@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
 import CategoryPage from './pages/CategoryPage'
 import Login from './pages/Login'
+import VendorLogin from './pages/VendorLogin'
 import Dashboard from './pages/admin/Dashboard'
 import Vendors from './pages/admin/Vendors'
 import { Services } from './pages/admin/Services'
@@ -31,6 +32,7 @@ function App() {
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/vendor-login" element={<VendorLogin />} />
           
           {/* Admin Routes */}
           <Route
