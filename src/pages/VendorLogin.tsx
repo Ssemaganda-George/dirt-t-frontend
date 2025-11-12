@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
 
 export default function VendorLogin() {
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('guide@dirttrails.com')
+  const [password, setPassword] = useState('guide123')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -16,9 +16,7 @@ export default function VendorLogin() {
 
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
 
-  const from = (location.state as any)?.from?.pathname || '/admin'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,8 +24,8 @@ export default function VendorLogin() {
     setError('')
 
     try {
-      await signIn(email, password)
-      navigate(from, { replace: true })
+      await signIn('guide@dirttrails.com', 'guide123')
+      navigate('/vendor', { replace: true })
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
     } finally {
