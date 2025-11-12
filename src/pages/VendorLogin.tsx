@@ -5,13 +5,16 @@ import { Eye, EyeOff } from 'lucide-react'
 
 export default function VendorLogin() {
   const [showEmailForm, setShowEmailForm] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { signIn } = useAuth()
+  const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -27,6 +30,27 @@ export default function VendorLogin() {
       navigate(from, { replace: true })
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    try {
+      await signUp(email, password, fullName, 'guide')
+      navigate('/', { replace: true })
+    } catch (error: any) {
+      setError(error.message || 'Failed to sign up')
     } finally {
       setLoading(false)
     }
@@ -55,7 +79,7 @@ export default function VendorLogin() {
           <p className="text-gray-600">Sign in to manage your listings and bookings.</p>
         </div>
 
-        {!showEmailForm ? (
+        {!showEmailForm && !isSignUp ? (
           <div className="mt-8 space-y-4">
             <button
               onClick={handleGoogleSignIn}
@@ -80,6 +104,13 @@ export default function VendorLogin() {
               Continue with email
             </button>
 
+            <button
+              onClick={() => { setIsSignUp(true); setShowEmailForm(false) }}
+              className="w-full flex items-center justify-center px-4 py-3 border-2 border-gray-300 rounded-full text-base font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              Create vendor account
+            </button>
+
             <div className="mt-6 text-xs text-center text-gray-500">
               <p>
                 By proceeding, you agree to our{' '}
@@ -93,6 +124,124 @@ export default function VendorLogin() {
               </p>
             </div>
           </div>
+        ) : isSignUp ? (
+          <form className="mt-8 space-y-6" onSubmit={handleSignUpSubmit}>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(false)}
+              className="text-sm text-gray-600 hover:text-gray-900 flex items-center"
+            >
+              <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                  Full name
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Creating account...' : 'Create account'}
+              </button>
+            </div>
+
+            <div className="text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(false); setShowEmailForm(true) }}
+                className="underline"
+              >
+                Already have an account? Sign in
+              </button>
+            </div>
+          </form>
         ) : (
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <button
@@ -167,6 +316,16 @@ export default function VendorLogin() {
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </div>
+
+            <div className="text-center text-sm text-gray-600">
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(true); setShowEmailForm(false) }}
+                className="underline"
+              >
+                Don't have an account? Create one
               </button>
             </div>
           </form>
