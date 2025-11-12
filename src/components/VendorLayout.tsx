@@ -107,7 +107,7 @@ export default function VendorLayout() {
       </div>
 
       {/* Main content */}
-      <div className={`transition-all duration-300 ${
+      <div className={`transition-all  duration-300 ${
         sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
       }`}>
         {/* Top bar */}
