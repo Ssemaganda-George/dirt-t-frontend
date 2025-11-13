@@ -177,32 +177,22 @@ function ServiceForm({ initial, onClose, onSubmit }: { initial?: Partial<Service
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select value={form.status as any} onChange={(e) => update('status', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Add image URL</label>
+            <div className="flex">
+              <input value={imageInput} onChange={(e) => setImageInput(e.target.value)} placeholder="https://" className="mt-1 w-full border rounded-l-md px-3 py-2" />
+              <button type="button" onClick={() => { if (!imageInput) return; update('images', [...(form.images || []), imageInput]); setImageInput('') }} className="mt-1 px-3 py-2 bg-gray-900 text-white rounded-r-md">Add</button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Add image URL</label>
-              <div className="flex">
-                <input value={imageInput} onChange={(e) => setImageInput(e.target.value)} placeholder="https://" className="mt-1 w-full border rounded-l-md px-3 py-2" />
-                <button type="button" onClick={() => { if (!imageInput) return; update('images', [...(form.images || []), imageInput]); setImageInput('') }} className="mt-1 px-3 py-2 bg-gray-900 text-white rounded-r-md">Add</button>
+            {(form.images || []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(form.images as string[]).map((src, idx) => (
+                  <div key={idx} className="flex items-center space-x-2 bg-gray-100 rounded px-2 py-1 text-xs">
+                    <span className="truncate max-w-[200px]">{src}</span>
+                    <button type="button" className="text-red-600" onClick={() => update('images', (form.images as string[]).filter((_, i) => i !== idx))}>Remove</button>
+                  </div>
+                ))}
               </div>
-              {(form.images || []).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(form.images as string[]).map((src, idx) => (
-                    <div key={idx} className="flex items-center space-x-2 bg-gray-100 rounded px-2 py-1 text-xs">
-                      <span className="truncate max-w-[200px]">{src}</span>
-                      <button type="button" className="text-red-600" onClick={() => update('images', (form.images as string[]).filter((_, i) => i !== idx))}>Remove</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-2">

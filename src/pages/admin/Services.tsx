@@ -3,9 +3,31 @@ import { useServices } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrency } from '../../lib/utils';
+import { useEffect, useState } from 'react';
+import { getPendingServices, removePendingService, type PendingServiceRecord } from '../../store/adminStore';
+import { updateService as vendorUpdateService } from '../../store/vendorStore';
 
 export function Services() {
   const { services, loading, error, updateServiceStatus } = useServices();
+  const [pending, setPending] = useState<PendingServiceRecord[]>([]);
+
+  const refreshPending = () => setPending(getPendingServices());
+
+  useEffect(() => {
+    refreshPending();
+  }, []);
+
+  const approvePending = (rec: PendingServiceRecord) => {
+    vendorUpdateService(rec.vendor_id, rec.service_id, { status: 'approved' });
+    removePendingService(rec.vendor_id, rec.service_id);
+    refreshPending();
+  };
+
+  const rejectPending = (rec: PendingServiceRecord) => {
+    vendorUpdateService(rec.vendor_id, rec.service_id, { status: 'rejected' });
+    removePendingService(rec.vendor_id, rec.service_id);
+    refreshPending();
+  };
 
   if (loading) {
     return (
@@ -35,6 +57,38 @@ export function Services() {
           <span className="text-yellow-600">Pending: {pendingServices.length}</span>
           <span className="text-green-600">Approved: {approvedServices.length}</span>
           <span className="text-red-600">Rejected: {rejectedServices.length}</span>
+        </div>
+      </div>
+
+      {/* Vendor Submissions Pending Approval */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Vendor Submissions Pending Approval</h3>
+            <button onClick={refreshPending} className="text-sm text-gray-600 hover:text-gray-900">Refresh</button>
+          </div>
+          {pending.length === 0 ? (
+            <p className="text-sm text-gray-500">No pending submissions from vendors.</p>
+          ) : (
+            <div className="space-y-3">
+              {pending.map((rec) => (
+                <div key={`${rec.vendor_id}:${rec.service_id}`} className="flex items-center justify-between border rounded-md p-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{rec.name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{rec.category.replace('_',' ')} • {formatCurrency(rec.price, rec.currency)}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button onClick={() => approvePending(rec)} className="inline-flex items-center px-3 py-1.5 text-xs rounded bg-green-600 text-white hover:bg-green-700">
+                      <CheckIcon className="h-4 w-4 mr-1" /> Approve
+                    </button>
+                    <button onClick={() => rejectPending(rec)} className="inline-flex items-center px-3 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700">
+                      <XMarkIcon className="h-4 w-4 mr-1" /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { Service, Booking, Transaction, Wallet } from '../types'
+import { addPendingService } from './adminStore'
 
 const key = (vendorId: string, entity: string) => `vendor:${vendorId}:${entity}`
 
@@ -108,6 +109,10 @@ export function createService(vendorId: string, data: Omit<Service, 'id' | 'vend
     status: data.status || 'pending',
     created_at: now(),
     updated_at: now()
+  }
+  // Add to admin pending queue if not yet approved
+  if (svc.status === 'pending') {
+    addPendingService(vendorId, svc)
   }
   const list = [svc, ...services]
   setServices(vendorId, list)
