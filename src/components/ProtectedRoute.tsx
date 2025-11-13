@@ -20,7 +20,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    const loginPath = location.pathname.startsWith('/vendor') ? '/vendor-login' : '/login'
+    return <Navigate to={loginPath} state={{ from: location }} replace />
   }
 
   if (requiredRole && profile?.role !== requiredRole) {

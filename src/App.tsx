@@ -7,6 +7,12 @@ import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
 import CategoryPage from './pages/CategoryPage'
 import Login from './pages/Login'
+import VendorLogin from './pages/VendorLogin'
+import VendorLayout from './components/VendorLayout'
+import VendorDashboard from './pages/vendor/Dashboard'
+import VendorServices from './pages/vendor/Services'
+import VendorBookings from './pages/vendor/Bookings'
+import VendorTransactions from './pages/vendor/Transactions'
 import Dashboard from './pages/admin/Dashboard'
 import Vendors from './pages/admin/Vendors'
 import { Services } from './pages/admin/Services'
@@ -31,6 +37,22 @@ function App() {
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/vendor-login" element={<VendorLogin />} />
+          
+          {/* Vendor Routes */}
+          <Route
+            path="/vendor/*"
+            element={
+              <ProtectedRoute requiredRole="guide">
+                <VendorLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<VendorDashboard />} />
+            <Route path="services" element={<VendorServices />} />
+            <Route path="bookings" element={<VendorBookings />} />
+            <Route path="transactions" element={<VendorTransactions />} />
+          </Route>
           
           {/* Admin Routes */}
           <Route

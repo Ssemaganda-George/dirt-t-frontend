@@ -5,8 +5,8 @@ import { Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const [showEmailForm, setShowEmailForm] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('admin@dirttrails.com')
+  const [password, setPassword] = useState('admin123')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
