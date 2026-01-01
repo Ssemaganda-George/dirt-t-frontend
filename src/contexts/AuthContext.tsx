@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { profileService, vendorService } from '@/lib/database'
 
 interface User {
   id: string
@@ -10,7 +12,9 @@ interface Profile {
   id: string
   email: string
   full_name: string
-  role: 'admin' | 'guide' | 'tourist'
+  phone?: string
+  avatar_url?: string
+  role: 'tourist' | 'vendor' | 'admin'
   created_at: string
   updated_at: string
 }
@@ -20,16 +24,12 @@ interface AuthContextType {
   profile: Profile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
+  signUp: (email: string, password: string, fullName: string, role?: string, vendorData?: any) => Promise<any>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-
-
-
 
 export function useAuth() {
   const context = useContext(AuthContext)
@@ -39,181 +39,136 @@ export function useAuth() {
   return context
 }
 
-// In-memory storage for demo purposes
-let users: Array<User & { password: string }> = []
-let profiles: Profile[] = []
-let currentUser: User | null = null
-
-
-const initializeDemoData = () => {
-  if (users.length === 0) {
-    const adminId = 'admin_001'
-    const now = new Date().toISOString()
-    
-    // Create demo admin user
-    users.push({
-      id: adminId,
-      email: 'admin@dirttrails.com',
-      password: 'admin123',
-      created_at: now
-    })
-    
-    // Create demo admin profile
-    profiles.push({
-      id: adminId,
-      email: 'admin@dirttrails.com',
-      full_name: 'Admin User',
-      role: 'admin',
-      created_at: now,
-      updated_at: now
-    })
-    
-    // Add a demo guide
-    const guideId = 'guide_001'
-    users.push({
-      id: guideId,
-      email: 'guide@dirttrails.com',
-      password: 'guide123',
-      created_at: now
-    })
-    
-    profiles.push({
-      id: guideId,
-      email: 'guide@dirttrails.com',
-      full_name: 'Demo Guide',
-      role: 'guide',
-      created_at: now,
-      updated_at: now
-    })
-  }
-}
-
-// Call initialization
-initializeDemoData()
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate initial session check
-    const checkSession = () => {
-      setUser(currentUser)
-      if (currentUser) {
-        fetchProfile(currentUser.id)
-      } else {
-        setLoading(false)
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          created_at: session.user.created_at
+        })
+
+        // Fetch profile
+        try {
+          const userProfile = await profileService.getById(session.user.id)
+          setProfile(userProfile)
+        } catch (error) {
+          console.error('Error fetching profile:', error)
+        }
       }
-    }
 
-    // Simulate async session check
-    setTimeout(checkSession, 100)
-  }, [])
-
-  const fetchProfile = (userId: string) => {
-    try {
-      const userProfile = profiles.find(p => p.id === userId)
-      setProfile(userProfile || null)
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    } finally {
       setLoading(false)
     }
-  }
+
+    getInitialSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            created_at: session.user.created_at
+          })
+
+          // Fetch or create profile
+          try {
+            let userProfile = await profileService.getById(session.user.id)
+
+            if (!userProfile) {
+              // Create profile if it doesn't exist
+              const role = session.user.user_metadata?.role || 'tourist'
+              userProfile = await profileService.create({
+                id: session.user.id,
+                email: session.user.email!,
+                full_name: session.user.user_metadata?.full_name || '',
+                role: role
+              })
+            }
+
+            setProfile(userProfile)
+
+            // Create vendor record if user has vendor data and is a vendor (for email confirmation flow)
+            if (session.user.user_metadata?.role === 'vendor' && session.user.user_metadata?.vendor_data) {
+              try {
+                const existingVendor = await vendorService.getByUserId(session.user.id)
+                if (!existingVendor) {
+                  await vendorService.create({
+                    user_id: session.user.id,
+                    business_name: session.user.user_metadata.vendor_data.businessName,
+                    business_description: session.user.user_metadata.vendor_data.businessDescription,
+                    business_address: session.user.user_metadata.vendor_data.businessAddress,
+                    business_phone: session.user.user_metadata.vendor_data.businessPhone,
+                    business_email: session.user.user_metadata.vendor_data.businessEmail,
+                    business_license: session.user.user_metadata.vendor_data.businessLicense || undefined,
+                    status: 'pending'
+                  })
+                }
+              } catch (vendorError) {
+                console.error('Error creating vendor record:', vendorError)
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching/creating profile:', error)
+          }
+        } else {
+          setUser(null)
+          setProfile(null)
+        }
+
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const signIn = async (email: string, password: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    const foundUser = users.find(u => u.email === email && u.password === password)
-    if (!foundUser) {
-      throw new Error('Invalid email or password')
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
 
-    const userWithoutPassword = {
-      id: foundUser.id,
-      email: foundUser.email,
-      created_at: foundUser.created_at
-    }
-
-    currentUser = userWithoutPassword
-    setUser(userWithoutPassword)
-    fetchProfile(foundUser.id)
+    if (error) throw error
   }
 
-  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist') => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Check if user already exists
-    if (users.find(u => u.email === email)) {
-      throw new Error('User already exists with this email')
-    }
-
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const now = new Date().toISOString()
-
-    // Create user
-    const newUser = {
-      id: userId,
+  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist', vendorData?: any) => {
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      created_at: now
-    }
-    users.push(newUser)
+      options: {
+        data: {
+          full_name: fullName,
+          role: role,
+          vendor_data: role === 'vendor' ? vendorData : undefined
+        }
+      }
+    })
 
-    // Create profile
-    const newProfile: Profile = {
-      id: userId,
-      email,
-      full_name: fullName,
-      role: role as 'admin' | 'guide' | 'tourist',
-      created_at: now,
-      updated_at: now
-    }
-    profiles.push(newProfile)
+    if (error) throw error
 
-    // Auto sign in
-    const userWithoutPassword = {
-      id: newUser.id,
-      email: newUser.email,
-      created_at: newUser.created_at
-    }
-
-    currentUser = userWithoutPassword
-    setUser(userWithoutPassword)
-    setProfile(newProfile)
-    setLoading(false)
+    return data
   }
 
   const signOut = async () => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    currentUser = null
-    setUser(null)
-    setProfile(null)
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300))
-
-    const profileIndex = profiles.findIndex(p => p.id === user.id)
-    if (profileIndex === -1) {
-      throw new Error('Profile not found')
-    }
-
-    profiles[profileIndex] = {
-      ...profiles[profileIndex],
-      ...updates,
-      updated_at: new Date().toISOString()
-    }
-
-    fetchProfile(user.id)
+    const updatedProfile = await profileService.update(user.id, updates)
+    setProfile(updatedProfile)
   }
 
   const value = {

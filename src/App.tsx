@@ -8,6 +8,8 @@ import ServiceDetail from './pages/ServiceDetail'
 import CategoryPage from './pages/CategoryPage'
 import Login from './pages/Login'
 import VendorLogin from './pages/VendorLogin'
+import VendorSignup from './pages/VendorSignup'
+import AdminLogin from './pages/AdminLogin'
 import VendorLayout from './components/VendorLayout'
 import VendorDashboard from './pages/vendor/Dashboard'
 import VendorServices from './pages/vendor/Services'
@@ -38,12 +40,15 @@ function App() {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
+          <Route path="/vendor-signup" element={<VendorSignup />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/partner" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-2xl font-bold text-gray-900">Partner Program</h1><p className="text-gray-600 mt-2">Coming soon...</p></div></div>} />
           
           {/* Vendor Routes */}
           <Route
             path="/vendor/*"
             element={
-              <ProtectedRoute requiredRole="guide">
+              <ProtectedRoute requiredRole="vendor">
                 <VendorLayout />
               </ProtectedRoute>
             }

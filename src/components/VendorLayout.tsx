@@ -18,6 +18,9 @@ export default function VendorLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const handleSignOut = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?')
+    if (!confirmed) return
+
     try {
       await signOut()
       navigate('/vendor-login')

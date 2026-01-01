@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { formatCurrency } from '../../lib/utils'
-import { 
-  Users, 
-  Store, 
-  ShoppingBag, 
-  CreditCard, 
+import { useAuth } from '../../contexts/AuthContext'
+import {
+  Users,
+  Store,
+  ShoppingBag,
+  CreditCard,
   TrendingUp,
   Clock,
   CheckCircle,
@@ -92,6 +93,7 @@ const mockTransactions = [
 ]
 
 export default function Dashboard() {
+  const { profile } = useAuth()
   const [stats, setStats] = useState<DashboardStats>({
     totalVendors: 0,
     pendingVendors: 0,
@@ -148,7 +150,7 @@ export default function Dashboard() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Welcome to DirtTrails Admin Dashboard
+          Welcome back, {profile?.full_name || 'Admin'}
         </p>
       </div>
 

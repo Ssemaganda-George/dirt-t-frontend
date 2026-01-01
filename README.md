@@ -88,3 +88,8 @@ This is an MVP for Uganda's tourism industry. Future contributions welcome for:
 ## 📄 License
 
 Private project for DirtTrails tourism marketplace.
+
+
+
+
+db. safaris.dirttrails@gmail.com
