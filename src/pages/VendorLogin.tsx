@@ -24,7 +24,7 @@ export default function VendorLogin() {
     setError('')
 
     try {
-      await signIn('guide@dirttrails.com', 'guide123')
+      await signIn(email, password)
       navigate('/vendor', { replace: true })
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
