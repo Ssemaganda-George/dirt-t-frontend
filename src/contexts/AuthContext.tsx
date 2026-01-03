@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient.ts'
 
 interface User {
   id: string
@@ -27,10 +28,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-
-
-
-
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
@@ -39,159 +36,136 @@ export function useAuth() {
   return context
 }
 
-// In-memory storage for demo purposes
-let users: Array<User & { password: string }> = []
-let profiles: Profile[] = []
-let currentUser: User | null = null
-
-
-const initializeDemoData = () => {
-  if (users.length === 0) {
-    const adminId = 'admin_001'
-    const now = new Date().toISOString()
-    
-    // Create demo admin user
-    users.push({
-      id: adminId,
-      email: 'admin@dirttrails.com',
-      password: 'admin123',
-      created_at: now
-    })
-    
-    // Create demo admin profile
-    profiles.push({
-      id: adminId,
-      email: 'admin@dirttrails.com',
-      full_name: 'Admin User',
-      role: 'admin',
-      created_at: now,
-      updated_at: now
-    })
-    
-    // Add a demo guide
-    const guideId = 'guide_001'
-    users.push({
-      id: guideId,
-      email: 'guide@dirttrails.com',
-      password: 'guide123',
-      created_at: now
-    })
-    
-    profiles.push({
-      id: guideId,
-      email: 'guide@dirttrails.com',
-      full_name: 'Demo Guide',
-      role: 'guide',
-      created_at: now,
-      updated_at: now
-    })
-  }
-}
-
-// Call initialization
-initializeDemoData()
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate initial session check
-    const checkSession = () => {
-      setUser(currentUser)
-      if (currentUser) {
-        fetchProfile(currentUser.id)
+    const init = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error(error)
+        setLoading(false)
+        return
+      }
+
+      const session = data.session
+      if (session?.user) {
+        const u = session.user
+        const normalizedUser: User = {
+          id: u.id,
+          email: u.email ?? '',
+          created_at: (u as any).created_at ?? new Date().toISOString(),
+        }
+        setUser(normalizedUser)
+        await fetchProfile(u.id)
       } else {
         setLoading(false)
       }
     }
 
-    // Simulate async session check
-    setTimeout(checkSession, 100)
+    init()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const u = session.user
+        const normalizedUser: User = {
+          id: u.id,
+          email: u.email ?? '',
+          created_at: (u as any).created_at ?? new Date().toISOString(),
+        }
+        setUser(normalizedUser)
+        await fetchProfile(u.id)
+      } else {
+        setUser(null)
+        setProfile(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
-  const fetchProfile = (userId: string) => {
+  const fetchProfile = async (userId: string) => {
     try {
-      const userProfile = profiles.find(p => p.id === userId)
-      setProfile(userProfile || null)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) throw error
+      setProfile(data as Profile)
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setProfile(null)
     } finally {
       setLoading(false)
     }
   }
 
   const signIn = async (email: string, password: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    const foundUser = users.find(u => u.email === email && u.password === password)
-    if (!foundUser) {
-      throw new Error('Invalid email or password')
-    }
-
-    const userWithoutPassword = {
-      id: foundUser.id,
-      email: foundUser.email,
-      created_at: foundUser.created_at
-    }
-
-    currentUser = userWithoutPassword
-    setUser(userWithoutPassword)
-    fetchProfile(foundUser.id)
-  }
-
-  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist') => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Check if user already exists
-    if (users.find(u => u.email === email)) {
-      throw new Error('User already exists with this email')
-    }
-
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const now = new Date().toISOString()
-
-    // Create user
-    const newUser = {
-      id: userId,
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      created_at: now
-    }
-    users.push(newUser)
+    })
 
-    // Create profile
-    const newProfile: Profile = {
-      id: userId,
+    if (error) throw error
+
+    const u = data.user
+    if (!u) return
+
+    const normalizedUser: User = {
+      id: u.id,
+      email: u.email ?? '',
+      created_at: (u as any).created_at ?? new Date().toISOString(),
+    }
+
+    setUser(normalizedUser)
+    await fetchProfile(u.id)
+  }
+
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    role: string = 'tourist'
+  ) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+    if (error) throw error
+
+    const u = data.user
+    if (!u) return
+
+    const normalizedUser: User = {
+      id: u.id,
+      email: u.email ?? '',
+      created_at: (u as any).created_at ?? new Date().toISOString(),
+    }
+
+    // create profile row matching your user_role enum
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: u.id,
       email,
       full_name: fullName,
-      role: role as 'admin' | 'guide' | 'tourist',
-      created_at: now,
-      updated_at: now
-    }
-    profiles.push(newProfile)
+      role,
+    })
+    if (profileError) throw profileError
 
-    // Auto sign in
-    const userWithoutPassword = {
-      id: newUser.id,
-      email: newUser.email,
-      created_at: newUser.created_at
-    }
-
-    currentUser = userWithoutPassword
-    setUser(userWithoutPassword)
-    setProfile(newProfile)
-    setLoading(false)
+    setUser(normalizedUser)
+    await fetchProfile(u.id)
   }
 
   const signOut = async () => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    currentUser = null
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
     setUser(null)
     setProfile(null)
   }
@@ -199,21 +173,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300))
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+      .select()
+      .single()
 
-    const profileIndex = profiles.findIndex(p => p.id === user.id)
-    if (profileIndex === -1) {
-      throw new Error('Profile not found')
-    }
-
-    profiles[profileIndex] = {
-      ...profiles[profileIndex],
-      ...updates,
-      updated_at: new Date().toISOString()
-    }
-
-    fetchProfile(user.id)
+    if (error) throw error
+    setProfile(data as Profile)
   }
 
   const value = {
