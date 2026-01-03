@@ -45,7 +45,7 @@ export default function VendorLogin() {
     }
 
     try {
-      await signUp(email, password, fullName, 'guide')
+      await signUp(email, password, fullName, 'vendor')
       navigate('/', { replace: true })
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')

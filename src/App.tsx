@@ -43,7 +43,7 @@ function App() {
           <Route
             path="/vendor/*"
             element={
-              <ProtectedRoute requiredRole="guide">
+              <ProtectedRoute requiredRole="vendor">
                 <VendorLayout />
               </ProtectedRoute>
             }

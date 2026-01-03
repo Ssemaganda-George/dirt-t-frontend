@@ -11,7 +11,7 @@ interface Profile {
   id: string
   email: string
   full_name: string
-  role: 'admin' | 'guide' | 'tourist'
+  role: 'admin' | 'vendor' | 'tourist'
   created_at: string
   updated_at: string
 }
@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.getSession()
       if (error) {
         console.error(error)
-        setLoading(false)
         return
       }
 
@@ -60,12 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(normalizedUser)
         await fetchProfile(u.id)
-      } else {
-        setLoading(false)
       }
     }
 
-    init()
+    init().finally(() => setLoading(false))
 
     const {
       data: { subscription },
@@ -78,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        await fetchProfile(u.id)
+        fetchProfile(u.id)
       } else {
         setUser(null)
         setProfile(null)
@@ -103,8 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching profile:', error)
       setProfile(null)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -126,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(normalizedUser)
+    // Ensure profile (and role) is loaded before route guards run
     await fetchProfile(u.id)
   }
 
@@ -160,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profileError) throw profileError
 
     setUser(normalizedUser)
+    // Ensure profile (and role) is loaded before route guards run
     await fetchProfile(u.id)
   }
 
