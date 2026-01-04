@@ -105,6 +105,19 @@ export default function VendorLayout() {
                 </Link>
               )
             })}
+            {/* Sign-out button at the bottom of the nav */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSignOut}
+                className={`group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 ${
+                  sidebarCollapsed ? 'justify-center' : ''
+                }`}
+                title={sidebarCollapsed ? 'Sign out' : ''}
+              >
+                <LogOut className={`${sidebarCollapsed ? 'mx-auto' : 'mr-3'} h-5 w-5 text-gray-400 group-hover:text-gray-500`} />
+                {!sidebarCollapsed && 'Sign out'}
+              </button>
+            </div>
           </nav>
         </div>
       </div>

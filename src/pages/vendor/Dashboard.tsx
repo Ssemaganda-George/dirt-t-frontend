@@ -11,7 +11,6 @@ import {
   Users, 
   Clock, 
   CheckCircle, 
-  RefreshCw,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react'
@@ -53,13 +52,6 @@ export default function VendorDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">Welcome back, {profile?.full_name || 'Vendor'}!</p>
         </div>
-        <button 
-          onClick={refresh} 
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </button>
       </div>
 
       {/* Stats Grid */}
