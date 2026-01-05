@@ -33,3 +33,4 @@ dist-ssr
 .env.production.local
 =======
 >>>>>>> christian
+node_modules
