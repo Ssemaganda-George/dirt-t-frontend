@@ -1,7 +1,7 @@
 services:
   - type: web
     name: dirttrails-vendor-frontend
-    env: static
+    runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     routes:
