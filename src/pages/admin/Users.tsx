@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor } from '../../lib/utils'
 import { Check, X, Eye, User, Store, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import { useServiceCategories } from '../../hooks/hook'
 
 // Database types
 interface Profile {
@@ -61,6 +62,8 @@ export default function Users() {
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null)
   const [filter, setFilter] = useState<'all' | 'tourist' | 'vendor' | 'pending' | 'verified' | 'rejected'>('all')
+  const { categories } = useServiceCategories()
+  const [vendorCategories, setVendorCategories] = useState<{[vendorId: string]: string[]}>({})
 
   useEffect(() => {
     fetchUsers()
@@ -160,6 +163,32 @@ export default function Users() {
     } catch (error) {
       console.error('Error updating vendor status:', error)
       // You could add a toast notification here for user feedback
+    }
+  }
+
+  const assignCategoryToVendor = async (vendorId: string, categoryId: string) => {
+    try {
+      // For now, we'll store categories in local state
+      // In a real implementation, this would update a vendor_categories table
+      setVendorCategories(prev => ({
+        ...prev,
+        [vendorId]: [...(prev[vendorId] || []), categoryId]
+      }))
+      console.log(`Category ${categoryId} assigned to vendor ${vendorId}`)
+    } catch (error) {
+      console.error('Error assigning category to vendor:', error)
+    }
+  }
+
+  const removeCategoryFromVendor = async (vendorId: string, categoryId: string) => {
+    try {
+      setVendorCategories(prev => ({
+        ...prev,
+        [vendorId]: (prev[vendorId] || []).filter(id => id !== categoryId)
+      }))
+      console.log(`Category ${categoryId} removed from vendor ${vendorId}`)
+    } catch (error) {
+      console.error('Error removing category from vendor:', error)
     }
   }
 
@@ -410,6 +439,55 @@ export default function Users() {
                           {selectedUser.vendor.status}
                         </span>
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Management for Verified Vendors */}
+                {selectedUser.vendor && selectedUser.vendor.status === 'approved' && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Service Categories</h4>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Assigned Categories:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {(vendorCategories[selectedUser.vendor!.id] || []).map(categoryId => {
+                            const category = categories.find(c => c.id === categoryId)
+                            return category ? (
+                              <span key={categoryId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {category.name}
+                                <button
+                                  onClick={() => removeCategoryFromVendor(selectedUser.vendor!.id, categoryId)}
+                                  className="ml-1 text-blue-600 hover:text-blue-800"
+                                  title="Remove category"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ) : null
+                          })}
+                          {(vendorCategories[selectedUser.vendor!.id] || []).length === 0 && (
+                            <p className="text-sm text-gray-500">No categories assigned</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Available Categories:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {categories
+                            .filter(category => !(vendorCategories[selectedUser.vendor!.id] || []).includes(category.id))
+                            .map(category => (
+                              <button
+                                key={category.id}
+                                onClick={() => assignCategoryToVendor(selectedUser.vendor!.id, category.id)}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                title="Assign category"
+                              >
+                                + {category.name}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
