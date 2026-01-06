@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Search, MapPin, Star, Heart } from 'lucide-react'
 import { getServices, getServiceCategories } from '../lib/database'
 import { useFlights } from '../hooks/hook'
@@ -264,7 +265,6 @@ export default function Home() {
                     key={item.id} 
                     flight={item}
                     formatCurrency={formatCurrency}
-                    onClick={() => {}} // TODO: Implement flight detail navigation
                   />
                 )
               } else {
@@ -567,10 +567,9 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
 interface FlightCardProps {
   flight: Flight
   formatCurrency: (amount: number, currency: string) => string
-  onClick: () => void
 }
 
-function FlightCard({ flight, formatCurrency, onClick }: FlightCardProps) {
+function FlightCard({ flight, formatCurrency }: Omit<FlightCardProps, 'onClick'>) {
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -587,11 +586,8 @@ function FlightCard({ flight, formatCurrency, onClick }: FlightCardProps) {
   }
 
   return (
-    <div 
-      onClick={onClick}
-      className="group block cursor-pointer"
-    >
-      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+    <Link to={`/flights/${flight.id}`} className="group block">
+      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 cursor-pointer">
         {/* Flight Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
           <div className="flex items-center justify-between mb-2">
@@ -677,6 +673,6 @@ function FlightCard({ flight, formatCurrency, onClick }: FlightCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

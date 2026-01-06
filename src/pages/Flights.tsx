@@ -77,7 +77,11 @@ export default function Flights() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredFlights.map((flight) => (
-              <div key={flight.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <Link
+                key={flight.id}
+                to={`/flights/${flight.id}`}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow block group"
+              >
                 <div className="aspect-w-16 aspect-h-9 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
                   <div className="text-white text-center">
                     <Plane className="h-16 w-16 mx-auto mb-2" />
@@ -86,7 +90,7 @@ export default function Flights() {
                 </div>
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{flight.airline}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{flight.airline}</h3>
                     <span className="text-sm text-gray-500">{flight.flight_number}</span>
                   </div>
 
@@ -120,15 +124,12 @@ export default function Flights() {
                     <div className="text-sm text-gray-600 mb-2">
                       {flight.available_seats} seats available
                     </div>
-                    <Link
-                      to={`/flights/${flight.id}`}
-                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center block"
-                    >
+                    <div className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center">
                       Book Flight
-                    </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
+import FlightDetail from './pages/FlightDetail'
 import CategoryPage from './pages/CategoryPage'
 import ServiceCategories from './pages/Services'
 import FlightPage from './pages/Flights'
@@ -32,6 +33,7 @@ function App() {
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
+            <Route path="flights/:id" element={<FlightDetail />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="flights" element={<FlightPage />} />
             <Route path="profile" element={<Profile />} />
