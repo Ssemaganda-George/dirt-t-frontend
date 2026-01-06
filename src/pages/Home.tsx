@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Search, MapPin, Star, Heart } from 'lucide-react'
 import { getServices, getServiceCategories } from '../lib/database'
+import { useFlights } from '../hooks/hook'
+import type { Flight } from '../types'
 
 interface Service {
   id: string
@@ -28,6 +30,16 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+
+  // Use the reactive useFlights hook instead of local state
+  const { flights: allFlights, loading: flightsLoading } = useFlights()
+
+  // Combined loading state
+  const isLoading = loading || flightsLoading
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId)
+  }
 
   // Remove hardcoded categories - will be fetched from database
   // const categories = [
@@ -61,14 +73,15 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
-      // Add "All" category at the beginning
+      // Add "All" category at the beginning and "Flights" at the end
       const allCategories = [
         { id: 'all', name: 'All', icon: '🌍' },
         ...dbCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
           icon: cat.icon || '📍'
-        }))
+        })),
+        { id: 'flights', name: 'Flights', icon: '✈️' }
       ]
       setCategories(allCategories)
     } catch (error) {
@@ -80,7 +93,8 @@ export default function Home() {
         { id: 'cat_tour', name: 'Tour Packages', icon: '🗺️' },
         { id: 'cat_transport', name: 'Transport', icon: '🚗' },
         { id: 'cat_restaurant', name: 'Restaurants', icon: '🍽️' },
-        { id: 'cat_activities', name: 'Activities', icon: '🎯' }
+        { id: 'cat_activities', name: 'Activities', icon: '🎯' },
+        { id: 'flights', name: 'Flights', icon: '✈️' }
       ])
     }
   }
@@ -103,6 +117,22 @@ export default function Home() {
 
     return matchesSearch && matchesCategory
   })
+
+  const filteredFlights = allFlights.filter((flight: Flight) => {
+    // Only show active flights
+    if (flight.status !== 'active') return false
+
+    const matchesSearch = flight.flight_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         flight.airline.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         flight.departure_city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         flight.arrival_city.toLowerCase().includes(searchQuery.toLowerCase())
+
+    return matchesSearch
+  })
+
+  const isShowingFlights = selectedCategory === 'flights'
+  const currentItems = isShowingFlights ? filteredFlights : filteredServices
+  const currentItemCount = currentItems.length
 
   if (selectedService) {
     return (
@@ -157,10 +187,10 @@ export default function Home() {
 
           {/* Quick Categories */}
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            {categories.slice(1, 6).map((cat) => (
+            {categories.slice(1, 7).map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+                onClick={() => handleCategorySelect(cat.id)}
                 className="bg-white/90 hover:bg-white px-5 py-2 rounded-full text-gray-800 font-medium shadow-lg hover:shadow-xl transition-all"
               >
                 <span className="mr-2">{cat.icon}</span>
@@ -178,7 +208,7 @@ export default function Home() {
           {categories.map((category) => (
             <button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              onClick={() => handleCategorySelect(category.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all border ${
                 selectedCategory === category.id
                   ? 'bg-black text-white border-black'
@@ -195,33 +225,46 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-              {selectedCategory === 'all' ? 'Explore Uganda' : selectedCategory}
+              {selectedCategory === 'all' ? 'Explore Uganda' : 
+               selectedCategory === 'flights' ? 'Available Flights' : 
+               selectedCategory}
             </h2>
             <p className="text-gray-600">
-              {filteredServices.length} {filteredServices.length === 1 ? 'place' : 'places'}
+              {currentItemCount} {isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>
 
-        {/* Services Grid */}
+        {/* Content Grid */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredServices.map((service) => (
-              <ServiceCard 
-                key={service.id} 
-                service={service}
-                formatCurrency={formatCurrency}
-                onClick={() => setSelectedService(service)}
-              />
-            ))}
+            {isShowingFlights ? (
+              filteredFlights.map((flight) => (
+                <FlightCard 
+                  key={flight.id} 
+                  flight={flight}
+                  formatCurrency={formatCurrency}
+                  onClick={() => {}} // TODO: Implement flight detail navigation
+                />
+              ))
+            ) : (
+              filteredServices.map((service) => (
+                <ServiceCard 
+                  key={service.id} 
+                  service={service}
+                  formatCurrency={formatCurrency}
+                  onClick={() => setSelectedService(service)}
+                />
+              ))
+            )}
           </div>
         )}
 
-        {!loading && filteredServices.length === 0 && (
+        {!isLoading && currentItemCount === 0 && (
           <div className="text-center py-16">
             <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
@@ -497,6 +540,123 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface FlightCardProps {
+  flight: Flight
+  formatCurrency: (amount: number, currency: string) => string
+  onClick: () => void
+}
+
+function FlightCard({ flight, formatCurrency, onClick }: FlightCardProps) {
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return `${hours}h ${mins}m`
+  }
+
+  return (
+    <div 
+      onClick={onClick}
+      className="group block cursor-pointer"
+    >
+      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+        {/* Flight Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center">
+              <span className="text-2xl mr-2">✈️</span>
+              <div>
+                <div className="font-bold text-lg">{flight.flight_number}</div>
+                <div className="text-blue-100 text-sm">{flight.airline}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm opacity-90">Duration</div>
+              <div className="font-semibold">{formatDuration(flight.duration_minutes)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Flight Details */}
+        <div className="p-4">
+          {/* Route */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-center">
+              <div className="font-bold text-lg">{flight.departure_city}</div>
+              <div className="text-sm text-gray-500">{flight.departure_airport}</div>
+              <div className="text-sm font-medium text-gray-700 mt-1">
+                {formatDateTime(flight.departure_time)}
+              </div>
+            </div>
+            <div className="flex-1 mx-4 relative">
+              <div className="border-t-2 border-dashed border-gray-300 relative">
+                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="bg-white border-2 border-gray-300 rounded-full p-1">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-lg">{flight.arrival_city}</div>
+              <div className="text-sm text-gray-500">{flight.arrival_airport}</div>
+              <div className="text-sm font-medium text-gray-700 mt-1">
+                {formatDateTime(flight.arrival_time)}
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-600">Economy</span>
+              <span className="font-bold text-lg text-gray-900">
+                {formatCurrency(flight.economy_price, flight.currency)}
+              </span>
+            </div>
+            {flight.business_price && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Business</span>
+                <span className="font-semibold text-gray-700">
+                  {formatCurrency(flight.business_price, flight.currency)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm text-gray-500 mt-2">
+              <span>{flight.available_seats} seats available</span>
+              <span>{flight.aircraft_type}</span>
+            </div>
+          </div>
+
+          {/* Amenities */}
+          {flight.amenities && flight.amenities.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1">
+              {flight.amenities.slice(0, 3).map((amenity, index) => (
+                <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                  {amenity}
+                </span>
+              ))}
+              {flight.amenities.length > 3 && (
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                  +{flight.amenities.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

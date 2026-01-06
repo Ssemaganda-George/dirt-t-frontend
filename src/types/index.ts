@@ -222,3 +222,29 @@ export interface Wallet {
   created_at: string;
   updated_at: string;
 }
+
+export interface Flight {
+  id: string;
+  flight_number: string;
+  airline: string;
+  departure_airport: string;
+  arrival_airport: string;
+  departure_city: string;
+  arrival_city: string;
+  departure_time: string;
+  arrival_time: string;
+  duration_minutes: number;
+  aircraft_type?: string;
+  economy_price: number;
+  business_price?: number;
+  first_class_price?: number;
+  currency: string;
+  total_seats: number;
+  available_seats: number;
+  status: 'active' | 'cancelled' | 'delayed' | 'completed';
+  flight_class: 'economy' | 'business' | 'first_class';
+  amenities: string[];
+  baggage_allowance?: string;
+  created_at: string;
+  updated_at: string;
+}

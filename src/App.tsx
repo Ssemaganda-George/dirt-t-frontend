@@ -7,7 +7,7 @@ import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
 import CategoryPage from './pages/CategoryPage'
 import ServiceCategories from './pages/Services'
-import Flights from './pages/Flights'
+import FlightPage from './pages/Flights'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import VendorLogin from './pages/VendorLogin'
@@ -19,6 +19,7 @@ import VendorTransactions from './pages/vendor/Transactions'
 import Dashboard from './pages/admin/Dashboard'
 import Vendors from './pages/admin/Vendors'
 import { Services } from './pages/admin/Services'
+import { Flights } from './pages/admin/Flights'
 import { Bookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Transactions'
 
@@ -32,7 +33,7 @@ function App() {
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
             <Route path="services" element={<ServiceCategories />} />
-            <Route path="flights" element={<Flights />} />
+            <Route path="flights" element={<FlightPage />} />
             <Route path="profile" element={<Profile />} />
             <Route path="hotels" element={<CategoryPage />} />
             <Route path="tours" element={<CategoryPage />} />
@@ -72,6 +73,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="vendors" element={<Vendors />} />
             <Route path="services" element={<Services />} />
+            <Route path="flights" element={<Flights />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="transactions" element={<Transactions />} />
             <Route path="users" element={<div className="p-8 text-center text-gray-500">User management coming soon...</div>} />

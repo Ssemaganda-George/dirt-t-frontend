@@ -17,6 +17,7 @@ export default function PublicLayout() {
     { name: 'Tours', href: '/tours' },
     { name: 'Restaurants', href: '/restaurants' },
     { name: 'Transport', href: '/transport' },
+    { name: 'Flights', href: '/flights' },
   ]
 
   return (

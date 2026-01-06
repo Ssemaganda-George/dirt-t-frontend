@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Service, Booking, Transaction } from '../types';
-import { getServices, createService, updateService, deleteService } from '../lib/database';
+import type { Service, Booking, Transaction, Flight } from '../types';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB } from '../lib/database';
 
 // Placeholder hooks - to be updated later
 export function useVendors() {
@@ -150,6 +150,112 @@ export function useServices(vendorId?: string) {
     updateService: updateExistingService,
     updateServiceStatus,
     deleteService: removeService
+  };
+}
+
+export function useFlights() {
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFlights = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await getFlights();
+      setFlights(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createNewFlight = async (flightData: {
+    flight_number: string;
+    airline: string;
+    departure_airport: string;
+    arrival_airport: string;
+    departure_city: string;
+    arrival_city: string;
+    departure_time: string;
+    arrival_time: string;
+    duration_minutes: number;
+    aircraft_type?: string;
+    economy_price: number;
+    business_price?: number;
+    first_class_price?: number;
+    currency?: string;
+    total_seats: number;
+    available_seats: number;
+    status?: Flight['status'];
+    flight_class?: Flight['flight_class'];
+    amenities?: string[];
+    baggage_allowance?: string;
+  }) => {
+    try {
+      const flightWithDefaults = {
+        ...flightData,
+        status: flightData.status || 'active',
+        flight_class: flightData.flight_class || 'economy',
+        currency: flightData.currency || 'UGX',
+        amenities: flightData.amenities || []
+      };
+      const newFlight = await createFlight(flightWithDefaults);
+      setFlights(prev => [...prev, newFlight]);
+      return newFlight;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const updateExistingFlight = async (id: string, updates: Partial<Flight>) => {
+    try {
+      const updatedFlight = await updateFlight(id, updates);
+      setFlights(prev => prev.map(flight =>
+        flight.id === id ? updatedFlight : flight
+      ));
+      return updatedFlight;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const removeFlight = async (id: string) => {
+    try {
+      await deleteFlight(id);
+      setFlights(prev => prev.filter(flight => flight.id !== id));
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const updateFlightStatus = async (id: string, status: Flight['status']): Promise<Flight> => {
+    try {
+      const updatedFlight: Flight = await updateFlightStatusDB(id, status);
+      setFlights(prev => prev.map(flight =>
+        flight.id === id ? updatedFlight : flight
+      ));
+      return updatedFlight;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetchFlights();
+  }, []);
+
+  return {
+    flights,
+    loading,
+    error,
+    refetch: fetchFlights,
+    createFlight: createNewFlight,
+    updateFlight: updateExistingFlight,
+    deleteFlight: removeFlight,
+    updateFlightStatus
   };
 }
 

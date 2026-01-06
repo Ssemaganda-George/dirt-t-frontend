@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   MapPin,
+  Plane,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: BarChart3 },
   { name: 'Vendors', href: '/admin/vendors', icon: Store },
   { name: 'Services', href: '/admin/services', icon: ShoppingBag },
+  { name: 'Flights', href: '/admin/flights', icon: Plane },
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
   { name: 'Transactions', href: '/admin/transactions', icon: CreditCard },
 ]
