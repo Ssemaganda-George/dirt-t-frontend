@@ -4,35 +4,35 @@ import { Hotel, Camera, Utensils, Car, Activity, Plane } from 'lucide-react'
 const categories = [
   {
     name: 'Hotels',
-    href: '/hotels',
+    href: '/category/hotels',
     icon: Hotel,
     description: 'Find the perfect accommodation for your stay',
     color: 'bg-blue-500'
   },
   {
     name: 'Tours',
-    href: '/tours',
+    href: '/category/tours',
     icon: Camera,
     description: 'Explore amazing destinations and experiences',
     color: 'bg-green-500'
   },
   {
     name: 'Restaurants',
-    href: '/restaurants',
+    href: '/category/restaurants',
     icon: Utensils,
     description: 'Discover great places to eat and drink',
     color: 'bg-orange-500'
   },
   {
     name: 'Transport',
-    href: '/transport',
+    href: '/category/transport',
     icon: Car,
     description: 'Get around with reliable transportation',
     color: 'bg-purple-500'
   },
   {
     name: 'Activities',
-    href: '/activities',
+    href: '/category/activities',
     icon: Activity,
     description: 'Book exciting activities and adventures',
     color: 'bg-red-500'

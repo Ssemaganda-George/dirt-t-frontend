@@ -1,86 +1,36 @@
 import { useState, useEffect } from 'react'
-import { Search, MapPin, Star, SlidersHorizontal, Plane } from 'lucide-react'
+import { Search, SlidersHorizontal, Plane, Clock } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { Link } from 'react-router-dom'
-
-interface Flight {
-  id: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location: string
-  vendors: {
-    business_name: string
-  }
-  service_categories: {
-    name: string
-  }
-}
-
-// Mock data for demonstration
-const mockFlights: Flight[] = [
-  {
-    id: 'flight-1',
-    title: 'Kampala to Nairobi Flight',
-    description: 'Direct flight from Kampala to Nairobi with excellent service and modern aircraft.',
-    price: 450000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg'],
-    location: 'Kampala - Nairobi',
-    vendors: {
-      business_name: 'East African Airlines'
-    },
-    service_categories: {
-      name: 'Flights'
-    }
-  },
-  {
-    id: 'flight-2',
-    title: 'Entebbe to Dar es Salaam',
-    description: 'Comfortable flight connecting East African cities with scenic views.',
-    price: 520000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg'],
-    location: 'Entebbe - Dar es Salaam',
-    vendors: {
-      business_name: 'Regional Air Services'
-    },
-    service_categories: {
-      name: 'Flights'
-    }
-  },
-  {
-    id: 'flight-3',
-    title: 'Kigali to Kampala Route',
-    description: 'Short regional flight with frequent departures and reliable service.',
-    price: 280000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg'],
-    location: 'Kigali - Kampala',
-    vendors: {
-      business_name: 'RwandAir Express'
-    },
-    service_categories: {
-      name: 'Flights'
-    }
-  }
-]
+import { useFlights } from '../hooks/hook'
+import type { Flight } from '../types'
 
 export default function Flights() {
   const [searchTerm, setSearchTerm] = useState('')
-  const [flights] = useState<Flight[]>(mockFlights)
-  const [filteredFlights, setFilteredFlights] = useState<Flight[]>(mockFlights)
+  const { flights: allFlights, loading } = useFlights()
+  const [filteredFlights, setFilteredFlights] = useState<Flight[]>([])
 
   useEffect(() => {
-    const filtered = flights.filter(flight =>
-      flight.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      flight.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      flight.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    setFilteredFlights(filtered)
-  }, [searchTerm, flights])
+    if (allFlights) {
+      const filtered = allFlights.filter((flight: Flight) => {
+        // Only show active flights with future departure times
+        if (flight.status !== 'active') return false
+
+        const departureTime = new Date(flight.departure_time)
+        const now = new Date()
+        if (departureTime <= now) return false
+
+        // Search functionality
+        const matchesSearch = flight.flight_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             flight.airline.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             flight.departure_city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             flight.arrival_city.toLowerCase().includes(searchTerm.toLowerCase())
+
+        return matchesSearch
+      })
+      setFilteredFlights(filtered)
+    }
+  }, [searchTerm, allFlights])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -119,55 +69,71 @@ export default function Flights() {
         </div>
 
         {/* Flights Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredFlights.map((flight) => (
-            <div key={flight.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img
-                  src={flight.images[0]}
-                  alt={flight.title}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{flight.title}</h3>
-                <p className="text-gray-600 mb-4 line-clamp-2">{flight.description}</p>
-
-                <div className="flex items-center text-sm text-gray-500 mb-4">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {flight.location}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600 ml-1">4.5</span>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading flights...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredFlights.map((flight) => (
+              <div key={flight.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                <div className="aspect-w-16 aspect-h-9 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
+                  <div className="text-white text-center">
+                    <Plane className="h-16 w-16 mx-auto mb-2" />
+                    <div className="text-lg font-semibold">{flight.flight_number}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(flight.price, flight.currency)}
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{flight.airline}</h3>
+                    <span className="text-sm text-gray-500">{flight.flight_number}</span>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                      <span>{flight.departure_city}</span>
+                      <span className="text-xs">→</span>
+                      <span>{flight.arrival_city}</span>
                     </div>
-                    <div className="text-sm text-gray-500">per person</div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{new Date(flight.departure_time).toLocaleDateString()}</span>
+                      <span>{Math.floor(flight.duration_minutes / 60)}h {flight.duration_minutes % 60}m</span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="text-sm text-gray-600 mb-2">
-                    by {flight.vendors.business_name}
+                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                    <Clock className="h-4 w-4 mr-1" />
+                    {new Date(flight.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </div>
-                  <Link
-                    to={`/service/${flight.id}`}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center block"
-                  >
-                    View Details
-                  </Link>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-gray-900">
+                        {formatCurrency(flight.economy_price, flight.currency)}
+                      </div>
+                      <div className="text-sm text-gray-500">Economy</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600 mb-2">
+                      {flight.available_seats} seats available
+                    </div>
+                    <Link
+                      to={`/flights/${flight.id}`}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center block"
+                    >
+                      Book Flight
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {filteredFlights.length === 0 && (
+        {!loading && filteredFlights.length === 0 && (
           <div className="text-center py-12">
             <Plane className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No flights found</h3>

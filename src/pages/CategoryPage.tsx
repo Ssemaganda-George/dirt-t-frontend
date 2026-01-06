@@ -3,129 +3,30 @@ import { useParams } from 'react-router-dom'
 import { Search, MapPin, Star, SlidersHorizontal } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { Link } from 'react-router-dom'
-
-interface Service {
-  id: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location: string
-  vendors: {
-    business_name: string
-  }
-  service_categories: {
-    name: string
-  }
-}
-
-// Mock data for demonstration
-const mockServices: Service[] = [
-  {
-    id: '1',
-    title: 'Luxury Safari Lodge',
-    description: 'Experience the ultimate safari adventure with luxury accommodation and wildlife viewing.',
-    price: 250000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Murchison Falls',
-    vendors: {
-      business_name: 'Safari Adventures Uganda'
-    },
-    service_categories: {
-      name: 'Hotels'
-    }
-  },
-  {
-    id: '2',
-    title: 'City Center Hotel',
-    description: 'Modern hotel in the heart of Kampala with all amenities and great service.',
-    price: 150000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Kampala',
-    vendors: {
-      business_name: 'Urban Hotels'
-    },
-    service_categories: {
-      name: 'Hotels'
-    }
-  },
-  {
-    id: '3',
-    title: 'Nile River Rafting',
-    description: 'Thrilling white water rafting experience on the mighty Nile River.',
-    price: 80000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Jinja',
-    vendors: {
-      business_name: 'Adventure Sports Uganda'
-    },
-    service_categories: {
-      name: 'Activities'
-    }
-  },
-  {
-    id: '4',
-    title: 'Gorilla Trekking Tour',
-    description: 'Once-in-a-lifetime experience to see mountain gorillas in their natural habitat.',
-    price: 600000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Bwindi National Park',
-    vendors: {
-      business_name: 'Gorilla Trek Specialists'
-    },
-    service_categories: {
-      name: 'Tours'
-    }
-  },
-  {
-    id: '5',
-    title: 'Traditional Ugandan Cuisine',
-    description: 'Authentic local dishes prepared with fresh ingredients and traditional methods.',
-    price: 35000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Kampala',
-    vendors: {
-      business_name: 'Heritage Restaurant'
-    },
-    service_categories: {
-      name: 'Restaurants'
-    }
-  },
-  {
-    id: '6',
-    title: 'Airport Transfer Service',
-    description: 'Comfortable and reliable transportation between Entebbe Airport and your destination.',
-    price: 45000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Entebbe',
-    vendors: {
-      business_name: 'Safe Travel Uganda'
-    },
-    service_categories: {
-      name: 'Transport'
-    }
-  }
-]
+import { useServices } from '../hooks/hook'
+import type { Service } from '../types'
 
 export default function CategoryPage() {
   const { category } = useParams<{ category: string }>()
-  const [services, setServices] = useState<Service[]>([])
-  const [loading, setLoading] = useState(true)
+  const { services: allServices, loading } = useServices()
+  const [filteredServices, setFilteredServices] = useState<Service[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('recommended')
   const [priceRange, setPriceRange] = useState([0, 1000000])
   const [showFilters, setShowFilters] = useState(false)
 
+  // Map URL categories to database category IDs
+  const categoryMapping: { [key: string]: string } = {
+    'hotels': 'cat_hotel',
+    'tours': 'cat_tour',
+    'restaurants': 'cat_restaurant',
+    'transport': 'cat_transport',
+    'activities': 'cat_activity'
+  }
+
   const categoryNames: { [key: string]: string } = {
     'hotels': 'Hotels',
-    'tours': 'Tours', 
+    'tours': 'Tour Packages',
     'restaurants': 'Restaurants',
     'transport': 'Transport',
     'activities': 'Activities'
@@ -134,43 +35,42 @@ export default function CategoryPage() {
   const categoryName = categoryNames[category || ''] || 'Services'
 
   useEffect(() => {
-    fetchServices()
-  }, [category])
+    if (allServices) {
+      let filtered = allServices
 
-  const fetchServices = async () => {
-    try {
-      // Simulate API call delay
-      setTimeout(() => {
-        let filteredMockServices = mockServices
-
-        // Filter by category if specified
-        if (category && category !== 'all') {
-          const targetCategory = categoryNames[category]
-          filteredMockServices = mockServices.filter(
-            service => service.service_categories.name === targetCategory
-          )
+      // Filter by category if specified
+      if (category && category !== 'all') {
+        const targetCategoryId = categoryMapping[category]
+        if (targetCategoryId) {
+          filtered = allServices.filter(service => service.category_id === targetCategoryId)
         }
+      }
 
-        setServices(filteredMockServices)
-        setLoading(false)
-      }, 1000)
-    } catch (error) {
-      console.error('Error fetching services:', error)
-      setLoading(false)
+      // Filter by approval status (only show approved services to tourists, admin services don't need approval)
+      filtered = filtered.filter(service => {
+        // Admin services don't require approval (no vendor info)
+        if (!service.vendors) {
+          return service.status !== 'inactive'
+        }
+        // Vendor services need to be approved
+        return service.status === 'approved'
+      })
+
+      setFilteredServices(filtered)
     }
-  }
+  }, [allServices, category])
 
-  const filteredServices = services.filter(service => {
+  const searchFilteredServices = filteredServices.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase())
-    
+                         (service.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+                         (service.vendors?.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+
     const matchesPrice = service.price >= priceRange[0] && service.price <= priceRange[1]
 
     return matchesSearch && matchesPrice
   })
 
-  const sortedServices = [...filteredServices].sort((a, b) => {
+  const sortedServices = [...searchFilteredServices].sort((a, b) => {
     switch (sortBy) {
       case 'price-low':
         return a.price - b.price
@@ -321,7 +221,7 @@ interface ServiceCardProps {
 
 function ServiceCard({ service }: ServiceCardProps) {
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
-  
+
   return (
     <Link to={`/service/${service.id}`} className="group">
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
@@ -338,24 +238,26 @@ function ServiceCard({ service }: ServiceCardProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="p-4">
-          <div className="flex items-center text-sm text-gray-500 mb-2">
-            <MapPin className="h-4 w-4 mr-1" />
-            {service.location}
-          </div>
-          
+          {service.location && (
+            <div className="flex items-center text-sm text-gray-500 mb-2">
+              <MapPin className="h-4 w-4 mr-1" />
+              {service.location}
+            </div>
+          )}
+
           <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
             {service.title}
           </h3>
-          
+
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {service.description}
           </p>
-          
+
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              by {service.vendors.business_name}
+              by {service.vendors?.business_name || 'Unknown Vendor'}
             </div>
             <div className="text-right">
               <div className="text-lg font-bold text-gray-900">

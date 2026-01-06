@@ -35,11 +35,7 @@ function App() {
             <Route path="services" element={<ServiceCategories />} />
             <Route path="flights" element={<FlightPage />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="hotels" element={<CategoryPage />} />
-            <Route path="tours" element={<CategoryPage />} />
-            <Route path="restaurants" element={<CategoryPage />} />
-            <Route path="transport" element={<CategoryPage />} />
-            <Route path="activities" element={<CategoryPage />} />
+            <Route path="category/:category" element={<CategoryPage />} />
           </Route>
           
           {/* Auth Routes */}

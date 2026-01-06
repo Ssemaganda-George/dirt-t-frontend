@@ -13,10 +13,10 @@ export default function PublicLayout() {
 
   const navigation = [
     { name: 'Home', href: '/' },
-    { name: 'Hotels', href: '/hotels' },
-    { name: 'Tours', href: '/tours' },
-    { name: 'Restaurants', href: '/restaurants' },
-    { name: 'Transport', href: '/transport' },
+    { name: 'Hotels', href: '/category/hotels' },
+    { name: 'Tours', href: '/category/tours' },
+    { name: 'Restaurants', href: '/category/restaurants' },
+    { name: 'Transport', href: '/category/transport' },
     { name: 'Flights', href: '/flights' },
   ]
 
@@ -175,10 +175,10 @@ export default function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-4">Explore</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/hotels" className="hover:text-white">Hotels</Link></li>
-                <li><Link to="/tours" className="hover:text-white">Tours</Link></li>
-                <li><Link to="/restaurants" className="hover:text-white">Restaurants</Link></li>
-                <li><Link to="/transport" className="hover:text-white">Transport</Link></li>
+                <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
+                <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
+                <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
               </ul>
             </div>
             

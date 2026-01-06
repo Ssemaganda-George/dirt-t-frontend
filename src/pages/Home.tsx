@@ -60,8 +60,10 @@ export default function Home() {
     try {
       setLoading(true)
       const allServices = await getServices()
-      // Only show approved services to tourists
-      const approvedServices = allServices.filter(service => service.status === 'approved')
+      // Only show approved services to tourists, but admin services don't require approval
+      const approvedServices = allServices.filter(service => 
+        !service.vendors || service.status === 'approved'
+      )
       setServices(approvedServices)
     } catch (error) {
       console.error('Error fetching services:', error)
@@ -73,15 +75,14 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
-      // Add "All" category at the beginning and "Flights" at the end
+      // Add "All" category at the beginning
       const allCategories = [
         { id: 'all', name: 'All', icon: '🌍' },
         ...dbCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
           icon: cat.icon || '📍'
-        })),
-        { id: 'flights', name: 'Flights', icon: '✈️' }
+        }))
       ]
       setCategories(allCategories)
     } catch (error) {
@@ -93,8 +94,7 @@ export default function Home() {
         { id: 'cat_tour', name: 'Tour Packages', icon: '🗺️' },
         { id: 'cat_transport', name: 'Transport', icon: '🚗' },
         { id: 'cat_restaurant', name: 'Restaurants', icon: '🍽️' },
-        { id: 'cat_activities', name: 'Activities', icon: '🎯' },
-        { id: 'flights', name: 'Flights', icon: '✈️' }
+        { id: 'cat_activities', name: 'Activities', icon: '🎯' }
       ])
     }
   }
@@ -119,8 +119,12 @@ export default function Home() {
   })
 
   const filteredFlights = allFlights.filter((flight: Flight) => {
-    // Only show active flights
+    // Only show active flights with future departure times
     if (flight.status !== 'active') return false
+    
+    const departureTime = new Date(flight.departure_time)
+    const now = new Date()
+    if (departureTime <= now) return false
 
     const matchesSearch = flight.flight_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          flight.airline.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -130,8 +134,18 @@ export default function Home() {
     return matchesSearch
   })
 
-  const isShowingFlights = selectedCategory === 'flights'
-  const currentItems = isShowingFlights ? filteredFlights : filteredServices
+  const isShowingFlights = selectedCategory === 'cat_flights'
+  const isShowingAll = selectedCategory === 'all'
+  
+  // For "All" category, combine services and flights
+  // For "Flights" category, show only flights
+  // For other categories, show only services
+  const currentItems = isShowingAll 
+    ? [...filteredServices, ...filteredFlights]
+    : isShowingFlights 
+      ? filteredFlights 
+      : filteredServices
+  
   const currentItemCount = currentItems.length
 
   if (selectedService) {
@@ -226,11 +240,10 @@ export default function Home() {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
               {selectedCategory === 'all' ? 'Explore Uganda' : 
-               selectedCategory === 'flights' ? 'Available Flights' : 
-               selectedCategory}
+               categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
             </h2>
             <p className="text-gray-600">
-              {currentItemCount} {isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
+              {currentItemCount} {isShowingAll ? 'result' : isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>
@@ -242,25 +255,30 @@ export default function Home() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isShowingFlights ? (
-              filteredFlights.map((flight) => (
-                <FlightCard 
-                  key={flight.id} 
-                  flight={flight}
-                  formatCurrency={formatCurrency}
-                  onClick={() => {}} // TODO: Implement flight detail navigation
-                />
-              ))
-            ) : (
-              filteredServices.map((service) => (
-                <ServiceCard 
-                  key={service.id} 
-                  service={service}
-                  formatCurrency={formatCurrency}
-                  onClick={() => setSelectedService(service)}
-                />
-              ))
-            )}
+            {currentItems.map((item) => {
+              // Check if item is a flight (has flight_number) or service
+              if ('flight_number' in item) {
+                // It's a flight
+                return (
+                  <FlightCard 
+                    key={item.id} 
+                    flight={item}
+                    formatCurrency={formatCurrency}
+                    onClick={() => {}} // TODO: Implement flight detail navigation
+                  />
+                )
+              } else {
+                // It's a service
+                return (
+                  <ServiceCard 
+                    key={item.id} 
+                    service={item}
+                    formatCurrency={formatCurrency}
+                    onClick={() => setSelectedService(item)}
+                  />
+                )
+              }
+            })}
           </div>
         )}
 

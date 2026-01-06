@@ -54,22 +54,22 @@ INSERT INTO flights (
   amenities, baggage_allowance
 ) VALUES
   ('KQ101', 'Kenya Airways', 'EBB', 'NBO', 'Entebbe', 'Nairobi',
-   '2024-01-15 08:00:00+00', '2024-01-15 09:30:00+00', 90, 'Boeing 737',
+   '2026-02-15 08:00:00+00', '2026-02-15 09:30:00+00', 90, 'Boeing 737',
    450000, 1200000, 2500000, 'UGX', 150, 120,
    ARRAY['WiFi', 'Entertainment', 'Meals'], '20kg checked + 8kg carry-on'),
 
   ('UR201', 'RwandAir', 'EBB', 'KGL', 'Entebbe', 'Kigali',
-   '2024-01-15 10:00:00+00', '2024-01-15 11:15:00+00', 75, 'Bombardier CRJ',
+   '2026-02-15 10:00:00+00', '2026-02-15 11:15:00+00', 75, 'Bombardier CRJ',
    280000, 750000, 1500000, 'UGX', 80, 65,
    ARRAY['WiFi', 'Snacks'], '15kg checked + 7kg carry-on'),
 
   ('ET301', 'Ethiopian Airlines', 'EBB', 'ADD', 'Entebbe', 'Addis Ababa',
-   '2024-01-15 14:00:00+00', '2024-01-15 16:30:00+00', 150, 'Boeing 787',
+   '2026-02-15 14:00:00+00', '2026-02-15 16:30:00+00', 150, 'Boeing 787',
    650000, 1800000, 3500000, 'UGX', 200, 180,
    ARRAY['WiFi', 'Entertainment', 'Meals', 'USB Charging'], '23kg checked + 8kg carry-on'),
 
   ('KL401', 'KLM', 'EBB', 'AMS', 'Entebbe', 'Amsterdam',
-   '2024-01-15 22:00:00+00', '2024-01-16 08:00:00+00', 540, 'Boeing 777',
+   '2026-02-15 22:00:00+00', '2026-02-16 08:00:00+00', 540, 'Boeing 777',
    2200000, 6500000, 12000000, 'UGX', 300, 250,
    ARRAY['WiFi', 'Entertainment', 'Meals', 'Lie-flat seats', 'USB Charging'], '23kg checked + 8kg carry-on')
 ON CONFLICT (flight_number) DO NOTHING;
