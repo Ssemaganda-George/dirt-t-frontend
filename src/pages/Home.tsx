@@ -76,10 +76,17 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
+      // Sort categories so Activities comes last
+      const sortedCategories = dbCategories.sort((a, b) => {
+        if (a.id === 'cat_activities') return 1
+        if (b.id === 'cat_activities') return -1
+        return a.name.localeCompare(b.name)
+      })
+      
       // Add "All" category at the beginning
       const allCategories = [
         { id: 'all', name: 'All', icon: '🌍' },
-        ...dbCategories.map(cat => ({
+        ...sortedCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
           icon: cat.icon || '📍'

@@ -1,7 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  Store,
   ShoppingBag,
   CreditCard,
   BarChart3,
@@ -10,12 +9,13 @@ import {
   X,
   MapPin,
   Plane,
+  Users,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: BarChart3 },
-  { name: 'Vendors', href: '/admin/vendors', icon: Store },
+  { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Services', href: '/admin/services', icon: ShoppingBag },
   { name: 'Flights', href: '/admin/flights', icon: Plane },
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },

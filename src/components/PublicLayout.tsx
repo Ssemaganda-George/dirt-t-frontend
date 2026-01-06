@@ -1,6 +1,6 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { User, Menu, X, Heart, ShoppingBag, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
 
@@ -9,15 +9,33 @@ export default function PublicLayout() {
   const [showPreferences, setShowPreferences] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState('UG')
   const [selectedCurrency, setSelectedCurrency] = useState('UGX')
+  const [showSignInDropdown, setShowSignInDropdown] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowSignInDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const navigation = [
     { name: 'Home', href: '/' },
+    { name: 'Flights', href: '/flights' },
     { name: 'Hotels', href: '/category/hotels' },
     { name: 'Tours', href: '/category/tours' },
     { name: 'Restaurants', href: '/category/restaurants' },
     { name: 'Transport', href: '/category/transport' },
-    { name: 'Flights', href: '/flights' },
+    
   ]
 
   return (
@@ -69,13 +87,47 @@ export default function PublicLayout() {
                 <span className="text-sm">Bookings</span>
               </button>
 
-              <Link
-                to="/login"
-                className="flex items-center px-4 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
-              >
-                <User className="h-5 w-5 mr-1" />
-                <span className="text-sm font-medium">Sign In</span>
-              </Link>
+              {/* Sign In Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowSignInDropdown(!showSignInDropdown)}
+                  className="flex items-center px-4 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
+                >
+                  <User className="h-5 w-5 mr-1" />
+                  <span className="text-sm font-medium">Sign In</span>
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </button>
+
+                {showSignInDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="px-4 py-2 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">Select Account</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowSignInDropdown(false)
+                          navigate('/login')
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <User className="h-4 w-4 inline mr-2" />
+                        Tourist
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowSignInDropdown(false)
+                          navigate('/vendor-login')
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      >
+                        <ShoppingBag className="h-4 w-4 inline mr-2" />
+                        Business
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Mobile menu button */}
               <button
@@ -135,6 +187,28 @@ export default function PublicLayout() {
                 >
                   My Bookings
                 </Link>
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      navigate('/login')
+                    }}
+                    className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
+                  >
+                    <User className="h-5 w-5 mr-2" />
+                    Sign in as Tourist
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      navigate('/vendor-login')
+                    }}
+                    className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
+                  >
+                    <ShoppingBag className="h-5 w-5 mr-2" />
+                    Sign in as Vendor
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -31,18 +31,18 @@ const categories = [
     color: 'bg-purple-500'
   },
   {
-    name: 'Activities',
-    href: '/category/activities',
-    icon: Activity,
-    description: 'Book exciting activities and adventures',
-    color: 'bg-red-500'
-  },
-  {
     name: 'Flights',
     href: '/flights',
     icon: Plane,
     description: 'Find and book flights to your destination',
     color: 'bg-indigo-500'
+  },
+  {
+    name: 'Activities',
+    href: '/category/activities',
+    icon: Activity,
+    description: 'Book exciting activities and adventures',
+    color: 'bg-red-500'
   }
 ]
 

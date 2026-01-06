@@ -711,68 +711,6 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </div>
         )
 
-      case 'cat_guide':
-        return (
-          <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-gray-900">Guide Details</h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
-                <input type="number" value={form.years_experience || ''} onChange={(e) => update('years_experience', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Service Area</label>
-                <input value={form.service_area || ''} onChange={(e) => update('service_area', e.target.value)} placeholder="e.g., Kampala, National Parks" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Languages Spoken</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrayInputs.languages_spoken || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, languages_spoken: e.target.value }))}
-                  placeholder="e.g., English, Luganda"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('languages_spoken', arrayInputs.languages_spoken || ''))}
-                />
-                <button type="button" onClick={() => addToArray('languages_spoken', arrayInputs.languages_spoken || '')} className="px-3 py-2 bg-gray-900 text-white rounded-md">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.languages_spoken || []).map((lang, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800">
-                    {lang}
-                    <button type="button" onClick={() => removeFromArray('languages_spoken', idx)} className="ml-1 text-indigo-600 hover:text-indigo-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Specialties</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrayInputs.specialties || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, specialties: e.target.value }))}
-                  placeholder="e.g., Wildlife, Culture"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('specialties', arrayInputs.specialties || ''))}
-                />
-                <button type="button" onClick={() => addToArray('specialties', arrayInputs.specialties || '')} className="px-3 py-2 bg-gray-900 text-white rounded-md">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.specialties || []).map((specialty, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-teal-100 text-teal-800">
-                    {specialty}
-                    <button type="button" onClick={() => removeFromArray('specialties', idx)} className="ml-1 text-teal-600 hover:text-teal-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-
       case 'cat_activities':
         return (
           <div className="space-y-4 border-t pt-4">
@@ -1133,7 +1071,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 <option value="cat_hostel">Hostels & Guesthouses</option>
                 <option value="cat_homestay">Homestays</option>
                 <option value="cat_transport">Transport</option>
-                <option value="cat_guide">Guides</option>
+                <option value="cat_activities">Activities</option>
                 <option value="cat_restaurant">Restaurants</option>
                 <option value="cat_tour">Tour Packages</option>
                 <option value="cat_activities">Activities & Experiences</option>

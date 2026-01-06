@@ -18,7 +18,7 @@ import VendorServices from './pages/vendor/Services'
 import VendorBookings from './pages/vendor/Bookings'
 import VendorTransactions from './pages/vendor/Transactions'
 import Dashboard from './pages/admin/Dashboard'
-import Vendors from './pages/admin/Vendors'
+import Users from './pages/admin/Users'
 import { Services } from './pages/admin/Services'
 import { Flights } from './pages/admin/Flights'
 import { Bookings } from './pages/admin/Bookings'
@@ -69,12 +69,11 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
-            <Route path="vendors" element={<Vendors />} />
+            <Route path="users" element={<Users />} />
             <Route path="services" element={<Services />} />
             <Route path="flights" element={<Flights />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="transactions" element={<Transactions />} />
-            <Route path="users" element={<div className="p-8 text-center text-gray-500">User management coming soon...</div>} />
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">
