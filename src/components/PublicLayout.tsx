@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { User, Menu, X, Heart, ShoppingBag, Globe } from 'lucide-react'
 import { useState } from 'react'
 import PreferencesModal from './PreferencesModal'
+import MobileBottomNav from './MobileBottomNav'
 
 export default function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -150,9 +151,12 @@ export default function PublicLayout() {
       />
 
       {/* Main Content */}
-      <main>
+      <main className="pb-16 md:pb-0">
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white">

@@ -6,6 +6,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
 import CategoryPage from './pages/CategoryPage'
+import ServiceCategories from './pages/Services'
+import Flights from './pages/Flights'
+import Profile from './pages/Profile'
 import Login from './pages/Login'
 import VendorLogin from './pages/VendorLogin'
 import VendorLayout from './components/VendorLayout'
@@ -28,6 +31,9 @@ function App() {
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
+            <Route path="services" element={<ServiceCategories />} />
+            <Route path="flights" element={<Flights />} />
+            <Route path="profile" element={<Profile />} />
             <Route path="hotels" element={<CategoryPage />} />
             <Route path="tours" element={<CategoryPage />} />
             <Route path="restaurants" element={<CategoryPage />} />
