@@ -18,8 +18,8 @@ function save<T>(k: string, v: T) {
 export interface PendingServiceRecord {
   vendor_id: string
   service_id: string
-  name: string
-  category: Service['category']
+  title: string
+  category_id: string
   price: number
   currency: string
   created_at: string
@@ -36,8 +36,8 @@ export function addPendingService(vendorId: string, svc: Service) {
   const rec: PendingServiceRecord = {
     vendor_id: vendorId,
     service_id: svc.id,
-    name: svc.name,
-    category: svc.category,
+    title: svc.title,
+    category_id: svc.category_id,
     price: svc.price,
     currency: svc.currency,
     created_at: svc.created_at,

@@ -61,6 +61,125 @@ export interface Service {
   approved_by?: string
   created_at: string
   updated_at: string
+
+  // Enhanced general fields
+  duration_days?: number
+  group_size_min?: number
+  group_size_max?: number
+  best_time_to_visit?: string
+  what_to_bring?: string[]
+  age_restrictions?: string
+  health_requirements?: string
+  accessibility_features?: string[]
+  sustainability_certified?: boolean
+  eco_friendly?: boolean
+
+  // Hotel-specific fields
+  room_types?: string[]
+  check_in_time?: string
+  check_out_time?: string
+  star_rating?: number
+  facilities?: string[]
+  total_rooms?: number
+  room_amenities?: string[]
+  nearby_attractions?: string[]
+  parking_available?: boolean
+  pet_friendly?: boolean
+  breakfast_included?: boolean
+
+  // Tour-specific fields
+  itinerary?: string[]
+  included_items?: string[]
+  excluded_items?: string[]
+  difficulty_level?: 'easy' | 'moderate' | 'challenging' | 'difficult'
+  minimum_age?: number
+  languages_offered?: string[]
+  tour_highlights?: string[]
+  meeting_point?: string
+  end_point?: string
+  transportation_included?: boolean
+  meals_included?: string[]
+  guide_included?: boolean
+
+  // Transport-specific fields
+  vehicle_type?: string
+  vehicle_capacity?: number
+  pickup_locations?: string[]
+  dropoff_locations?: string[]
+  route_description?: string
+  driver_included?: boolean
+  air_conditioning?: boolean
+  gps_tracking?: boolean
+  fuel_included?: boolean
+  tolls_included?: boolean
+  insurance_included?: boolean
+
+  // Restaurant-specific fields
+  cuisine_type?: string
+  opening_hours?: { [key: string]: string }
+  menu_items?: string[]
+  dietary_options?: string[]
+  average_cost_per_person?: number
+  reservations_required?: boolean
+  outdoor_seating?: boolean
+  live_music?: boolean
+  private_dining?: boolean
+  alcohol_served?: boolean
+
+  // Guide-specific fields
+  languages_spoken?: string[]
+  specialties?: string[]
+  certifications?: string[]
+  years_experience?: number
+  service_area?: string
+  license_number?: string
+  emergency_contact?: string
+  first_aid_certified?: boolean
+  vehicle_owned?: boolean
+
+  // Activity-specific fields
+  activity_type?: string
+  skill_level_required?: string
+  equipment_provided?: string[]
+  safety_briefing_required?: boolean
+  weather_dependent?: boolean
+  seasonal_availability?: string
+
+  // Rental-specific fields
+  rental_items?: string[]
+  rental_duration?: string
+  deposit_required?: number
+  insurance_required?: boolean
+  delivery_available?: boolean
+  maintenance_included?: boolean
+
+  // Event-specific fields
+  event_type?: string
+  event_date?: string
+  event_duration_hours?: number
+  max_participants?: number
+  materials_included?: string[]
+  prerequisites?: string
+
+  // Agency-specific fields
+  services_offered?: string[]
+  destinations_covered?: string[]
+  booking_fee?: number
+  customization_available?: boolean
+  emergency_support?: boolean
+
+  // Enhanced contact and booking info
+  tags?: string[]
+  contact_info?: { phone?: string; email?: string; website?: string }
+  booking_requirements?: string
+  cancellation_policy?: string
+  website_url?: string
+  social_media?: { [key: string]: string }
+  emergency_phone?: string
+  booking_deadline_hours?: number
+  payment_methods?: string[]
+  refund_policy?: string
+
   vendors?: Vendor
   service_categories?: ServiceCategory
 }
@@ -106,4 +225,288 @@ export interface Transaction {
   metadata: Record<string, any>
   created_at: string
   updated_at: string
+}
+
+// Database functions
+import { supabase } from './supabaseClient'
+
+// Service CRUD operations
+export async function getServices(vendorId?: string) {
+  let query = supabase
+    .from('services')
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+
+  if (vendorId) {
+    query = query.eq('vendor_id', vendorId)
+  }
+
+  const { data, error } = await query.order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching services:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function createService(serviceData: {
+  vendor_id: string
+  category_id: string
+  title: string
+  description: string
+  price: number
+  currency?: string
+  images?: string[]
+  location?: string
+  duration_hours?: number
+  max_capacity?: number
+  amenities?: string[]
+
+  // Hotel-specific fields
+  room_types?: string[]
+  check_in_time?: string
+  check_out_time?: string
+  star_rating?: number
+  facilities?: string[]
+
+  // Tour-specific fields
+  itinerary?: string[]
+  included_items?: string[]
+  excluded_items?: string[]
+  difficulty_level?: 'easy' | 'moderate' | 'challenging' | 'difficult'
+  minimum_age?: number
+  languages_offered?: string[]
+
+  // Transport-specific fields
+  vehicle_type?: string
+  vehicle_capacity?: number
+  pickup_locations?: string[]
+  dropoff_locations?: string[]
+  route_description?: string
+
+  // Restaurant-specific fields
+  cuisine_type?: string
+  opening_hours?: { [key: string]: string }
+  menu_items?: string[]
+  dietary_options?: string[]
+  average_cost_per_person?: number
+
+  // Guide-specific fields
+  languages_spoken?: string[]
+  specialties?: string[]
+  certifications?: string[]
+  years_experience?: number
+  service_area?: string
+
+  // General metadata
+  tags?: string[]
+  contact_info?: { phone?: string; email?: string; website?: string }
+  booking_requirements?: string
+  cancellation_policy?: string
+
+  status?: string
+}) {
+  const { data, error } = await supabase
+    .from('services')
+    .insert([{
+      ...serviceData,
+      status: serviceData.status || 'pending',
+      currency: serviceData.currency || 'UGX',
+      images: serviceData.images || [],
+      amenities: serviceData.amenities || []
+    }])
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+    .single()
+
+  if (error) {
+    console.error('Error creating service:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function updateService(serviceId: string, updates: Partial<{
+  title: string
+  description: string
+  price: number
+  currency: string
+  images: string[]
+  location: string
+  duration_hours: number
+  max_capacity: number
+  amenities: string[]
+  status: string
+  category_id: string
+
+  // Hotel-specific fields
+  room_types?: string[]
+  check_in_time?: string
+  check_out_time?: string
+  star_rating?: number
+  facilities?: string[]
+
+  // Tour-specific fields
+  itinerary?: string[]
+  included_items?: string[]
+  excluded_items?: string[]
+  difficulty_level?: 'easy' | 'moderate' | 'challenging' | 'difficult'
+  minimum_age?: number
+  languages_offered?: string[]
+
+  // Transport-specific fields
+  vehicle_type?: string
+  vehicle_capacity?: number
+  pickup_locations?: string[]
+  dropoff_locations?: string[]
+  route_description?: string
+
+  // Restaurant-specific fields
+  cuisine_type?: string
+  opening_hours?: { [key: string]: string }
+  menu_items?: string[]
+  dietary_options?: string[]
+  average_cost_per_person?: number
+
+  // Guide-specific fields
+  languages_spoken?: string[]
+  specialties?: string[]
+  certifications?: string[]
+  years_experience?: number
+  service_area?: string
+
+  // General metadata
+  tags?: string[]
+  contact_info?: { phone?: string; email?: string; website?: string }
+  booking_requirements?: string
+  cancellation_policy?: string
+}>) {
+  const { data, error } = await supabase
+    .from('services')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', serviceId)
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+    .single()
+
+  if (error) {
+    console.error('Error updating service:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteService(serviceId: string) {
+  const { error } = await supabase
+    .from('services')
+    .delete()
+    .eq('id', serviceId)
+
+  if (error) {
+    console.error('Error deleting service:', error)
+    throw error
+  }
+}
+
+// Get service categories
+export async function getServiceCategories() {
+  const { data, error } = await supabase
+    .from('service_categories')
+    .select('*')
+    .order('name')
+
+  if (error) {
+    console.error('Error fetching service categories:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+// Image upload functions
+export async function uploadServiceImage(file: File, serviceId?: string): Promise<string> {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${serviceId || 'temp'}_${Date.now()}.${fileExt}`
+  const filePath = `services/${fileName}`
+
+  const { error } = await supabase.storage
+    .from('service-images')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    })
+
+  if (error) {
+    console.error('Error uploading image:', error)
+    throw error
+  }
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('service-images')
+    .getPublicUrl(filePath)
+
+  return publicUrl
+}
+
+export async function deleteServiceImage(imageUrl: string): Promise<void> {
+  // Extract file path from URL
+  const urlParts = imageUrl.split('/')
+  const fileName = urlParts[urlParts.length - 1]
+  const filePath = `services/${fileName}`
+
+  const { error } = await supabase.storage
+    .from('service-images')
+    .remove([filePath])
+
+  if (error) {
+    console.error('Error deleting image:', error)
+    throw error
+  }
 }

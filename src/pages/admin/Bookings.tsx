@@ -170,10 +170,10 @@ export function Bookings() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {booking.service?.name || 'Unknown Service'}
+                          {booking.service?.title || 'Unknown Service'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {booking.service?.vendor?.business_name}
+                          {booking.service?.vendors?.business_name}
                         </div>
                       </div>
                     </td>

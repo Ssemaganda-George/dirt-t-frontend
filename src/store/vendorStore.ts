@@ -26,13 +26,13 @@ function ensureSeed(vendorId: string) {
     const s1: Service = {
       id: `s_${Date.now()}`,
       vendor_id: vendorId,
-      name: 'Sample Tour Package',
+      title: 'Sample Tour Package',
       description: 'Guided experience showcasing local highlights.',
-      category: 'tour_package',
+      category_id: 'cat_tour',
       price: 120000,
       currency: 'UGX',
       images: ['https://images.pexels.com/photos/346885/pexels-photo-346885.jpeg'],
-      availability_status: 'available',
+      amenities: [],
       status: 'approved',
       created_at: now(),
       updated_at: now()
@@ -99,13 +99,13 @@ export function createService(vendorId: string, data: Omit<Service, 'id' | 'vend
   const svc: Service = {
     id: `svc_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     vendor_id: vendorId,
-    name: data.name,
+    title: data.title,
     description: data.description,
-    category: data.category,
+    category_id: data.category_id,
     price: data.price,
     currency: data.currency,
     images: data.images || [],
-    availability_status: data.availability_status,
+    amenities: data.amenities || [],
     status: data.status || 'pending',
     created_at: now(),
     updated_at: now()

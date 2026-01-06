@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Search, MapPin, Star, Heart } from 'lucide-react'
+import { getServices, getServiceCategories } from '../lib/database'
 
 interface Service {
   id: string
@@ -8,148 +9,79 @@ interface Service {
   price: number
   currency: string
   images: string[]
-  location: string
-  vendor: string
-  category: string
-  reviews: number
-  rating: number
-}
-
-const mockServices: Service[] = [
-  {
-    id: '1',
-    title: 'Murchison Falls Safari',
-    description: 'Experience the magnificent Murchison Falls and spot the Big Five on this unforgettable safari adventure.',
-    price: 450000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-    location: 'Murchison Falls National Park',
-    vendor: 'Uganda Safari Co.',
-    category: 'Tours',
-    reviews: 1847,
-    rating: 4.8
-  },
-  {
-    id: '2',
-    title: 'Lake Victoria Hotel',
-    description: 'Luxury waterfront accommodation with stunning views of Lake Victoria.',
-    price: 320000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg'],
-    location: 'Entebbe',
-    vendor: 'Victoria Hotels',
-    category: 'Hotels',
-    reviews: 2156,
-    rating: 4.6
-  },
-  {
-    id: '3',
-    title: 'Jinja White Water Rafting',
-    description: 'Thrilling white water rafting experience on the source of the Nile River.',
-    price: 285000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/2827374/pexels-photo-2827374.jpeg'],
-    location: 'Jinja',
-    vendor: 'Nile Adventures',
-    category: 'Activities',
-    reviews: 987,
-    rating: 4.9
-  },
-  {
-    id: '4',
-    title: 'Kampala Cultural Restaurant',
-    description: 'Authentic Ugandan cuisine in the heart of Kampala with traditional music and dance.',
-    price: 75000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1565982/pexels-photo-1565982.jpeg'],
-    location: 'Kampala',
-    vendor: 'Cultural Dining',
-    category: 'Restaurants',
-    reviews: 1432,
-    rating: 4.7
-  },
-  {
-    id: '5',
-    title: 'Airport Transfer Service',
-    description: 'Reliable and comfortable transport between Entebbe Airport and your destination.',
-    price: 85000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/164634/pexels-photo-164634.jpeg'],
-    location: 'Entebbe - Kampala',
-    vendor: 'Uganda Transfers',
-    category: 'Transport',
-    reviews: 756,
-    rating: 4.5
-  },
-  {
-    id: '6',
-    title: 'Queen Elizabeth Park Lodge',
-    description: 'Eco-friendly lodge overlooking the Kazinga Channel with game viewing opportunities.',
-    price: 420000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1134166/pexels-photo-1134166.jpeg'],
-    location: 'Queen Elizabeth National Park',
-    vendor: 'Eco Lodges Uganda',
-    category: 'Hotels',
-    reviews: 1623,
-    rating: 4.8
-  },
-  {
-    id: '7',
-    title: 'Bwindi Gorilla Trekking',
-    description: 'Once-in-a-lifetime mountain gorilla trekking experience in the impenetrable forest.',
-    price: 1200000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/1661535/pexels-photo-1661535.jpeg'],
-    location: 'Bwindi Impenetrable Forest',
-    vendor: 'Gorilla Safaris Ltd',
-    category: 'Tours',
-    reviews: 2341,
-    rating: 5.0
-  },
-  {
-    id: '8',
-    title: 'Serena Kigo Restaurant',
-    description: 'Fine dining with panoramic lake views and international cuisine.',
-    price: 120000,
-    currency: 'UGX',
-    images: ['https://images.pexels.com/photos/262978/pexels-photo-262978.jpeg'],
-    location: 'Kampala',
-    vendor: 'Serena Hotels',
-    category: 'Restaurants',
-    reviews: 891,
-    rating: 4.6
+  location?: string
+  vendors?: {
+    business_name: string
   }
-]
+  service_categories?: {
+    name: string
+    icon: string
+  }
+  category_id: string
+  status: string
+}
 
 export default function Home() {
   const [services, setServices] = useState<Service[]>([])
+  const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: string}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [loading, setLoading] = useState(true)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  const categories = [
-    { id: 'all', name: 'All', icon: '🌍' },
-    { id: 'Hotels', name: 'Hotels', icon: '🏨' },
-    { id: 'Tours', name: 'Tours', icon: '🗺️' },
-    { id: 'Transport', name: 'Transport', icon: '🚗' },
-    { id: 'Restaurants', name: 'Restaurants', icon: '🍽️' },
-    { id: 'Activities', name: 'Activities', icon: '🎯' }
-  ]
+  // Remove hardcoded categories - will be fetched from database
+  // const categories = [
+  //   { id: 'all', name: 'All', icon: '🌍' },
+  //   { id: 'Hotels', name: 'Hotels', icon: '🏨' },
+  //   { id: 'Tours', name: 'Tours', icon: '🗺️' },
+  //   { id: 'Transport', name: 'Transport', icon: '🚗' },
+  //   { id: 'Restaurants', name: 'Restaurants', icon: '🍽️' },
+  //   { id: 'Activities', name: 'Activities', icon: '🎯' }
+  // ]
 
   useEffect(() => {
     fetchServices()
+    fetchCategories()
   }, [])
 
   const fetchServices = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 800))
-      setServices(mockServices)
+      setLoading(true)
+      const allServices = await getServices()
+      // Only show approved services to tourists
+      const approvedServices = allServices.filter(service => service.status === 'approved')
+      setServices(approvedServices)
     } catch (error) {
       console.error('Error fetching services:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const dbCategories = await getServiceCategories()
+      // Add "All" category at the beginning
+      const allCategories = [
+        { id: 'all', name: 'All', icon: '🌍' },
+        ...dbCategories.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon || '📍'
+        }))
+      ]
+      setCategories(allCategories)
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      // Fallback to basic categories if database fetch fails
+      setCategories([
+        { id: 'all', name: 'All', icon: '🌍' },
+        { id: 'cat_hotel', name: 'Hotels', icon: '🏨' },
+        { id: 'cat_tour', name: 'Tour Packages', icon: '🗺️' },
+        { id: 'cat_transport', name: 'Transport', icon: '🚗' },
+        { id: 'cat_restaurant', name: 'Restaurants', icon: '🍽️' },
+        { id: 'cat_activities', name: 'Activities', icon: '🎯' }
+      ])
     }
   }
 
@@ -163,10 +95,11 @@ export default function Home() {
 
   const filteredServices = services.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         service.vendor.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory
+                         (service.location && service.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const matchesCategory = selectedCategory === 'all' ||
+                           service.category_id === selectedCategory
 
     return matchesSearch && matchesCategory
   })
@@ -224,7 +157,7 @@ export default function Home() {
 
           {/* Quick Categories */}
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            {categories.slice(1).map((cat) => (
+            {categories.slice(1, 6).map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -341,7 +274,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           {/* Category Badge */}
           <div className="absolute bottom-3 left-3">
             <span className="bg-white/95 px-3 py-1 rounded-full text-xs font-semibold text-gray-800">
-              {service.category}
+              {service.service_categories?.name || service.category_id}
             </span>
           </div>
         </div>
@@ -352,11 +285,11 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center text-sm text-gray-600 flex-1 min-w-0">
               <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">{service.location}</span>
+              <span className="truncate">{service.location || 'Location TBA'}</span>
             </div>
             <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg ml-2">
               <Star className="h-4 w-4 text-emerald-600 fill-current flex-shrink-0" />
-              <span className="text-sm font-bold text-emerald-700">{service.rating}</span>
+              <span className="text-sm font-bold text-emerald-700">4.5</span>
             </div>
           </div>
 
@@ -372,7 +305,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 
           {/* Reviews & Vendor */}
           <div className="text-xs text-gray-500 mb-3">
-            {service.reviews.toLocaleString()} reviews • {service.vendor}
+            0 reviews • {service.vendors?.business_name || 'Vendor'}
           </div>
 
           {/* Price */}
@@ -444,12 +377,12 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">
-                    {service.category}
+                    {service.service_categories?.name || service.category_id}
                   </span>
                   <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
                     <Star className="h-4 w-4 text-emerald-600 fill-current" />
-                    <span className="text-sm font-bold text-emerald-700">{service.rating}</span>
-                    <span className="text-sm text-gray-600">({service.reviews.toLocaleString()} reviews)</span>
+                    <span className="text-sm font-bold text-emerald-700">4.5</span>
+                    <span className="text-sm text-gray-600">(0 reviews)</span>
                   </div>
                 </div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-3">
@@ -475,11 +408,11 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
                     <span className="text-2xl font-bold text-emerald-700">
-                      {service.vendor.charAt(0)}
+                      {service.vendors?.business_name?.charAt(0) || 'V'}
                     </span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{service.vendor}</h3>
+                    <h3 className="font-bold text-gray-900 text-lg">{service.vendors?.business_name || 'Vendor'}</h3>
                     <p className="text-gray-600">Professional tour operator</p>
                   </div>
                 </div>

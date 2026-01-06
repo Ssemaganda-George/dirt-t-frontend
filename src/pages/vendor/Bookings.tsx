@@ -48,7 +48,7 @@ export default function VendorBookings() {
             <tbody className="bg-white divide-y divide-gray-200">
               {bookings.map(b => (
                 <tr key={b.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-900">{b.service?.name || b.service_id}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{b.service?.title || b.service_id}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
@@ -127,7 +127,7 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
           <div>
             <label className="block text-sm font-medium text-gray-700">Service</label>
             <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="mt-1 w-full border rounded-md px-3 py-2">
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {services.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
