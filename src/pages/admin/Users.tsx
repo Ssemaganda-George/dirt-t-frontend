@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor } from '../../lib/utils'
-import { Check, X, Eye, User, Store } from 'lucide-react'
+import { Check, X, Eye, User, Store, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 
 // Database types
@@ -70,42 +70,51 @@ export default function Users() {
     try {
       setLoading(true)
 
-      // Fetch profiles with their associated vendor/tourist data using joins
+      // Fetch all user profiles from the database profiles table
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          vendors (*),
-          tourists (*)
-        `)
+        .select('*')
         .neq('role', 'admin') // Exclude admin users
         .order('created_at', { ascending: false })
 
-      if (profilesError) throw profilesError
+      if (profilesError) {
+        console.error('Error fetching profiles from database:', profilesError)
+        throw profilesError
+      }
 
-      // Transform the data to match our interface
+      // Fetch related vendor and tourist data from their respective tables
+      const [vendorsResult, touristsResult] = await Promise.all([
+        supabase.from('vendors').select('*'),
+        supabase.from('tourists').select('*')
+      ])
+
+      if (vendorsResult.error) {
+        console.error('Error fetching vendors from database:', vendorsResult.error)
+        throw vendorsResult.error
+      }
+
+      if (touristsResult.error) {
+        console.error('Error fetching tourists from database:', touristsResult.error)
+        throw touristsResult.error
+      }
+
+      // Combine profile data with vendor/tourist details for comprehensive user management
       const usersWithDetails: UserWithDetails[] = profiles.map(profile => {
+        const vendor = vendorsResult.data?.find(v => v.user_id === profile.id)
+        const tourist = touristsResult.data?.find(t => t.user_id === profile.id)
+
         return {
-          profile: {
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            phone: profile.phone,
-            avatar_url: profile.avatar_url,
-            role: profile.role,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at
-          },
-          vendor: profile.vendors?.[0] || null, // vendors is an array, take first item
-          tourist: profile.tourists?.[0] || null, // tourists is an array, take first item
-          isVerified: profile.vendors?.[0] ? profile.vendors[0].status === 'approved' : true
+          profile,
+          vendor,
+          tourist,
+          isVerified: vendor ? vendor.status === 'approved' : true // Tourists are auto-verified
         }
       })
 
       setUsers(usersWithDetails)
     } catch (error) {
-      console.error('Error fetching users:', error)
-      // You could add a toast notification here
+      console.error('Error fetching users from database:', error)
+      // In a production app, you would show a user-friendly error message here
     } finally {
       setLoading(false)
     }
@@ -113,24 +122,33 @@ export default function Users() {
 
   const updateVendorStatus = async (vendorId: string, status: 'approved' | 'rejected') => {
     try {
+      // Update vendor status in database
       const { error } = await supabase
         .from('vendors')
         .update({
           status,
           approved_at: status === 'approved' ? new Date().toISOString() : null,
-          approved_by: null // You might want to add current admin user ID here
+          updated_at: new Date().toISOString()
         })
         .eq('id', vendorId)
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error updating vendor status:', error)
+        throw error
+      }
 
-      // Update local state
+      // Update local state to reflect database changes
       setUsers(prevUsers =>
         prevUsers.map(user =>
           user.vendor?.id === vendorId
             ? {
                 ...user,
-                vendor: user.vendor ? { ...user.vendor, status } : undefined,
+                vendor: user.vendor ? {
+                  ...user.vendor,
+                  status,
+                  approved_at: status === 'approved' ? new Date().toISOString() : null,
+                  updated_at: new Date().toISOString()
+                } : undefined,
                 isVerified: status === 'approved'
               }
             : user
@@ -138,8 +156,10 @@ export default function Users() {
       )
 
       setSelectedUser(null)
+      console.log(`Vendor ${vendorId} ${status} successfully`)
     } catch (error) {
       console.error('Error updating vendor status:', error)
+      // You could add a toast notification here for user feedback
     }
   }
 
@@ -164,13 +184,25 @@ export default function Users() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Review and verify user registrations
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Manage users from the database - review profiles, verify vendors, and track registrations
+            </p>
+          </div>
+          <button
+            onClick={fetchUsers}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Users Table */}
       <div className="mb-6">
         <div className="flex flex-wrap gap-4">
           <button
