@@ -118,8 +118,17 @@ export default function Home() {
   const filteredServices = services.filter(service => {
     const matchesSearch = !searchQuery || // If no search query, show all
                          service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
                          (service.location && service.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
+                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (service.service_categories?.name && service.service_categories.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         // Also check for common category variations and partial matches
+                         searchQuery.toLowerCase().includes('hotel') && service.category_id === 'cat_hotels' ||
+                         searchQuery.toLowerCase().includes('tour') && service.category_id === 'cat_tour_packages' ||
+                         searchQuery.toLowerCase().includes('restaurant') && service.category_id === 'cat_restaurants' ||
+                         searchQuery.toLowerCase().includes('flight') && service.category_id === 'cat_flights' ||
+                         searchQuery.toLowerCase().includes('transport') && service.category_id === 'cat_transport' ||
+                         searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities'
 
     const matchesCategory = selectedCategory === 'all' ||
                            service.category_id === selectedCategory
@@ -211,7 +220,7 @@ export default function Home() {
                 <Search className="h-5 w-5 text-gray-400 mr-3" />
                 <input
                   type="text"
-                  placeholder={categories.length > 1 ? `${categories.slice(1).map(cat => cat.name).join(', ')} ...` : "Search for services..."}
+                  placeholder="Search for services ...."
                   className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
