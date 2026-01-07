@@ -17,10 +17,9 @@ CREATE TABLE IF NOT EXISTS service_categories (
 INSERT INTO service_categories (id, name, description, icon) VALUES
   ('cat_hotel', 'Hotels', 'Accommodation services', '🏨'),
   ('cat_transport', 'Transport', 'Transportation services', '🚗'),
-  ('cat_guide', 'Guides', 'Tour guide services', '🗺️'),
+  ('cat_activities', 'Activities', 'Events and activities happening', '🎯'),
   ('cat_restaurant', 'Restaurants', 'Food and dining services', '🍽️'),
   ('cat_tour', 'Tour Packages', 'Complete tour packages', '🎯'),
-  ('cat_activities', 'Activities & Experiences', 'Adventure activities, experiences, and entertainment', '🎢'),
   ('cat_rental', 'Equipment Rental', 'Gear and equipment rental services', '🚲'),
   ('cat_events', 'Events & Workshops', 'Events, workshops, and special occasions', '🎪'),
   ('cat_hostel', 'Hostels & Guesthouses', 'Budget accommodation options', '🏠'),

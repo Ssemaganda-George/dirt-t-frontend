@@ -74,6 +74,19 @@ export interface Service {
   parking_available?: boolean
   pet_friendly?: boolean
   breakfast_included?: boolean
+  property_type?: string
+  wifi_available?: boolean
+  minimum_stay?: number
+  maximum_guests?: number
+  common_facilities?: string[]
+  generator_backup?: boolean
+  smoking_allowed?: boolean
+  children_allowed?: boolean
+  disabled_access?: boolean
+  concierge_service?: boolean
+  house_rules?: string[]
+  local_recommendations?: string[]
+  check_in_process?: string
 
   // Tour-specific fields
   itinerary?: string[]
@@ -88,6 +101,7 @@ export interface Service {
   transportation_included?: boolean
   meals_included?: string[]
   guide_included?: boolean
+  accommodation_included?: boolean
 
   // Transport-specific fields
   vehicle_type?: string
@@ -101,6 +115,15 @@ export interface Service {
   fuel_included?: boolean
   tolls_included?: boolean
   insurance_included?: boolean
+  license_required?: string
+  booking_notice_hours?: number
+  usb_charging?: boolean
+  child_seat?: boolean
+  roof_rack?: boolean
+  towing_capacity?: boolean
+  four_wheel_drive?: boolean
+  automatic_transmission?: boolean
+  transport_terms?: string
 
   // Restaurant-specific fields
   cuisine_type?: string
@@ -113,6 +136,12 @@ export interface Service {
   live_music?: boolean
   private_dining?: boolean
   alcohol_served?: boolean
+  price_range?: string
+  advance_booking_days?: number
+  dress_code?: string
+  menu_highlights?: string[]
+  restaurant_atmosphere?: string
+  restaurant_notes?: string
 
   // Guide-specific fields
   languages_spoken?: string[]
@@ -125,13 +154,16 @@ export interface Service {
   first_aid_certified?: boolean
   vehicle_owned?: boolean
 
-  // Activity-specific fields
-  activity_type?: string
-  skill_level_required?: string
-  equipment_provided?: string[]
-  safety_briefing_required?: boolean
-  weather_dependent?: boolean
-  seasonal_availability?: string
+  // Activity/Event-specific fields
+  event_status?: string
+  ticket_price?: number
+  early_bird_price?: number
+  ticket_purchase_link?: string
+  event_location?: string
+  event_highlights?: string[]
+  event_inclusions?: string[]
+  event_prerequisites?: string[]
+  meals_provided?: boolean
 
   // Rental-specific fields
   rental_items?: string[]
@@ -140,6 +172,15 @@ export interface Service {
   insurance_required?: boolean
   delivery_available?: boolean
   maintenance_included?: boolean
+  replacement_value?: number
+  delivery_radius?: number
+  usage_instructions?: string[]
+  maintenance_requirements?: string[]
+  training_provided?: boolean
+  cleaning_included?: boolean
+  repair_service?: boolean
+  equipment_condition?: string
+  rental_terms?: string
 
   // Event-specific fields
   event_type?: string
@@ -147,7 +188,19 @@ export interface Service {
   event_duration_hours?: number
   max_participants?: number
   materials_included?: string[]
-  prerequisites?: string
+  prerequisites?: string[]
+  event_datetime?: string
+  registration_deadline?: string
+  learning_outcomes?: string[]
+  instructor_credentials?: string
+  certificates_provided?: boolean
+  refreshments_included?: boolean
+  take_home_materials?: boolean
+  photography_allowed?: boolean
+  recording_allowed?: boolean
+  group_discounts?: boolean
+  event_description?: string
+  event_cancellation_policy?: string
 
   // Agency-specific fields
   services_offered?: string[]
@@ -155,6 +208,40 @@ export interface Service {
   booking_fee?: number
   customization_available?: boolean
   emergency_support?: boolean
+  iata_number?: string
+  specializations?: string[]
+  success_stories?: string[]
+  insurance_brokerage?: boolean
+  visa_assistance?: boolean
+  group_bookings?: boolean
+  corporate_accounts?: boolean
+  agency_description?: string
+
+  // Flight-specific fields
+  flight_number?: string
+  airline?: string
+  aircraft_type?: string
+  departure_city?: string
+  arrival_city?: string
+  departure_airport?: string
+  arrival_airport?: string
+  departure_time?: string
+  arrival_time?: string
+  duration_minutes?: number
+  economy_price?: number
+  business_price?: number
+  first_class_price?: number
+  total_seats?: number
+  available_seats?: number
+  flight_class?: string
+  flight_status?: string
+  baggage_allowance?: string
+  flight_amenities?: string[]
+  flexible_booking?: boolean
+  lounge_access?: boolean
+  priority_boarding?: boolean
+  flight_meals_included?: boolean
+  flight_notes?: string
 
   // Enhanced contact and booking info
   tags?: string[]
@@ -166,7 +253,7 @@ export interface Service {
   emergency_phone?: string
   booking_deadline_hours?: number
   payment_methods?: string[]
-  refund_policy?: string
+  refund_policy?: boolean
 
   vendors?: {
     id: string;

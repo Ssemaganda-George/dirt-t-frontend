@@ -76,10 +76,17 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
+      // Sort categories so Activities comes last
+      const sortedCategories = dbCategories.sort((a, b) => {
+        if (a.id === 'cat_activities') return 1
+        if (b.id === 'cat_activities') return -1
+        return a.name.localeCompare(b.name)
+      })
+      
       // Add "All" category at the beginning
       const allCategories = [
         { id: 'all', name: 'All', icon: '🌍' },
-        ...dbCategories.map(cat => ({
+        ...sortedCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
           icon: cat.icon || '📍'
@@ -109,43 +116,68 @@ export default function Home() {
   }
 
   const filteredServices = services.filter(service => {
-    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = !searchQuery || // If no search query, show all
+                         service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
                          (service.location && service.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase()))
+                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (service.service_categories?.name && service.service_categories.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         // Also check for common category variations and partial matches
+                         searchQuery.toLowerCase().includes('hotel') && service.category_id === 'cat_hotels' ||
+                         searchQuery.toLowerCase().includes('tour') && service.category_id === 'cat_tour_packages' ||
+                         searchQuery.toLowerCase().includes('restaurant') && service.category_id === 'cat_restaurants' ||
+                         searchQuery.toLowerCase().includes('flight') && service.category_id === 'cat_flights' ||
+                         searchQuery.toLowerCase().includes('transport') && service.category_id === 'cat_transport' ||
+                         searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities'
 
     const matchesCategory = selectedCategory === 'all' ||
                            service.category_id === selectedCategory
 
-    return matchesSearch && matchesCategory
+    // If there's a search query, ignore category filter; otherwise apply category filter
+    return searchQuery ? matchesSearch : (matchesSearch && matchesCategory)
   })
 
   const filteredFlights = allFlights.filter((flight: Flight) => {
     // Only show active flights with future departure times
     if (flight.status !== 'active') return false
-    
+
     const departureTime = new Date(flight.departure_time)
     const now = new Date()
     if (departureTime <= now) return false
 
-    const matchesSearch = flight.flight_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         flight.airline.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         flight.departure_city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         flight.arrival_city.toLowerCase().includes(searchQuery.toLowerCase())
+    // If no search query, show all flights (normal category filtering applies)
+    if (!searchQuery) return true
+
+    // If there's a search query, check for matches
+    const query = searchQuery.toLowerCase()
+    const matchesSearch = flight.flight_number.toLowerCase().includes(query) ||
+                         flight.airline.toLowerCase().includes(query) ||
+                         flight.departure_city.toLowerCase().includes(query) ||
+                         flight.arrival_city.toLowerCase().includes(query) ||
+                         // Also match common flight-related search terms
+                         query.includes('flight') ||
+                         query.includes('air') ||
+                         query.includes('plane') ||
+                         query.includes('airline') ||
+                         query.includes('aviation')
 
     return matchesSearch
   })
 
   const isShowingFlights = selectedCategory === 'cat_flights'
   const isShowingAll = selectedCategory === 'all'
-  
+
   // For "All" category, combine services and flights
   // For "Flights" category, show only flights
   // For other categories, show only services
-  const currentItems = isShowingAll 
-    ? [...filteredServices, ...filteredFlights]
-    : isShowingFlights 
-      ? filteredFlights 
-      : filteredServices
+  // But if there's a search query, show all matching results regardless of category
+  const currentItems = searchQuery
+    ? [...filteredServices, ...filteredFlights] // When searching, show all matching results
+    : isShowingAll
+      ? [...filteredServices, ...filteredFlights]
+      : isShowingFlights
+        ? filteredFlights
+        : filteredServices
   
   const currentItemCount = currentItems.length
 
@@ -188,7 +220,7 @@ export default function Home() {
                 <Search className="h-5 w-5 text-gray-400 mr-3" />
                 <input
                   type="text"
-                  placeholder="Where to?"
+                  placeholder="I want ..."
                   className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -219,18 +251,18 @@ export default function Home() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filter Tabs */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
+        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => handleCategorySelect(category.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all border ${
+              className={`flex items-center gap-0.5 md:gap-2 px-1 py-0.5 md:px-3 md:py-2 rounded-full text-[10px] md:text-sm font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
                 selectedCategory === category.id
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
             >
-              <span>{category.icon}</span>
+              <span className="text-xs hidden md:inline">{category.icon}</span>
               <span>{category.name}</span>
             </button>
           ))}
@@ -240,11 +272,14 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
-              {selectedCategory === 'all' ? 'Explore Uganda' : 
-               categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
+              {searchQuery
+                ? `Search results for "${searchQuery}"`
+                : selectedCategory === 'all'
+                  ? 'Explore Uganda'
+                  : categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
             </h2>
             <p className="text-gray-600">
-              {currentItemCount} {isShowingAll ? 'result' : isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
+              {currentItemCount} {searchQuery ? 'result' : isShowingAll ? 'result' : isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>

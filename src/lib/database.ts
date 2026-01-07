@@ -19,6 +19,22 @@ export interface Profile {
   updated_at: string
 }
 
+export interface Tourist {
+  id: string
+  user_id: string
+  first_name?: string
+  last_name?: string
+  phone?: string
+  emergency_contact?: string
+  emergency_phone?: string
+  travel_preferences?: string
+  dietary_restrictions?: string
+  medical_conditions?: string
+  created_at: string
+  updated_at: string
+  profiles?: Profile
+}
+
 export interface Vendor {
   id: string
   user_id: string
@@ -27,6 +43,10 @@ export interface Vendor {
   business_address?: string
   business_phone?: string
   business_email?: string
+  business_website?: string
+  business_type?: string
+  operating_hours?: string
+  years_in_business?: string
   business_license?: string
   tax_id?: string
   status: VendorStatus

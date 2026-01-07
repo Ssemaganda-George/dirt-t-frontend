@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Service, Booking, Transaction, Flight } from '../types';
-import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB } from '../lib/database';
+import type { ServiceCategory } from '../lib/database';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories } from '../lib/database';
 
 // Placeholder hooks - to be updated later
 export function useVendors() {
@@ -283,3 +284,34 @@ export function useFlights() {
 
 //   return { transactions, loading, error, refetch: () => {} };
 // }
+
+export function useServiceCategories() {
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await getServiceCategories();
+      setCategories(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  return {
+    categories,
+    loading,
+    error,
+    refetch: fetchCategories
+  };
+}
