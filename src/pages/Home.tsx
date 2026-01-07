@@ -220,7 +220,7 @@ export default function Home() {
                 <Search className="h-5 w-5 text-gray-400 mr-3" />
                 <input
                   type="text"
-                  placeholder="Search for services ...."
+                  placeholder="I want ..."
                   className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
