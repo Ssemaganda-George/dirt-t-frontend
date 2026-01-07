@@ -3,6 +3,7 @@ import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown } from 'lucide-re
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
+import SupportModal from './SupportModal'
 
 export default function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -10,6 +11,7 @@ export default function PublicLayout() {
   const [selectedRegion, setSelectedRegion] = useState('UG')
   const [selectedCurrency, setSelectedCurrency] = useState('UGX')
   const [showSignInDropdown, setShowSignInDropdown] = useState(false)
+  const [showSupportModal, setShowSupportModal] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -91,10 +93,9 @@ export default function PublicLayout() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowSignInDropdown(!showSignInDropdown)}
-                  className="flex items-center px-4 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
+                  className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
                 >
-                  <User className="h-5 w-5 mr-1" />
-                  <span className="text-sm font-medium">Sign In</span>
+                  <User className="h-5 w-5" />
                   <ChevronDown className="h-4 w-4 ml-1" />
                 </button>
 
@@ -225,16 +226,22 @@ export default function PublicLayout() {
         onCurrencyChange={setSelectedCurrency}
       />
 
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
+
       {/* Main Content */}
       <main className="pb-16 md:pb-0">
         <Outlet />
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+      <MobileBottomNav onSupportClick={() => setShowSupportModal(true)} />
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
+      <footer className="hidden md:block bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
