@@ -256,7 +256,7 @@ export default function Home() {
             <button
               key={category.id}
               onClick={() => handleCategorySelect(category.id)}
-              className={`flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
+              className={`flex items-center gap-0.5 md:gap-2 px-1 py-0.5 md:px-3 md:py-2 rounded-full text-[10px] md:text-sm font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
                 selectedCategory === category.id
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
