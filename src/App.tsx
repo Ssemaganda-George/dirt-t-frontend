@@ -1,10 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { BookingProvider } from './contexts/BookingContext'
+import { CartProvider } from './contexts/CartContext'
 import PublicLayout from './components/PublicLayout'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
+import BookingFlow from './pages/BookingFlow'
+import ServiceInquiry from './pages/ServiceInquiry'
 import CategoryPage from './pages/CategoryPage'
 import ServiceCategories from './pages/Services'
 import Profile from './pages/Profile'
@@ -25,12 +29,16 @@ import { Transactions } from './pages/admin/Transactions'
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
+      <CartProvider>
+        <BookingProvider>
+          <Router>
+            <Routes>
           {/* Public Routes */}
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
+            <Route path="service/:id/book/:category" element={<BookingFlow />} />
+            <Route path="service/:id/inquiry" element={<ServiceInquiry />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<Profile />} />
             <Route path="category/:category" element={<CategoryPage />} />
@@ -81,8 +89,10 @@ function App() {
           } />
         </Routes>
       </Router>
-    </AuthProvider>
-  )
+    </BookingProvider>
+    </CartProvider>
+  </AuthProvider>
+  );
 }
 
 export default App

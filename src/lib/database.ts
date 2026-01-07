@@ -324,6 +324,37 @@ export async function getServices(vendorId?: string) {
   return data || []
 }
 
+export async function getServiceById(serviceId: string) {
+  const { data, error } = await supabase
+    .from('services')
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_phone,
+        business_email,
+        business_address,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+    .eq('id', serviceId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching service:', error)
+    throw error
+  }
+
+  return data
+}
+
 export async function createService(serviceData: {
   vendor_id: string
   category_id: string

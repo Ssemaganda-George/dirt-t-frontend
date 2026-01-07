@@ -5,10 +5,12 @@ import { createBooking, getBookings, getServices, updateBookingStatus, deleteBoo
 import { formatCurrency, formatDateTime } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { Trash2 } from 'lucide-react'
+import { useCart } from '../../contexts/CartContext'
 
 export default function VendorBookings() {
   const { profile } = useAuth()
   const vendorId = profile?.id || 'vendor_demo'
+  const { state: cartState } = useCart()
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -75,6 +77,51 @@ export default function VendorBookings() {
               {bookings.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Saved Cart Items */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {cartState.items.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <div>
+                      <div className="font-medium">{item.service.title}</div>
+                      <div className="text-gray-500">{item.service.vendors.business_name}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900 capitalize">{item.category}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(item.totalPrice, item.currency)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{formatDateTime(item.savedAt)}</td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {cartState.items.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">No saved cart items.</td>
                 </tr>
               )}
             </tbody>

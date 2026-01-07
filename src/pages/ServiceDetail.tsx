@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
   MapPin, 
   Star, 
@@ -14,6 +14,7 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
+import { getServiceById } from '../lib/database'
 
 interface ServiceDetail {
   id: string
@@ -26,49 +27,54 @@ interface ServiceDetail {
   duration_hours: number
   max_capacity: number
   amenities: string[]
-  vendors: {
+  vendors?: {
     business_name: string
     business_description: string
     business_phone: string
     business_email: string
     business_address: string
-  }
+  } | null
   service_categories: {
     name: string
   }
-}
 
-// Mock data for demonstration
-const mockService: ServiceDetail = {
-  id: '1',
-  title: 'Professional Photography Session',
-  description: 'Capture your special moments with our professional photography service. Perfect for portraits, events, or commercial needs.',
-  price: 150,
-  currency: 'USD',
-  images: ['https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'],
-  location: 'Downtown Studio, New York',
-  duration_hours: 2,
-  max_capacity: 8,
-  amenities: ['Professional lighting', 'Multiple backdrop options', 'Digital copies included', 'Editing service'],
-  vendors: {
-    business_name: 'Creative Studios',
-    business_description: 'Professional photography and creative services with over 10 years of experience.',
-    business_phone: '+1 (555) 123-4567',
-    business_email: 'info@creativestudios.com',
-    business_address: '123 Main St, New York, NY 10001'
-  },
-  service_categories: {
-    name: 'Photography'
-  }
+  // Service-specific fields
+  duration_days?: number
+  star_rating?: number
+  room_types?: string[]
+  check_in_time?: string
+  check_out_time?: string
+  facilities?: string[]
+  difficulty_level?: string
+  minimum_age?: number
+  languages_offered?: string[]
+  included_items?: string[]
+  vehicle_type?: string
+  vehicle_capacity?: number
+  driver_included?: boolean
+  air_conditioning?: boolean
+  pickup_locations?: string[]
+  airline?: string
+  flight_number?: string
+  departure_city?: string
+  arrival_city?: string
+  flight_class?: string
+  cuisine_type?: string
+  average_cost_per_person?: number
+  outdoor_seating?: boolean
+  reservations_required?: boolean
+  activity_type?: string
+  skill_level_required?: string
+  equipment_provided?: string[]
 }
 
 export default function ServiceDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState('')
   const [guests, setGuests] = useState(1)
-  const [showBookingModal, setShowBookingModal] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -78,22 +84,345 @@ export default function ServiceDetail() {
 
   const fetchService = async () => {
     try {
-      // Simulate API call delay
-      setTimeout(() => {
-        setService(mockService)
+      if (!id) {
+        console.error('No service ID provided')
+        setService(null)
         setLoading(false)
-      }, 1000)
+        return
+      }
+      
+      console.log('Fetching service with ID:', id)
+      const serviceData = await getServiceById(id)
+      console.log('Service data received:', serviceData)
+      
+      if (!serviceData) {
+        console.log('No service found with ID:', id)
+        setService(null)
+      } else {
+        setService(serviceData)
+      }
+      setLoading(false)
     } catch (error) {
       console.error('Error fetching service:', error)
+      setService(null) // Explicitly set to null on error
       setLoading(false)
     }
   }
 
+  // Map service category names to booking flow categories
+  const mapCategoryToBookingFlow = (categoryName: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      'hotels': 'hotels',
+      'hotel': 'hotels',
+      'accommodation': 'hotels',
+      'transport': 'transport',
+      'transportation': 'transport',
+      'car rental': 'transport',
+      'tours': 'tours',
+      'tour': 'tours',
+      'guided tour': 'tours',
+      'restaurants': 'restaurants',
+      'restaurant': 'restaurants',
+      'dining': 'restaurants',
+      'activities': 'activities',
+      'activity': 'activities',
+      'experience': 'activities',
+      'flights': 'flights',
+      'flight': 'flights',
+      'air travel': 'flights'
+    }
+    
+    return categoryMap[categoryName.toLowerCase()] || 'activities' // Default to activities
+  }
+
   const handleBooking = () => {
-    setShowBookingModal(true)
+    if (!service || !selectedDate) return
+    
+    const bookingCategory = mapCategoryToBookingFlow(service.service_categories.name)
+    // Use React Router navigation
+    navigate(`/service/${id}/book/${bookingCategory}`)
+  }
+
+  const handleInquiry = () => {
+    if (!service) return
+    // Navigate to inquiry form
+    navigate(`/service/${id}/inquiry`)
+  }
+
+  // Get appropriate button text based on category
+  const getBookingButtonText = (categoryName: string): string => {
+    const categoryTexts: { [key: string]: string } = {
+      'hotels': 'Book Hotel',
+      'transport': 'Book Transport',
+      'tours': 'Book Tour',
+      'restaurants': 'Make Reservation',
+      'activities': 'Book Activity',
+      'flights': 'Book Flight'
+    }
+    
+    const mappedCategory = mapCategoryToBookingFlow(categoryName)
+    return categoryTexts[mappedCategory] || 'Book Now'
+  }
+
+  const getInquiryButtonText = (categoryName: string): string => {
+    const categoryTexts: { [key: string]: string } = {
+      'hotels': 'Hotel Inquiry',
+      'transport': 'Transport Inquiry',
+      'tours': 'Tour Inquiry',
+      'restaurants': 'Reservation Inquiry',
+      'activities': 'Activity Inquiry',
+      'flights': 'Flight Inquiry'
+    }
+    
+    const mappedCategory = mapCategoryToBookingFlow(categoryName)
+    return categoryTexts[mappedCategory] || 'Make an Inquiry'
+  }
+
+  // Render category-specific information
+  const renderCategorySpecificInfo = (service: ServiceDetail) => {
+    const categoryName = service.service_categories.name.toLowerCase()
+
+    switch (categoryName) {
+      case 'hotels':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Hotel Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.star_rating && (
+                <div className="flex items-center">
+                  <Star className="h-5 w-5 text-yellow-400 fill-current mr-2" />
+                  <span className="text-sm text-gray-600">{service.star_rating} Star Hotel</span>
+                </div>
+              )}
+              {service.room_types && service.room_types.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Room Types:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.room_types.map((room, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        {room}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.check_in_time && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Check-in:</span> {service.check_in_time}
+                </div>
+              )}
+              {service.check_out_time && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Check-out:</span> {service.check_out_time}
+                </div>
+              )}
+              {service.facilities && service.facilities.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Facilities:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.facilities.slice(0, 4).map((facility, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        {facility}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      case 'tours':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tour Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.difficulty_level && (
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-600">
+                    <span className="font-medium">Difficulty:</span> {service.difficulty_level}
+                  </span>
+                </div>
+              )}
+              {service.duration_days && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Duration:</span> {service.duration_days} days
+                </div>
+              )}
+              {service.minimum_age && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
+                </div>
+              )}
+              {service.languages_offered && service.languages_offered.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Languages:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.languages_offered.map((lang, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        {lang}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.included_items && service.included_items.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">What's Included:</span>
+                  <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
+                    {service.included_items.slice(0, 3).map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      case 'transport':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Transport Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.vehicle_type && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Vehicle Type:</span> {service.vehicle_type}
+                </div>
+              )}
+              {service.vehicle_capacity && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Capacity:</span> {service.vehicle_capacity} passengers
+                </div>
+              )}
+              {service.driver_included && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Professional Driver Included</span>
+                </div>
+              )}
+              {service.air_conditioning && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Air Conditioning</span>
+                </div>
+              )}
+              {service.pickup_locations && service.pickup_locations.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Pickup Locations:</span>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {service.pickup_locations.slice(0, 2).join(', ')}
+                    {service.pickup_locations.length > 2 && '...'}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      case 'flights':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Flight Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.airline && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Airline:</span> {service.airline}
+                </div>
+              )}
+              {service.flight_number && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Flight Number:</span> {service.flight_number}
+                </div>
+              )}
+              {service.departure_city && service.arrival_city && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Route:</span> {service.departure_city} → {service.arrival_city}
+                </div>
+              )}
+              {service.flight_class && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Class:</span> {service.flight_class}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      case 'restaurants':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Restaurant Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.cuisine_type && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Cuisine:</span> {service.cuisine_type}
+                </div>
+              )}
+              {service.average_cost_per_person && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Average Cost:</span> {formatCurrency(service.average_cost_per_person, service.currency)} per person
+                </div>
+              )}
+              {service.outdoor_seating && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Outdoor Seating Available</span>
+                </div>
+              )}
+              {service.reservations_required && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-blue-500 mr-2" />
+                  <span className="text-sm text-gray-600">Reservations Required</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      case 'activities':
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.activity_type && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Activity Type:</span> {service.activity_type}
+                </div>
+              )}
+              {service.skill_level_required && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Skill Level:</span> {service.skill_level_required}
+                </div>
+              )}
+              {service.duration_hours && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Duration:</span> {service.duration_hours} hours
+                </div>
+              )}
+              {service.equipment_provided && service.equipment_provided.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Equipment Provided:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.equipment_provided.map((equipment, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                        {equipment}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
   }
 
   if (loading) {
+    console.log('ServiceDetail: Loading state is true')
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -102,11 +431,13 @@ export default function ServiceDetail() {
   }
 
   if (!service) {
+    console.log('ServiceDetail: Service is null, showing not found message')
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
-          <Link to="/" className="text-blue-600 hover:text-blue-700">
+          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
             Return to home
           </Link>
         </div>
@@ -218,36 +549,45 @@ export default function ServiceDetail() {
               )}
             </div>
 
+            {/* Category-Specific Information */}
+            {renderCategorySpecificInfo(service)}
+
             {/* Vendor Info */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">About the provider</h3>
-              <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-xl font-bold text-blue-600">
-                    {service.vendors.business_name.charAt(0)}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">{service.vendors.business_name}</h4>
-                  <p className="text-gray-600 text-sm mb-3">
-                    {service.vendors.business_description}
-                  </p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    {service.vendors.business_phone && (
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-1" />
-                        {service.vendors.business_phone}
-                      </div>
-                    )}
-                    {service.vendors.business_email && (
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-1" />
-                        {service.vendors.business_email}
-                      </div>
-                    )}
+              {service.vendors ? (
+                <div className="flex items-start space-x-4">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-xl font-bold text-blue-600">
+                      {service.vendors.business_name?.charAt(0) || 'V'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900">{service.vendors.business_name || 'Vendor'}</h4>
+                    <p className="text-gray-600 text-sm mb-3">
+                      {service.vendors.business_description || 'No description available'}
+                    </p>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      {service.vendors.business_phone && (
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 mr-1" />
+                          {service.vendors.business_phone}
+                        </div>
+                      )}
+                      {service.vendors.business_email && (
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-1" />
+                          {service.vendors.business_email}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  <p>Vendor information not available</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -312,13 +652,21 @@ export default function ServiceDetail() {
                 </div>
               </div>
 
-              <button
-                onClick={handleBooking}
-                disabled={!selectedDate}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
-              >
-                Book Now
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleBooking}
+                  disabled={!selectedDate}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  {service ? getBookingButtonText(service.service_categories.name) : 'Book Now'}
+                </button>
+                <button
+                  onClick={handleInquiry}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  {service ? getInquiryButtonText(service.service_categories.name) : 'Make an Inquiry'}
+                </button>
+              </div>
 
               <p className="text-xs text-gray-500 text-center mt-3">
                 You won't be charged yet
@@ -328,33 +676,7 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      {/* Booking Modal */}
-      {showBookingModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Complete your booking</h3>
-              <p className="text-gray-600 mb-6">
-                Please sign in or create an account to complete your booking.
-              </p>
-              <div className="flex space-x-3">
-                <Link
-                  to="/login"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-center transition-colors"
-                >
-                  Sign In
-                </Link>
-                <button
-                  onClick={() => setShowBookingModal(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Booking Modal - Removed, replaced with direct navigation */}
     </div>
   )
 }

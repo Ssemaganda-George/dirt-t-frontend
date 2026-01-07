@@ -5,6 +5,7 @@ import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
 import SupportModal from './SupportModal'
 import { useServiceCategories } from '../hooks/hook'
+import { useCart } from '../contexts/CartContext'
 
 export default function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -17,6 +18,7 @@ export default function PublicLayout() {
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { categories } = useServiceCategories()
+  const { getCartCount } = useCart()
 
   // Map category IDs to navigation items
   const getNavigationItems = () => {
@@ -34,8 +36,7 @@ export default function PublicLayout() {
           'cat_restaurants': 'restaurants',
           'cat_transport': 'transport',
           'cat_flights': 'flights',
-          'cat_activities': 'activities',
-          
+          'cat_activities': 'activities'
         }
 
         const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
@@ -120,9 +121,14 @@ export default function PublicLayout() {
                 <span className="text-sm">Saved</span>
               </button>
               
-              <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600">
+              <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600 relative">
                 <ShoppingBag className="h-5 w-5 mr-1" />
-                <span className="text-sm">Bookings</span>
+                <span className="text-sm">Cart</span>
+                {getCartCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {getCartCount()}
+                  </span>
+                )}
               </button>
 
               {/* Sign In Dropdown */}
