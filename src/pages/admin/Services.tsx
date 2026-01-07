@@ -1,5 +1,5 @@
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useServices, useServiceCategories } from '../../hooks/hook';
+import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrency } from '../../lib/utils';
@@ -8,6 +8,7 @@ import { useState } from 'react';
 export function Services() {
   const { services, loading, error, updateServiceStatus } = useServices();
   const { categories } = useServiceCategories();
+  const { deleteRequests, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -62,6 +63,33 @@ export function Services() {
     }
   };
 
+  const approveDeleteRequest = async (requestId: string) => {
+    setUpdatingStatus(requestId);
+    try {
+      await updateDeleteRequestStatus(requestId, 'approved');
+    } catch (err) {
+      console.error('Failed to approve delete request:', err);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const rejectDeleteRequest = async (requestId: string) => {
+    setUpdatingStatus(requestId);
+    try {
+      const reason = prompt('Reason for rejection:');
+      if (reason) {
+        await updateDeleteRequestStatus(requestId, 'rejected', reason);
+      }
+    } catch (err) {
+      console.error('Failed to reject delete request:', err);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending');
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -70,6 +98,7 @@ export function Services() {
           <span className="text-yellow-600">Pending: {selectedCategory === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
           <span className="text-green-600">Approved: {selectedCategory === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}</span>
           <span className="text-red-600">Rejected: {selectedCategory === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
+          <span className="text-orange-600">Delete Requests: {pendingDeleteRequests.length}</span>
         </div>
       </div>
 
@@ -227,6 +256,73 @@ export function Services() {
                         >
                           <XMarkIcon className="h-4 w-4 mr-1" />
                           {updatingStatus === service.id ? 'Rejecting...' : 'Reject'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Requests Section */}
+      {pendingDeleteRequests.length > 0 && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Pending Delete Requests ({pendingDeleteRequests.length})
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {pendingDeleteRequests.map((request) => (
+                    <tr key={request.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                            {request.service?.description}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {request.vendor?.business_name || 'Unknown'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {request.reason}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(request.requested_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => approveDeleteRequest(request.id)}
+                          disabled={updatingStatus === request.id}
+                          className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                          title="Approve deletion"
+                        >
+                          <CheckIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => rejectDeleteRequest(request.id)}
+                          disabled={updatingStatus === request.id}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                          title="Reject deletion"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
                         </button>
                       </td>
                     </tr>

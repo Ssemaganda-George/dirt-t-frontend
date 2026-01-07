@@ -5,6 +5,7 @@ export type ServiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'ina
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 export type TransactionType = 'payment' | 'withdrawal' | 'refund'
 export type TransactionStatus = 'pending' | 'completed' | 'failed'
+export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
 import type { Flight } from '../types'
 
@@ -206,6 +207,25 @@ export interface Service {
   service_categories?: ServiceCategory
 }
 
+export interface ServiceDeleteRequest {
+  id: string
+  service_id: string
+  vendor_id: string
+  reason: string
+  status: ServiceDeleteRequestStatus
+  admin_notes?: string
+  requested_at: string
+  reviewed_at?: string
+  reviewed_by?: string
+  created_at: string
+  updated_at: string
+
+  // Relations
+  service?: Service
+  vendor?: Vendor
+  reviewer?: Profile
+}
+
 export interface Booking {
   id: string
   service_id: string
@@ -343,15 +363,25 @@ export async function createService(serviceData: {
 
   status?: string
 }) {
+  // Only insert fields that exist in the basic services table schema
+  const basicServiceData = {
+    vendor_id: serviceData.vendor_id,
+    category_id: serviceData.category_id,
+    title: serviceData.title,
+    description: serviceData.description,
+    price: serviceData.price,
+    currency: serviceData.currency || 'UGX',
+    images: serviceData.images || [],
+    location: serviceData.location,
+    duration_hours: serviceData.duration_hours,
+    max_capacity: serviceData.max_capacity,
+    amenities: serviceData.amenities || [],
+    status: serviceData.status || 'pending'
+  }
+
   const { data, error } = await supabase
     .from('services')
-    .insert([{
-      ...serviceData,
-      status: serviceData.status || 'pending',
-      currency: serviceData.currency || 'UGX',
-      images: serviceData.images || [],
-      amenities: serviceData.amenities || []
-    }])
+    .insert([basicServiceData])
     .select(`
       *,
       vendors (
@@ -372,6 +402,52 @@ export async function createService(serviceData: {
   if (error) {
     console.error('Error creating service:', error)
     throw error
+  }
+
+  // If the service was created successfully and there are additional fields,
+  // update the service with the additional fields (this will work if the migration has been run)
+  if (data && Object.keys(serviceData).some(key => !Object.keys(basicServiceData).includes(key))) {
+    try {
+      // Extract additional fields that aren't in the basic schema
+      const additionalFields: any = {}
+      Object.keys(serviceData).forEach(key => {
+        if (!Object.keys(basicServiceData).includes(key) && serviceData[key as keyof typeof serviceData] !== undefined) {
+          additionalFields[key] = serviceData[key as keyof typeof serviceData]
+        }
+      })
+
+      if (Object.keys(additionalFields).length > 0) {
+        await updateService(data.id, additionalFields)
+        // Re-fetch the service with updated data
+        const { data: updatedData, error: updateError } = await supabase
+          .from('services')
+          .select(`
+            *,
+            vendors (
+              id,
+              business_name,
+              business_description,
+              business_email,
+              status
+            ),
+            service_categories (
+              id,
+              name,
+              icon
+            )
+          `)
+          .eq('id', data.id)
+          .single()
+
+        if (!updateError) {
+          return updatedData
+        }
+      }
+    } catch (updateError) {
+      // If updating additional fields fails, just return the basic service
+      // This allows service creation to work even without the comprehensive migration
+      console.warn('Failed to update additional service fields:', updateError)
+    }
   }
 
   return data
@@ -620,4 +696,95 @@ export async function updateFlightStatus(id: string, status: Flight['status']): 
   }
 
   return data
+}
+
+// Service Delete Request functions
+export async function createServiceDeleteRequest(serviceId: string, vendorId: string, reason: string): Promise<ServiceDeleteRequest> {
+  const { data, error } = await supabase
+    .from('service_delete_requests')
+    .insert([{
+      service_id: serviceId,
+      vendor_id: vendorId,
+      reason: reason
+    }])
+    .select(`
+      *,
+      service:services(*, service_categories(*)),
+      vendor:vendors(*)
+    `)
+    .single()
+
+  if (error) {
+    console.error('Error creating service delete request:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function getServiceDeleteRequests(vendorId?: string): Promise<ServiceDeleteRequest[]> {
+  let query = supabase
+    .from('service_delete_requests')
+    .select(`
+      *,
+      service:services(*, service_categories(*)),
+      vendor:vendors(*),
+      reviewer:profiles(id, full_name, email)
+    `)
+    .order('requested_at', { ascending: false })
+
+  if (vendorId) {
+    query = query.eq('vendor_id', vendorId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching service delete requests:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function updateServiceDeleteRequestStatus(
+  requestId: string,
+  status: ServiceDeleteRequestStatus,
+  adminNotes?: string
+): Promise<ServiceDeleteRequest> {
+  const { data, error } = await supabase
+    .from('service_delete_requests')
+    .update({
+      status: status,
+      admin_notes: adminNotes,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: (await supabase.auth.getUser()).data.user?.id
+    })
+    .eq('id', requestId)
+    .select(`
+      *,
+      service:services(*, service_categories(*)),
+      vendor:vendors(*),
+      reviewer:profiles(id, full_name, email)
+    `)
+    .single()
+
+  if (error) {
+    console.error('Error updating service delete request status:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function deleteServiceDeleteRequest(requestId: string): Promise<void> {
+  const { error } = await supabase
+    .from('service_delete_requests')
+    .delete()
+    .eq('id', requestId)
+
+  if (error) {
+    console.error('Error deleting service delete request:', error)
+    throw error
+  }
 }

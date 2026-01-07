@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
-import { useServices, useServiceCategories } from '../../hooks/hook'
+import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
 import { formatCurrency } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
@@ -15,6 +15,7 @@ export default function VendorServices() {
 
   const { services, loading, error, createService, updateService, deleteService } = useServices(vendorId || undefined)
   const { categories } = useServiceCategories()
+  const { createDeleteRequest } = useServiceDeleteRequests(vendorId || undefined)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
@@ -52,10 +53,15 @@ export default function VendorServices() {
   }, [user?.id])
 
   const onCreate = async (data: Partial<Service>) => {
+    if (!vendorId) {
+      alert('Vendor account not found. Please contact support.')
+      return
+    }
+
     try {
       await createService({
         vendor_id: vendorId!,
-        category_id: data.category_id || 'cat_tour',
+        category_id: data.category_id || 'cat_activities',
         title: data.title || '',
         description: data.description || '',
         price: Number(data.price) || 0,
@@ -110,7 +116,8 @@ export default function VendorServices() {
       setShowForm(false)
     } catch (err) {
       console.error('Failed to create service:', err)
-      alert('Failed to create service. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+      alert(`Failed to create service: ${errorMessage}`)
     }
   }
 
@@ -193,13 +200,31 @@ export default function VendorServices() {
     }
   }
 
-  const onDelete = async (id: string) => {
-    if (!confirm('Delete this service?')) return
-    try {
-      await deleteService(id)
-    } catch (err) {
-      console.error('Failed to delete service:', err)
-      alert('Failed to delete service. Please try again.')
+  const onDelete = async (service: Service) => {
+    if (service.status === 'approved') {
+      // For approved services, create a delete request
+      const reason = prompt('Please provide a reason for requesting deletion of this approved service:')
+      if (!reason || reason.trim() === '') {
+        alert('Reason is required to request service deletion.')
+        return
+      }
+
+      try {
+        await createDeleteRequest(service.id, vendorId!, reason.trim())
+        alert('Delete request submitted successfully. An admin will review your request.')
+      } catch (err) {
+        console.error('Failed to create delete request:', err)
+        alert('Failed to submit delete request. Please try again.')
+      }
+    } else {
+      // For non-approved services, delete directly
+      if (!confirm('Delete this service?')) return
+      try {
+        await deleteService(service.id)
+      } catch (err) {
+        console.error('Failed to delete service:', err)
+        alert('Failed to delete service. Please try again.')
+      }
     }
   }
 
@@ -332,8 +357,18 @@ export default function VendorServices() {
                       <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-blue-600 hover:text-blue-800 mr-3">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button onClick={() => onDelete(s.id)} className="text-red-600 hover:text-red-800">
-                        <Trash2 className="h-4 w-4" />
+                      <button
+                        onClick={() => onDelete(s)}
+                        className={s.status === 'approved' ? "text-orange-600 hover:text-orange-800" : "text-red-600 hover:text-red-800"}
+                        title={s.status === 'approved' ? "Request deletion (requires admin approval)" : "Delete service"}
+                      >
+                        {s.status === 'approved' ? (
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </button>
                     </td>
                   </tr>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Service, Booking, Transaction, Flight } from '../types';
-import type { ServiceCategory } from '../lib/database';
-import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories } from '../lib/database';
+import type { ServiceCategory, ServiceDeleteRequest } from '../lib/database';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest } from '../lib/database';
 
 // Placeholder hooks - to be updated later
 export function useVendors() {
@@ -313,5 +313,78 @@ export function useServiceCategories() {
     loading,
     error,
     refetch: fetchCategories
+  };
+}
+
+export function useServiceDeleteRequests(vendorId?: string) {
+  const [deleteRequests, setDeleteRequests] = useState<ServiceDeleteRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDeleteRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await getServiceDeleteRequests(vendorId);
+      setDeleteRequests(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createDeleteRequest = async (serviceId: string, vendorId: string, reason: string) => {
+    try {
+      setError(null);
+      const newRequest = await createServiceDeleteRequest(serviceId, vendorId, reason);
+      setDeleteRequests(prev => [newRequest, ...prev]);
+      return newRequest;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create delete request');
+      throw err;
+    }
+  };
+
+  const updateDeleteRequestStatus = async (requestId: string, status: 'pending' | 'approved' | 'rejected', adminNotes?: string) => {
+    try {
+      setError(null);
+      const updated = await updateServiceDeleteRequestStatus(requestId, status, adminNotes);
+      setDeleteRequests(prev =>
+        prev.map(request =>
+          request.id === requestId ? updated : request
+        )
+      );
+      return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update delete request status');
+      throw err;
+    }
+  };
+
+  const removeDeleteRequest = async (requestId: string) => {
+    try {
+      setError(null);
+      await deleteServiceDeleteRequest(requestId);
+      setDeleteRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete request');
+      throw err;
+    }
+  };
+
+  useEffect(() => {
+    fetchDeleteRequests();
+  }, [vendorId]);
+
+  return {
+    deleteRequests,
+    loading,
+    error,
+    refetch: fetchDeleteRequests,
+    createDeleteRequest,
+    updateDeleteRequestStatus,
+    deleteDeleteRequest: removeDeleteRequest
   };
 }
