@@ -5,10 +5,8 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import ServiceDetail from './pages/ServiceDetail'
-import FlightDetail from './pages/FlightDetail'
 import CategoryPage from './pages/CategoryPage'
 import ServiceCategories from './pages/Services'
-import FlightPage from './pages/Flights'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import VendorLogin from './pages/VendorLogin'
@@ -21,7 +19,6 @@ import VendorTransactions from './pages/vendor/Transactions'
 import Dashboard from './pages/admin/Dashboard'
 import Users from './pages/admin/Users'
 import { Services } from './pages/admin/Services'
-import { Flights } from './pages/admin/Flights'
 import { Bookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Transactions'
 
@@ -34,9 +31,7 @@ function App() {
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
-            <Route path="flights/:id" element={<FlightDetail />} />
             <Route path="services" element={<ServiceCategories />} />
-            <Route path="flights" element={<FlightPage />} />
             <Route path="profile" element={<Profile />} />
             <Route path="category/:category" element={<CategoryPage />} />
           </Route>
@@ -73,7 +68,6 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="users" element={<Users />} />
             <Route path="services" element={<Services />} />
-            <Route path="flights" element={<Flights />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="transactions" element={<Transactions />} />
           </Route>
