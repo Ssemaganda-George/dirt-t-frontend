@@ -152,30 +152,30 @@ export default function ServiceDetail() {
   // Get appropriate button text based on category
   const getBookingButtonText = (categoryName: string): string => {
     const categoryTexts: { [key: string]: string } = {
-      'hotels': 'Book Hotel',
-      'transport': 'Book Transport',
-      'tours': 'Book Tour',
-      'restaurants': 'Make Reservation',
-      'activities': 'Book Activity',
-      'flights': 'Book Flight'
+      'hotels': 'Check Availability',
+      'transport': 'Check Availability',
+      'tours': 'Check Availability',
+      'restaurants': 'Check Availability',
+      'activities': 'Check Availability',
+      'flights': 'Check Availability'
     }
     
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
-    return categoryTexts[mappedCategory] || 'Book Now'
+    return categoryTexts[mappedCategory] || 'Check Availability'
   }
 
   const getInquiryButtonText = (categoryName: string): string => {
     const categoryTexts: { [key: string]: string } = {
-      'hotels': 'Hotel Inquiry',
-      'transport': 'Transport Inquiry',
-      'tours': 'Tour Inquiry',
-      'restaurants': 'Reservation Inquiry',
-      'activities': 'Activity Inquiry',
-      'flights': 'Flight Inquiry'
+      'hotels': 'Contact Vendor',
+      'transport': 'Contact Vendor',
+      'tours': 'Contact Vendor',
+      'restaurants': 'Contact Vendor',
+      'activities': 'Contact Vendor',
+      'flights': 'Contact Vendor'
     }
     
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
-    return categoryTexts[mappedCategory] || 'Make an Inquiry'
+    return categoryTexts[mappedCategory] || 'Contact Vendor'
   }
 
   // Render category-specific information
@@ -658,13 +658,13 @@ export default function ServiceDetail() {
                   disabled={!selectedDate}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
                 >
-                  {service ? getBookingButtonText(service.service_categories.name) : 'Book Now'}
+                  {service ? getBookingButtonText(service.service_categories.name) : 'Check Availability'}
                 </button>
                 <button
                   onClick={handleInquiry}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300"
                 >
-                  {service ? getInquiryButtonText(service.service_categories.name) : 'Make an Inquiry'}
+                  {service ? getInquiryButtonText(service.service_categories.name) : 'Contact Vendor'}
                 </button>
               </div>
 
