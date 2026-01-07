@@ -21,13 +21,11 @@ export default function PublicLayout() {
   // Map category IDs to navigation items
   const getNavigationItems = () => {
     const baseNavigation = [
-      { name: 'Home', href: '/' },
-      { name: 'Flights', href: '/flights' }
+      { name: 'Home', href: '/' }
     ]
 
     // Map database categories to navigation items
     const categoryNavigation = categories
-      .filter(cat => !cat.id.includes('flight') && !cat.name.toLowerCase().includes('flight')) // Filter out any flight-related categories
       .map(cat => {
         // Map category IDs to URL-friendly names
         const urlMapping: { [key: string]: string } = {
@@ -35,7 +33,9 @@ export default function PublicLayout() {
           'cat_tour_packages': 'tours',
           'cat_restaurants': 'restaurants',
           'cat_transport': 'transport',
-          'cat_activities': 'activities'
+          'cat_flights': 'flights',
+          'cat_activities': 'activities',
+          
         }
 
         const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
@@ -43,6 +43,18 @@ export default function PublicLayout() {
           name: cat.name,
           href: `/category/${urlSlug}`
         }
+      })
+      .sort((a, b) => {
+        // Custom sorting: flights first, activities last, others alphabetical
+        const order = { 'flights': 0, 'activities': 2 }
+        const aPriority = order[a.href.split('/').pop() as keyof typeof order] ?? 1
+        const bPriority = order[b.href.split('/').pop() as keyof typeof order] ?? 1
+        
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority
+        }
+        // If same priority, sort alphabetically
+        return a.name.localeCompare(b.name)
       })
 
     return [...baseNavigation, ...categoryNavigation]

@@ -37,7 +37,7 @@ const categories = [
   },
   {
     name: 'Flights',
-    href: '/flights',
+    href: '/category/flights',
     icon: Plane,
     description: 'Flights in Uganda',
     color: 'bg-indigo-500'

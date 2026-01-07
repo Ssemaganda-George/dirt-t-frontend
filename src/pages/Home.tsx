@@ -20,15 +20,6 @@ export default function Home() {
     setSelectedCategory(categoryId)
   }
 
-  // Remove hardcoded categories - will be fetched from database
-  // const categories = [
-  //   { id: 'all', name: 'All', icon: '🌍' },
-  //   { id: 'Hotels', name: 'Hotels', icon: '🏨' },
-  //   { id: 'Tours', name: 'Tours', icon: '🗺️' },
-  //   { id: 'Transport', name: 'Transport', icon: '🚗' },
-  //   { id: 'Restaurants', name: 'Restaurants', icon: '🍽️' },
-  //   { id: 'Activities', name: 'Activities', icon: '🎯' }
-  // ]
 
   useEffect(() => {
     fetchCategories()

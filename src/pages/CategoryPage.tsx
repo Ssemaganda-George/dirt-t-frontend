@@ -14,6 +14,7 @@ export default function CategoryPage() {
   const [sortBy, setSortBy] = useState('recommended')
   const [priceRange, setPriceRange] = useState([0, 1000000])
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
 
   // Map URL categories to database category IDs
   const categoryMapping: { [key: string]: string } = {
@@ -21,7 +22,8 @@ export default function CategoryPage() {
     'tours': 'cat_tour_packages',
     'restaurants': 'cat_restaurants',
     'transport': 'cat_transport',
-    'activities': 'cat_activities'
+    'activities': 'cat_activities',
+    'flights': 'cat_flights'
   }
 
   const categoryNames: { [key: string]: string } = {
@@ -29,8 +31,84 @@ export default function CategoryPage() {
     'tours': 'Tour Packages',
     'restaurants': 'Restaurants',
     'transport': 'Transport',
-    'activities': 'Activities'
+    'activities': 'Activities',
+    'flights': 'Flights',
+    'services': 'Services'
   }
+
+  // Get dynamic category filters based on current category
+  const getCategoryFilters = () => {
+    if (category === 'services') {
+      // On services page, show all category filters
+      return [
+        { key: 'all', label: 'All' },
+        { key: 'flights', label: 'Flights' },
+        { key: 'hotels', label: 'Hotels' },
+        { key: 'tours', label: 'Tours' },
+        { key: 'restaurants', label: 'Restaurants' },
+        { key: 'transport', label: 'Transport' },
+        { key: 'activities', label: 'Activities' }
+      ]
+    } else if (category && categoryMapping[category]) {
+      // On specific category pages, show category-specific filters
+      const categoryId = categoryMapping[category]
+      switch (categoryId) {
+        case 'cat_flights':
+          return [
+            { key: 'all', label: 'All Flights' },
+            { key: 'domestic', label: 'Domestic' },
+            { key: 'international', label: 'International' },
+            { key: 'business', label: 'Business Class' },
+            { key: 'economy', label: 'Economy' }
+          ]
+        case 'cat_hotels':
+          return [
+            { key: 'all', label: 'All Hotels' },
+            { key: 'budget', label: 'Budget' },
+            { key: 'midrange', label: 'Mid-range' },
+            { key: 'luxury', label: 'Luxury' },
+            { key: 'resort', label: 'Resort' }
+          ]
+        case 'cat_tour_packages':
+          return [
+            { key: 'all', label: 'All Tours' },
+            { key: 'daytrip', label: 'Day Trips' },
+            { key: 'multiday', label: 'Multi-day' },
+            { key: 'adventure', label: 'Adventure' },
+            { key: 'cultural', label: 'Cultural' }
+          ]
+        case 'cat_restaurants':
+          return [
+            { key: 'all', label: 'All Restaurants' },
+            { key: 'local', label: 'Local Cuisine' },
+            { key: 'international', label: 'International' },
+            { key: 'fine', label: 'Fine Dining' },
+            { key: 'casual', label: 'Casual' }
+          ]
+        case 'cat_transport':
+          return [
+            { key: 'all', label: 'All Transport' },
+            { key: 'taxi', label: 'Taxi' },
+            { key: 'bus', label: 'Bus' },
+            { key: 'private', label: 'Private Car' },
+            { key: 'shuttle', label: 'Shuttle' }
+          ]
+        case 'cat_activities':
+          return [
+            { key: 'all', label: 'All Activities' },
+            { key: 'outdoor', label: 'Outdoor' },
+            { key: 'indoor', label: 'Indoor' },
+            { key: 'water', label: 'Water Sports' },
+            { key: 'cultural', label: 'Cultural' }
+          ]
+        default:
+          return [{ key: 'all', label: 'All' }]
+      }
+    }
+    return [{ key: 'all', label: 'All' }]
+  }
+
+  const categoryFilters = getCategoryFilters()
 
   const categoryName = categoryNames[category || ''] || 'Services'
 
@@ -38,8 +116,8 @@ export default function CategoryPage() {
     if (allServices) {
       let filtered = allServices
 
-      // Filter by category if specified
-      if (category && category !== 'all') {
+      // Filter by category if specified (but not for 'services' which shows all)
+      if (category && category !== 'all' && category !== 'services') {
         const targetCategoryId = categoryMapping[category]
         if (targetCategoryId) {
           filtered = allServices.filter(service => service.category_id === targetCategoryId)
@@ -60,6 +138,11 @@ export default function CategoryPage() {
     }
   }, [allServices, category])
 
+  // Reset category filter when category changes
+  useEffect(() => {
+    setSelectedCategoryFilter('all')
+  }, [category])
+
   const searchFilteredServices = filteredServices.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
@@ -67,7 +150,18 @@ export default function CategoryPage() {
 
     const matchesPrice = service.price >= priceRange[0] && service.price <= priceRange[1]
 
-    return matchesSearch && matchesPrice
+    // Filter by selected category filter
+    let matchesCategoryFilter = true
+    if (category === 'services') {
+      // On services page: filter by main categories
+      matchesCategoryFilter = selectedCategoryFilter === 'all' || 
+                             service.category_id === categoryMapping[selectedCategoryFilter]
+    } else {
+      // On specific category pages: filter by sub-categories (for now, just 'all' works)
+      matchesCategoryFilter = selectedCategoryFilter === 'all'
+    }
+
+    return matchesSearch && matchesPrice && matchesCategoryFilter
   })
 
   const sortedServices = [...searchFilteredServices].sort((a, b) => {
@@ -102,6 +196,27 @@ export default function CategoryPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            
+            {/* Category Filters for Mobile - Dynamic based on current category */}
+            {category && categoryFilters.length > 1 && (
+              <div className="md:hidden">
+                <div className="flex gap-0.5 overflow-x-auto pb-0.5 scrollbar-hide">
+                  {categoryFilters.map((filter) => (
+                    <button
+                      key={filter.key}
+                      onClick={() => setSelectedCategoryFilter(filter.key)}
+                      className={`flex items-center px-1 py-0.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors min-h-[24px] ${
+                        selectedCategoryFilter === filter.key
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="flex gap-2">
               <select

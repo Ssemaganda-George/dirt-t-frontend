@@ -7,8 +7,8 @@ interface MobileBottomNavProps {
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
-  { name: 'Services', href: '/services', icon: Briefcase },
-  { name: 'Flights', href: '/flights', icon: Plane },
+  { name: 'Services', href: '/category/services', icon: Briefcase },
+  { name: 'Flights', href: '/category/flights', icon: Plane },
   { name: 'Support', href: '/support', icon: HelpCircle, isModal: true },
   { name: 'Profile', href: '/profile', icon: User },
 ]
