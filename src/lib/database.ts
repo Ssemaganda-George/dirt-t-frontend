@@ -191,6 +191,24 @@ export interface Service {
   customization_available?: boolean
   emergency_support?: boolean
 
+  // Flight-specific fields
+  flight_number?: string
+  airline?: string
+  departure_airport?: string
+  arrival_airport?: string
+  departure_city?: string
+  arrival_city?: string
+  departure_time?: string
+  arrival_time?: string
+  duration_minutes?: number
+  aircraft_type?: string
+  business_price?: number
+  first_class_price?: number
+  total_seats?: number
+  available_seats?: number
+  flight_class?: 'economy' | 'business' | 'first_class'
+  baggage_allowance?: string
+
   // Enhanced contact and booking info
   tags?: string[]
   contact_info?: { phone?: string; email?: string; website?: string }
@@ -507,37 +525,116 @@ export async function updateService(serviceId: string, updates: Partial<{
   contact_info?: { phone?: string; email?: string; website?: string }
   booking_requirements?: string
   cancellation_policy?: string
-}>) {
-  const { data, error } = await supabase
-    .from('services')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', serviceId)
-    .select(`
-      *,
-      vendors (
-        id,
-        business_name,
-        business_description,
-        business_email,
-        status
-      ),
-      service_categories (
-        id,
-        name,
-        icon
-      )
-    `)
-    .single()
+}>): Promise<any> {
+  // Separate basic fields from additional fields
+  const basicFields = {
+    title: updates.title,
+    description: updates.description,
+    price: updates.price,
+    currency: updates.currency,
+    images: updates.images,
+    location: updates.location,
+    duration_hours: updates.duration_hours,
+    max_capacity: updates.max_capacity,
+    amenities: updates.amenities,
+    status: updates.status,
+    category_id: updates.category_id,
+    updated_at: new Date().toISOString()
+  }
 
-  if (error) {
+  // Filter out undefined values from basic fields
+  const filteredBasicFields: any = {}
+  Object.keys(basicFields).forEach(key => {
+    if (basicFields[key as keyof typeof basicFields] !== undefined) {
+      filteredBasicFields[key] = basicFields[key as keyof typeof basicFields]
+    }
+  })
+
+  // Extract additional fields
+  const additionalFields: any = {}
+  const basicKeys = Object.keys(basicFields)
+  Object.keys(updates).forEach(key => {
+    if (!basicKeys.includes(key) && updates[key as keyof typeof updates] !== undefined) {
+      additionalFields[key] = updates[key as keyof typeof updates]
+    }
+  })
+
+  try {
+    // First, update the basic fields
+    const { data, error } = await supabase
+      .from('services')
+      .update(filteredBasicFields)
+      .eq('id', serviceId)
+      .select(`
+        *,
+        vendors (
+          id,
+          business_name,
+          business_description,
+          business_email,
+          status
+        ),
+        service_categories (
+          id,
+          name,
+          icon
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Error updating basic service fields:', error)
+      throw error
+    }
+
+    // If there are additional fields and the basic update succeeded,
+    // try to update the additional fields (this will work if the migration has been run)
+    if (Object.keys(additionalFields).length > 0) {
+      try {
+        await supabase
+          .from('services')
+          .update({
+            ...additionalFields,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', serviceId)
+
+        // Re-fetch the service with updated data
+        const { data: updatedData, error: updateError } = await supabase
+          .from('services')
+          .select(`
+            *,
+            vendors (
+              id,
+              business_name,
+              business_description,
+              business_email,
+              status
+            ),
+            service_categories (
+              id,
+              name,
+              icon
+            )
+          `)
+          .eq('id', serviceId)
+          .single()
+
+        if (!updateError) {
+          return updatedData
+        }
+      } catch (additionalError) {
+        // If updating additional fields fails, just return the basic service data
+        // This allows service updates to work even without the comprehensive migration
+        console.warn('Failed to update additional service fields:', additionalError)
+      }
+    }
+
+    return data
+  } catch (error) {
     console.error('Error updating service:', error)
     throw error
   }
-
-  return data
 }
 
 export async function deleteService(serviceId: string) {
@@ -700,51 +797,86 @@ export async function updateFlightStatus(id: string, status: Flight['status']): 
 
 // Service Delete Request functions
 export async function createServiceDeleteRequest(serviceId: string, vendorId: string, reason: string): Promise<ServiceDeleteRequest> {
-  const { data, error } = await supabase
-    .from('service_delete_requests')
-    .insert([{
-      service_id: serviceId,
-      vendor_id: vendorId,
-      reason: reason
-    }])
-    .select(`
-      *,
-      service:services(*, service_categories(*)),
-      vendor:vendors(*)
-    `)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('service_delete_requests')
+      .insert([{
+        service_id: serviceId,
+        vendor_id: vendorId,
+        reason: reason
+      }])
+      .select(`
+        *,
+        service:services(*, service_categories(*)),
+        vendor:vendors(*)
+      `)
+      .single()
 
-  if (error) {
-    console.error('Error creating service delete request:', error)
-    throw error
+    if (error) {
+      // Check if the error is because the table doesn't exist
+      if (error.message?.includes('relation "service_delete_requests" does not exist')) {
+        throw new Error('Delete request functionality is not available yet. Please run the database migration first.')
+      }
+      console.error('Error creating service delete request:', error)
+      throw error
+    }
+
+    return data
+  } catch (err) {
+    // If it's our custom error message, re-throw it
+    if (err instanceof Error && err.message.includes('Delete request functionality is not available yet')) {
+      throw err
+    }
+    // Otherwise, provide a generic error
+    console.error('Error creating service delete request:', err)
+    throw new Error('Failed to create delete request. The database table may not exist yet.')
   }
-
-  return data
 }
 
 export async function getServiceDeleteRequests(vendorId?: string): Promise<ServiceDeleteRequest[]> {
-  let query = supabase
-    .from('service_delete_requests')
-    .select(`
-      *,
-      service:services(*, service_categories(*)),
-      vendor:vendors(*),
-      reviewer:profiles(id, full_name, email)
-    `)
-    .order('requested_at', { ascending: false })
+  try {
+    console.log('getServiceDeleteRequests: Called with vendorId:', vendorId);
 
-  if (vendorId) {
-    query = query.eq('vendor_id', vendorId)
+    let query = supabase
+      .from('service_delete_requests')
+      .select(`
+        *,
+        service:services(*, service_categories(*)),
+        vendor:vendors(*),
+        reviewer:profiles(id, full_name, email)
+      `)
+      .order('requested_at', { ascending: false })
+
+    if (vendorId) {
+      query = query.eq('vendor_id', vendorId)
+    }
+
+    console.log('getServiceDeleteRequests: Executing query...');
+    const { data, error } = await query
+
+    if (error) {
+      console.error('getServiceDeleteRequests: Query error:', error);
+      // Check if the error is because the table doesn't exist
+      if (error.message?.includes('relation "service_delete_requests" does not exist')) {
+        console.warn('service_delete_requests table does not exist yet. Returning empty array.')
+        return []
+      }
+      console.error('Error fetching service delete requests:', error)
+      throw error
+    }
+
+    console.log('getServiceDeleteRequests: Query successful, returned', data?.length || 0, 'records');
+    console.log('getServiceDeleteRequests: Sample data:', data?.[0]);
+    return data || []
+  } catch (err) {
+    console.error('getServiceDeleteRequests: Exception:', err);
+    // If it's our custom error message, return empty array
+    if (err instanceof Error && err.message.includes('table does not exist')) {
+      return []
+    }
+    console.error('Error fetching service delete requests:', err)
+    throw err
   }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Error fetching service delete requests:', error)
-    throw error
-  }
-
-  return data || []
 }
 
 export async function updateServiceDeleteRequestStatus(

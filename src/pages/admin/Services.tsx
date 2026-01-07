@@ -12,6 +12,9 @@ export function Services() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
+  console.log('Admin deleteRequests:', deleteRequests);
+  console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -189,6 +192,12 @@ export function Services() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={service.status} variant="small" />
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge 
+                        status={service.status === 'approved' ? 'available' : 'unavailable'} 
+                        variant="small" 
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -268,19 +277,23 @@ export function Services() {
       )}
 
       {/* Delete Requests Section */}
-      {pendingDeleteRequests.length > 0 && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Pending Delete Requests ({pendingDeleteRequests.length})
-            </h3>
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Delete Requests ({pendingDeleteRequests.length})
+          </h3>
+          {pendingDeleteRequests.length === 0 ? (
+            <p className="text-gray-500 text-sm">No pending delete requests.</p>
+          ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comments</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
@@ -301,8 +314,17 @@ export function Services() {
                           {request.vendor?.business_name || 'Unknown'}
                         </div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge 
+                          status={request.service?.status === 'approved' ? 'available' : 'unavailable'} 
+                          variant="small" 
+                        />
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {request.reason}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {request.admin_notes || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(request.requested_at).toLocaleDateString()}
@@ -330,9 +352,9 @@ export function Services() {
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

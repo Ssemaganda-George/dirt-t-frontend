@@ -1,42 +1,20 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { Search, MapPin, Star, Heart } from 'lucide-react'
-import { getServices, getServiceCategories } from '../lib/database'
-import { useFlights } from '../hooks/hook'
-import type { Flight } from '../types'
-
-interface Service {
-  id: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location?: string
-  vendors?: {
-    business_name: string
-  }
-  service_categories?: {
-    name: string
-    icon: string
-  }
-  category_id: string
-  status: string
-}
+import { getServiceCategories } from '../lib/database'
+import { useServices } from '../hooks/hook'
+import type { Service } from '../types'
 
 export default function Home() {
-  const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: string}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [loading, setLoading] = useState(true)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  // Use the reactive useFlights hook instead of local state
-  const { flights: allFlights, loading: flightsLoading } = useFlights()
+  // Use the reactive useServices hook
+  const { services: allServices, loading: servicesLoading } = useServices()
 
   // Combined loading state
-  const isLoading = loading || flightsLoading
+  const isLoading = servicesLoading
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId)
@@ -53,25 +31,8 @@ export default function Home() {
   // ]
 
   useEffect(() => {
-    fetchServices()
     fetchCategories()
   }, [])
-
-  const fetchServices = async () => {
-    try {
-      setLoading(true)
-      const allServices = await getServices()
-      // Only show approved services to tourists, but admin services don't require approval
-      const approvedServices = allServices.filter(service => 
-        !service.vendors || service.status === 'approved'
-      )
-      setServices(approvedServices)
-    } catch (error) {
-      console.error('Error fetching services:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchCategories = async () => {
     try {
@@ -98,11 +59,12 @@ export default function Home() {
       // Fallback to basic categories if database fetch fails
       setCategories([
         { id: 'all', name: 'All', icon: '🌍' },
-        { id: 'cat_hotel', name: 'Hotels', icon: '🏨' },
-        { id: 'cat_tour', name: 'Tour Packages', icon: '🗺️' },
+        { id: 'cat_hotels', name: 'Hotels', icon: '🏨' },
+        { id: 'cat_tour_packages', name: 'Tour Packages', icon: '🗺️' },
         { id: 'cat_transport', name: 'Transport', icon: '🚗' },
-        { id: 'cat_restaurant', name: 'Restaurants', icon: '🍽️' },
-        { id: 'cat_activities', name: 'Activities', icon: '🎯' }
+        { id: 'cat_restaurants', name: 'Restaurants', icon: '🍽️' },
+        { id: 'cat_activities', name: 'Activities', icon: '🎯' },
+        { id: 'cat_flights', name: 'Flights', icon: '✈️' }
       ])
     }
   }
@@ -115,7 +77,7 @@ export default function Home() {
     }).format(amount)
   }
 
-  const filteredServices = services.filter(service => {
+  const filteredServices = allServices.filter((service: Service) => {
     const matchesSearch = !searchQuery || // If no search query, show all
                          service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -137,48 +99,7 @@ export default function Home() {
     return searchQuery ? matchesSearch : (matchesSearch && matchesCategory)
   })
 
-  const filteredFlights = allFlights.filter((flight: Flight) => {
-    // Only show active flights with future departure times
-    if (flight.status !== 'active') return false
-
-    const departureTime = new Date(flight.departure_time)
-    const now = new Date()
-    if (departureTime <= now) return false
-
-    // If no search query, show all flights (normal category filtering applies)
-    if (!searchQuery) return true
-
-    // If there's a search query, check for matches
-    const query = searchQuery.toLowerCase()
-    const matchesSearch = flight.flight_number.toLowerCase().includes(query) ||
-                         flight.airline.toLowerCase().includes(query) ||
-                         flight.departure_city.toLowerCase().includes(query) ||
-                         flight.arrival_city.toLowerCase().includes(query) ||
-                         // Also match common flight-related search terms
-                         query.includes('flight') ||
-                         query.includes('air') ||
-                         query.includes('plane') ||
-                         query.includes('airline') ||
-                         query.includes('aviation')
-
-    return matchesSearch
-  })
-
-  const isShowingFlights = selectedCategory === 'cat_flights'
-  const isShowingAll = selectedCategory === 'all'
-
-  // For "All" category, combine services and flights
-  // For "Flights" category, show only flights
-  // For other categories, show only services
-  // But if there's a search query, show all matching results regardless of category
-  const currentItems = searchQuery
-    ? [...filteredServices, ...filteredFlights] // When searching, show all matching results
-    : isShowingAll
-      ? [...filteredServices, ...filteredFlights]
-      : isShowingFlights
-        ? filteredFlights
-        : filteredServices
-  
+  const currentItems = filteredServices
   const currentItemCount = currentItems.length
 
   if (selectedService) {
@@ -279,41 +200,26 @@ export default function Home() {
                   : categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
             </h2>
             <p className="text-gray-600">
-              {currentItemCount} {searchQuery ? 'result' : isShowingAll ? 'result' : isShowingFlights ? 'flight' : 'place'}{currentItemCount === 1 ? '' : 's'}
+              {currentItemCount} {searchQuery ? 'result' : 'place'}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>
 
         {/* Content Grid */}
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {currentItems.map((item) => {
-              // Check if item is a flight (has flight_number) or service
-              if ('flight_number' in item) {
-                // It's a flight
-                return (
-                  <FlightCard 
-                    key={item.id} 
-                    flight={item}
-                    formatCurrency={formatCurrency}
-                  />
-                )
-              } else {
-                // It's a service
-                return (
-                  <ServiceCard 
-                    key={item.id} 
-                    service={item}
-                    formatCurrency={formatCurrency}
-                    onClick={() => setSelectedService(item)}
-                  />
-                )
-              }
-            })}
+            {currentItems.map((service: Service) => (
+              <ServiceCard 
+                key={service.id} 
+                service={service}
+                formatCurrency={formatCurrency}
+                onClick={() => setSelectedService(service)}
+              />
+            ))}
           </div>
         )}
 
@@ -337,21 +243,80 @@ interface ServiceCardProps {
 
 function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
-  
+
+  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+
+  // Get category-specific information
+  const getCategoryInfo = () => {
+    switch (service.category_id) {
+      case 'cat_hotels':
+        return {
+          icon: '🏨',
+          label: 'Hotel',
+          primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
+          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
+        }
+      case 'cat_tour_packages':
+        return {
+          icon: '🎒',
+          label: 'Tour Package',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
+          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
+        }
+      case 'cat_transport':
+        return {
+          icon: '🚗',
+          label: 'Transport',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
+          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
+        }
+      case 'cat_restaurants':
+        return {
+          icon: '🍽️',
+          label: 'Restaurant',
+          primaryInfo: 'Dining experience',
+          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
+        }
+      case 'cat_activities':
+        return {
+          icon: '🎢',
+          label: 'Activity',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
+          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
+        }
+      case 'cat_flights':
+        return {
+          icon: '✈️',
+          label: 'Flight',
+          primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
+          secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null
+        }
+      default:
+        return {
+          icon: '📦',
+          label: 'Service',
+          primaryInfo: 'Experience',
+          secondaryInfo: null
+        }
+    }
+  }
+
+  const categoryInfo = getCategoryInfo()
+
   return (
-    <div 
+    <div
       onClick={onClick}
       className="group block cursor-pointer"
     >
-      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+      <div className="bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 h-full flex flex-col">
         {/* Image Container */}
-        <div className="relative">
+        <div className="relative h-48 overflow-hidden">
           <img
-            src={service.images[0]}
+            src={imageUrl}
             alt={service.title}
-            className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
-          
+
           {/* Save Button */}
           <button
             onClick={(e) => {
@@ -360,7 +325,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
             }}
             className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
           >
-            <Heart 
+            <Heart
               className={`h-5 w-5 transition-colors ${
                 isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
               }`}
@@ -369,14 +334,15 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 
           {/* Category Badge */}
           <div className="absolute bottom-3 left-3">
-            <span className="bg-white/95 px-3 py-1 rounded-full text-xs font-semibold text-gray-800">
-              {service.service_categories?.name || service.category_id}
-            </span>
+            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm">{categoryInfo.icon}</span>
+              <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="flex-1 p-4 flex flex-col">
           {/* Location & Rating */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center text-sm text-gray-600 flex-1 min-w-0">
@@ -394,8 +360,32 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
             {service.title}
           </h3>
 
+          {/* Category-specific info */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+              <span>{categoryInfo.primaryInfo}</span>
+            </div>
+            {categoryInfo.secondaryInfo && (
+              <div className="text-sm text-gray-600">
+                {categoryInfo.secondaryInfo}
+              </div>
+            )}
+            {/* Flight-specific details */}
+            {service.category_id === 'cat_flights' && service.departure_time && service.arrival_time && (
+              <div className="mt-2 text-xs text-gray-500">
+                <div className="flex justify-between">
+                  <span>Dep: {new Date(service.departure_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span>Arr: {new Date(service.arrival_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {service.aircraft_type && (
+                  <div className="mt-1">Aircraft: {service.aircraft_type}</div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Description */}
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">
             {service.description}
           </p>
 
@@ -427,6 +417,8 @@ interface ServiceDetailProps {
 function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) {
   const [isSaved, setIsSaved] = useState(false)
 
+  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Back Button */}
@@ -447,7 +439,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
       {/* Hero Image */}
       <div className="relative h-96 bg-gray-900">
         <img
-          src={service.images[0]}
+          src={imageUrl}
           alt={service.title}
           className="w-full h-full object-cover opacity-90"
         />
@@ -497,6 +489,69 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
                   {service.description}
                 </p>
               </div>
+
+              {/* Flight Details */}
+              {service.category_id === 'cat_flights' && (
+                <div className="mb-8 pb-8 border-b border-gray-200">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Flight Details</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Departure</h3>
+                      <div className="space-y-1">
+                        <p className="text-gray-700">{service.departure_city} ({service.departure_airport})</p>
+                        <p className="text-gray-600">{service.departure_time ? new Date(service.departure_time).toLocaleString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'TBD'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Arrival</h3>
+                      <div className="space-y-1">
+                        <p className="text-gray-700">{service.arrival_city} ({service.arrival_airport})</p>
+                        <p className="text-gray-600">{service.arrival_time ? new Date(service.arrival_time).toLocaleString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'TBD'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {service.flight_number && (
+                      <div>
+                        <span className="text-sm text-gray-500">Flight Number</span>
+                        <p className="font-semibold">{service.flight_number}</p>
+                      </div>
+                    )}
+                    {service.airline && (
+                      <div>
+                        <span className="text-sm text-gray-500">Airline</span>
+                        <p className="font-semibold">{service.airline}</p>
+                      </div>
+                    )}
+                    {service.aircraft_type && (
+                      <div>
+                        <span className="text-sm text-gray-500">Aircraft</span>
+                        <p className="font-semibold">{service.aircraft_type}</p>
+                      </div>
+                    )}
+                    {service.duration_minutes && (
+                      <div>
+                        <span className="text-sm text-gray-500">Duration</span>
+                        <p className="font-semibold">{Math.floor(service.duration_minutes / 60)}h {service.duration_minutes % 60}m</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Vendor Info */}
               <div className="mb-8 pb-8 border-b border-gray-200">
@@ -599,115 +654,5 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
   )
 }
 
-interface FlightCardProps {
-  flight: Flight
-  formatCurrency: (amount: number, currency: string) => string
-}
 
-function FlightCard({ flight, formatCurrency }: Omit<FlightCardProps, 'onClick'>) {
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}h ${mins}m`
-  }
-
-  return (
-    <Link to={`/flights/${flight.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 cursor-pointer">
-        {/* Flight Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
-              <span className="text-2xl mr-2">✈️</span>
-              <div>
-                <div className="font-bold text-lg">{flight.flight_number}</div>
-                <div className="text-blue-100 text-sm">{flight.airline}</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm opacity-90">Duration</div>
-              <div className="font-semibold">{formatDuration(flight.duration_minutes)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Flight Details */}
-        <div className="p-4">
-          {/* Route */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-center">
-              <div className="font-bold text-lg">{flight.departure_city}</div>
-              <div className="text-sm text-gray-500">{flight.departure_airport}</div>
-              <div className="text-sm font-medium text-gray-700 mt-1">
-                {formatDateTime(flight.departure_time)}
-              </div>
-            </div>
-            <div className="flex-1 mx-4 relative">
-              <div className="border-t-2 border-dashed border-gray-300 relative">
-                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className="bg-white border-2 border-gray-300 rounded-full p-1">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-lg">{flight.arrival_city}</div>
-              <div className="text-sm text-gray-500">{flight.arrival_airport}</div>
-              <div className="text-sm font-medium text-gray-700 mt-1">
-                {formatDateTime(flight.arrival_time)}
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Economy</span>
-              <span className="font-bold text-lg text-gray-900">
-                {formatCurrency(flight.economy_price, flight.currency)}
-              </span>
-            </div>
-            {flight.business_price && (
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">Business</span>
-                <span className="font-semibold text-gray-700">
-                  {formatCurrency(flight.business_price, flight.currency)}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between text-sm text-gray-500 mt-2">
-              <span>{flight.available_seats} seats available</span>
-              <span>{flight.aircraft_type}</span>
-            </div>
-          </div>
-
-          {/* Amenities */}
-          {flight.amenities && flight.amenities.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {flight.amenities.slice(0, 3).map((amenity, index) => (
-                <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                  {amenity}
-                </span>
-              ))}
-              {flight.amenities.length > 3 && (
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  +{flight.amenities.length - 3} more
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  )
-}

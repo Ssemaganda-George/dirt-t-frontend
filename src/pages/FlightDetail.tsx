@@ -8,22 +8,22 @@ import {
   Monitor
 } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
-import { useFlights } from '../hooks/hook'
-import type { Flight } from '../types'
+import { useServices } from '../hooks/hook'
+import type { Service } from '../types'
 
 export default function FlightDetail() {
   const { id } = useParams<{ id: string }>()
-  const { flights } = useFlights()
-  const [flight, setFlight] = useState<Flight | null>(null)
+  const { services } = useServices()
+  const [flight, setFlight] = useState<Service | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (flights && id) {
-      const foundFlight = flights.find(f => f.id === id)
+    if (services && id) {
+      const foundFlight = services.find((s: Service) => s.id === id && s.category_id === 'cat_flights')
       setFlight(foundFlight || null)
       setLoading(false)
     }
-  }, [flights, id])
+  }, [services, id])
 
   if (loading) {
     return (
@@ -51,10 +51,10 @@ export default function FlightDetail() {
     )
   }
 
-  const departureDate = new Date(flight.departure_time)
-  const arrivalDate = new Date(flight.arrival_time)
-  const durationHours = Math.floor(flight.duration_minutes / 60)
-  const durationMinutes = flight.duration_minutes % 60
+  const departureDate = new Date(flight.departure_time || '')
+  const arrivalDate = new Date(flight.arrival_time || '')
+  const durationHours = Math.floor((flight.duration_minutes || 0) / 60)
+  const durationMinutes = (flight.duration_minutes || 0) % 60
 
   // Mock amenities for display (in a real app, these would come from the database)
   const amenities = flight.amenities || ['WiFi', 'Entertainment', 'Meals', 'USB Charging']
@@ -87,7 +87,7 @@ export default function FlightDetail() {
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-gray-900">
-                {formatCurrency(flight.economy_price, flight.currency)}
+                {formatCurrency(flight.economy_price || 0, flight.currency || 'UGX')}
               </div>
               <div className="text-sm text-gray-500">Economy</div>
             </div>
@@ -192,7 +192,7 @@ export default function FlightDetail() {
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-gray-900">
-                      {formatCurrency(flight.economy_price, flight.currency)}
+                      {formatCurrency(flight.economy_price || 0, flight.currency || 'UGX')}
                     </div>
                   </div>
                 </div>

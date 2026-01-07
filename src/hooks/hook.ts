@@ -326,9 +326,13 @@ export function useServiceDeleteRequests(vendorId?: string) {
       setLoading(true);
       setError(null);
 
+      console.log('useServiceDeleteRequests: Fetching delete requests for vendorId:', vendorId);
       const data = await getServiceDeleteRequests(vendorId);
+      console.log('useServiceDeleteRequests: Fetched data:', data);
+      console.log('useServiceDeleteRequests: Data length:', data?.length || 0);
       setDeleteRequests(data);
     } catch (err) {
+      console.error('useServiceDeleteRequests: Error fetching delete requests:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

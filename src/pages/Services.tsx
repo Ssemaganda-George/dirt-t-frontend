@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Hotel, Camera, Utensils, Car, Activity, Plane, Search, Heart, MapPin, Star } from 'lucide-react'
-import { getServices, getServiceCategories } from '../lib/database'
-import { useFlights } from '../hooks/hook'
+import { getServiceCategories } from '../lib/database'
+import { useServices } from '../hooks/hook'
 import { formatCurrency } from '../lib/utils'
 import type { Service } from '../types'
 
@@ -39,7 +39,7 @@ const categories = [
     name: 'Flights',
     href: '/flights',
     icon: Plane,
-    description: 'Find and book flights to your destination',
+    description: 'Flights in Uganda',
     color: 'bg-indigo-500'
   },
   {
@@ -52,39 +52,20 @@ const categories = [
 ]
 
 export default function Services() {
-  const [services, setServices] = useState<Service[]>([])
   const [dbCategories, setDbCategories] = useState<Array<{id: string, name: string, icon?: string}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [loading, setLoading] = useState(true)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
-  // Use the reactive useFlights hook instead of local state
-  const { flights: allFlights, loading: flightsLoading } = useFlights()
+  // Use the reactive useServices hook instead of local state
+  const { services: allServices, loading: servicesLoading } = useServices()
 
   // Combined loading state
-  const isLoading = loading || flightsLoading
+  const isLoading = servicesLoading
 
   useEffect(() => {
-    fetchServices()
     fetchCategories()
   }, [])
-
-  const fetchServices = async () => {
-    try {
-      setLoading(true)
-      const allServices = await getServices()
-      // Only show approved services to tourists, but admin services don't require approval
-      const approvedServices = allServices.filter(service => 
-        !service.vendors || service.status === 'approved'
-      )
-      setServices(approvedServices)
-    } catch (error) {
-      console.error('Error fetching services:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchCategories = async () => {
     try {
@@ -126,28 +107,24 @@ export default function Services() {
   }
 
   // Filter by search query first (across all categories if searching)
-  const searchFilteredServices = services.filter(service => {
+  const approvedServices = allServices.filter(service => 
+    !service.vendors || service.status === 'approved'
+  )
+  
+  const searchFilteredServices = approvedServices.filter((service: Service) => {
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return service.title.toLowerCase().includes(query) ||
            (service.location?.toLowerCase().includes(query) ?? false) ||
            (service.vendors?.business_name.toLowerCase().includes(query) ?? false) ||
            (service.service_categories?.name.toLowerCase().includes(query) ?? false) ||
-           (service.description?.toLowerCase().includes(query) ?? false)
-  })
-
-  const searchFilteredFlights = allFlights.filter(flight => {
-    if (!searchQuery) return true
-    const query = searchQuery.toLowerCase()
-    return flight.flight_number.toLowerCase().includes(query) ||
-           flight.airline.toLowerCase().includes(query) ||
-           flight.departure_city.toLowerCase().includes(query) ||
-           flight.arrival_city.toLowerCase().includes(query) ||
-           query.includes('flight') ||
-           query.includes('air') ||
-           query.includes('plane') ||
-           query.includes('airline') ||
-           query.includes('aviation')
+           (service.description?.toLowerCase().includes(query) ?? false) ||
+           // Also check for flight-specific search terms
+           query.includes('flight') && service.category_id === 'cat_flights' ||
+           query.includes('air') && service.category_id === 'cat_flights' ||
+           query.includes('plane') && service.category_id === 'cat_flights' ||
+           query.includes('airline') && service.category_id === 'cat_flights' ||
+           query.includes('aviation') && service.category_id === 'cat_flights'
   })
 
   // Apply category filtering only when not searching
@@ -158,29 +135,7 @@ export default function Services() {
         return service.category_id === selectedCategory
       })
 
-  const categoryFilteredFlights = searchQuery
-    ? searchFilteredFlights
-    : allFlights.filter(() => {
-        if (selectedCategory === 'all') return true
-        if (selectedCategory === 'cat_flights') return true
-        return false
-      })
-
-  const isShowingFlights = selectedCategory === 'cat_flights'
-  const isShowingAll = selectedCategory === 'all'
-
-  // For "All" category, combine services and flights
-  // For "Flights" category, show only flights
-  // For other categories, show only services
-  // But if there's a search query, show all matching results regardless of category
-  const currentItems = searchQuery
-    ? [...searchFilteredServices, ...searchFilteredFlights] // When searching, show all matching results
-    : isShowingAll
-      ? [...categoryFilteredServices, ...categoryFilteredFlights]
-      : isShowingFlights
-        ? categoryFilteredFlights
-        : categoryFilteredServices
-  
+  const currentItems = categoryFilteredServices
   const currentItemCount = currentItems.length
 
   if (selectedService) {
@@ -241,7 +196,7 @@ export default function Services() {
                     : dbCategories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
               </h2>
               <p className="text-gray-600 text-sm">
-                {currentItemCount} {searchQuery ? 'result' : isShowingAll ? 'result' : isShowingFlights ? 'flight' : 'service'}{currentItemCount === 1 ? '' : 's'}
+                {currentItemCount} {searchQuery ? 'result' : 'service'}{currentItemCount === 1 ? '' : 's'}
               </p>
             </div>
           </div>
@@ -255,29 +210,14 @@ export default function Services() {
         ) : (
           <div className="px-4 py-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {currentItems.map((item: any) => {
-                // Check if item is a flight (has flight_number) or service
-                if ('flight_number' in item) {
-                  // It's a flight
-                  return (
-                    <FlightCard 
-                      key={item.id} 
-                      flight={item}
-                      formatCurrency={formatCurrency}
-                    />
-                  )
-                } else {
-                  // It's a service
-                  return (
-                    <ServiceCard 
-                      key={item.id} 
-                      service={item}
-                      formatCurrency={formatCurrency}
-                      onClick={() => setSelectedService(item)}
-                    />
-                  )
-                }
-              })}
+              {currentItems.map((service: Service) => (
+                <ServiceCard 
+                  key={service.id} 
+                  service={service}
+                  formatCurrency={formatCurrency}
+                  onClick={() => setSelectedService(service)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -594,115 +534,5 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
   )
 }
 
-interface FlightCardProps {
-  flight: any
-  formatCurrency: (amount: number, currency: string) => string
-}
 
-function FlightCard({ flight, formatCurrency }: Omit<FlightCardProps, 'onClick'>) {
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return `${hours}h ${mins}m`
-  }
-
-  return (
-    <Link to={`/flights/${flight.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 cursor-pointer">
-        {/* Flight Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center">
-              <span className="text-2xl mr-2">✈️</span>
-              <div>
-                <div className="font-bold text-lg">{flight.flight_number}</div>
-                <div className="text-blue-100 text-sm">{flight.airline}</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm opacity-90">Duration</div>
-              <div className="font-semibold">{formatDuration(flight.duration_minutes)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Flight Details */}
-        <div className="p-4">
-          {/* Route */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-center">
-              <div className="font-bold text-lg">{flight.departure_city}</div>
-              <div className="text-sm text-gray-500">{flight.departure_airport}</div>
-              <div className="text-sm font-medium text-gray-700 mt-1">
-                {formatDateTime(flight.departure_time)}
-              </div>
-            </div>
-            <div className="flex-1 mx-4 relative">
-              <div className="border-t-2 border-dashed border-gray-300 relative">
-                <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className="bg-white border-2 border-gray-300 rounded-full p-1">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-lg">{flight.arrival_city}</div>
-              <div className="text-sm text-gray-500">{flight.arrival_airport}</div>
-              <div className="text-sm font-medium text-gray-700 mt-1">
-                {formatDateTime(flight.arrival_time)}
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Economy</span>
-              <span className="font-bold text-lg text-gray-900">
-                {formatCurrency(flight.economy_price, flight.currency)}
-              </span>
-            </div>
-            {flight.business_price && (
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">Business</span>
-                <span className="font-semibold text-gray-700">
-                  {formatCurrency(flight.business_price, flight.currency)}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between text-sm text-gray-500 mt-2">
-              <span>{flight.available_seats} seats available</span>
-              <span>{flight.aircraft_type}</span>
-            </div>
-          </div>
-
-          {/* Amenities */}
-          {flight.amenities && flight.amenities.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {flight.amenities.slice(0, 3).map((amenity: string, index: number) => (
-                <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                  {amenity}
-                </span>
-              ))}
-              {flight.amenities.length > 3 && (
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  +{flight.amenities.length - 3} more
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </Link>
-  )
-}

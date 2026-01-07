@@ -2,35 +2,41 @@ import { useState, useEffect } from 'react'
 import { Search, SlidersHorizontal, Plane, Clock } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { Link } from 'react-router-dom'
-import { useFlights } from '../hooks/hook'
-import type { Flight } from '../types'
+import { useServices } from '../hooks/hook'
+import type { Service } from '../types'
 
 export default function Flights() {
   const [searchTerm, setSearchTerm] = useState('')
-  const { flights: allFlights, loading } = useFlights()
-  const [filteredFlights, setFilteredFlights] = useState<Flight[]>([])
+  const { services: allServices, loading, error } = useServices()
+  const [filteredFlights, setFilteredFlights] = useState<Service[]>([])
 
   useEffect(() => {
-    if (allFlights) {
-      const filtered = allFlights.filter((flight: Flight) => {
-        // Only show active flights with future departure times
-        if (flight.status !== 'active') return false
-
-        const departureTime = new Date(flight.departure_time)
-        const now = new Date()
-        if (departureTime <= now) return false
-
+    if (allServices) {
+      console.log('All services from database:', allServices.length)
+      const flightServices = allServices.filter((service: Service) => 
+        service.category_id === 'cat_flights' && 
+        (!service.vendors || service.status === 'approved')
+      )
+      console.log('Flight services:', flightServices.length)
+      
+      const filtered = flightServices.filter((service: Service) => {
         // Search functionality
-        const matchesSearch = flight.flight_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             flight.airline.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             flight.departure_city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             flight.arrival_city.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesSearch = !searchTerm || (
+          service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          service.airline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          service.departure_city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          service.arrival_city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          service.flight_number?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
 
         return matchesSearch
       })
+      console.log('Filtered flight services:', filtered.length)
       setFilteredFlights(filtered)
+    } else {
+      console.log('No services data received')
     }
-  }, [searchTerm, allFlights])
+  }, [searchTerm, allServices])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,7 +48,7 @@ export default function Flights() {
             <h1 className="text-3xl font-bold text-gray-900">Flights</h1>
           </div>
           <p className="text-lg text-gray-600">
-            Find and book flights to your favorite destinations
+            Flights in Uganda
           </p>
         </div>
 
@@ -69,52 +75,64 @@ export default function Flights() {
         </div>
 
         {/* Flights Grid */}
-        {loading ? (
+        {error ? (
+          <div className="text-center py-12">
+            <div className="text-red-600 mb-4">
+              <Plane className="h-16 w-16 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">Error loading flights</h3>
+              <p className="text-gray-600">{error}</p>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-gray-600 mt-4">Loading flights...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFlights.map((flight) => (
+            {filteredFlights.map((service) => (
               <Link
-                key={flight.id}
-                to={`/flights/${flight.id}`}
+                key={service.id}
+                to={`/services/${service.id}`}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow block group"
               >
                 <div className="aspect-w-16 aspect-h-9 bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
                   <div className="text-white text-center">
                     <Plane className="h-16 w-16 mx-auto mb-2" />
-                    <div className="text-lg font-semibold">{flight.flight_number}</div>
+                    <div className="text-lg font-semibold">{service.flight_number || service.title}</div>
                   </div>
                 </div>
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{flight.airline}</h3>
-                    <span className="text-sm text-gray-500">{flight.flight_number}</span>
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{service.airline || service.title}</h3>
+                    <span className="text-sm text-gray-500">{service.flight_number || 'Flight'}</span>
                   </div>
 
                   <div className="mb-4">
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
-                      <span>{flight.departure_city}</span>
+                      <span>{service.departure_city || 'Departure'}</span>
                       <span className="text-xs">→</span>
-                      <span>{flight.arrival_city}</span>
+                      <span>{service.arrival_city || 'Arrival'}</span>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{new Date(flight.departure_time).toLocaleDateString()}</span>
-                      <span>{Math.floor(flight.duration_minutes / 60)}h {flight.duration_minutes % 60}m</span>
-                    </div>
+                    {service.departure_time && service.duration_minutes && (
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{new Date(service.departure_time).toLocaleDateString()}</span>
+                        <span>{Math.floor(service.duration_minutes / 60)}h {service.duration_minutes % 60}m</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center text-sm text-gray-500 mb-4">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {new Date(flight.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                  </div>
+                  {service.departure_time && (
+                    <div className="flex items-center text-sm text-gray-500 mb-4">
+                      <Clock className="h-4 w-4 mr-1" />
+                      {new Date(service.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <div className="text-right">
                       <div className="text-xl font-bold text-gray-900">
-                        {formatCurrency(flight.economy_price, flight.currency)}
+                        {formatCurrency(service.economy_price || service.price, service.currency)}
                       </div>
                       <div className="text-sm text-gray-500">Economy</div>
                     </div>
@@ -122,7 +140,7 @@ export default function Flights() {
 
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <div className="text-sm text-gray-600 mb-2">
-                      {flight.available_seats} seats available
+                      {service.available_seats ? `${service.available_seats} seats available` : 'Seats available'}
                     </div>
                     <div className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center">
                       Book Flight

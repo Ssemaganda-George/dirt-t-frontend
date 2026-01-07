@@ -17,11 +17,11 @@ export default function CategoryPage() {
 
   // Map URL categories to database category IDs
   const categoryMapping: { [key: string]: string } = {
-    'hotels': 'cat_hotel',
-    'tours': 'cat_tour',
-    'restaurants': 'cat_restaurant',
+    'hotels': 'cat_hotels',
+    'tours': 'cat_tour_packages',
+    'restaurants': 'cat_restaurants',
     'transport': 'cat_transport',
-    'activities': 'cat_activity'
+    'activities': 'cat_activities'
   }
 
   const categoryNames: { [key: string]: string } = {
@@ -222,44 +222,129 @@ interface ServiceCardProps {
 function ServiceCard({ service }: ServiceCardProps) {
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
+  // Get category-specific information
+  const getCategoryInfo = () => {
+    switch (service.category_id) {
+      case 'cat_hotels':
+        return {
+          icon: '🏨',
+          label: 'Hotel',
+          primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
+          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
+        }
+      case 'cat_tour_packages':
+        return {
+          icon: '🎒',
+          label: 'Tour Package',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
+          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
+        }
+      case 'cat_transport':
+        return {
+          icon: '🚗',
+          label: 'Transport',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
+          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
+        }
+      case 'cat_restaurants':
+        return {
+          icon: '🍽️',
+          label: 'Restaurant',
+          primaryInfo: 'Dining experience',
+          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
+        }
+      case 'cat_activities':
+        return {
+          icon: '🎢',
+          label: 'Activity',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
+          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
+        }
+      case 'cat_flights':
+        return {
+          icon: '✈️',
+          label: 'Flight',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h flight` : 'Flight booking',
+          secondaryInfo: service.max_capacity ? `Class: ${service.max_capacity}` : null
+        }
+      default:
+        return {
+          icon: '📦',
+          label: 'Service',
+          primaryInfo: 'Experience',
+          secondaryInfo: null
+        }
+    }
+  }
+
+  const categoryInfo = getCategoryInfo()
+
   return (
     <Link to={`/service/${service.id}`} className="group">
-      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
-        <div className="relative">
+      <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
+        {/* Image Container - Fixed height */}
+        <div className="relative h-48 overflow-hidden">
           <img
             src={imageUrl}
             alt={service.title}
-            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          <div className="absolute top-3 right-3 bg-white bg-opacity-90 rounded-full p-1">
-            <div className="flex items-center space-x-1">
-              <Star className="h-4 w-4 text-yellow-400 fill-current" />
-              <span className="text-sm font-medium">4.5</span>
+
+          {/* Category Badge */}
+          <div className="absolute top-3 left-3">
+            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+              <span className="text-sm">{categoryInfo.icon}</span>
+              <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
+            </div>
+          </div>
+
+          {/* Rating Badge */}
+          <div className="absolute top-3 right-3">
+            <div className="flex items-center gap-1 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+              <Star className="h-3 w-3 fill-current" />
+              <span>4.5</span>
             </div>
           </div>
         </div>
 
-        <div className="p-4">
+        {/* Content - Flexible height to maintain consistent card height */}
+        <div className="flex-1 p-4 flex flex-col">
+          {/* Location */}
           {service.location && (
-            <div className="flex items-center text-sm text-gray-500 mb-2">
-              <MapPin className="h-4 w-4 mr-1" />
-              {service.location}
+            <div className="flex items-center text-sm text-gray-600 mb-2">
+              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">{service.location}</span>
             </div>
           )}
 
-          <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+          {/* Title */}
+          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2 min-h-[2.5rem]">
             {service.title}
           </h3>
 
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+          {/* Category-specific info */}
+          <div className="mb-3">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+              <span>{categoryInfo.primaryInfo}</span>
+            </div>
+            {categoryInfo.secondaryInfo && (
+              <div className="text-sm text-gray-600">
+                {categoryInfo.secondaryInfo}
+              </div>
+            )}
+          </div>
+
+          {/* Description - Limited lines */}
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">
             {service.description}
           </p>
 
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              by {service.vendors?.business_name || 'Unknown Vendor'}
+          {/* Footer with vendor and price */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <div className="text-xs text-gray-500 truncate flex-1 min-w-0">
+              by {service.vendors?.business_name || 'Vendor'}
             </div>
-            <div className="text-right">
+            <div className="text-right ml-2">
               <div className="text-lg font-bold text-gray-900">
                 {formatCurrency(service.price, service.currency)}
               </div>

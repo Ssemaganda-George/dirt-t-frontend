@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
 import SupportModal from './SupportModal'
+import { useServiceCategories } from '../hooks/hook'
 
 export default function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -15,6 +16,39 @@ export default function PublicLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { categories } = useServiceCategories()
+
+  // Map category IDs to navigation items
+  const getNavigationItems = () => {
+    const baseNavigation = [
+      { name: 'Home', href: '/' },
+      { name: 'Flights', href: '/flights' }
+    ]
+
+    // Map database categories to navigation items
+    const categoryNavigation = categories
+      .filter(cat => !cat.id.includes('flight') && !cat.name.toLowerCase().includes('flight')) // Filter out any flight-related categories
+      .map(cat => {
+        // Map category IDs to URL-friendly names
+        const urlMapping: { [key: string]: string } = {
+          'cat_hotels': 'hotels',
+          'cat_tour_packages': 'tours',
+          'cat_restaurants': 'restaurants',
+          'cat_transport': 'transport',
+          'cat_activities': 'activities'
+        }
+
+        const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
+        return {
+          name: cat.name,
+          href: `/category/${urlSlug}`
+        }
+      })
+
+    return [...baseNavigation, ...categoryNavigation]
+  }
+
+  const navigation = getNavigationItems()
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,16 +63,6 @@ export default function PublicLayout() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
-
-  const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Flights', href: '/flights' },
-    { name: 'Hotels', href: '/category/hotels' },
-    { name: 'Tours', href: '/category/tours' },
-    { name: 'Restaurants', href: '/category/restaurants' },
-    { name: 'Transport', href: '/category/transport' },
-    
-  ]
 
   return (
     <div className="min-h-screen bg-gray-50">

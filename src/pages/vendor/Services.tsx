@@ -15,7 +15,7 @@ export default function VendorServices() {
 
   const { services, loading, error, createService, updateService, deleteService } = useServices(vendorId || undefined)
   const { categories } = useServiceCategories()
-  const { createDeleteRequest } = useServiceDeleteRequests(vendorId || undefined)
+  const { deleteRequests, createDeleteRequest } = useServiceDeleteRequests(vendorId || undefined)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
@@ -201,6 +201,16 @@ export default function VendorServices() {
   }
 
   const onDelete = async (service: Service) => {
+    if (!user) {
+      alert('You must be logged in to delete services.')
+      return
+    }
+
+    if (!vendorId) {
+      alert('Vendor account not found. Please contact support.')
+      return
+    }
+
     if (service.status === 'approved') {
       // For approved services, create a delete request
       const reason = prompt('Please provide a reason for requesting deletion of this approved service:')
@@ -210,11 +220,12 @@ export default function VendorServices() {
       }
 
       try {
-        await createDeleteRequest(service.id, vendorId!, reason.trim())
+        await createDeleteRequest(service.id, vendorId, reason.trim())
         alert('Delete request submitted successfully. An admin will review your request.')
       } catch (err) {
         console.error('Failed to create delete request:', err)
-        alert('Failed to submit delete request. Please try again.')
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
+        alert(`Failed to submit delete request: ${errorMessage}`)
       }
     } else {
       // For non-approved services, delete directly
@@ -252,10 +263,19 @@ export default function VendorServices() {
     ? services 
     : services.filter(service => service.category_id === selectedCategory)
 
+  const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending')
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
+        <div className="flex items-center space-x-4">
+          <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
+          {pendingDeleteRequests.length > 0 && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+              {pendingDeleteRequests.length} Pending Delete Request{pendingDeleteRequests.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" /> Add Service
         </button>
@@ -378,6 +398,52 @@ export default function VendorServices() {
           </table>
         </div>
       </div>
+
+      {/* Delete Requests Section */}
+      {pendingDeleteRequests.length > 0 && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              My Delete Requests ({pendingDeleteRequests.length})
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {pendingDeleteRequests.map((request) => (
+                    <tr key={request.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                            {request.service?.description}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        {request.reason}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={request.status} variant="small" />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(request.requested_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <ServiceForm
