@@ -55,7 +55,7 @@ export default function VendorDashboard() {
         </div>
         <button 
           onClick={refresh} 
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
@@ -99,7 +99,7 @@ export default function VendorDashboard() {
         {/* Recent Bookings - Takes 2 columns */}
         <div className="xl:col-span-2">
           <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-blue-600" />
@@ -142,7 +142,7 @@ export default function VendorDashboard() {
         {/* Recent Transactions - Takes 1 column */}
         <div className="xl:col-span-1">
           <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-600" />
@@ -208,23 +208,19 @@ function StatCard({
   const colorClasses = {
     blue: {
       bg: 'bg-blue-50',
-      icon: 'text-blue-600',
-      gradient: 'from-blue-500 to-blue-600'
+      icon: 'text-blue-600'
     },
     yellow: {
       bg: 'bg-yellow-50',
-      icon: 'text-yellow-600',
-      gradient: 'from-yellow-500 to-yellow-600'
+      icon: 'text-yellow-600'
     },
     green: {
       bg: 'bg-green-50',
-      icon: 'text-green-600',
-      gradient: 'from-green-500 to-green-600'
+      icon: 'text-green-600'
     },
     purple: {
       bg: 'bg-purple-50',
-      icon: 'text-purple-600',
-      gradient: 'from-purple-500 to-purple-600'
+      icon: 'text-purple-600'
     }
   }
 

@@ -16,9 +16,19 @@ interface Profile {
   updated_at: string
 }
 
+interface Vendor {
+  id: string
+  user_id: string
+  business_name: string
+  status: 'pending' | 'approved' | 'rejected' | 'suspended'
+  created_at: string
+  updated_at: string
+}
+
 interface AuthContextType {
   user: User | null
   profile: Profile | null
+  vendor: Vendor | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
@@ -39,6 +49,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -79,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null)
         setProfile(null)
+        setVendor(null)
       }
     })
 
@@ -97,9 +109,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error
       setProfile(data as Profile)
+
+      // If user is a vendor, fetch vendor data
+      if (data.role === 'vendor') {
+        await fetchVendor(userId)
+      } else {
+        setVendor(null)
+      }
     } catch (error) {
       console.error('Error fetching profile:', error)
       setProfile(null)
+      setVendor(null)
+    }
+  }
+
+  const fetchVendor = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        // If vendor record doesn't exist, set vendor to null
+        setVendor(null)
+      } else {
+        setVendor(data as Vendor)
+      }
+    } catch (error) {
+      console.error('Error fetching vendor:', error)
+      setVendor(null)
     }
   }
 
@@ -187,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     user,
     profile,
+    vendor,
     loading,
     signIn,
     signUp,

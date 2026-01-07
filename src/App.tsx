@@ -12,6 +12,7 @@ import FlightPage from './pages/Flights'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 import VendorLogin from './pages/VendorLogin'
+import VendorPending from './pages/VendorPending'
 import VendorLayout from './components/VendorLayout'
 import VendorDashboard from './pages/vendor/Dashboard'
 import VendorServices from './pages/vendor/Services'
@@ -43,6 +44,7 @@ function App() {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
+          <Route path="/vendor-pending" element={<VendorPending />} />
           
           {/* Vendor Routes */}
           <Route
