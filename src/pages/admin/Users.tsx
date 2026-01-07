@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor } from '../../lib/utils'
-import { Check, X, Eye, User, Store, RefreshCw, Ban } from 'lucide-react'
+import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { useServiceCategories } from '../../hooks/hook'
 
@@ -73,6 +73,14 @@ export default function Users() {
   const [showSuspendModal, setShowSuspendModal] = useState(false)
   const [suspendTarget, setSuspendTarget] = useState<{type: 'vendor' | 'user', id: string, name: string} | null>(null)
   const [suspendPeriod, setSuspendPeriod] = useState<'1day' | '1week' | '1month' | 'permanent'>('1week')
+
+  // Generic confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'approve' | 'reject' | 'delete'
+    target: {type: 'vendor' | 'user', id: string, name: string}
+    action: () => void
+  } | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -314,6 +322,23 @@ export default function Users() {
     }
   }
 
+  const showConfirmation = (type: 'approve' | 'reject' | 'delete', target: {type: 'vendor' | 'user', id: string, name: string}, action: () => void) => {
+    setConfirmAction({ type, target, action })
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return
+
+    try {
+      await confirmAction.action()
+      setShowConfirmModal(false)
+      setConfirmAction(null)
+    } catch (error) {
+      console.error('Error performing action:', error)
+    }
+  }
+
   const assignCategoryToVendor = async (vendorId: string, categoryId: string) => {
     try {
       // For now, we'll store categories in local state
@@ -517,14 +542,14 @@ export default function Users() {
                       {user.vendor?.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => user.vendor && updateVendorStatus(user.vendor.id, 'approved')}
+                            onClick={() => user.vendor && showConfirmation('approve', {type: 'vendor', id: user.vendor.id, name: user.vendor.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor!.id, 'approved'))}
                             className="text-green-600 hover:text-green-900"
                             title="Approve"
                           >
                             <Check className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => user.vendor && updateVendorStatus(user.vendor.id, 'rejected')}
+                            onClick={() => user.vendor && showConfirmation('reject', {type: 'vendor', id: user.vendor.id, name: user.vendor.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor!.id, 'rejected'))}
                             className="text-red-600 hover:text-red-900"
                             title="Reject"
                           >
@@ -726,14 +751,14 @@ export default function Users() {
                 {selectedUser.vendor?.status === 'pending' && (
                   <div className="flex space-x-3 pt-4 border-t">
                     <button
-                      onClick={() => updateVendorStatus(selectedUser.vendor!.id, 'approved')}
+                      onClick={() => showConfirmation('approve', {type: 'vendor', id: selectedUser.vendor!.id, name: selectedUser.vendor!.business_name || selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.vendor!.id, 'approved'))}
                       className="btn-primary flex items-center"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Approve Vendor
                     </button>
                     <button
-                      onClick={() => updateVendorStatus(selectedUser.vendor!.id, 'rejected')}
+                      onClick={() => showConfirmation('reject', {type: 'vendor', id: selectedUser.vendor!.id, name: selectedUser.vendor!.business_name || selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.vendor!.id, 'rejected'))}
                       className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
                     >
                       <X className="h-4 w-4 mr-2" />
@@ -806,6 +831,90 @@ export default function Users() {
                   >
                     <Ban className="h-4 w-4 mr-2" />
                     Confirm Suspension
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generic Confirmation Modal */}
+      {showConfirmModal && confirmAction && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {confirmAction.type === 'approve' ? 'Confirm Approval' :
+                   confirmAction.type === 'reject' ? 'Confirm Rejection' :
+                   'Confirm Deletion'}
+                </h3>
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    {confirmAction.type === 'approve' ? (
+                      <Check className="h-5 w-5 text-green-600 mr-2" />
+                    ) : confirmAction.type === 'reject' ? (
+                      <X className="h-5 w-5 text-red-600 mr-2" />
+                    ) : (
+                      <Trash2 className="h-5 w-5 text-red-600 mr-2" />
+                    )}
+                    <span className="text-gray-900 font-medium">
+                      {confirmAction.type === 'approve' ? 'Approval Confirmation' :
+                       confirmAction.type === 'reject' ? 'Rejection Confirmation' :
+                       'Deletion Confirmation'}
+                    </span>
+                  </div>
+                  <p className="text-gray-700 text-sm mt-1">
+                    {confirmAction.type === 'approve' ?
+                      `Are you sure you want to approve ${confirmAction.target.name}? This will grant them full vendor privileges.` :
+                     confirmAction.type === 'reject' ?
+                      `Are you sure you want to reject ${confirmAction.target.name}? This action cannot be undone.` :
+                      `Are you sure you want to delete ${confirmAction.target.name}? This action cannot be undone.`
+                    }
+                  </p>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmAction}
+                    className={`flex-1 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center ${
+                      confirmAction.type === 'approve'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
+                  >
+                    {confirmAction.type === 'approve' ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Confirm Approval
+                      </>
+                    ) : confirmAction.type === 'reject' ? (
+                      <>
+                        <X className="h-4 w-4 mr-2" />
+                        Confirm Rejection
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Confirm Deletion
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
