@@ -23,7 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-<<<<<<< HEAD
 
 # Environment variables
 .env
@@ -31,6 +30,4 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
-=======
->>>>>>> christian
 node_modules

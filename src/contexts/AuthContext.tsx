@@ -135,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     })
+    console.log(data, error)
     if (error) throw error
 
     const u = data.user
