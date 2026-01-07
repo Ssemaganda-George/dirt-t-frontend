@@ -251,18 +251,18 @@ export default function Home() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filter Tabs */}
-        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2">
+        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => handleCategorySelect(category.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all border ${
+              className={`flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
                 selectedCategory === category.id
                   ? 'bg-black text-white border-black'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
             >
-              <span>{category.icon}</span>
+              <span className="text-xs hidden md:inline">{category.icon}</span>
               <span>{category.name}</span>
             </button>
           ))}
