@@ -6,12 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(amount: number, currency: string = 'UGX'): string {
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)
+  try {
+    // Validate currency code - only allow known valid codes
+    const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF'];
+    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
+    
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: safeCurrency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch (error) {
+    // Fallback to simple formatting if Intl.NumberFormat fails
+    console.warn('Currency formatting failed for:', currency, 'falling back to UGX');
+    return `UGX ${amount.toLocaleString('en-UG')}`;
+  }
 }
 
 export function formatDate(date: string): string {

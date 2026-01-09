@@ -255,6 +255,19 @@ export interface Service {
   payment_methods?: string[]
   refund_policy?: boolean
 
+  // Shop-specific fields
+  shop_type?: string
+  store_size?: number
+  opening_time?: string
+  closing_time?: string
+  products_offered?: string[]
+  in_store_pickup?: boolean
+  online_orders?: boolean
+  minimum_order_value?: number
+  delivery_fee?: number
+  shop_policies?: string
+  shop_notes?: string
+
   vendors?: {
     id: string;
     business_name: string;

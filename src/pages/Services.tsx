@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Hotel, Camera, Utensils, Car, Activity, Plane, Search, Heart, MapPin, Star } from 'lucide-react'
+import { Hotel, Camera, Utensils, Car, Activity, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { formatCurrency } from '../lib/utils'
@@ -34,6 +34,13 @@ const categories = [
     icon: Car,
     description: 'Get around with reliable transportation',
     color: 'bg-purple-500'
+  },
+  {
+    name: 'Shops',
+    href: '/category/shops',
+    icon: ShoppingBag,
+    description: 'Find unique shops and retail experiences',
+    color: 'bg-pink-500'
   },
   {
     name: 'Flights',

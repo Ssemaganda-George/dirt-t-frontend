@@ -129,6 +129,19 @@ export default function VendorServices() {
         years_experience: data.years_experience || undefined,
         service_area: data.service_area || '',
 
+        // Shop fields
+        shop_type: data.shop_type || '',
+        store_size: data.store_size || undefined,
+        opening_time: data.opening_time || '',
+        closing_time: data.closing_time || '',
+        products_offered: data.products_offered || [],
+        in_store_pickup: data.in_store_pickup || false,
+        online_orders: data.online_orders || false,
+        minimum_order_value: data.minimum_order_value || undefined,
+        delivery_fee: data.delivery_fee || undefined,
+        shop_policies: data.shop_policies || '',
+        shop_notes: data.shop_notes || '',
+
         // General fields
         tags: data.tags || [],
         contact_info: data.contact_info || {},
@@ -199,6 +212,19 @@ export default function VendorServices() {
       if (updates.certifications !== undefined) validUpdates.certifications = updates.certifications
       if (updates.years_experience !== undefined) validUpdates.years_experience = updates.years_experience
       if (updates.service_area !== undefined) validUpdates.service_area = updates.service_area
+
+      // Shop fields
+      if (updates.shop_type !== undefined) validUpdates.shop_type = updates.shop_type
+      if (updates.store_size !== undefined) validUpdates.store_size = updates.store_size
+      if (updates.opening_time !== undefined) validUpdates.opening_time = updates.opening_time
+      if (updates.closing_time !== undefined) validUpdates.closing_time = updates.closing_time
+      if (updates.products_offered !== undefined) validUpdates.products_offered = updates.products_offered
+      if (updates.in_store_pickup !== undefined) validUpdates.in_store_pickup = updates.in_store_pickup
+      if (updates.online_orders !== undefined) validUpdates.online_orders = updates.online_orders
+      if (updates.minimum_order_value !== undefined) validUpdates.minimum_order_value = updates.minimum_order_value
+      if (updates.delivery_fee !== undefined) validUpdates.delivery_fee = updates.delivery_fee
+      if (updates.shop_policies !== undefined) validUpdates.shop_policies = updates.shop_policies
+      if (updates.shop_notes !== undefined) validUpdates.shop_notes = updates.shop_notes
 
       // General fields
       if (updates.tags !== undefined) validUpdates.tags = updates.tags
@@ -2475,6 +2501,125 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             <div>
               <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
               <textarea value={form.flight_notes || ''} onChange={(e) => update('flight_notes', e.target.value)} placeholder="Any additional information about the flight booking service" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
+            </div>
+          </div>
+        )
+
+      case 'shops':
+        return (
+          <div className="space-y-4 border-t pt-4">
+            <h4 className="font-medium text-gray-900">Shop Details</h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Shop Type</label>
+                <select value={form.shop_type || ''} onChange={(e) => update('shop_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select shop type</option>
+                  <option value="boutique">Boutique</option>
+                  <option value="souvenir_shop">Souvenir Shop</option>
+                  <option value="craft_market">Craft Market</option>
+                  <option value="department_store">Department Store</option>
+                  <option value="specialty_shop">Specialty Shop</option>
+                  <option value="online_store">Online Store</option>
+                  <option value="pop_up_shop">Pop-up Shop</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Store Size (sq meters)</label>
+                <input type="number" value={form.store_size || ''} onChange={(e) => update('store_size', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 50" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Opening Time</label>
+                <input type="time" value={form.opening_time || ''} onChange={(e) => update('opening_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Closing Time</label>
+                <input type="time" value={form.closing_time || ''} onChange={(e) => update('closing_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Products & Services</label>
+              <div className="flex gap-2">
+                <input
+                  value={arrayInputs.products_offered || ''}
+                  onChange={(e) => setArrayInputs(prev => ({ ...prev, products_offered: e.target.value }))}
+                  placeholder="e.g., Handcrafted souvenirs, Local textiles, Traditional crafts"
+                  className="flex-1 border rounded-md px-3 py-2"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('products_offered', arrayInputs.products_offered || ''))}
+                />
+                <button type="button" onClick={() => addToArray('products_offered', arrayInputs.products_offered || '')} className="px-3 py-2 bg-gray-900 text-white rounded-md">Add</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(form.products_offered || []).map((product, idx) => (
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                    {product}
+                    <button type="button" onClick={() => removeFromArray('products_offered', idx)} className="ml-1 text-blue-600 hover:text-blue-800">×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Payment Methods</label>
+              <div className="flex gap-2">
+                <input
+                  value={arrayInputs.payment_methods || ''}
+                  onChange={(e) => setArrayInputs(prev => ({ ...prev, payment_methods: e.target.value }))}
+                  placeholder="e.g., Cash, Mobile Money, Credit Card, Bank Transfer"
+                  className="flex-1 border rounded-md px-3 py-2"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('payment_methods', arrayInputs.payment_methods || ''))}
+                />
+                <button type="button" onClick={() => addToArray('payment_methods', arrayInputs.payment_methods || '')} className="px-3 py-2 bg-gray-900 text-white rounded-md">Add</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(form.payment_methods || []).map((method, idx) => (
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                    {method}
+                    <button type="button" onClick={() => removeFromArray('payment_methods', idx)} className="ml-1 text-green-600 hover:text-green-800">×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center">
+                <input type="checkbox" checked={form.delivery_available || false} onChange={(e) => update('delivery_available', e.target.checked)} className="mr-2" />
+                Delivery Available
+              </label>
+              <label className="flex items-center">
+                <input type="checkbox" checked={form.in_store_pickup || false} onChange={(e) => update('in_store_pickup', e.target.checked)} className="mr-2" />
+                In-store Pickup
+              </label>
+              <label className="flex items-center">
+                <input type="checkbox" checked={form.online_orders || false} onChange={(e) => update('online_orders', e.target.checked)} className="mr-2" />
+                Online Orders
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Minimum Order Value</label>
+                <input type="number" value={form.minimum_order_value || ''} onChange={(e) => update('minimum_order_value', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Delivery Fee</label>
+                <input type="number" value={form.delivery_fee || ''} onChange={(e) => update('delivery_fee', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Shop Policies</label>
+              <textarea value={form.shop_policies || ''} onChange={(e) => update('shop_policies', e.target.value)} placeholder="Return policy, exchange terms, special conditions, etc." rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Additional Shop Information</label>
+              <textarea value={form.shop_notes || ''} onChange={(e) => update('shop_notes', e.target.value)} placeholder="Any additional information about your shop, special features, or services" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
         )

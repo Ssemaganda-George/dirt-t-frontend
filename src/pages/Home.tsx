@@ -55,17 +55,32 @@ export default function Home() {
         { id: 'cat_transport', name: 'Transport', icon: '🚗' },
         { id: 'cat_restaurants', name: 'Restaurants', icon: '🍽️' },
         { id: 'cat_activities', name: 'Activities', icon: '🎯' },
-        { id: 'cat_flights', name: 'Flights', icon: '✈️' }
+        { id: 'cat_flights', name: 'Flights', icon: '✈️' },
+        { id: 'cat_shops', name: 'Shops', icon: '🛍️' }
       ])
     }
   }
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-UG', {
-      style: 'currency',
-      currency: currency === 'UGX' ? 'UGX' : 'USD',
-      minimumFractionDigits: 0
-    }).format(amount)
+    try {
+      // Validate currency code - only allow known valid codes
+      const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF'];
+      const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
+      
+      return new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: safeCurrency,
+        minimumFractionDigits: 0
+      }).format(amount);
+    } catch (error) {
+      // Fallback to simple formatting if Intl.NumberFormat fails
+      console.warn('Currency formatting failed for:', currency, 'falling back to UGX');
+      return new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: 'UGX',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
   }
 
   const filteredServices = allServices.filter((service: Service) => {
@@ -85,7 +100,8 @@ export default function Home() {
                          searchQuery.toLowerCase().includes('restaurant') && service.category_id === 'cat_restaurants' ||
                          searchQuery.toLowerCase().includes('flight') && service.category_id === 'cat_flights' ||
                          searchQuery.toLowerCase().includes('transport') && service.category_id === 'cat_transport' ||
-                         searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities'
+                         searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities' ||
+                         searchQuery.toLowerCase().includes('shop') && service.category_id === 'cat_shops'
 
     const matchesCategory = selectedCategory === 'all' ||
                            service.category_id === selectedCategory
@@ -285,6 +301,13 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Flight',
           primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
           secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null
+        }
+      case 'cat_shops':
+        return {
+          icon: '🛍️',
+          label: 'Shop',
+          primaryInfo: 'Retail shopping',
+          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null
         }
       default:
         return {

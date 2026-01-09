@@ -1,4 +1,4 @@
-import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -8,7 +8,7 @@ import { useState } from 'react';
 import type { Service } from '../../types';
 
 export function Services() {
-  const { services, loading, error, updateServiceStatus, updateService } = useServices();
+  const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
   const { categories } = useServiceCategories();
   const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
@@ -120,6 +120,33 @@ export function Services() {
     setIsEditModalOpen(false);
   };
 
+  const handleDeleteService = async (serviceId: string, serviceTitle: string) => {
+    console.log('handleDeleteService called with:', { serviceId, serviceTitle });
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the service "${serviceTitle}"? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) {
+      console.log('Delete cancelled by user');
+      return;
+    }
+
+    console.log('Starting service deletion...');
+    setUpdatingStatus(serviceId);
+    try {
+      console.log('Calling deleteService function...');
+      await deleteService(serviceId);
+      console.log('deleteService completed successfully');
+      // The service will be automatically removed from the list by the useServices hook
+    } catch (err) {
+      console.error('Failed to delete service:', err);
+      alert('Failed to delete service. Please try again.');
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const handleSaveService = async (updatedServiceData: Partial<Service>) => {
     if (!editingService) return;
     
@@ -144,7 +171,7 @@ export function Services() {
           <span className="text-yellow-600">Pending: {selectedCategory === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
           <span className="text-green-600">Approved: {selectedCategory === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}</span>
           <span className="text-red-600">Rejected: {selectedCategory === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
-          <span className="text-orange-600">Delete Requests: {pendingDeleteRequests.length}</span>
+          <span className="text-orange-600">Delete Requests: {deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length}</span>
         </div>
       </div>
 
@@ -251,6 +278,14 @@ export function Services() {
                         title="Edit service"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteService(service.id, service.title)}
+                        disabled={updatingStatus === service.id}
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50 ml-2"
+                        title="Delete service"
+                      >
+                        <TrashIcon className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>

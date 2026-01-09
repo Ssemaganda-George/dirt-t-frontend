@@ -23,7 +23,8 @@ export default function CategoryPage() {
     'restaurants': 'cat_restaurants',
     'transport': 'cat_transport',
     'activities': 'cat_activities',
-    'flights': 'cat_flights'
+    'flights': 'cat_flights',
+    'shops': 'cat_shops'
   }
 
   const categoryNames: { [key: string]: string } = {
@@ -33,6 +34,7 @@ export default function CategoryPage() {
     'transport': 'Transport',
     'activities': 'Activities',
     'flights': 'Flights',
+    'shops': 'Shops',
     'services': 'Services'
   }
 
@@ -47,7 +49,8 @@ export default function CategoryPage() {
         { key: 'tours', label: 'Tours' },
         { key: 'restaurants', label: 'Restaurants' },
         { key: 'transport', label: 'Transport' },
-        { key: 'activities', label: 'Activities' }
+        { key: 'activities', label: 'Activities' },
+        { key: 'shops', label: 'Shops' }
       ]
     } else if (category && categoryMapping[category]) {
       // On specific category pages, show category-specific filters

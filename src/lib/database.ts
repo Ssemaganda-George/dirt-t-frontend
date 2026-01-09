@@ -688,8 +688,12 @@ export async function updateService(serviceId: string, vendorId: string | undefi
 }
 
 export async function deleteService(serviceId: string, vendorId?: string) {
+  console.log('deleteService called with:', { serviceId, vendorId });
+
   // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
+  // OR allow admins to delete any service
   if (vendorId) {
+    console.log('Checking vendor authorization...');
     const { data: serviceCheck, error: checkError } = await supabase
       .from('services')
       .select('vendor_id')
@@ -697,14 +701,47 @@ export async function deleteService(serviceId: string, vendorId?: string) {
       .single()
 
     if (checkError || !serviceCheck) {
+      console.error('Service not found:', checkError);
       throw new Error('Service not found')
     }
 
     if (serviceCheck.vendor_id !== vendorId) {
+      console.error('Unauthorized: Service does not belong to this vendor');
       throw new Error('Unauthorized: Service does not belong to this vendor')
     }
+  } else {
+    console.log('Checking admin authorization...');
+    // If no vendorId provided, check if user is admin
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      console.error('Unauthorized: User not authenticated');
+      throw new Error('Unauthorized: User not authenticated')
+    }
+
+    console.log('User authenticated:', user.id);
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('Profile error:', profileError);
+      throw new Error('Unauthorized: Profile not found')
+    }
+
+    console.log('User profile:', profile);
+
+    if (profile.role !== 'admin') {
+      console.error('Unauthorized: User is not admin, role:', profile.role);
+      throw new Error('Unauthorized: Only admins can delete services without vendor context')
+    }
+
+    console.log('Admin authorization confirmed');
   }
 
+  console.log('Deleting service from database...');
   const { error } = await supabase
     .from('services')
     .delete()
@@ -714,6 +751,8 @@ export async function deleteService(serviceId: string, vendorId?: string) {
     console.error('Error deleting service:', error)
     throw error
   }
+
+  console.log('Service deleted successfully');
 }
 
 // Get service categories
