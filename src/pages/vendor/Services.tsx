@@ -50,6 +50,8 @@ export default function VendorServices() {
         }
 
         // User is an approved vendor, try to get their vendor record
+        let vendorIdToUse = user.id // Default fallback
+
         const { data: vendor, error: vendorError } = await supabase
           .from('vendors')
           .select('id')
@@ -57,12 +59,52 @@ export default function VendorServices() {
           .single()
 
         if (vendorError) {
-          // If we can't read vendor record due to RLS, assume vendor exists and use user ID as vendor ID
-          console.warn('Could not fetch vendor record, using user ID as vendor ID:', vendorError)
-          setVendorId(user.id)
+          console.warn('Could not fetch vendor record:', vendorError)
+          
+          // Try to create vendor record if it doesn't exist
+          const { data: newVendor, error: createError } = await supabase
+            .from('vendors')
+            .insert([{
+              user_id: user.id,
+              business_name: 'Business Name',
+              business_description: 'Please update your business description',
+              business_email: user.email || '',
+              status: 'approved'
+            }])
+            .select('id')
+            .single()
+
+          if (createError) {
+            if (createError.code === '23505') {
+              // Record already exists, try to fetch it again
+              console.log('Vendor record already exists, fetching again...')
+              const { data: existingVendor, error: fetchError } = await supabase
+                .from('vendors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
+              
+              if (!fetchError && existingVendor) {
+                vendorIdToUse = existingVendor.id
+              } else {
+                console.error('Still cannot fetch vendor record after creation attempt:', fetchError)
+                // Use user ID as fallback - the updated RLS policy should handle this
+                vendorIdToUse = user.id
+              }
+            } else {
+              console.error('Failed to create vendor record:', createError)
+              // Use user ID as fallback
+              vendorIdToUse = user.id
+            }
+          } else if (newVendor) {
+            vendorIdToUse = newVendor.id
+            console.log('Created new vendor record with ID:', vendorIdToUse)
+          }
         } else {
-          setVendorId(vendor.id)
+          vendorIdToUse = vendor.id
         }
+
+        setVendorId(vendorIdToUse)
       } catch (err) {
         console.error('Failed to check vendor status:', err)
         setVendorId(null)

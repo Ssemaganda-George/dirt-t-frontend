@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Hotel, Camera, Utensils, Car, Activity, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
+import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { formatCurrency } from '../lib/utils'
@@ -17,7 +17,7 @@ const categories = [
   {
     name: 'Tours',
     href: '/category/tours',
-    icon: Camera,
+    icon: Map,
     description: 'Explore amazing destinations and experiences',
     color: 'bg-green-500'
   },
@@ -52,20 +52,29 @@ const categories = [
   {
     name: 'Activities',
     href: '/category/activities',
-    icon: Activity,
+    icon: Target,
     description: 'Book exciting activities and adventures',
     color: 'bg-red-500'
   }
 ]
 
 export default function Services() {
-  const [dbCategories, setDbCategories] = useState<Array<{id: string, name: string, icon?: string}>>([])
+  const [dbCategories, setDbCategories] = useState<Array<{id: string, name: string, icon?: string | React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
 
   // Use the reactive useServices hook instead of local state
   const { services: allServices, loading: servicesLoading } = useServices()
+
+  // Helper function to render icons (handles both string and component icons)
+  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
+    if (typeof icon === 'string') {
+      return <span className={className}>{icon}</span>
+    }
+    const IconComponent = icon
+    return <IconComponent className={className} />
+  }
 
   // Combined loading state
   const isLoading = servicesLoading
@@ -86,7 +95,7 @@ export default function Services() {
       
       // Add "All" category at the beginning
       const allCategories = [
-        { id: 'all', name: 'All', icon: '🌍' },
+        { id: 'all', name: 'All', icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
@@ -98,13 +107,13 @@ export default function Services() {
       console.error('Error fetching categories:', error)
       // Fallback to basic categories if database fetch fails
       setDbCategories([
-        { id: 'all', name: 'All', icon: '🌍' },
-        { id: 'cat_hotel', name: 'Hotels', icon: '🏨' },
-        { id: 'cat_tour', name: 'Tours', icon: '🗺️' },
-        { id: 'cat_restaurant', name: 'Restaurants', icon: '🍽️' },
-        { id: 'cat_transport', name: 'Transport', icon: '🚗' },
-        { id: 'cat_flights', name: 'Flights', icon: '✈️' },
-        { id: 'cat_activities', name: 'Activities', icon: '🎯' }
+        { id: 'all', name: 'All', icon: Map },
+        { id: 'cat_hotel', name: 'Hotels', icon: Hotel },
+        { id: 'cat_tour', name: 'Tours', icon: Map },
+        { id: 'cat_restaurant', name: 'Restaurants', icon: Utensils },
+        { id: 'cat_transport', name: 'Transport', icon: Car },
+        { id: 'cat_flights', name: 'Flights', icon: Plane },
+        { id: 'cat_activities', name: 'Activities', icon: Target }
       ])
     }
   }
@@ -188,7 +197,7 @@ export default function Services() {
                       : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                   }`}
                 >
-                  <span className="text-xs hidden md:inline">{category.icon}</span>
+                  <span className="text-xs hidden md:inline">{renderIcon(category.icon, "h-4 w-4")}</span>
                   <span>{category.name}</span>
                 </button>
               ))}

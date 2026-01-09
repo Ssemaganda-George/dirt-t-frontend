@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Search, MapPin, Star, SlidersHorizontal } from 'lucide-react'
+import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { Link } from 'react-router-dom'
 import { useServices } from '../hooks/hook'
@@ -340,54 +340,70 @@ interface ServiceCardProps {
 function ServiceCard({ service }: ServiceCardProps) {
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
+  // Helper function to render icons (handles both string and component icons)
+  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
+    if (typeof icon === 'string') {
+      return <span className={className}>{icon}</span>
+    }
+    const IconComponent = icon
+    return <IconComponent className={className} />
+  }
+
   // Get category-specific information
   const getCategoryInfo = () => {
     switch (service.category_id) {
       case 'cat_hotels':
         return {
-          icon: '🏨',
+          icon: Hotel,
           label: 'Hotel',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
           secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
         }
       case 'cat_tour_packages':
         return {
-          icon: '🎒',
+          icon: Map,
           label: 'Tour Package',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
           secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
         }
       case 'cat_transport':
         return {
-          icon: '🚗',
+          icon: Car,
           label: 'Transport',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
           secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
         }
       case 'cat_restaurants':
         return {
-          icon: '🍽️',
+          icon: Utensils,
           label: 'Restaurant',
           primaryInfo: 'Dining experience',
           secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
         }
       case 'cat_activities':
         return {
-          icon: '🎢',
+          icon: Target,
           label: 'Activity',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
           secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
         }
       case 'cat_flights':
         return {
-          icon: '✈️',
+          icon: Plane,
           label: 'Flight',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h flight` : 'Flight booking',
           secondaryInfo: service.max_capacity ? `Class: ${service.max_capacity}` : null
         }
+      case 'cat_shops':
+        return {
+          icon: ShoppingBag,
+          label: 'Shop',
+          primaryInfo: 'Retail shopping',
+          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null
+        }
       default:
         return {
-          icon: '📦',
+          icon: Package,
           label: 'Service',
           primaryInfo: 'Experience',
           secondaryInfo: null
@@ -411,7 +427,7 @@ function ServiceCard({ service }: ServiceCardProps) {
           {/* Category Badge */}
           <div className="absolute top-3 left-3">
             <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
-              <span className="text-sm">{categoryInfo.icon}</span>
+              {renderIcon(categoryInfo.icon, "h-4 w-4")}
               <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
             </div>
           </div>

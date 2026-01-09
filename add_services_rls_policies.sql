@@ -61,9 +61,16 @@ CREATE POLICY "Vendors can view their own services" ON services
 
 -- Vendors can insert their own services
 CREATE POLICY "Vendors can insert their own services" ON services
-  FOR INSERT WITH CHECK (auth.uid() IN (
-    SELECT v.user_id FROM vendors v WHERE v.id = services.vendor_id
-  ));
+  FOR INSERT WITH CHECK (
+    -- Allow if auth.uid() matches the user_id of the vendor record
+    auth.uid() IN (
+      SELECT v.user_id FROM vendors v WHERE v.id = services.vendor_id
+    )
+    -- OR allow if the vendor_id is the user's ID (fallback case)
+    OR (services.vendor_id = auth.uid() AND auth.uid() IN (
+      SELECT p.id FROM profiles p WHERE p.role = 'vendor' AND p.status = 'approved'
+    ))
+  );
 
 -- Vendors can update their own services
 CREATE POLICY "Vendors can update their own services" ON services

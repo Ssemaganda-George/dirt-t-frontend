@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Search, MapPin, Star, Heart } from 'lucide-react'
+import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import type { Service } from '../types'
 
 export default function Home() {
-  const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: string}>>([])
+  const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
@@ -37,11 +37,11 @@ export default function Home() {
       
       // Add "All" category at the beginning
       const allCategories = [
-        { id: 'all', name: 'All', icon: '🌍' },
+        { id: 'all', name: 'All', icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
           name: cat.name,
-          icon: cat.icon || '📍'
+          icon: cat.icon || MapPinIcon
         }))
       ]
       setCategories(allCategories)
@@ -49,14 +49,14 @@ export default function Home() {
       console.error('Error fetching categories:', error)
       // Fallback to basic categories if database fetch fails
       setCategories([
-        { id: 'all', name: 'All', icon: '🌍' },
-        { id: 'cat_hotels', name: 'Hotels', icon: '🏨' },
-        { id: 'cat_tour_packages', name: 'Tour Packages', icon: '🗺️' },
-        { id: 'cat_transport', name: 'Transport', icon: '🚗' },
-        { id: 'cat_restaurants', name: 'Restaurants', icon: '🍽️' },
-        { id: 'cat_activities', name: 'Activities', icon: '🎯' },
-        { id: 'cat_flights', name: 'Flights', icon: '✈️' },
-        { id: 'cat_shops', name: 'Shops', icon: '🛍️' }
+        { id: 'all', name: 'All', icon: Map },
+        { id: 'cat_hotels', name: 'Hotels', icon: Hotel },
+        { id: 'cat_tour_packages', name: 'Tour Packages', icon: Map },
+        { id: 'cat_transport', name: 'Transport', icon: Car },
+        { id: 'cat_restaurants', name: 'Restaurants', icon: Utensils },
+        { id: 'cat_activities', name: 'Activities', icon: Target },
+        { id: 'cat_flights', name: 'Flights', icon: Plane },
+        { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])
     }
   }
@@ -81,6 +81,18 @@ export default function Home() {
         minimumFractionDigits: 0
       }).format(amount);
     }
+  }
+
+  // Helper function to render icons (handles both string and component icons)
+  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
+    if (typeof icon === 'string') {
+      return <span className={className}>{icon}</span>
+    }
+    if (typeof icon === 'function') {
+      const IconComponent = icon
+      return <IconComponent className={className} />
+    }
+    return null
   }
 
   const filteredServices = allServices.filter((service: Service) => {
@@ -172,7 +184,7 @@ export default function Home() {
                 onClick={() => handleCategorySelect(cat.id)}
                 className="bg-white/90 hover:bg-white px-5 py-2 rounded-full text-gray-800 font-medium shadow-lg hover:shadow-xl transition-all"
               >
-                <span className="mr-2">{cat.icon}</span>
+                {renderIcon(cat.icon, "h-4 w-4 mr-2")}
                 {cat.name}
               </button>
             ))}
@@ -194,7 +206,7 @@ export default function Home() {
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
             >
-              <span className="text-xs hidden md:inline">{category.icon}</span>
+              <span className="text-xs hidden md:inline">{renderIcon(category.icon, "h-3 w-3")}</span>
               <span>{category.name}</span>
             </button>
           ))}
@@ -257,61 +269,73 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
+  // Helper function to render icons (handles both string and component icons)
+  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
+    if (typeof icon === 'string') {
+      return <span className={className}>{icon}</span>
+    }
+    if (typeof icon === 'function') {
+      const IconComponent = icon
+      return <IconComponent className={className} />
+    }
+    return null
+  }
+
   // Get category-specific information
   const getCategoryInfo = () => {
     switch (service.category_id) {
       case 'cat_hotels':
         return {
-          icon: '🏨',
+          icon: Hotel,
           label: 'Hotel',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
           secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
         }
       case 'cat_tour_packages':
         return {
-          icon: '🎒',
+          icon: Map,
           label: 'Tour Package',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
           secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
         }
       case 'cat_transport':
         return {
-          icon: '🚗',
+          icon: Car,
           label: 'Transport',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
           secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
         }
       case 'cat_restaurants':
         return {
-          icon: '🍽️',
+          icon: Utensils,
           label: 'Restaurant',
           primaryInfo: 'Dining experience',
           secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
         }
       case 'cat_activities':
         return {
-          icon: '🎢',
+          icon: Target,
           label: 'Activity',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
           secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
         }
       case 'cat_flights':
         return {
-          icon: '✈️',
+          icon: Plane,
           label: 'Flight',
           primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
           secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null
         }
       case 'cat_shops':
         return {
-          icon: '🛍️',
+          icon: ShoppingBag,
           label: 'Shop',
           primaryInfo: 'Retail shopping',
           secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null
         }
       default:
         return {
-          icon: '📦',
+          icon: Package,
           label: 'Service',
           primaryInfo: 'Experience',
           secondaryInfo: null
@@ -353,7 +377,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           {/* Category Badge */}
           <div className="absolute bottom-3 left-3">
             <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
-              <span className="text-sm">{categoryInfo.icon}</span>
+              {renderIcon(categoryInfo.icon, "h-4 w-4")}
               <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
             </div>
           </div>
