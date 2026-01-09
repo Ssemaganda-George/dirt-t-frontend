@@ -906,12 +906,7 @@ export async function getServiceDeleteRequests(vendorId?: string): Promise<Servi
 
     let query = supabase
       .from('service_delete_requests')
-      .select(`
-        *,
-        service:services(*, service_categories(*)),
-        vendor:vendors(*),
-        reviewer:profiles(id, full_name, email)
-      `)
+      .select('*')
       .order('requested_at', { ascending: false })
 
     if (vendorId) {
@@ -923,11 +918,25 @@ export async function getServiceDeleteRequests(vendorId?: string): Promise<Servi
 
     if (error) {
       console.error('getServiceDeleteRequests: Query error:', error);
+      console.error('getServiceDeleteRequests: Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+
       // Check if the error is because the table doesn't exist
       if (error.message?.includes('relation "service_delete_requests" does not exist')) {
         console.warn('service_delete_requests table does not exist yet. Returning empty array.')
         return []
       }
+
+      // Check if it's an RLS policy error
+      if (error.message?.includes('policy') || error.message?.includes('permission denied')) {
+        console.warn('RLS policy blocking access. Returning empty array.')
+        return []
+      }
+
       console.error('Error fetching service delete requests:', error)
       throw error
     }
@@ -937,8 +946,10 @@ export async function getServiceDeleteRequests(vendorId?: string): Promise<Servi
     return data || []
   } catch (err) {
     console.error('getServiceDeleteRequests: Exception:', err);
+    console.error('getServiceDeleteRequests: Exception details:', err);
+
     // If it's our custom error message, return empty array
-    if (err instanceof Error && err.message.includes('table does not exist')) {
+    if (err instanceof Error && (err.message.includes('table does not exist') || err.message.includes('RLS policy'))) {
       return []
     }
     console.error('Error fetching service delete requests:', err)

@@ -10,7 +10,7 @@ import type { Service } from '../../types';
 export function Services() {
   const { services, loading, error, updateServiceStatus, updateService } = useServices();
   const { categories } = useServiceCategories();
-  const { deleteRequests, updateDeleteRequestStatus } = useServiceDeleteRequests();
+  const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [editingService, setEditingService] = useState<Service | null>(null);
@@ -18,6 +18,7 @@ export function Services() {
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
+  console.log('Admin deleteRequests error:', deleteRequestsError);
 
   if (loading) {
     return (
@@ -27,10 +28,14 @@ export function Services() {
     );
   }
 
-  if (error) {
+  if (error || deleteRequestsError) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">Error loading services: {error}</p>
+        <p className="text-red-800">
+          Error loading services: {error}
+          {error && deleteRequestsError && <br />}
+          {deleteRequestsError && `Error loading delete requests: ${deleteRequestsError}`}
+        </p>
       </div>
     );
   }
