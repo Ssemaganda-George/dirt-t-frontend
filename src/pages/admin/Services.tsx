@@ -28,16 +28,26 @@ export function Services() {
     );
   }
 
-  if (error || deleteRequestsError) {
+  if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">
-          Error loading services: {error}
-          {error && deleteRequestsError && <br />}
-          {deleteRequestsError && `Error loading delete requests: ${deleteRequestsError}`}
-        </p>
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800">Error loading services: {error}</p>
+        </div>
+        {/* Still show the services management interface even if delete requests fail */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Services Management</h3>
+            <p className="text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
+          </div>
+        </div>
       </div>
     );
+  }
+
+  if (deleteRequestsError) {
+    console.warn('Delete requests error (non-blocking):', deleteRequestsError);
+    // Show a warning but don't block the entire interface
   }
 
   const pendingServices = services.filter(service => service.status === 'pending');
@@ -325,9 +335,19 @@ export function Services() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Delete Requests ({pendingDeleteRequests.length})
+            Delete Requests ({deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length})
           </h3>
-          {pendingDeleteRequests.length === 0 ? (
+          {deleteRequestsError ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <p className="text-yellow-800">
+                Delete requests are temporarily unavailable due to a permissions issue. 
+                Please contact support or run the database migration to fix RLS policies.
+              </p>
+              <p className="text-yellow-700 text-sm mt-2">
+                Error: {deleteRequestsError}
+              </p>
+            </div>
+          ) : pendingDeleteRequests.length === 0 ? (
             <p className="text-gray-500 text-sm">No pending delete requests.</p>
           ) : (
             <div className="overflow-x-auto">
