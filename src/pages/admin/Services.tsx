@@ -2,15 +2,19 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { EditServiceModal } from '../../components/EditServiceModal';
 import { formatCurrency } from '../../lib/utils';
 import { useState } from 'react';
+import type { Service } from '../../types';
 
 export function Services() {
-  const { services, loading, error, updateServiceStatus } = useServices();
+  const { services, loading, error, updateServiceStatus, updateService } = useServices();
   const { categories } = useServiceCategories();
   const { deleteRequests, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -91,6 +95,30 @@ export function Services() {
     }
   };
 
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingService(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleSaveService = async (updatedServiceData: Partial<Service>) => {
+    if (!editingService) return;
+    
+    setUpdatingStatus(editingService.id);
+    try {
+      await updateService(editingService.id, updatedServiceData);
+      handleCloseEditModal();
+    } catch (err) {
+      console.error('Failed to update service:', err);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending');
 
   return (
@@ -160,6 +188,9 @@ export function Services() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Availability
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -197,6 +228,15 @@ export function Services() {
                         status={service.status === 'approved' ? 'available' : 'unavailable'} 
                         variant="small" 
                       />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleEditService(service)}
+                        className="text-blue-600 hover:text-blue-900 mr-2"
+                        title="Edit service"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -355,6 +395,14 @@ export function Services() {
           )}
         </div>
       </div>
+
+      <EditServiceModal
+        service={editingService}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveService}
+        isLoading={updatingStatus === editingService?.id}
+      />
     </div>
   );
 }

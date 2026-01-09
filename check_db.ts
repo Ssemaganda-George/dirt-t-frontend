@@ -25,51 +25,46 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkDatabase() {
+async function checkVendorStatus() {
   try {
-    console.log('Testing getServiceById for the specific service...');
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select(`
-        *,
-        vendors (
-          id,
-          business_name,
-          business_description,
-          business_email,
-          status
-        ),
-        service_categories (
-          id,
-          name,
-          icon
-        )
-      `)
-      .eq('id', '9cb73f36-04c6-44c0-9e71-82399617c20b')
-      .maybeSingle();
+    console.log('Checking vendor status in database...');
 
-    if (serviceError) {
-      console.error('Error fetching service:', serviceError);
-    } else {
-      console.log('Service found:', service);
+    // Check vendor profiles with status
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email, role, status')
+      .eq('role', 'vendor')
+      .limit(20);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      return;
     }
 
-    console.log('\nChecking services...');
-    const { data: services, error: servicesError } = await supabase
-      .from('services')
-      .select('id, title, status, vendor_id')
-      .limit(10);
+    console.log('Vendor profiles found:', profiles?.length || 0);
+    profiles?.forEach(profile => {
+      console.log(`- ${profile.email}: role=${profile.role}, status=${profile.status}`);
+    });
 
-    if (servicesError) {
-      console.error('Error fetching services:', servicesError);
-    } else {
-      console.log('Services found:', services?.length || 0);
-      console.log('Services:', services);
+    // Check vendors table
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('id, user_id, business_name, status')
+      .limit(20);
+
+    if (vendorsError) {
+      console.error('Error fetching vendors:', vendorsError);
+      return;
     }
+
+    console.log('\nVendor records found:', vendors?.length || 0);
+    vendors?.forEach(vendor => {
+      console.log(`- ${vendor.business_name}: user_id=${vendor.user_id}, status=${vendor.status}`);
+    });
 
   } catch (error) {
-    console.error('Script error:', error);
+    console.error('Check error:', error);
   }
 }
 
-checkDatabase();
+checkVendorStatus();

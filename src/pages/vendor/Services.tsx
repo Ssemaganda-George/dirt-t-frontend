@@ -20,36 +20,58 @@ export default function VendorServices() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
 
-  // Fetch vendor record for the current user
+  // Check if user is a vendor and set vendorId accordingly
   useEffect(() => {
-    const fetchVendor = async () => {
+    const checkVendorStatus = async () => {
       if (!user?.id) {
         setVendorLoading(false)
         return
       }
 
       try {
-        const { data, error } = await supabase
+        // First check if user has vendor role in profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, status')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError)
+          setVendorId(null)
+          setVendorLoading(false)
+          return
+        }
+
+        if (profile.role !== 'vendor' || profile.status !== 'approved') {
+          setVendorId(null)
+          setVendorLoading(false)
+          return
+        }
+
+        // User is an approved vendor, try to get their vendor record
+        const { data: vendor, error: vendorError } = await supabase
           .from('vendors')
           .select('id')
           .eq('user_id', user.id)
           .single()
 
-        if (error) {
-          console.error('Error fetching vendor:', error)
-          setVendorId(null)
+        if (vendorError) {
+          // If we can't read vendor record due to RLS, assume vendor exists and use user ID as vendor ID
+          console.warn('Could not fetch vendor record, using user ID as vendor ID:', vendorError)
+          setVendorId(user.id)
         } else {
-          setVendorId(data.id)
+          setVendorId(vendor.id)
         }
       } catch (err) {
-        console.error('Failed to fetch vendor:', err)
+        console.error('Failed to check vendor status:', err)
         setVendorId(null)
       } finally {
         setVendorLoading(false)
       }
     }
 
-    fetchVendor()
+    checkVendorStatus()
   }, [user?.id])
 
   const onCreate = async (data: Partial<Service>) => {

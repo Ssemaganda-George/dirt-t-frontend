@@ -12,6 +12,7 @@ interface Profile {
   email: string
   full_name: string
   role: 'admin' | 'vendor' | 'tourist'
+  status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
   created_at: string
   updated_at: string
 }
@@ -135,7 +136,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If vendor record doesn't exist, set vendor to null
         setVendor(null)
       } else {
-        setVendor(data as Vendor)
+        // Get status from profile
+        const profileStatus = profile?.status as 'pending' | 'approved' | 'rejected' | 'suspended' | undefined
+        setVendor({
+          ...data,
+          status: profileStatus || 'pending'
+        } as Vendor)
       }
     } catch (error) {
       console.error('Error fetching vendor:', error)
@@ -163,6 +169,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(normalizedUser)
     // Ensure profile (and role) is loaded before route guards run
     await fetchProfile(u.id)
+
+    // Check if user is suspended and prevent login
+    if (profile?.status === 'suspended') {
+      // Sign out the user immediately
+      await supabase.auth.signOut()
+      setUser(null)
+      setProfile(null)
+      setVendor(null)
+      throw new Error('Your account has been suspended. Please contact support for assistance.')
+    }
   }
 
   const signUp = async (

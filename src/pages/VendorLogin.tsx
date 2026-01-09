@@ -62,6 +62,21 @@ export default function VendorLogin() {
       // Then create the vendor profile with business details
       const { data: user } = await supabase.auth.getUser()
       if (user.user) {
+        // Set vendor status in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            status: 'pending',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.user.id)
+
+        if (profileError) {
+          console.error('Error updating profile status:', profileError)
+          setError('Account created but status update failed. Please contact support.')
+        }
+
+        // Create vendor business details
         const { error: vendorError } = await supabase
           .from('vendors')
           .insert([{
@@ -70,8 +85,7 @@ export default function VendorLogin() {
             business_description: businessDescription,
             business_address: businessAddress,
             business_phone: businessPhone,
-            business_email: businessEmail || email,
-            status: 'pending'
+            business_email: businessEmail || email
           }])
 
         if (vendorError) {

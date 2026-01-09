@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { formatDate, getStatusColor } from '../../lib/utils'
-import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2 } from 'lucide-react'
+import { formatDate } from '../../lib/utils'
+import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
-import { useServiceCategories } from '../../hooks/hook'
+import { deleteUser } from '../../lib/database'
 
 // Database types
 interface Profile {
@@ -12,7 +12,7 @@ interface Profile {
   phone?: string
   avatar_url?: string
   role: 'tourist' | 'vendor' | 'admin'
-  status?: 'active' | 'suspended'
+  status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
   suspended_at?: string
   suspension_period?: string
   suspension_end_at?: string
@@ -66,8 +66,6 @@ export default function Users() {
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null)
   const [filter, setFilter] = useState<'all' | 'tourist' | 'vendor' | 'pending' | 'verified' | 'rejected' | 'suspended'>('all')
-  const { categories } = useServiceCategories()
-  const [vendorCategories, setVendorCategories] = useState<{[vendorId: string]: string[]}>({})
 
   // Suspension modal state
   const [showSuspendModal, setShowSuspendModal] = useState(false)
@@ -90,7 +88,7 @@ export default function Users() {
     try {
       setLoading(true)
 
-      // Fetch all user profiles from the database profiles table
+      // Fetch all user profiles from the database profiles table only
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -102,32 +100,19 @@ export default function Users() {
         throw profilesError
       }
 
-      // Fetch related vendor and tourist data from their respective tables
-      const [vendorsResult, touristsResult] = await Promise.all([
-        supabase.from('vendors').select('*'),
-        supabase.from('tourists').select('*')
-      ])
-
-      if (vendorsResult.error) {
-        console.error('Error fetching vendors from database:', vendorsResult.error)
-        throw vendorsResult.error
-      }
-
-      if (touristsResult.error) {
-        console.error('Error fetching tourists from database:', touristsResult.error)
-        throw touristsResult.error
-      }
-
-      // Combine profile data with vendor/tourist details for comprehensive user management
+      // Create user details using only profile data
       const usersWithDetails: UserWithDetails[] = profiles.map(profile => {
-        const vendor = vendorsResult.data?.find(v => v.user_id === profile.id)
-        const tourist = touristsResult.data?.find(t => t.user_id === profile.id)
+        // Use profile status directly
+        const profileStatus = profile.status || (profile.role === 'vendor' ? 'pending' : 'active')
 
         return {
-          profile,
-          vendor,
-          tourist,
-          isVerified: vendor ? vendor.status === 'approved' : true // Tourists are auto-verified
+          profile: {
+            ...profile,
+            status: profileStatus
+          },
+          vendor: undefined, // Not fetching vendor data
+          tourist: undefined, // Not fetching tourist data
+          isVerified: (profile.role === 'vendor' && profileStatus === 'approved') || profile.role === 'tourist' || profile.role === 'admin'
         }
       })
 
@@ -140,43 +125,64 @@ export default function Users() {
     }
   }
 
-  const updateVendorStatus = async (vendorId: string, status: 'approved' | 'rejected' | 'suspended') => {
+  const updateVendorStatus = async (profileId: string, status: 'approved' | 'rejected' | 'suspended') => {
     try {
-      // Update vendor status in database
-      const { error } = await supabase
-        .from('vendors')
+      // Find the user by profile ID
+      const user = users.find(u => u.profile.id === profileId)
+      if (!user) {
+        throw new Error('User not found')
+      }
+
+      // Update vendor status in profiles table (primary status)
+      const { error: profileError } = await supabase
+        .from('profiles')
         .update({
           status,
-          approved_at: status === 'approved' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         })
-        .eq('id', vendorId)
+        .eq('id', profileId)
 
-      if (error) {
-        console.error('Database error updating vendor status:', error)
-        throw error
+      if (profileError) {
+        console.error('Database error updating profile status:', profileError)
+        throw profileError
+      }
+
+      // Sync with vendors table if it exists (for backward compatibility)
+      try {
+        const { error: vendorError } = await supabase
+          .from('vendors')
+          .update({
+            status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', profileId)
+
+        if (vendorError && !vendorError.message?.includes('Could not find')) {
+          console.warn('Could not sync with vendors table (may not exist):', vendorError)
+        }
+      } catch (vendorSyncError) {
+        console.warn('Vendors table sync failed (table may not exist):', vendorSyncError)
       }
 
       // Update local state to reflect database changes
       setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.vendor?.id === vendorId
+        prevUsers.map(u =>
+          u.profile.id === profileId
             ? {
-                ...user,
-                vendor: user.vendor ? {
-                  ...user.vendor,
+                ...u,
+                profile: {
+                  ...u.profile,
                   status,
-                  approved_at: status === 'approved' ? new Date().toISOString() : null,
                   updated_at: new Date().toISOString()
-                } : undefined,
+                },
                 isVerified: status === 'approved'
               }
-            : user
+            : u
         )
       )
 
       setSelectedUser(null)
-      console.log(`Vendor ${vendorId} ${status} successfully`)
+      console.log(`Vendor ${user.profile.email} ${status} successfully`)
     } catch (error) {
       console.error('Error updating vendor status:', error)
       // You could add a toast notification here for user feedback
@@ -185,7 +191,7 @@ export default function Users() {
 
   const updateUserStatus = async (userId: string, status: 'active' | 'suspended') => {
     try {
-      // Update user status in database
+      // Update user status in profiles table (primary)
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -197,6 +203,26 @@ export default function Users() {
       if (error) {
         console.error('Database error updating user status:', error)
         throw error
+      }
+
+      // Get user role to determine if we need to sync with tourists table
+      const user = users.find(u => u.profile.id === userId)
+      if (user?.profile.role === 'tourist') {
+        // Sync with tourists table if it exists (for backward compatibility)
+        try {
+          const { error: touristError } = await supabase
+            .from('tourists')
+            .update({
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', userId)
+
+          if (touristError && !touristError.message?.includes('Could not find')) {
+            console.warn('Could not sync with tourists table (may not exist):', touristError)
+          }
+        } catch (touristSyncError) {
+          console.warn('Tourists table sync failed (table may not exist):', touristSyncError)
+        }
       }
 
       // Update local state to reflect database changes
@@ -223,6 +249,21 @@ export default function Users() {
     }
   }
 
+  const deleteUserAccount = async (userId: string, userName: string) => {
+    try {
+      await deleteUser(userId)
+      
+      // Update local state to remove the user
+      setUsers(prevUsers => prevUsers.filter(user => user.profile.id !== userId))
+      
+      setSelectedUser(null)
+      console.log(`User ${userName} deleted successfully`)
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      // You could add a toast notification here for user feedback
+    }
+  }
+
   const openSuspendModal = (type: 'vendor' | 'user', id: string, name: string) => {
     setSuspendTarget({ type, id, name })
     setSuspendPeriod('1week')
@@ -230,7 +271,13 @@ export default function Users() {
   }
 
   const handleSuspendConfirm = async () => {
-    if (!suspendTarget) return
+    console.log('handleSuspendConfirm called')
+    if (!suspendTarget) {
+      console.error('No suspend target set')
+      return
+    }
+
+    console.log('Starting suspension for:', suspendTarget)
 
     try {
       const now = new Date()
@@ -252,36 +299,13 @@ export default function Users() {
           break
       }
 
-      if (suspendTarget.type === 'vendor') {
-        // Update vendor status
-        const { error } = await supabase
-          .from('vendors')
-          .update({
-            status: 'suspended',
-            updated_at: now.toISOString()
-          })
-          .eq('id', suspendTarget.id)
-
-        if (error) throw error
-
-        // Update local state
-        setUsers(prevUsers =>
-          prevUsers.map(user =>
-            user.vendor?.id === suspendTarget!.id
-              ? {
-                  ...user,
-                  vendor: user.vendor ? {
-                    ...user.vendor,
-                    status: 'suspended',
-                    updated_at: now.toISOString()
-                  } : undefined
-                }
-              : user
-          )
-        )
-      } else {
-        // Update user status with suspension details
-        const { error } = await supabase
+      // Update user status in profiles table
+      console.log('About to update profiles table for user:', suspendTarget.id)
+      
+      // Try full update first (with suspension columns)
+      let updateSucceeded = false
+      try {
+        const { error: fullError } = await supabase
           .from('profiles')
           .update({
             status: 'suspended',
@@ -292,33 +316,77 @@ export default function Users() {
           })
           .eq('id', suspendTarget.id)
 
-        if (error) throw error
-
-        // Update local state
-        setUsers(prevUsers =>
-          prevUsers.map(user =>
-            user.profile.id === suspendTarget!.id
-              ? {
-                  ...user,
-                  profile: {
-                    ...user.profile,
-                    status: 'suspended',
-                    suspended_at: now.toISOString(),
-                    suspension_period: suspendPeriod,
-                    suspension_end_at: suspensionEndAt?.toISOString() || undefined,
-                    updated_at: now.toISOString()
-                  }
-                }
-              : user
-          )
-        )
+        if (!fullError) {
+          updateSucceeded = true
+          console.log('Full update succeeded')
+        }
+      } catch (e) {
+        console.log('Full update failed, trying basic update')
       }
+
+      // If full update failed, try basic update
+      if (!updateSucceeded) {
+        const { error: basicError } = await supabase
+          .from('profiles')
+          .update({
+            status: 'suspended',
+            updated_at: now.toISOString()
+          })
+          .eq('id', suspendTarget.id)
+          
+        if (basicError) {
+          console.error('Basic update also failed:', basicError)
+          throw basicError
+        }
+        console.log('Basic update succeeded')
+      }
+
+      // Sync with vendors table if suspending a vendor
+      if (suspendTarget.type === 'vendor') {
+        try {
+          const { error: vendorError } = await supabase
+            .from('vendors')
+            .update({
+              status: 'suspended',
+              updated_at: now.toISOString()
+            })
+            .eq('user_id', suspendTarget.id)
+
+          if (vendorError && !vendorError.message?.includes('Could not find')) {
+            console.warn('Could not sync with vendors table:', vendorError)
+          }
+        } catch (vendorSyncError) {
+          console.warn('Vendors table sync failed:', vendorSyncError)
+        }
+      }
+
+      // Update local state
+      console.log('Updating local state')
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          user.profile.id === suspendTarget!.id
+            ? {
+                ...user,
+                profile: {
+                  ...user.profile,
+                  status: 'suspended',
+                  updated_at: now.toISOString()
+                }
+              }
+            : user
+        )
+      )
 
       setShowSuspendModal(false)
       setSuspendTarget(null)
-      console.log(`${suspendTarget.type} ${suspendTarget.id} suspended successfully`)
+      console.log(`${suspendTarget?.type} ${suspendTarget?.name} suspended successfully`)
+      // alert(`${suspendTarget?.name} has been suspended successfully!`) // Removed temporary alert
     } catch (error) {
-      console.error('Error suspending:', error)
+      console.error('Error suspending user:', error)
+      const errorMessage = error instanceof Error ? error.message : 
+                          (error && typeof error === 'object' && 'message' in error) ? (error as any).message :
+                          JSON.stringify(error)
+      console.error(`Failed to suspend user: ${errorMessage}`)
     }
   }
 
@@ -339,42 +407,18 @@ export default function Users() {
     }
   }
 
-  const assignCategoryToVendor = async (vendorId: string, categoryId: string) => {
-    try {
-      // For now, we'll store categories in local state
-      // In a real implementation, this would update a vendor_categories table
-      setVendorCategories(prev => ({
-        ...prev,
-        [vendorId]: [...(prev[vendorId] || []), categoryId]
-      }))
-      console.log(`Category ${categoryId} assigned to vendor ${vendorId}`)
-    } catch (error) {
-      console.error('Error assigning category to vendor:', error)
-    }
-  }
-
-  const removeCategoryFromVendor = async (vendorId: string, categoryId: string) => {
-    try {
-      setVendorCategories(prev => ({
-        ...prev,
-        [vendorId]: (prev[vendorId] || []).filter(id => id !== categoryId)
-      }))
-      console.log(`Category ${categoryId} removed from vendor ${vendorId}`)
-    } catch (error) {
-      console.error('Error removing category from vendor:', error)
-    }
-  }
-
   const filteredUsers = users.filter(user => {
     if (filter === 'all') return true
     if (filter === 'tourist') return user.profile.role === 'tourist'
     if (filter === 'vendor') return user.profile.role === 'vendor'
-    if (filter === 'pending') return user.vendor?.status === 'pending'
+    if (filter === 'pending') return user.profile.status === 'pending'
     if (filter === 'verified') return user.isVerified
-    if (filter === 'rejected') return user.vendor?.status === 'rejected'
-    if (filter === 'suspended') return user.vendor?.status === 'suspended' || user.profile.status === 'suspended'
+    if (filter === 'rejected') return user.profile.status === 'rejected'
+    if (filter === 'suspended') return user.profile.status === 'suspended'
     return true
   })
+
+  const pendingVendorsCount = users.filter(u => u.profile.status === 'pending').length;
 
   if (loading) {
     return (
@@ -386,6 +430,23 @@ export default function Users() {
 
   return (
     <div>
+      {/* Pending Vendors Alert */}
+      {pendingVendorsCount > 0 && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <strong>{pendingVendorsCount} vendor{pendingVendorsCount > 1 ? 's' : ''} awaiting approval.</strong> 
+                Click the "Pending" filter below to review and approve/reject vendor applications.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -446,7 +507,7 @@ export default function Users() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Pending ({users.filter(u => u.vendor?.status === 'pending').length})
+            Pending ({users.filter(u => u.profile.status === 'pending').length})
           </button>
           <button
             onClick={() => setFilter('verified')}
@@ -466,7 +527,7 @@ export default function Users() {
                 : 'bg-red-100 text-red-700 hover:bg-red-200'
             }`}
           >
-            Rejected ({users.filter(u => u.vendor?.status === 'rejected').length})
+            Rejected ({users.filter(u => u.profile.status === 'rejected').length})
           </button>
           <button
             onClick={() => setFilter('suspended')}
@@ -485,7 +546,7 @@ export default function Users() {
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
           {filteredUsers.map((user) => (
-            <li key={user.profile.id}>
+            <li key={user.profile.id} className={`${user.profile.status === 'pending' ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -522,9 +583,19 @@ export default function Users() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      {user.vendor && (
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.vendor.status)}`}>
-                          {user.vendor.status}
+                      {user.profile.role === 'vendor' && (
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.profile.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300 animate-pulse'
+                            : user.profile.status === 'approved'
+                            ? 'bg-green-100 text-green-800'
+                            : user.profile.status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : user.profile.status === 'suspended'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.profile.status === 'pending' ? '⏳ PENDING APPROVAL' : (user.profile.status || 'Unknown').toUpperCase()}
                         </span>
                       )}
                       {user.profile.role === 'tourist' && (
@@ -539,60 +610,85 @@ export default function Users() {
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      {user.vendor?.status === 'pending' && (
-                        <>
+                      {user.profile.status === 'pending' && user.profile.role === 'vendor' && (
+                        <div className="flex space-x-2">
                           <button
-                            onClick={() => user.vendor && showConfirmation('approve', {type: 'vendor', id: user.vendor.id, name: user.vendor.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor!.id, 'approved'))}
-                            className="text-green-600 hover:text-green-900"
-                            title="Approve"
+                            onClick={() => showConfirmation('approve', {type: 'vendor', id: user.profile.id, name: user.vendor?.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor?.id || user.profile.id, 'approved'))}
+                            className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-200"
+                            title="Approve Vendor"
                           >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => showConfirmation('reject', {type: 'vendor', id: user.profile.id, name: user.vendor?.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor?.id || user.profile.id, 'rejected'))}
+                            className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md bg-red-100 text-red-800 hover:bg-red-200 transition-colors duration-200"
+                            title="Reject Vendor"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                      {/* Suspend/Resume button - changes based on current status */}
+                      {user.profile.role === 'vendor' && user.profile.status !== 'pending' && user.profile.status !== 'rejected' && (
+                        <button
+                          onClick={() => user.profile.status === 'suspended' ?
+                            updateVendorStatus(user.profile.id, 'approved') :
+                            openSuspendModal('vendor', user.profile.id, user.profile.full_name || 'Vendor')
+                          }
+                          className={user.profile.status === 'suspended' ? "text-green-600 hover:text-green-900" : "text-orange-600 hover:text-orange-900"}
+                          title={user.profile.status === 'suspended' ? "Resume Vendor" : "Suspend Vendor"}
+                        >
+                          {user.profile.status === 'suspended' ? (
                             <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => user.vendor && showConfirmation('reject', {type: 'vendor', id: user.vendor.id, name: user.vendor.business_name || user.profile.full_name || 'Vendor'}, () => updateVendorStatus(user.vendor!.id, 'rejected'))}
-                            className="text-red-600 hover:text-red-900"
-                            title="Reject"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                      {user.vendor?.status === 'approved' && (
-                        <button
-                          onClick={() => user.vendor && openSuspendModal('vendor', user.vendor.id, user.vendor.business_name || user.profile.full_name || 'Vendor')}
-                          className="text-orange-600 hover:text-orange-900"
-                          title="Suspend"
-                        >
-                          <Ban className="h-4 w-4" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
                         </button>
                       )}
-                      {user.vendor?.status === 'suspended' && (
+                      {/* Suspend/Resume button for tourists */}
+                      {user.profile.role === 'tourist' && (
                         <button
-                          onClick={() => user.vendor && updateVendorStatus(user.vendor.id, 'approved')}
-                          className="text-green-600 hover:text-green-900"
-                          title="Unsuspend"
+                          onClick={() => user.profile.status === 'suspended' ?
+                            updateUserStatus(user.profile.id, 'active') :
+                            openSuspendModal('user', user.profile.id, user.profile.full_name || 'User')
+                          }
+                          className={user.profile.status === 'suspended' ? "text-green-600 hover:text-green-900" : "text-orange-600 hover:text-orange-900"}
+                          title={user.profile.status === 'suspended' ? "Resume User" : "Suspend User"}
                         >
-                          <Check className="h-4 w-4" />
+                          {user.profile.status === 'suspended' ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
                         </button>
                       )}
-                      {user.profile.role === 'tourist' && user.profile.status !== 'suspended' && (
+                      {/* Suspend/Resume button for admins and other roles */}
+                      {user.profile.role !== 'vendor' && user.profile.role !== 'tourist' && user.profile.status !== 'pending' && (
                         <button
-                          onClick={() => openSuspendModal('user', user.profile.id, user.profile.full_name || 'User')}
-                          className="text-orange-600 hover:text-orange-900"
-                          title="Suspend User"
+                          onClick={() => user.profile.status === 'suspended' ?
+                            updateUserStatus(user.profile.id, 'active') :
+                            openSuspendModal('user', user.profile.id, user.profile.full_name || 'User')
+                          }
+                          className={user.profile.status === 'suspended' ? "text-green-600 hover:text-green-900" : "text-orange-600 hover:text-orange-900"}
+                          title={user.profile.status === 'suspended' ? "Resume User" : "Suspend User"}
                         >
-                          <Ban className="h-4 w-4" />
+                          {user.profile.status === 'suspended' ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
                         </button>
                       )}
-                      {user.profile.role === 'tourist' && user.profile.status === 'suspended' && (
-                        <button
-                          onClick={() => updateUserStatus(user.profile.id, 'active')}
-                          className="text-green-600 hover:text-green-900"
-                          title="Unsuspend User"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                      )}
+                      {/* Delete button */}
+                      <button
+                        onClick={() => showConfirmation('delete', {type: 'user', id: user.profile.id, name: user.profile.full_name || (user.profile.role === 'vendor' ? 'Vendor' : 'User')}, () => deleteUserAccount(user.profile.id, user.profile.full_name || (user.profile.role === 'vendor' ? 'Vendor' : 'User')))}
+                        className="text-red-600 hover:text-red-900"
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -658,114 +754,65 @@ export default function Users() {
                   </div>
                 </div>
 
-                {/* Vendor Information */}
-                {selectedUser.vendor && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Business Information</h4>
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                      <p><span className="font-medium">Business Name:</span> {selectedUser.vendor.business_name}</p>
-                      <p><span className="font-medium">Description:</span> {selectedUser.vendor.business_description || 'Not provided'}</p>
-                      <p><span className="font-medium">Address:</span> {selectedUser.vendor.business_address || 'Not provided'}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedUser.vendor.business_phone || 'Not provided'}</p>
-                      <p><span className="font-medium">Email:</span> {selectedUser.vendor.business_email || 'Not provided'}</p>
-                      <p><span className="font-medium">Website:</span> {selectedUser.vendor.business_website || 'Not provided'}</p>
-                      <p><span className="font-medium">Business Type:</span> {selectedUser.vendor.business_type || 'Not provided'}</p>
-                      <p><span className="font-medium">Operating Hours:</span> {selectedUser.vendor.operating_hours || 'Not provided'}</p>
-                      <p><span className="font-medium">Years in Business:</span> {selectedUser.vendor.years_in_business || 'Not provided'}</p>
-                      <p><span className="font-medium">Status:</span>
-                        <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedUser.vendor.status)}`}>
-                          {selectedUser.vendor.status}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Category Management for Verified Vendors */}
-                {selectedUser.vendor && selectedUser.vendor.status === 'approved' && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Service Categories</h4>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="mb-4">
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Assigned Categories:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {(vendorCategories[selectedUser.vendor!.id] || []).map(categoryId => {
-                            const category = categories.find(c => c.id === categoryId)
-                            return category ? (
-                              <span key={categoryId} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {category.name}
-                                <button
-                                  onClick={() => removeCategoryFromVendor(selectedUser.vendor!.id, categoryId)}
-                                  className="ml-1 text-blue-600 hover:text-blue-800"
-                                  title="Remove category"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </span>
-                            ) : null
-                          })}
-                          {(vendorCategories[selectedUser.vendor!.id] || []).length === 0 && (
-                            <p className="text-sm text-gray-500">No categories assigned</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-2">Available Categories:</h5>
-                        <div className="flex flex-wrap gap-2">
-                          {categories
-                            .filter(category => !(vendorCategories[selectedUser.vendor!.id] || []).includes(category.id))
-                            .map(category => (
-                              <button
-                                key={category.id}
-                                onClick={() => assignCategoryToVendor(selectedUser.vendor!.id, category.id)}
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                                title="Assign category"
-                              >
-                                + {category.name}
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tourist Information */}
-                {selectedUser.tourist && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Tourist Information</h4>
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                      <p><span className="font-medium">First Name:</span> {selectedUser.tourist.first_name || 'Not provided'}</p>
-                      <p><span className="font-medium">Last Name:</span> {selectedUser.tourist.last_name || 'Not provided'}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedUser.tourist.phone || 'Not provided'}</p>
-                      <p><span className="font-medium">Emergency Contact:</span> {selectedUser.tourist.emergency_contact || 'Not provided'}</p>
-                      <p><span className="font-medium">Emergency Phone:</span> {selectedUser.tourist.emergency_phone || 'Not provided'}</p>
-                      <p><span className="font-medium">Travel Preferences:</span> {selectedUser.tourist.travel_preferences || 'Not provided'}</p>
-                      <p><span className="font-medium">Dietary Restrictions:</span> {selectedUser.tourist.dietary_restrictions || 'Not provided'}</p>
-                      <p><span className="font-medium">Medical Conditions:</span> {selectedUser.tourist.medical_conditions || 'Not provided'}</p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Actions */}
-                {selectedUser.vendor?.status === 'pending' && (
-                  <div className="flex space-x-3 pt-4 border-t">
-                    <button
-                      onClick={() => showConfirmation('approve', {type: 'vendor', id: selectedUser.vendor!.id, name: selectedUser.vendor!.business_name || selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.vendor!.id, 'approved'))}
-                      className="btn-primary flex items-center"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Approve Vendor
-                    </button>
-                    <button
-                      onClick={() => showConfirmation('reject', {type: 'vendor', id: selectedUser.vendor!.id, name: selectedUser.vendor!.business_name || selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.vendor!.id, 'rejected'))}
-                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Reject Vendor
-                    </button>
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium text-gray-900 mb-3">Actions</h4>
+                  <div className="space-y-3">
+                    {/* Pending Vendor Actions */}
+                    {selectedUser.profile.status === 'pending' && selectedUser.profile.role === 'vendor' && (
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => showConfirmation('approve', {type: 'vendor', id: selectedUser.profile.id, name: selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.profile.id, 'approved'))}
+                          className="btn-primary flex items-center"
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Approve Vendor
+                        </button>
+                        <button
+                          onClick={() => showConfirmation('reject', {type: 'vendor', id: selectedUser.profile.id, name: selectedUser.profile.full_name || 'Vendor'}, () => updateVendorStatus(selectedUser.profile.id, 'rejected'))}
+                          className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Reject Vendor
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Suspend/Resume Actions for Active/Suspended Users */}
+                    {(selectedUser.profile.status === 'active' || selectedUser.profile.status === 'approved' || selectedUser.profile.status === 'suspended') && (
+                      <div className="flex space-x-3">
+                        {selectedUser.profile.status === 'suspended' ? (
+                          <button
+                            onClick={() => showConfirmation('approve', {type: 'user', id: selectedUser.profile.id, name: selectedUser.profile.full_name || 'User'}, () => updateUserStatus(selectedUser.profile.id, 'active'))}
+                            className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            Resume Account
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => openSuspendModal('user', selectedUser.profile.id, selectedUser.profile.full_name || 'User')}
+                            className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                          >
+                            <Ban className="h-4 w-4 mr-2" />
+                            Suspend Account
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Delete Action - Available for all users */}
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => showConfirmation('delete', {type: 'user', id: selectedUser.profile.id, name: selectedUser.profile.full_name || 'User'}, () => deleteUserAccount(selectedUser.profile.id, selectedUser.profile.full_name || 'User'))}
+                        className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete User Account
+                      </button>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -846,7 +893,11 @@ export default function Users() {
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  {confirmAction.type === 'approve' ? 'Confirm Approval' :
+                  {confirmAction.type === 'approve' ? 
+                    (users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 
+                      (confirmAction.target.type === 'vendor' ? 'Confirm Reapproval' : 'Confirm Reactivation') : 
+                      'Confirm Approval'
+                    ) :
                    confirmAction.type === 'reject' ? 'Confirm Rejection' :
                    'Confirm Deletion'}
                 </h3>
@@ -869,14 +920,21 @@ export default function Users() {
                       <Trash2 className="h-5 w-5 text-red-600 mr-2" />
                     )}
                     <span className="text-gray-900 font-medium">
-                      {confirmAction.type === 'approve' ? 'Approval Confirmation' :
+                      {confirmAction.type === 'approve' ? 
+                        (users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ?
+                          (confirmAction.target.type === 'vendor' ? 'Reapproval Confirmation' : 'Reactivation Confirmation') :
+                          'Approval Confirmation'
+                        ) :
                        confirmAction.type === 'reject' ? 'Rejection Confirmation' :
                        'Deletion Confirmation'}
                     </span>
                   </div>
                   <p className="text-gray-700 text-sm mt-1">
                     {confirmAction.type === 'approve' ?
-                      `Are you sure you want to approve ${confirmAction.target.name}? This will grant them full vendor privileges.` :
+                      (confirmAction.target.type === 'vendor' ?
+                        `Are you sure you want to ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'reapprove' : 'approve'} ${confirmAction.target.name}? ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'This will restore their vendor privileges.' : 'This will grant them full vendor privileges.'}` :
+                        `Are you sure you want to reactivate ${confirmAction.target.name}? This will restore their account access.`
+                      ) :
                      confirmAction.type === 'reject' ?
                       `Are you sure you want to reject ${confirmAction.target.name}? This action cannot be undone.` :
                       `Are you sure you want to delete ${confirmAction.target.name}? This action cannot be undone.`
@@ -902,7 +960,10 @@ export default function Users() {
                     {confirmAction.type === 'approve' ? (
                       <>
                         <Check className="h-4 w-4 mr-2" />
-                        Confirm Approval
+                        {users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ?
+                          (confirmAction.target.type === 'vendor' ? 'Confirm Reapproval' : 'Confirm Reactivation') :
+                          'Confirm Approval'
+                        }
                       </>
                     ) : confirmAction.type === 'reject' ? (
                       <>

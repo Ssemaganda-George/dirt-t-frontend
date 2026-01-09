@@ -1,5 +1,6 @@
 // Database types
 export type UserRole = 'tourist' | 'vendor' | 'admin'
+export type UserStatus = 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
 export type VendorStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type ServiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'inactive'
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
@@ -16,6 +17,7 @@ export interface Profile {
   phone?: string
   avatar_url?: string
   role: UserRole
+  status?: UserStatus
   created_at: string
   updated_at: string
 }
@@ -466,7 +468,7 @@ export async function createService(serviceData: {
       })
 
       if (Object.keys(additionalFields).length > 0) {
-        await updateService(data.id, additionalFields)
+        await updateService(data.id, data.vendor_id, additionalFields)
         // Re-fetch the service with updated data
         const { data: updatedData, error: updateError } = await supabase
           .from('services')
@@ -502,7 +504,7 @@ export async function createService(serviceData: {
   return data
 }
 
-export async function updateService(serviceId: string, updates: Partial<{
+export async function updateService(serviceId: string, vendorId: string | undefined, updates: Partial<{
   title: string
   description: string
   price: number
@@ -591,6 +593,23 @@ export async function updateService(serviceId: string, updates: Partial<{
   })
 
   try {
+    // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
+    if (vendorId) {
+      const { data: serviceCheck, error: checkError } = await supabase
+        .from('services')
+        .select('vendor_id')
+        .eq('id', serviceId)
+        .single()
+
+      if (checkError || !serviceCheck) {
+        throw new Error('Service not found')
+      }
+
+      if (serviceCheck.vendor_id !== vendorId) {
+        throw new Error('Unauthorized: Service does not belong to this vendor')
+      }
+    }
+
     // First, update the basic fields
     const { data, error } = await supabase
       .from('services')
@@ -668,7 +687,24 @@ export async function updateService(serviceId: string, updates: Partial<{
   }
 }
 
-export async function deleteService(serviceId: string) {
+export async function deleteService(serviceId: string, vendorId?: string) {
+  // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
+  if (vendorId) {
+    const { data: serviceCheck, error: checkError } = await supabase
+      .from('services')
+      .select('vendor_id')
+      .eq('id', serviceId)
+      .single()
+
+    if (checkError || !serviceCheck) {
+      throw new Error('Service not found')
+    }
+
+    if (serviceCheck.vendor_id !== vendorId) {
+      throw new Error('Unauthorized: Service does not belong to this vendor')
+    }
+  }
+
   const { error } = await supabase
     .from('services')
     .delete()
@@ -948,6 +984,135 @@ export async function deleteServiceDeleteRequest(requestId: string): Promise<voi
 
   if (error) {
     console.error('Error deleting service delete request:', error)
+    throw error
+  }
+}
+
+// User management functions
+export async function deleteUser(userId: string): Promise<void> {
+  try {
+    // First, get the user's role to determine what related data to delete
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError)
+      throw profileError
+    }
+
+    // Delete related data based on user role
+    if (profile.role === 'vendor') {
+      // Delete vendor-specific data
+      const { error: vendorError } = await supabase
+        .from('vendors')
+        .delete()
+        .eq('user_id', userId)
+
+      if (vendorError) {
+        console.error('Error deleting vendor data:', vendorError)
+        throw vendorError
+      }
+
+      // Delete all services and related data for this vendor
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select('id')
+        .eq('vendor_id', userId)
+
+      if (servicesError) {
+        console.error('Error fetching vendor services:', servicesError)
+        throw servicesError
+      }
+
+      if (services && services.length > 0) {
+        const serviceIds = services.map(s => s.id)
+
+        // Delete service images (this will be handled by storage policies)
+        // Delete bookings related to these services
+        const { error: bookingsError } = await supabase
+          .from('bookings')
+          .delete()
+          .in('service_id', serviceIds)
+
+        if (bookingsError) {
+          console.error('Error deleting service bookings:', bookingsError)
+          throw bookingsError
+        }
+
+        // Delete transactions related to these services
+        const { error: transactionsError } = await supabase
+          .from('transactions')
+          .delete()
+          .in('service_id', serviceIds)
+
+        if (transactionsError) {
+          console.error('Error deleting service transactions:', transactionsError)
+          throw transactionsError
+        }
+
+        // Delete the services themselves
+        const { error: deleteServicesError } = await supabase
+          .from('services')
+          .delete()
+          .eq('vendor_id', userId)
+
+        if (deleteServicesError) {
+          console.error('Error deleting services:', deleteServicesError)
+          throw deleteServicesError
+        }
+      }
+    } else if (profile.role === 'tourist') {
+      // Delete tourist-specific data
+      const { error: touristError } = await supabase
+        .from('tourists')
+        .delete()
+        .eq('user_id', userId)
+
+      if (touristError) {
+        console.error('Error deleting tourist data:', touristError)
+        throw touristError
+      }
+
+      // Delete bookings made by this tourist
+      const { error: bookingsError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('tourist_id', userId)
+
+      if (bookingsError) {
+        console.error('Error deleting tourist bookings:', bookingsError)
+        throw bookingsError
+      }
+
+      // Delete transactions made by this tourist
+      const { error: transactionsError } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('tourist_id', userId)
+
+      if (transactionsError) {
+        console.error('Error deleting tourist transactions:', transactionsError)
+        throw transactionsError
+      }
+    }
+
+    // Finally, delete the user profile
+    const { error: deleteProfileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+
+    if (deleteProfileError) {
+      console.error('Error deleting user profile:', deleteProfileError)
+      throw deleteProfileError
+    }
+
+    console.log(`User ${userId} and all related data deleted successfully`)
+  } catch (error) {
+    console.error('Error deleting user:', error)
     throw error
   }
 }

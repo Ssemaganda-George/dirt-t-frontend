@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, profile, vendor, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -28,8 +28,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Check vendor approval status
-  if (requiredRole === 'vendor' && vendor?.status !== 'approved') {
+  // Check vendor approval status - use profile status since we're using unified status system
+  if (requiredRole === 'vendor' && profile?.status !== 'approved') {
     return <Navigate to="/vendor-pending" replace />
   }
 

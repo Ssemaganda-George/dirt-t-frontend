@@ -130,8 +130,8 @@ export default function CategoryPage() {
         if (!service.vendors) {
           return service.status !== 'inactive'
         }
-        // Vendor services need to be approved
-        return service.status === 'approved'
+        // Vendor services need to be approved and vendor not suspended
+        return service.status === 'approved' && service.vendors.status !== 'suspended'
       })
 
       setFilteredServices(filtered)

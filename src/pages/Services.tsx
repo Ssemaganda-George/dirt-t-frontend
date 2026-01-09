@@ -108,7 +108,8 @@ export default function Services() {
 
   // Filter by search query first (across all categories if searching)
   const approvedServices = allServices.filter(service => 
-    !service.vendors || service.status === 'approved'
+    service.status === 'approved' && 
+    (!service.vendors || service.vendors.status !== 'suspended')
   )
   
   const searchFilteredServices = approvedServices.filter((service: Service) => {

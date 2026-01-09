@@ -77,7 +77,7 @@ export function useServices(vendorId?: string) {
     try {
       setError(null);
       
-      const updated = await updateService(serviceId, { status });
+      const updated = await updateService(serviceId, vendorId, { status });
       setServices(prevServices => 
         prevServices.map(service => 
           service.id === serviceId ? updated : service
@@ -114,7 +114,7 @@ export function useServices(vendorId?: string) {
   }>) => {
     try {
       setError(null);
-      const updated = await updateService(serviceId, updates);
+      const updated = await updateService(serviceId, vendorId, updates);
       setServices(prevServices => 
         prevServices.map(service => 
           service.id === serviceId ? updated : service
@@ -130,7 +130,7 @@ export function useServices(vendorId?: string) {
   const removeService = async (serviceId: string) => {
     try {
       setError(null);
-      await deleteService(serviceId);
+      await deleteService(serviceId, vendorId);
       setServices(prev => prev.filter(s => s.id !== serviceId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete service');

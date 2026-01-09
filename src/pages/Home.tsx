@@ -69,6 +69,10 @@ export default function Home() {
   }
 
   const filteredServices = allServices.filter((service: Service) => {
+    // First check if service is approved and vendor is not suspended
+    const isApproved = service.status === 'approved' && 
+                      (!service.vendors || service.vendors.status !== 'suspended')
+
     const matchesSearch = !searchQuery || // If no search query, show all
                          service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -87,7 +91,7 @@ export default function Home() {
                            service.category_id === selectedCategory
 
     // If there's a search query, ignore category filter; otherwise apply category filter
-    return searchQuery ? matchesSearch : (matchesSearch && matchesCategory)
+    return isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
   })
 
   const currentItems = filteredServices
