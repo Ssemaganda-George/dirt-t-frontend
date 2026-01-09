@@ -948,8 +948,7 @@ export async function getServiceDeleteRequests(vendorId?: string): Promise<Servi
       .select(`
         *,
         service:services(id, title, description, category_id, service_categories(name, emoji)),
-        vendor:vendors(id, business_name, user_id),
-        reviewer:profiles(id, full_name, email)
+        vendor:vendors(id, business_name, user_id)
       `)
       .order('requested_at', { ascending: false })
 
