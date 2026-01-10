@@ -31,7 +31,7 @@ export default function VendorBookings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Add Booking</button>
+        <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Add Booking</button>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -199,7 +199,7 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
           </div>
           <div className="flex justify-end space-x-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border bg-white">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 text-white">Create booking</button>
+            <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white">Create booking</button>
           </div>
         </form>
       </div>

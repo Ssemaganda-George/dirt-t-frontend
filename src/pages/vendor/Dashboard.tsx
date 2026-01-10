@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { getVendorStats } from '../../lib/database'
+import { supabase } from '../../lib/supabaseClient'
 import { formatCurrency, formatDateTime } from '../../lib/utils'
 import StatCard from '../../components/StatCard'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -14,12 +16,15 @@ import {
   CheckCircle,
   RefreshCw,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  MessageSquare
 } from 'lucide-react'
 
 export default function VendorDashboard() {
-  const { profile } = useAuth()
-  const vendorId = profile?.id
+  const { profile, user } = useAuth()
+  const navigate = useNavigate()
+  const [vendorId, setVendorId] = useState<string | null>(null)
+  const [vendorLoading, setVendorLoading] = useState(true)
 
   const [stats, setStats] = useState({
     servicesCount: 0,
@@ -27,13 +32,110 @@ export default function VendorDashboard() {
     completedBookings: 0,
     balance: 0,
     currency: 'UGX',
+    messagesCount: 0,
     recentBookings: [] as any[],
     recentTransactions: [] as any[]
   })
   const [loading, setLoading] = useState(true)
 
+  // Check if user is a vendor and set vendorId accordingly
+  useEffect(() => {
+    const checkVendorStatus = async () => {
+      if (!user?.id) {
+        setVendorLoading(false)
+        return
+      }
+
+      try {
+        // First check if user has vendor role in profiles
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, status')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError)
+          setVendorId(null)
+          setVendorLoading(false)
+          return
+        }
+
+        if (profile.role !== 'vendor' || profile.status !== 'approved') {
+          setVendorId(null)
+          setVendorLoading(false)
+          return
+        }
+
+        // User is an approved vendor, try to get their vendor record
+        let vendorIdToUse = user.id // Default fallback
+
+        const { data: vendor, error: vendorError } = await supabase
+          .from('vendors')
+          .select('id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (vendorError) {
+          console.warn('Could not fetch vendor record:', vendorError)
+          
+          // Try to create vendor record if it doesn't exist
+          const { data: newVendor, error: createError } = await supabase
+            .from('vendors')
+            .insert([{
+              user_id: user.id,
+              business_name: 'Business Name',
+              business_description: 'Please update your business description',
+              business_email: user.email || '',
+              status: 'approved'
+            }])
+            .select('id')
+            .single()
+
+          if (createError) {
+            if (createError.code === '23505') {
+              // Record already exists, try to fetch it again
+              const { data: existingVendor, error: fetchError } = await supabase
+                .from('vendors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
+              
+              if (!fetchError && existingVendor) {
+                vendorIdToUse = existingVendor.id
+              } else {
+                console.error('Still cannot fetch vendor record after creation attempt:', fetchError)
+                // Use user ID as fallback - the updated RLS policy should handle this
+                vendorIdToUse = user.id
+              }
+            } else {
+              console.error('Error creating vendor record:', createError)
+              // Use user ID as fallback
+              vendorIdToUse = user.id
+            }
+          } else if (newVendor) {
+            vendorIdToUse = newVendor.id
+          }
+        } else if (vendor) {
+          vendorIdToUse = vendor.id
+        }
+
+        setVendorId(vendorIdToUse)
+      } catch (error) {
+        console.error('Error in checkVendorStatus:', error)
+        setVendorId(null)
+      } finally {
+        setVendorLoading(false)
+      }
+    }
+
+    checkVendorStatus()
+  }, [user?.id])
+
   const refresh = async () => {
-    if (!vendorId) return
+    if (!vendorId) {
+      return
+    }
 
     try {
       setLoading(true)
@@ -46,9 +148,13 @@ export default function VendorDashboard() {
     }
   }
 
-  useEffect(() => { refresh() }, [vendorId])
+  useEffect(() => { 
+    if (vendorId && !vendorLoading) {
+      refresh() 
+    }
+  }, [vendorId, vendorLoading])
 
-  if (loading) {
+  if (loading || vendorLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
@@ -75,7 +181,7 @@ export default function VendorDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <StatCard
             title="Total Services"
             value={stats.servicesCount}
@@ -83,6 +189,8 @@ export default function VendorDashboard() {
             color="blue"
             trend="+12% this month"
             subtitle="Active listings"
+            onClick={() => navigate('/vendor/services')}
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
           <StatCard
             title="Pending Bookings"
@@ -91,6 +199,8 @@ export default function VendorDashboard() {
             color="yellow"
             trend="+5% this week"
             subtitle="Awaiting confirmation"
+            onClick={() => navigate('/vendor/bookings')}
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
           <StatCard
             title="Completed Bookings"
@@ -99,6 +209,8 @@ export default function VendorDashboard() {
             color="green"
             trend="+18% this month"
             subtitle="Successfully completed"
+            onClick={() => navigate('/vendor/bookings')}
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
           <StatCard
             title="Wallet Balance"
@@ -107,6 +219,18 @@ export default function VendorDashboard() {
             color="teal"
             trend="+24% this month"
             subtitle="Available earnings"
+            onClick={() => navigate('/vendor/transactions')}
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          />
+          <StatCard
+            title="Messages"
+            value={stats.messagesCount}
+            icon={MessageSquare}
+            color="purple"
+            trend="0 unread"
+            subtitle="Customer inquiries"
+            onClick={() => navigate('/vendor/messages')}
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
         </div>
 

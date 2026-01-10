@@ -34,7 +34,7 @@ export default function VendorTransactions() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-        <button onClick={() => setShowWithdraw(true)} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Request Withdrawal</button>
+        <button onClick={() => setShowWithdraw(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Request Withdrawal</button>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -87,7 +87,7 @@ export default function VendorTransactions() {
               </div>
               <div className="flex justify-end space-x-2 pt-2">
                 <button onClick={() => setShowWithdraw(false)} className="px-4 py-2 rounded-md border bg-white">Cancel</button>
-                <button onClick={handleWithdraw} className="px-4 py-2 rounded-md bg-blue-600 text-white">Submit</button>
+                <button onClick={handleWithdraw} className="px-4 py-2 rounded-md bg-primary-600 text-white">Submit</button>
               </div>
             </div>
           </div>

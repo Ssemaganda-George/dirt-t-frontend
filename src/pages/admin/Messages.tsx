@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { MessageSquare, User, Store, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAdminMessages, markMessageAsRead, replyToMessage } from '../../lib/database'
+import { getAdminMessages, markMessageAsRead, replyToMessage, getAllVendors, Vendor } from '../../lib/database'
+import { getStatusColor } from '../../lib/utils'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 interface Message {
   id: string
@@ -20,16 +22,31 @@ interface Message {
 
 export default function Messages() {
   const { profile } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const vendorId = searchParams.get('vendorId')
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread' | 'vendor_to_admin' | 'tourist_to_admin'>('all')
   const [replyMessage, setReplyMessage] = useState('')
   const [showReplyForm, setShowReplyForm] = useState(false)
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [vendorSearch, setVendorSearch] = useState('')
+  const [currentVendorPage, setCurrentVendorPage] = useState(1)
+  const VENDORS_PER_PAGE = 5
+
+  console.log('Messages component: profile:', profile)
+  console.log('Messages component: vendorId from URL:', vendorId)
 
   useEffect(() => {
     fetchMessages()
+    fetchVendors()
   }, [filter])
+
+  useEffect(() => {
+    setCurrentVendorPage(1)
+  }, [vendorSearch])
 
   const fetchMessages = async () => {
     try {
@@ -50,6 +67,17 @@ export default function Messages() {
       console.error('Error fetching messages:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchVendors = async () => {
+    try {
+      console.log('fetchVendors: Starting to fetch vendors...')
+      const data = await getAllVendors()
+      console.log('fetchVendors: Received vendors data:', data)
+      setVendors(data)
+    } catch (error) {
+      console.error('Error fetching vendors:', error)
     }
   }
 
@@ -86,16 +114,29 @@ export default function Messages() {
   }
 
   const filteredMessages = messages.filter(message => {
+    // First apply the main filter
+    let passesFilter = false
     switch (filter) {
       case 'unread':
-        return message.status === 'unread'
+        passesFilter = message.status === 'unread'
+        break
       case 'vendor_to_admin':
-        return message.sender_role === 'vendor'
+        passesFilter = message.sender_role === 'vendor'
+        break
       case 'tourist_to_admin':
-        return message.sender_role === 'tourist'
+        passesFilter = message.sender_role === 'tourist'
+        break
       default:
-        return true
+        passesFilter = true
+        break
     }
+
+    // Then apply vendor-specific filter if vendorId is present
+    if (vendorId && passesFilter) {
+      passesFilter = message.sender_id === vendorId
+    }
+
+    return passesFilter
   })
 
   const getStatusIcon = (status: string) => {
@@ -135,128 +176,310 @@ export default function Messages() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-primary-600" />
-            Messages
-          </h1>
-          <p className="mt-2 text-lg text-gray-600">
-            Manage communications between vendors, tourists, and admin
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <MessageSquare className="h-8 w-8 text-primary-600" />
+                {vendorId ? 'Vendor Messages' : 'Manage Messages'}
+              </h1>
+              <p className="mt-2 text-lg text-gray-600">
+                {vendorId 
+                  ? `Messages from ${vendors.find(v => v.user_id === vendorId)?.business_name || 'Selected Vendor'}`
+                  : 'Manage messages and vendor accounts'
+                }
+              </p>
+            </div>
+            {vendorId && (
+              <button
+                onClick={() => navigate('/admin/messages')}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                ← Back to All Messages
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Messages List */}
-          <div className="lg:col-span-2">
+        <div className={`grid grid-cols-1 ${vendorId ? 'lg:grid-cols-1' : 'lg:grid-cols-2'} gap-8`}>
+          {/* Messages Card */}
+          <div className="bg-white shadow-sm rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary-600" />
+                  Messages
+                </h2>
+              </div>
+
             {/* Filters */}
-            <div className="mb-6">
+            <div className="mb-4">
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${
                     filter === 'all'
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  All Messages ({messages.length})
+                  All ({messages.length})
                 </button>
                 <button
                   onClick={() => setFilter('unread')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${
                     filter === 'unread'
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   Unread ({messages.filter(m => m.status === 'unread').length})
                 </button>
                 <button
                   onClick={() => setFilter('vendor_to_admin')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${
                     filter === 'vendor_to_admin'
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  From Vendors ({messages.filter(m => m.sender_role === 'vendor').length})
+                  Vendors ({messages.filter(m => m.sender_role === 'vendor').length})
                 </button>
                 <button
                   onClick={() => setFilter('tourist_to_admin')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1 rounded-lg text-sm font-medium ${
                     filter === 'tourist_to_admin'
                       ? 'bg-primary-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  From Tourists ({messages.filter(m => m.sender_role === 'tourist').length})
+                  Tourists ({messages.filter(m => m.sender_role === 'tourist').length})
                 </button>
               </div>
             </div>
 
             {/* Messages List */}
-            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-              <div className="divide-y divide-gray-200">
-                {filteredMessages.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No messages</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {filter === 'all' ? 'No messages found.' : `No ${filter.replace('_', ' ')} messages.`}
-                    </p>
-                  </div>
-                ) : (
-                  filteredMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      onClick={() => setSelectedMessage(message)}
-                      className={`p-6 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        selectedMessage?.id === message.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            {getSenderIcon(message.sender_role)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-gray-900">
-                                {message.sender_name}
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {filteredMessages.length === 0 ? (
+                <div className="p-4 text-center">
+                  <MessageSquare className="mx-auto h-8 w-8 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No messages</h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {filter === 'all' ? 'No messages found.' : `No ${filter.replace('_', ' ')} messages.`}
+                  </p>
+                </div>
+              ) : (
+                filteredMessages.slice(0, 5).map((message) => (
+                  <div
+                    key={message.id}
+                    onClick={() => setSelectedMessage(message)}
+                    className={`p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${
+                      selectedMessage?.id === message.id ? 'bg-blue-50 border-blue-500' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-2">
+                        <div className="flex-shrink-0">
+                          {getSenderIcon(message.sender_role)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {message.sender_name}
+                            </p>
+                            <div className="flex items-center space-x-1">
+                              {getStatusIcon(message.status)}
+                              <p className="text-xs text-gray-500">
+                                {new Date(message.created_at).toLocaleDateString()}
                               </p>
-                              <div className="flex items-center space-x-2">
-                                {getStatusIcon(message.status)}
-                                <p className="text-sm text-gray-500">
-                                  {new Date(message.created_at).toLocaleDateString()}
-                                </p>
-                              </div>
                             </div>
-                            <p className="text-sm font-medium text-gray-900 mt-1">
-                              {message.subject}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                              {message.message}
-                            </p>
                           </div>
+                          <p className="text-sm font-medium text-gray-900 mt-1 truncate">
+                            {message.subject}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-1">
+                            {message.message}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
+
+            {filteredMessages.length > 5 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500">
+                  Showing 5 of {filteredMessages.length} messages
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Message Detail */}
-          <div className="lg:col-span-1">
-            {selectedMessage ? (
-              <div className="bg-white shadow-sm rounded-lg p-6">
-                <div className="flex items-start justify-between mb-4">
+          {/* Vendor Accounts Card - Only show when not filtering by specific vendor */}
+          {!vendorId && (
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <Store className="h-5 w-5 text-primary-600" />
+                  Vendor Accounts
+                </h2>
+                <span className="text-sm text-gray-500">
+                  {vendorSearch ? 
+                    `${(() => {
+                      const filtered = vendors.filter(vendor =>
+                        vendor.business_name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                        (vendor.business_email && vendor.business_email.toLowerCase().includes(vendorSearch.toLowerCase()))
+                      )
+                      return filtered.length
+                    })()} of ${vendors.length} vendors` : 
+                    `${vendors.length} total`
+                  }
+                </span>
+              </div>
+
+              {/* Search Filter */}
+              <div className="mb-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search vendors by business name or email..."
+                    value={vendorSearch}
+                    onChange={(e) => setVendorSearch(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Vendor List */}
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {(() => {
+                  const filteredVendors = vendors.filter(vendor =>
+                    vendor.business_name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                    (vendor.business_email && vendor.business_email.toLowerCase().includes(vendorSearch.toLowerCase()))
+                  )
+
+                  const startIndex = (currentVendorPage - 1) * VENDORS_PER_PAGE
+                  const endIndex = startIndex + VENDORS_PER_PAGE
+                  const paginatedVendors = filteredVendors.slice(startIndex, endIndex)
+
+                  return filteredVendors.length === 0 ? (
+                    <div className="p-4 text-center">
+                      <Store className="mx-auto h-8 w-8 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No vendors found</h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {vendorSearch ? 'Try adjusting your search terms.' : 'No vendor accounts found.'}
+                      </p>
+                    </div>
+                  ) : (
+                    paginatedVendors.map((vendor) => (
+                      <div
+                        key={vendor.id}
+                        onClick={() => navigate(`/admin/vendor-messages?vendor=${btoa(vendor.user_id)}`)}
+                        className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-gray-200"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2">
+                            <div className="flex-shrink-0">
+                              <Store className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {vendor.business_name}
+                                </p>
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(vendor.status)}`}>
+                                  {vendor.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1 truncate">
+                                {vendor.business_email}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Created {new Date(vendor.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )
+                })()}
+              </div>
+
+              {/* Pagination Controls */}
+              {(() => {
+                const filteredVendors = vendors.filter(vendor =>
+                  vendor.business_name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+                  (vendor.business_email && vendor.business_email.toLowerCase().includes(vendorSearch.toLowerCase()))
+                )
+                const totalPages = Math.ceil(filteredVendors.length / VENDORS_PER_PAGE)
+
+                if (filteredVendors.length <= VENDORS_PER_PAGE) return null
+
+                return (
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      Showing {Math.min((currentVendorPage - 1) * VENDORS_PER_PAGE + 1, filteredVendors.length)} to {Math.min(currentVendorPage * VENDORS_PER_PAGE, filteredVendors.length)} of {filteredVendors.length} vendors
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCurrentVendorPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentVendorPage === 1}
+                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Previous page"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page {currentVendorPage} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentVendorPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentVendorPage === totalPages}
+                        className="p-1 rounded-md text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Next page"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Message Detail Modal */}
+        {selectedMessage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Message Details</h3>
+                <button
+                  onClick={() => setSelectedMessage(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-2">
                     {getSenderIcon(selectedMessage.sender_role)}
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h4 className="text-md font-medium text-gray-900">
                         {selectedMessage.sender_name}
-                      </h3>
+                      </h4>
                       <p className="text-sm text-gray-500">
                         {selectedMessage.sender_role === 'vendor' ? 'Vendor' : 'Tourist'}
                       </p>
@@ -270,10 +493,10 @@ export default function Messages() {
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <h4 className="text-md font-medium text-gray-900 mb-2">
+                <div>
+                  <h5 className="text-md font-medium text-gray-900 mb-2">
                     {selectedMessage.subject}
-                  </h4>
+                  </h5>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">
                     {selectedMessage.message}
                   </p>
@@ -281,13 +504,13 @@ export default function Messages() {
 
                 {!showReplyForm ? (
                   <div className="flex space-x-2">
-                    <button 
+                    <button
                       onClick={() => setShowReplyForm(true)}
                       className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
                     >
                       Reply
                     </button>
-                    <button 
+                    <button
                       onClick={handleMarkAsRead}
                       className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                     >
@@ -324,17 +547,10 @@ export default function Messages() {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="bg-white shadow-sm rounded-lg p-8 text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Select a message</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Choose a message from the list to view its details
-                </p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
       </div>
     </div>
   )

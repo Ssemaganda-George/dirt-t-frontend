@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { MessageSquare, Send, User, CheckCircle } from 'lucide-react'
+import { MessageSquare, Send, User, CheckCircle, X } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getVendorMessages, markMessageAsRead, replyToMessage } from '../../lib/database'
+import { getVendorMessages, markMessageAsRead, replyToMessage, sendMessage } from '../../lib/database'
 
 interface Message {
   id: string
@@ -21,18 +21,54 @@ export default function VendorMessages() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [filter, setFilter] = useState<'all' | 'unread' | 'customer' | 'admin'>('customer')
   const [replyMessage, setReplyMessage] = useState('')
   const [showReplyForm, setShowReplyForm] = useState(false)
+  const [showNewMessageForm, setShowNewMessageForm] = useState(false)
+  const [newMessageSubject, setNewMessageSubject] = useState('')
+  const [newMessageContent, setNewMessageContent] = useState('')
+  const [messageCounts, setMessageCounts] = useState({
+    customer: 0,
+    admin: 0,
+    unread: 0
+  })
 
   useEffect(() => {
     fetchMessages()
+    fetchMessageCounts()
   }, [filter])
+
+  const fetchMessageCounts = async () => {
+    try {
+      const [customerData, adminData, unreadData] = await Promise.all([
+        getVendorMessages(profile?.id || '', 'customer'),
+        getVendorMessages(profile?.id || '', 'admin'),
+        getVendorMessages(profile?.id || '', 'unread')
+      ])
+
+      setMessageCounts({
+        customer: customerData.length,
+        admin: adminData.length,
+        unread: unreadData.length
+      })
+    } catch (error) {
+      console.error('Error fetching message counts:', error)
+    }
+  }
 
   const fetchMessages = async () => {
     try {
       setLoading(true)
-      const filterParam = filter === 'unread' ? 'unread' : undefined
+      let filterParam: 'unread' | 'customer' | 'admin' | undefined
+
+      if (filter === 'unread') {
+        filterParam = 'unread'
+      } else if (filter === 'customer') {
+        filterParam = 'customer'
+      } else if (filter === 'admin') {
+        filterParam = 'admin'
+      }
+
       const data = await getVendorMessages(profile?.id || '', filterParam)
       setMessages(data)
     } catch (error) {
@@ -46,6 +82,10 @@ export default function VendorMessages() {
     switch (filter) {
       case 'unread':
         return message.status === 'unread'
+      case 'customer':
+        return true // Already filtered by the API
+      case 'admin':
+        return true // Already filtered by the API
       default:
         return true
     }
@@ -85,6 +125,32 @@ export default function VendorMessages() {
     }
   }
 
+  const handleNewMessage = async () => {
+    if (!newMessageSubject.trim() || !newMessageContent.trim()) return
+
+    try {
+      // For now, we'll send to a default admin. In a real app, you'd have admin user IDs
+      // This assumes there's an admin with a known ID or we need to get admin IDs from the database
+      const adminRecipientId = 'admin-placeholder-id' // This should be replaced with actual admin ID logic
+
+      await sendMessage({
+        sender_id: profile?.id || '',
+        sender_role: 'vendor',
+        recipient_id: adminRecipientId,
+        recipient_role: 'admin',
+        subject: newMessageSubject,
+        message: newMessageContent
+      })
+
+      setNewMessageSubject('')
+      setNewMessageContent('')
+      setShowNewMessageForm(false)
+      await fetchMessages() // Refresh messages
+    } catch (error) {
+      console.error('Error sending new message:', error)
+    }
+  }
+
   const markAsRead = async (messageId: string) => {
     try {
       await markMessageAsRead(messageId)
@@ -109,10 +175,10 @@ export default function VendorMessages() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <MessageSquare className="h-8 w-8 text-primary-600" />
-            Customer Messages
+            Messages
           </h1>
           <p className="mt-2 text-lg text-gray-600">
-            Manage communications with your customers
+            Manage communications with customers and administrators
           </p>
         </div>
 
@@ -123,14 +189,24 @@ export default function VendorMessages() {
             <div className="mb-6">
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setFilter('all')}
+                  onClick={() => setFilter('customer')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    filter === 'all'
+                    filter === 'customer'
                       ? 'bg-primary-600 text-white'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  All Messages ({messages.length})
+                  Customer Messages ({messageCounts.customer})
+                </button>
+                <button
+                  onClick={() => setFilter('admin')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    filter === 'admin'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Admin Messages ({messageCounts.admin})
                 </button>
                 <button
                   onClick={() => setFilter('unread')}
@@ -140,10 +216,23 @@ export default function VendorMessages() {
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Unread ({messages.filter(m => m.status === 'unread').length})
+                  Unread ({messageCounts.unread})
                 </button>
               </div>
             </div>
+
+            {/* New Message Button - Only show for Admin Messages */}
+            {filter === 'admin' && (
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowNewMessageForm(true)}
+                  className="inline-flex items-center px-4 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  New Message to Admin
+                </button>
+              </div>
+            )}
 
             {/* Messages List */}
             <div className="bg-white shadow-sm rounded-lg overflow-hidden">
@@ -202,6 +291,76 @@ export default function VendorMessages() {
               </div>
             </div>
           </div>
+
+          {/* New Message Form Modal */}
+          {showNewMessageForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">New Message to Admin</h3>
+                  <button
+                    onClick={() => {
+                      setShowNewMessageForm(false)
+                      setNewMessageSubject('')
+                      setNewMessageContent('')
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      value={newMessageSubject}
+                      onChange={(e) => setNewMessageSubject(e.target.value)}
+                      placeholder="Enter message subject..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Message
+                    </label>
+                    <textarea
+                      value={newMessageContent}
+                      onChange={(e) => setNewMessageContent(e.target.value)}
+                      placeholder="Type your message to the admin..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      rows={6}
+                    />
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handleNewMessage}
+                      disabled={!newMessageSubject.trim() || !newMessageContent.trim()}
+                      className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Send className="w-4 h-4" />
+                      Send Message
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowNewMessageForm(false)
+                        setNewMessageSubject('')
+                        setNewMessageContent('')
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Message Detail */}
           <div className="lg:col-span-1">

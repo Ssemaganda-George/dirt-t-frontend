@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
-import { useState } from 'react'
+import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 
 const navigation = [
   { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
@@ -17,8 +17,25 @@ export default function VendorLayout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSignOut = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?')
+    if (!confirmed) return
+
     try {
       await signOut()
       navigate('/vendor-login')
@@ -70,7 +87,7 @@ export default function VendorLayout() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center justify-between h-16 px-4">
             {!sidebarCollapsed && (
-              <span className="text-xl font-bold text-gray-900">DirtTrails Vendor</span>
+              <span className="text-xl font-bold text-gray-900">DirtTrails Business</span>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -78,7 +95,7 @@ export default function VendorLayout() {
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? (
-                <ChevronRight className="h-5 w-5" />
+                <MapPin className="h-8 w-8 text-primary-600" />
               ) : (
                 <ChevronLeft className="h-5 w-5" />
               )}
@@ -91,13 +108,13 @@ export default function VendorLayout() {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive ? 'bg-primary-100 text-primary-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none transition-colors ${
+                    isActive ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                   title={sidebarCollapsed ? item.name : ''}
                 >
                   <item.icon className={`${sidebarCollapsed ? 'mx-auto' : 'mr-3'} h-5 w-5 ${
-                    isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
+                    isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
                   }`} />
                   {!sidebarCollapsed && item.name}
                 </Link>
@@ -117,19 +134,64 @@ export default function VendorLayout() {
             <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-600 lg:hidden">
               <Menu className="h-6 w-6" />
             </button>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary-700">{profile?.full_name?.charAt(0).toUpperCase()}</span>
-                </div>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                  <p className="text-xs text-gray-500 capitalize">{profile?.role}</p>
-                </div>
+
+            {/* Spacer to push account details to far right */}
+            <div className="flex-1"></div>
+
+            <div className="flex items-center space-x-4 ml-auto">
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600"
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center shadow-md">
+                    <span className="text-sm font-bold text-white">{profile?.full_name?.charAt(0).toUpperCase() || 'V'}</span>
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                    <p className="text-xs text-gray-500 capitalize">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="py-1">
+                      <div className="px-4 py-2 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">My Account</p>
+                        <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
+                      </div>
+                      <Link
+                        to="/vendor/profile"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <User className="h-4 w-4 mr-3" />
+                        Profile
+                      </Link>
+                      <Link
+                        to="/vendor/settings"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <Settings className="h-4 w-4 mr-3" />
+                        Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setDropdownOpen(false)
+                          handleSignOut()
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut className="h-4 w-4 mr-3" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button onClick={handleSignOut} className="text-gray-400 hover:text-gray-600" title="Sign out">
-                <LogOut className="h-5 w-5" />
-              </button>
             </div>
           </div>
         </div>

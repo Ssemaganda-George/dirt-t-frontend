@@ -21,13 +21,19 @@ import VendorServices from './pages/vendor/Services'
 import VendorBookings from './pages/vendor/Bookings'
 import VendorMessages from './pages/vendor/Messages'
 import VendorTransactions from './pages/vendor/Transactions'
+import VendorProfile from './pages/vendor/Profile'
+import VendorSettings from './pages/vendor/Settings'
 import Dashboard from './pages/admin/Dashboard'
 import Users from './pages/admin/Users'
 import Vendors from './pages/admin/Vendors'
 import Messages from './pages/admin/Messages'
+import AdminProfile from './pages/admin/Profile'
+import AdminSettings from './pages/admin/Settings'
 import { Services } from './pages/admin/Services'
 import { Bookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Transactions'
+
+import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
 
 function App() {
   return (
@@ -62,6 +68,8 @@ function App() {
             }
           >
             <Route index element={<VendorDashboard />} />
+            <Route path="profile" element={<VendorProfile />} />
+            <Route path="settings" element={<VendorSettings />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
             <Route path="messages" element={<VendorMessages />} />
@@ -78,12 +86,20 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="profile" element={<AdminProfile />} />
+            <Route path="settings" element={<AdminSettings />} />
             <Route path="users" element={<Users />} />
             <Route path="vendors" element={<Vendors />} />
             <Route path="services" element={<Services />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="transactions" element={<Transactions />} />
+            <Route path="vendor-messages" element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminVendorMessages />
+              </ProtectedRoute>
+            } />
+import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">

@@ -1175,25 +1175,65 @@ export async function deleteUser(userId: string): Promise<void> {
 
 // Admin dashboard functions
 export async function getAllVendors(): Promise<Vendor[]> {
-  const { data, error } = await supabase
+  // First try a simple query without joins to test RLS
+  const { data: simpleData, error: simpleError } = await supabase
     .from('vendors')
-    .select(`
-      *,
-      profiles (
-        id,
-        full_name,
-        email,
-        phone
-      )
-    `)
+    .select('id, user_id, business_name, business_email, status, created_at, updated_at')
     .order('created_at', { ascending: false })
+    .limit(10)
 
-  if (error) {
-    console.error('Error fetching vendors:', error)
-    throw error
+  if (simpleError) {
+    console.error('Error fetching vendors (simple query):', simpleError)
+    throw simpleError
   }
 
-  return data || []
+  console.log('getAllVendors: Found', simpleData?.length || 0, 'vendors')
+
+  // If simple query works, try with profiles join
+  if (simpleData && simpleData.length > 0) {
+    const { data, error } = await supabase
+      .from('vendors')
+      .select(`
+        *,
+        profiles (
+          id,
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching vendors with profiles:', error)
+      // Return simple data if join fails, but ensure it matches Vendor interface
+      return simpleData.map(vendor => ({
+        ...vendor,
+        business_description: undefined,
+        business_address: undefined,
+        business_phone: undefined,
+        business_website: undefined,
+        business_type: undefined,
+        operating_hours: undefined,
+        years_in_business: undefined,
+        business_license: undefined,
+        tax_id: undefined,
+        approved_at: undefined,
+        approved_by: undefined,
+        profiles: {
+          id: vendor.user_id,
+          full_name: vendor.business_name,
+          email: vendor.business_email,
+          phone: undefined
+        }
+      })) as Vendor[]
+    }
+
+    return data || []
+  }
+
+  // If no data from simple query, return empty array
+  return []
 }
 
 export async function getAllBookings(): Promise<Booking[]> {
@@ -1506,7 +1546,7 @@ export async function getAdminMessages(filter?: 'vendor_to_admin' | 'tourist_to_
   }
 }
 
-export async function getVendorMessages(vendorId: string, filter?: 'unread') {
+export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'customer' | 'admin') {
   try {
     let query = supabase
       .from('messages')
@@ -1516,11 +1556,14 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread') {
       `)
       .eq('recipient_id', vendorId)
       .eq('recipient_role', 'vendor')
-      .eq('sender_role', 'tourist')
       .order('created_at', { ascending: false })
 
     if (filter === 'unread') {
       query = query.eq('status', 'unread')
+    } else if (filter === 'customer') {
+      query = query.eq('sender_role', 'tourist')
+    } else if (filter === 'admin') {
+      query = query.eq('sender_role', 'admin')
     }
 
     const { data, error } = await query
@@ -1718,11 +1761,49 @@ export async function getVendorWallet(vendorId: string): Promise<Wallet | null> 
 
 export async function getVendorStats(vendorId: string) {
   try {
-    // Get services count
-    const { data: services, error: servicesError } = await supabase
+    if (!vendorId) {
+      console.error('getVendorStats: vendorId is null or undefined')
+      return {
+        servicesCount: 0,
+        pendingBookings: 0,
+        completedBookings: 0,
+        balance: 0,
+        currency: 'UGX',
+        messagesCount: 0,
+        recentBookings: [],
+        recentTransactions: []
+      }
+    }
+
+    // Get services count - try with vendorId first, then check if it's a user_id
+    let servicesQuery = supabase
       .from('services')
-      .select('id')
+      .select('id, vendor_id, status')
       .eq('vendor_id', vendorId)
+
+    let { data: services, error: servicesError } = await servicesQuery
+
+    // If no services found and vendorId might be a user_id, also check for vendor record
+    if ((!services || services.length === 0) && !servicesError) {
+      // Check if there's a vendor record for this user_id
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        const { data: vendorServices, error: vendorServicesError } = await supabase
+          .from('services')
+          .select('id, vendor_id, status')
+          .eq('vendor_id', vendorRecord.id)
+
+        if (!vendorServicesError && vendorServices) {
+          services = vendorServices
+          servicesError = vendorServicesError
+        }
+      }
+    }
 
     if (servicesError) throw servicesError
 
@@ -1737,8 +1818,54 @@ export async function getVendorStats(vendorId: string) {
     const pendingBookings = bookings?.filter(b => b.status === 'pending').length || 0
     const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
 
-    // Get wallet
-    const wallet = await getVendorWallet(vendorId)
+    // Get wallet - try to get vendor wallet, fallback to user wallet if vendorId is user.id
+    let wallet = null
+    try {
+      wallet = await getVendorWallet(vendorId)
+    } catch (error) {
+      console.log('getVendorStats: Could not get wallet with vendorId, trying with user lookup')
+      // If vendorId might be a user_id, try to find the vendor record
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        wallet = await getVendorWallet(vendorRecord.id)
+      }
+    }
+
+    // Get messages count for vendor
+    const { count: messagesCount, error: messagesError } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', vendorId)
+      .eq('recipient_role', 'vendor')
+
+    // If no messages found, try with vendor.id if vendorId is user.id
+    let finalMessagesCount = messagesCount
+    if ((!messagesCount || messagesCount === 0) && !messagesError) {
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        const { count: vendorMessagesCount, error: vendorMessagesError } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', vendorRecord.id)
+          .eq('recipient_role', 'vendor')
+
+        if (!vendorMessagesError && vendorMessagesCount) {
+          finalMessagesCount = vendorMessagesCount
+        }
+      }
+    }
+
+    if (messagesError) throw messagesError
 
     // Get recent bookings
     const { data: recentBookings, error: recentBookingsError } = await supabase
@@ -1781,6 +1908,7 @@ export async function getVendorStats(vendorId: string) {
       completedBookings,
       balance: wallet?.balance || 0,
       currency: wallet?.currency || 'UGX',
+      messagesCount: finalMessagesCount || 0,
       recentBookings: recentBookings || [],
       recentTransactions: recentTx || []
     }

@@ -366,7 +366,7 @@ export default function VendorServices() {
             </span>
           )}
         </div>
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+        <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
           <Plus className="h-4 w-4 mr-2" /> Add Service
         </button>
       </div>
