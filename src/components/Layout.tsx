@@ -9,6 +9,7 @@ import {
   X,
   MapPin,
   Users,
+  MessageSquare,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Services', href: '/admin/services', icon: ShoppingBag },
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
+  { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { name: 'Transactions', href: '/admin/transactions', icon: CreditCard },
 ]
 

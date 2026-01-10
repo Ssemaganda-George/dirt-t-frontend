@@ -1,78 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor } from '../../lib/utils'
 import { Check, X, Eye, Store } from 'lucide-react'
-
-// Mock data types
-interface Profile {
-  full_name: string
-  email: string
-  phone: string
-}
-
-interface Vendor {
-  id: string
-  business_name: string
-  business_description: string
-  business_address: string
-  business_phone: string
-  business_email: string
-  status: 'pending' | 'approved' | 'rejected'
-  created_at: string
-  approved_at: string | null
-  profiles: Profile
-}
-
-// Mock data
-const mockVendors: Vendor[] = [
-  {
-    id: '1',
-    business_name: 'Fresh Foods Market',
-    business_description: 'Local organic produce and fresh groceries for the community',
-    business_address: '123 Market Street, Downtown',
-    business_phone: '+256-700-123456',
-    business_email: 'contact@freshfoods.ug',
-    status: 'pending',
-    created_at: '2025-08-10T10:00:00Z',
-    approved_at: null,
-    profiles: {
-      full_name: 'John Mukasa',
-      email: 'john.mukasa@email.com',
-      phone: '+256-700-123456'
-    }
-  },
-  {
-    id: '2',
-    business_name: 'Tech Solutions Hub',
-    business_description: 'Technology services and computer repair solutions',
-    business_address: '456 Technology Avenue, Kampala',
-    business_phone: '+256-700-654321',
-    business_email: 'info@techsolutions.ug',
-    status: 'approved',
-    created_at: '2025-08-08T14:30:00Z',
-    approved_at: '2025-08-09T09:15:00Z',
-    profiles: {
-      full_name: 'Sarah Nakato',
-      email: 'sarah.nakato@email.com',
-      phone: '+256-700-654321'
-    }
-  },
-  {
-    id: '3',
-    business_name: 'Craft & Design Studio',
-    business_description: 'Handmade crafts and custom design services',
-    business_address: '789 Arts District, Entebbe',
-    business_phone: '+256-700-987654',
-    business_email: 'hello@craftdesign.ug',
-    status: 'rejected',
-    created_at: '2025-08-05T16:45:00Z',
-    approved_at: null,
-    profiles: {
-      full_name: 'Peter Ssemakula',
-      email: 'peter.ssemakula@email.com',
-      phone: '+256-700-987654'
-    }
-  }
-]
+import { getAllVendors, updateVendorStatus, Vendor } from '../../lib/database'
 
 export default function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -86,15 +15,9 @@ export default function Vendors() {
 
   const fetchVendors = async () => {
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Sort by created_at descending (newest first)
-      const sortedVendors = [...mockVendors].sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-      
-      setVendors(sortedVendors)
+      setLoading(true)
+      const data = await getAllVendors()
+      setVendors(data)
     } catch (error) {
       console.error('Error fetching vendors:', error)
     } finally {
@@ -102,21 +25,11 @@ export default function Vendors() {
     }
   }
 
-  const updateVendorStatus = async (vendorId: string, status: 'approved' | 'rejected') => {
+  const handleUpdateVendorStatus = async (vendorId: string, status: 'approved' | 'rejected') => {
     try {
-      // Update local state
-      setVendors(prevVendors => 
-        prevVendors.map(vendor => 
-          vendor.id === vendorId 
-            ? {
-                ...vendor,
-                status,
-                approved_at: status === 'approved' ? new Date().toISOString() : null
-              }
-            : vendor
-        )
-      )
-      
+      await updateVendorStatus(vendorId, status)
+      // Refresh the vendors list
+      await fetchVendors()
       setSelectedVendor(null)
     } catch (error) {
       console.error('Error updating vendor status:', error)
@@ -305,14 +218,14 @@ export default function Vendors() {
                 {selectedVendor.status === 'pending' && (
                   <div className="flex space-x-3 pt-4">
                     <button
-                      onClick={() => updateVendorStatus(selectedVendor.id, 'approved')}
+                      onClick={() => handleUpdateVendorStatus(selectedVendor.id, 'approved')}
                       className="btn-primary flex items-center"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Approve
                     </button>
                     <button
-                      onClick={() => updateVendorStatus(selectedVendor.id, 'rejected')}
+                      onClick={() => handleUpdateVendorStatus(selectedVendor.id, 'rejected')}
                       className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
                     >
                       <X className="h-4 w-4 mr-2" />

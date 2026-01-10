@@ -1,12 +1,13 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, ChevronRight } from 'lucide-react'
+import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 
 const navigation = [
-  { name: 'Overview', href: '/vendor', icon: BarChart3 },
+  { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
   { name: 'My Services', href: '/vendor/services', icon: ShoppingBag },
   { name: 'Bookings', href: '/vendor/bookings', icon: Map },
+  { name: 'Messages', href: '/vendor/messages', icon: MessageSquare },
   { name: 'Transactions', href: '/vendor/transactions', icon: CreditCard },
 ]
 

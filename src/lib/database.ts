@@ -257,6 +257,7 @@ export interface Booking {
   total_amount: number
   currency: string
   status: BookingStatus
+  payment_status: 'pending' | 'paid' | 'refunded'
   special_requests?: string
   payment_reference?: string
   created_at: string
@@ -276,17 +277,16 @@ export interface Wallet {
 
 export interface Transaction {
   id: string
-  wallet_id: string
   booking_id?: string
-  type: TransactionType
+  vendor_id?: string
+  tourist_id?: string
   amount: number
   currency: string
+  transaction_type: 'payment' | 'withdrawal' | 'refund'
   status: TransactionStatus
-  reference?: string
-  description?: string
-  metadata: Record<string, any>
+  payment_method: 'card' | 'mobile_money' | 'bank_transfer'
+  reference: string
   created_at: string
-  updated_at: string
 }
 
 // Database functions
@@ -1169,6 +1169,623 @@ export async function deleteUser(userId: string): Promise<void> {
     console.log(`User ${userId} and all related data deleted successfully`)
   } catch (error) {
     console.error('Error deleting user:', error)
+    throw error
+  }
+}
+
+// Admin dashboard functions
+export async function getAllVendors(): Promise<Vendor[]> {
+  const { data, error } = await supabase
+    .from('vendors')
+    .select(`
+      *,
+      profiles (
+        id,
+        full_name,
+        email,
+        phone
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching vendors:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getAllBookings(): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        vendors (
+          id,
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching bookings:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getAllTransactions(): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(`
+      *,
+      bookings (
+        id,
+        services (
+          title,
+          vendors (
+            business_name
+          )
+        )
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching transactions:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getAllUsers(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching users:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function updateVendorStatus(vendorId: string, status: VendorStatus): Promise<Vendor> {
+  const { data, error } = await supabase
+    .from('vendors')
+    .update({
+      status,
+      approved_at: status === 'approved' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', vendorId)
+    .select(`
+      *,
+      profiles (
+        id,
+        full_name,
+        email,
+        phone
+      )
+    `)
+    .single()
+
+  if (error) {
+    console.error('Error updating vendor status:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function getDashboardStats() {
+  try {
+    console.log('getDashboardStats: Starting dashboard stats fetch...');
+
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('getDashboardStats: Auth check - User:', user?.id, 'Error:', authError);
+
+    if (authError || !user) {
+      console.error('getDashboardStats: User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
+    // Check user role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    console.log('getDashboardStats: Profile check - Profile:', profile, 'Error:', profileError);
+
+    if (profileError || !profile) {
+      console.error('getDashboardStats: Profile not found');
+      throw new Error('Profile not found');
+    }
+
+    if (profile.role !== 'admin') {
+      console.error('getDashboardStats: User is not admin, role:', profile.role);
+      throw new Error('Access denied: Admin role required');
+    }
+
+    console.log('getDashboardStats: User is admin, proceeding with queries...');
+
+    // Get vendor stats
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('status')
+
+    console.log('getDashboardStats: Vendors query - Data length:', vendors?.length, 'Error:', vendorsError);
+
+    if (vendorsError) {
+      console.error('getDashboardStats: Error fetching vendors:', vendorsError);
+      throw vendorsError;
+    }
+
+    const totalVendors = vendors?.length || 0
+    const pendingVendors = vendors?.filter(v => v.status === 'pending').length || 0
+
+    // Get tourist stats
+    const { data: tourists, error: touristsError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'tourist')
+
+    console.log('getDashboardStats: Tourists query - Data length:', tourists?.length, 'Error:', touristsError);
+
+    if (touristsError) {
+      console.error('getDashboardStats: Error fetching tourists:', touristsError);
+      throw touristsError;
+    }
+
+    const totalTourists = tourists?.length || 0
+
+    // Get service stats
+    const { data: services, error: servicesError } = await supabase
+      .from('services')
+      .select('status')
+
+    console.log('getDashboardStats: Services query - Data length:', services?.length, 'Error:', servicesError);
+
+    if (servicesError) {
+      console.error('getDashboardStats: Error fetching services:', servicesError);
+      throw servicesError;
+    }
+
+    const totalServices = services?.length || 0
+    const pendingServices = services?.filter(s => s.status === 'pending').length || 0
+
+    // Get booking stats
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('status, total_amount')
+
+    console.log('getDashboardStats: Bookings query - Data length:', bookings?.length, 'Error:', bookingsError);
+
+    if (bookingsError) {
+      console.error('getDashboardStats: Error fetching bookings:', bookingsError);
+      throw bookingsError;
+    }
+
+    const totalBookings = bookings?.length || 0
+    const totalRevenue = bookings?.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0) || 0
+
+    console.log('getDashboardStats: Stats calculated -', {
+      totalVendors,
+      pendingVendors,
+      totalServices,
+      pendingServices,
+      totalBookings,
+      totalRevenue
+    });
+
+    // Get recent bookings
+    const { data: recentBookings, error: recentBookingsError } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        services (
+          title,
+          vendors (
+            business_name
+          )
+        ),
+        profiles (
+          full_name
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    console.log('getDashboardStats: Recent bookings query - Data length:', recentBookings?.length, 'Error:', recentBookingsError);
+
+    if (recentBookingsError) {
+      console.error('getDashboardStats: Error fetching recent bookings:', recentBookingsError);
+      // Don't throw here, just log and continue
+    }
+
+    // Get recent vendors
+    const { data: recentVendors, error: recentVendorsError } = await supabase
+      .from('vendors')
+      .select(`
+        *,
+        profiles (
+          full_name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    console.log('getDashboardStats: Recent vendors query - Data length:', recentVendors?.length, 'Error:', recentVendorsError);
+
+    if (recentVendorsError) {
+      console.error('getDashboardStats: Error fetching recent vendors:', recentVendorsError);
+      // Don't throw here, just log and continue
+    }
+
+    // Get total messages for admin
+    const { count: totalMessages, error: totalMessagesError } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_role', 'admin')
+
+    console.log('getDashboardStats: Total messages query - Count:', totalMessages, 'Error:', totalMessagesError);
+
+    if (totalMessagesError) {
+      console.error('getDashboardStats: Error fetching total messages:', totalMessagesError);
+      // Don't throw here, just log and continue
+    }
+
+    return {
+      totalVendors,
+      pendingVendors,
+      totalTourists,
+      totalServices,
+      pendingServices,
+      totalBookings,
+      totalRevenue,
+      totalMessages: totalMessages || 0,
+      recentBookings: recentBookings || [],
+      recentVendors: recentVendors || []
+    }
+  } catch (error) {
+    console.error('getDashboardStats: Exception caught:', error)
+    throw error
+  }
+}
+
+// Message management functions
+export async function getAdminMessages(filter?: 'vendor_to_admin' | 'tourist_to_admin' | 'unread') {
+  try {
+    let query = supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:profiles!messages_sender_id_fkey(id, full_name, email),
+        recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
+      `)
+      .eq('recipient_role', 'admin')
+      .order('created_at', { ascending: false })
+
+    if (filter === 'vendor_to_admin') {
+      query = query.eq('sender_role', 'vendor')
+    } else if (filter === 'tourist_to_admin') {
+      query = query.eq('sender_role', 'tourist')
+    } else if (filter === 'unread') {
+      query = query.eq('status', 'unread')
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching admin messages:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getAdminMessages:', error)
+    throw error
+  }
+}
+
+export async function getVendorMessages(vendorId: string, filter?: 'unread') {
+  try {
+    let query = supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:profiles!messages_sender_id_fkey(id, full_name, email)
+      `)
+      .eq('recipient_id', vendorId)
+      .eq('recipient_role', 'vendor')
+      .eq('sender_role', 'tourist')
+      .order('created_at', { ascending: false })
+
+    if (filter === 'unread') {
+      query = query.eq('status', 'unread')
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching vendor messages:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getVendorMessages:', error)
+    throw error
+  }
+}
+
+export async function sendMessage(messageData: {
+  sender_id: string
+  sender_role: string
+  recipient_id: string
+  recipient_role: string
+  subject: string
+  message: string
+}) {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([{
+        ...messageData,
+        status: 'unread',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error sending message:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in sendMessage:', error)
+    throw error
+  }
+}
+
+export async function markMessageAsRead(messageId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        status: 'read',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', messageId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error marking message as read:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in markMessageAsRead:', error)
+    throw error
+  }
+}
+
+export async function replyToMessage(originalMessageId: string, replyData: {
+  sender_id: string
+  sender_role: string
+  recipient_id: string
+  recipient_role: string
+  subject: string
+  message: string
+}) {
+  try {
+    // First, mark the original message as replied
+    await supabase
+      .from('messages')
+      .update({
+        status: 'replied',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', originalMessageId)
+
+    // Then send the reply
+    return await sendMessage(replyData)
+  } catch (error) {
+    console.error('Error in replyToMessage:', error)
+    throw error
+  }
+}
+export async function getVendorServices(vendorId: string): Promise<Service[]> {
+  const { data, error } = await supabase
+    .from('services')
+    .select(`
+      *,
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+    .eq('vendor_id', vendorId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching vendor services:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getVendorBookings(vendorId: string): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        description
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .eq('vendor_id', vendorId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching vendor bookings:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getVendorTransactions(vendorId: string): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(`
+      *,
+      bookings (
+        id,
+        services (
+          title
+        )
+      )
+    `)
+    .eq('vendor_id', vendorId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching vendor transactions:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getVendorWallet(vendorId: string): Promise<Wallet | null> {
+  const { data, error } = await supabase
+    .from('wallets')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .single()
+
+  if (error) {
+    // If wallet doesn't exist, return a default one
+    if (error.code === 'PGRST116') {
+      return {
+        id: `wallet_${vendorId}`,
+        vendor_id: vendorId,
+        balance: 0,
+        currency: 'UGX',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    }
+    console.error('Error fetching vendor wallet:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function getVendorStats(vendorId: string) {
+  try {
+    // Get services count
+    const { data: services, error: servicesError } = await supabase
+      .from('services')
+      .select('id')
+      .eq('vendor_id', vendorId)
+
+    if (servicesError) throw servicesError
+
+    // Get bookings stats
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('status')
+      .eq('vendor_id', vendorId)
+
+    if (bookingsError) throw bookingsError
+
+    const pendingBookings = bookings?.filter(b => b.status === 'pending').length || 0
+    const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
+
+    // Get wallet
+    const wallet = await getVendorWallet(vendorId)
+
+    // Get recent bookings
+    const { data: recentBookings, error: recentBookingsError } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        services (
+          title
+        ),
+        profiles (
+          full_name
+        )
+      `)
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (recentBookingsError) throw recentBookingsError
+
+    // Get recent transactions
+    const { data: recentTx, error: recentTxError } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        bookings (
+          services (
+            title
+          )
+        )
+      `)
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    if (recentTxError) throw recentTxError
+
+    return {
+      servicesCount: services?.length || 0,
+      pendingBookings,
+      completedBookings,
+      balance: wallet?.balance || 0,
+      currency: wallet?.currency || 'UGX',
+      recentBookings: recentBookings || [],
+      recentTransactions: recentTx || []
+    }
+  } catch (error) {
+    console.error('Error fetching vendor stats:', error)
     throw error
   }
 }

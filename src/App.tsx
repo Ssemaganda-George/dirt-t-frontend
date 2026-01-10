@@ -19,9 +19,12 @@ import VendorLayout from './components/VendorLayout'
 import VendorDashboard from './pages/vendor/Dashboard'
 import VendorServices from './pages/vendor/Services'
 import VendorBookings from './pages/vendor/Bookings'
+import VendorMessages from './pages/vendor/Messages'
 import VendorTransactions from './pages/vendor/Transactions'
 import Dashboard from './pages/admin/Dashboard'
 import Users from './pages/admin/Users'
+import Vendors from './pages/admin/Vendors'
+import Messages from './pages/admin/Messages'
 import { Services } from './pages/admin/Services'
 import { Bookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Transactions'
@@ -61,6 +64,7 @@ function App() {
             <Route index element={<VendorDashboard />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
+            <Route path="messages" element={<VendorMessages />} />
             <Route path="transactions" element={<VendorTransactions />} />
           </Route>
           
@@ -75,8 +79,10 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="users" element={<Users />} />
+            <Route path="vendors" element={<Vendors />} />
             <Route path="services" element={<Services />} />
             <Route path="bookings" element={<Bookings />} />
+            <Route path="messages" element={<Messages />} />
             <Route path="transactions" element={<Transactions />} />
           </Route>
           <Route path="/unauthorized" element={
