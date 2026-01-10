@@ -207,7 +207,7 @@ export default function AdminVendorMessages() {
             </div>
           </div>
           <div className="lg:col-span-1">
-            {selectedMessage ? (
+            {selectedMessage && (
               <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-2">
@@ -276,14 +276,6 @@ export default function AdminVendorMessages() {
                     </div>
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="bg-white shadow-sm rounded-lg p-8 text-center">
-                <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Select a message</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Choose a customer message to view and reply
-                </p>
               </div>
             )}
           </div>

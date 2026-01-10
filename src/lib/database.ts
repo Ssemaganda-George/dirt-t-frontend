@@ -1,3 +1,27 @@
+// Utility to get the first admin profile's ID
+
+/**
+ * Fetches the first admin profile's ID from the database.
+ * Returns null if not found or on error.
+ */
+export async function getAdminProfileId(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .limit(1)
+      .single();
+    if (error || !data) {
+      console.error('Error fetching admin profile ID:', error);
+      return null;
+    }
+    return data.id;
+  } catch (err) {
+    console.error('Exception fetching admin profile ID:', err);
+    return null;
+  }
+}
 // Database types
 export type UserRole = 'tourist' | 'vendor' | 'admin'
 export type UserStatus = 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
@@ -1550,20 +1574,25 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
   try {
     let query = supabase
       .from('messages')
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(id, full_name, email)
-      `)
-      .eq('recipient_id', vendorId)
-      .eq('recipient_role', 'vendor')
+      .select(`*, sender:profiles!messages_sender_id_fkey(id, full_name, email)`)
       .order('created_at', { ascending: false })
 
     if (filter === 'unread') {
-      query = query.eq('status', 'unread')
+      query = query
+        .or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
+        .eq('status', 'unread')
     } else if (filter === 'customer') {
-      query = query.eq('sender_role', 'tourist')
+      // Only messages from tourists to vendor
+      query = query
+        .eq('recipient_id', vendorId)
+        .eq('recipient_role', 'vendor')
+        .eq('sender_role', 'tourist')
     } else if (filter === 'admin') {
-      query = query.eq('sender_role', 'admin')
+      // All messages between vendor and admin (sent or received)
+      query = query.or(`and(sender_id.eq.${vendorId},recipient_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.admin)`)
+    } else {
+      // All messages where vendor is involved
+      query = query.or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
     }
 
     const { data, error } = await query

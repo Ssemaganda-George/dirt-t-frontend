@@ -4,7 +4,8 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EditServiceModal } from '../../components/EditServiceModal';
 import { formatCurrency } from '../../lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllVendors } from '../../lib/database';
 import type { Service } from '../../types';
 
 export function Services() {
@@ -15,10 +16,24 @@ export function Services() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<string>('all');
+  const [vendors, setVendors] = useState<any[]>([]);
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
   console.log('Admin deleteRequests error:', deleteRequestsError);
+
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const vendorData = await getAllVendors();
+        setVendors(vendorData);
+      } catch (error) {
+        console.error('Error fetching vendors:', error);
+      }
+    };
+    fetchVendors();
+  }, []);
 
   if (loading) {
     return (
@@ -54,14 +69,22 @@ export function Services() {
   const approvedServices = services.filter(service => service.status === 'approved');
   const rejectedServices = services.filter(service => service.status === 'rejected');
 
-  // Filter services based on selected category
-  const filteredServices = selectedCategory === 'all' 
+  // Filter services based on selected category and vendor
+  const categoryFilteredServices = selectedCategory === 'all' 
     ? services 
     : services.filter(service => service.category_id === selectedCategory);
 
-  const filteredPendingServices = selectedCategory === 'all'
+  const filteredServices = selectedVendor === 'all'
+    ? categoryFilteredServices
+    : categoryFilteredServices.filter(service => service.vendor_id === selectedVendor);
+
+  const categoryFilteredPendingServices = selectedCategory === 'all'
     ? pendingServices
     : pendingServices.filter(service => service.category_id === selectedCategory);
+
+  const filteredPendingServices = selectedVendor === 'all'
+    ? categoryFilteredPendingServices
+    : categoryFilteredPendingServices.filter(service => service.vendor_id === selectedVendor);
 
   const approveService = async (serviceId: string) => {
     setUpdatingStatus(serviceId);
@@ -175,6 +198,28 @@ export function Services() {
         </div>
       </div>
 
+      {/* Vendor Filter */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="flex items-center space-x-4">
+          <label htmlFor="vendor-filter" className="text-sm font-medium text-gray-700">
+            Filter by Vendor:
+          </label>
+          <select
+            id="vendor-filter"
+            value={selectedVendor}
+            onChange={(e) => setSelectedVendor(e.target.value)}
+            className="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+          >
+            <option value="all">All Vendors</option>
+            {vendors.map((vendor) => (
+              <option key={vendor.id} value={vendor.id}>
+                {vendor.business_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Category Tabs */}
       <div className="bg-white shadow rounded-lg">
         <div className="border-b border-gray-200">
@@ -187,10 +232,13 @@ export function Services() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              All Services ({services.length})
+              All Services ({selectedVendor === 'all' ? services.length : services.filter(s => s.vendor_id === selectedVendor).length})
             </button>
             {categories.map((category) => {
               const categoryServices = services.filter(service => service.category_id === category.id);
+              const filteredCategoryServices = selectedVendor === 'all' 
+                ? categoryServices 
+                : categoryServices.filter(service => service.vendor_id === selectedVendor);
               return (
                 <button
                   key={category.id}
@@ -201,7 +249,7 @@ export function Services() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {category.name} ({categoryServices.length})
+                  {category.name} ({filteredCategoryServices.length})
                 </button>
               );
             })}
