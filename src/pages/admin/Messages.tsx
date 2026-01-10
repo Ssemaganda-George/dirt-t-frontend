@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageSquare, User, Store, CheckCircle, Send, X } from 'lucide-react'
+import { MessageSquare, User, Store, CheckCircle, Send, X, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAdminMessages, markMessageAsRead, replyToMessage, getAllVendors, Vendor, sendMessage, getVendorMessages } from '../../lib/database'
 import { getStatusColor } from '../../lib/utils'
@@ -47,6 +47,7 @@ export default function Messages() {
   const [newMessageContent, setNewMessageContent] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const [sendMessageError, setSendMessageError] = useState<string | null>(null)
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
   console.log('Messages component: profile:', profile)
   console.log('Messages component: vendorId from URL:', vendorId)
@@ -256,53 +257,57 @@ export default function Messages() {
         <div className={`grid grid-cols-1 ${vendorId || touristId ? 'lg:grid-cols-1' : 'lg:grid-cols-2'} gap-8`}>
           {vendorId || touristId ? (
             /* Chat Interface */
-            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                      {vendorId ? (
-                        <Store className="w-5 h-5 text-primary-600" />
-                      ) : (
-                        <User className="w-5 h-5 text-primary-600" />
-                      )}
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">
-                        {vendorId 
-                          ? vendors.find(v => v.user_id === vendorId)?.business_name || 'Vendor Chat'
-                          : 'Tourist Chat'
-                        }
-                      </h2>
-                      <p className="text-sm text-gray-500">
-                        {vendorId 
-                          ? vendors.find(v => v.user_id === vendorId)?.business_email
-                          : touristId
-                        }
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {vendorId ? 'Vendor Account' : 'Tourist Account'}
-                      </p>
-                    </div>
+            <div className={`shadow-sm rounded-lg overflow-hidden ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
+              {/* Chat Header */}
+              <div className="mb-4 flex items-center justify-between p-4">
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => navigate('/admin/messages')}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    ←
+                  </button>
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                    {vendorId ? (
+                      <Store className="w-5 h-5 text-primary-600" />
+                    ) : (
+                      <User className="w-5 h-5 text-primary-600" />
+                    )}
                   </div>
-                  {vendorId && (
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(vendors.find(v => v.user_id === vendorId)?.status || 'pending')}`}>
-                        {vendors.find(v => v.user_id === vendorId)?.status || 'pending'}
-                      </span>
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {vendorId
+                        ? vendors.find(v => v.user_id === vendorId)?.business_name || 'Vendor'
+                        : 'Tourist'
+                      }
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {vendorId ? 'Vendor Account' : 'Tourist Account'}
+                    </p>
+                  </div>
                 </div>
+                {/* Theme Toggle */}
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                  {isDarkMode ? (
+                    <Sun className="w-5 h-5 text-yellow-500" />
+                  ) : (
+                    <Moon className="w-5 h-5 text-gray-600" />
+                  )}
+                </button>
               </div>
 
               {/* Messages Container */}
-              <div className="h-96 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div className={`h-96 overflow-y-auto p-4 space-y-4 ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
                 {chatMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No messages yet</h3>
-                      <p className="mt-1 text-sm text-gray-500">Start the conversation with this vendor.</p>
+                      <MessageSquare className={`mx-auto h-12 w-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                      <h3 className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>No messages yet</h3>
+                      <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Start the conversation with this {vendorId ? 'vendor' : 'tourist'}.</p>
                     </div>
                   </div>
                 ) : (
@@ -318,12 +323,14 @@ export default function Messages() {
                           {showAvatar && (
                             <div className={`flex-shrink-0 ${isAdmin ? 'ml-2' : 'mr-2'}`}>
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                isAdmin ? 'bg-primary-100' : 'bg-blue-100'
+                                isAdmin 
+                                  ? (isDarkMode ? 'bg-blue-800' : 'bg-primary-100')
+                                  : (isDarkMode ? 'bg-green-800' : 'bg-blue-100')
                               }`}>
                                 {isAdmin ? (
-                                  <User className="w-4 h-4 text-primary-600" />
+                                  <User className={`w-4 h-4 ${isDarkMode ? 'text-blue-300' : 'text-primary-600'}`} />
                                 ) : (
-                                  <Store className="w-4 h-4 text-blue-600" />
+                                  <Store className={`w-4 h-4 ${isDarkMode ? 'text-green-300' : 'text-blue-600'}`} />
                                 )}
                               </div>
                             </div>
@@ -331,14 +338,14 @@ export default function Messages() {
                           {!showAvatar && <div className="w-10" />}
                           <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
                             <div className={`px-4 py-2 rounded-2xl ${
-                              isAdmin 
-                                ? 'bg-primary-600 text-white rounded-br-md' 
-                                : 'bg-white text-gray-900 rounded-bl-md border border-gray-200'
+                              isAdmin
+                                ? (isDarkMode ? 'bg-[#005c4b] text-white rounded-br-md' : 'bg-primary-600 text-white rounded-br-md')
+                                : (isDarkMode ? 'bg-gray-700 text-white rounded-bl-md border border-gray-600' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200')
                             }`}>
                               <p className="text-sm whitespace-pre-wrap">{message.message}</p>
                             </div>
                             {showTimestamp && (
-                              <p className={`text-xs text-gray-500 mt-1 ${isAdmin ? 'text-right' : 'text-left'}`}>
+                              <p className={`text-xs mt-1 ${isAdmin ? 'text-right' : 'text-left'} ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 {new Date(message.created_at).toLocaleString()}
                               </p>
                             )}
@@ -351,12 +358,16 @@ export default function Messages() {
               </div>
 
               {/* Message Input */}
-              <div className="p-4 border-t border-gray-200 bg-white">
+              <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700 bg-[#0a0a0a]' : 'border-gray-200 bg-white'}`}>
                 {sendMessageError && (
-                  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className={`mb-3 p-3 rounded-lg border ${
+                    isDarkMode 
+                      ? 'bg-red-900 border-red-700' 
+                      : 'bg-red-50 border-red-200'
+                  }`}>
                     <div className="flex items-center">
-                      <X className="w-4 h-4 text-red-500 mr-2" />
-                      <p className="text-sm text-red-700">{sendMessageError}</p>
+                      <X className={`w-4 h-4 mr-2 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
+                      <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{sendMessageError}</p>
                     </div>
                   </div>
                 )}
@@ -371,7 +382,11 @@ export default function Messages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 resize-none"
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500 resize-none ${
+                      isDarkMode 
+                        ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' 
+                        : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
+                    }`}
                     rows={1}
                     style={{ minHeight: '40px', maxHeight: '120px' }}
                     onInput={(e) => {
@@ -383,10 +398,14 @@ export default function Messages() {
                   <button
                     onClick={handleSendMessage}
                     disabled={!newMessageContent.trim() || sendingMessage}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                    className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
+                      newMessageContent.trim() && !sendingMessage
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     {sendingMessage ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
                     ) : (
                       <Send className="w-4 h-4" />
                     )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MessageSquare, Send, X } from 'lucide-react'
+import { MessageSquare, Send, X, User, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getVendorMessages, sendMessage, getAdminProfileId } from '../../lib/database'
 
@@ -32,6 +32,7 @@ export default function VendorMessages() {
     unread: 0
   })
   const [sendMessageError, setSendMessageError] = useState<string | null>(null)
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
   // Local storage cache functions
   const getCacheKey = (vendorId: string, filter: string) => `vendor_messages_${vendorId}_${filter}`
@@ -243,12 +244,24 @@ export default function VendorMessages() {
                       </p>
                     </div>
                   </div>
+                  {/* Theme Toggle */}
+                  <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                  >
+                    {isDarkMode ? (
+                      <Sun className="w-5 h-5 text-yellow-500" />
+                    ) : (
+                      <Moon className="w-5 h-5 text-gray-600" />
+                    )}
+                  </button>
                 </div>
 
-                {/* WhatsApp-like Chat Trail */}
-                <div className="bg-[#0a0a0a] rounded-lg overflow-hidden bg-opacity-95">
+                {/* Chat Interface */}
+                <div className={`shadow-sm rounded-lg overflow-hidden ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
                   {/* Messages Container */}
-                  <div className="p-4 h-[50vh] overflow-y-auto flex flex-col gap-3">
+                  <div className={`h-96 overflow-y-auto p-4 space-y-4 ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
                     {(() => {
                       const conversationMessages = messages.filter(msg => {
                         if (selectedConversation === 'admin') {
@@ -259,85 +272,66 @@ export default function VendorMessages() {
                       }).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
                       return conversationMessages.length === 0 ? (
-                        <div className="p-8 text-center">
-                          <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                          <h3 className="mt-2 text-sm font-medium text-gray-300">No messages</h3>
-                          <p className="mt-1 text-sm text-gray-500">Start the conversation.</p>
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">No messages yet</h3>
+                            <p className="mt-1 text-sm text-gray-500">Start the conversation.</p>
+                          </div>
                         </div>
                       ) : (
                         conversationMessages.map((message, index) => {
                           const isVendor = message.sender_id === profile?.id
-                          const isAdmin = message.sender_role === 'admin'
                           const showAvatar = index === 0 || conversationMessages[index - 1]?.sender_id !== message.sender_id
+                          const showTimestamp = index === conversationMessages.length - 1 ||
+                            new Date(conversationMessages[index + 1]?.created_at).getTime() - new Date(message.created_at).getTime() > 300000 // 5 minutes
 
                           return (
-                            <div
-                              key={message.id}
-                              className={`flex w-full ${isVendor ? 'justify-end' : 'justify-start'} mb-1`}
-                            >
-                              {/* Avatar for received messages */}
-                              {!isVendor && showAvatar && (
-                                <div className="flex-shrink-0 mr-3">
-                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-lg">
-                                    {isAdmin ? 'A' : (message.sender_name?.[0] || 'U')}
-                                  </div>
-                                </div>
-                              )}
-                              {!isVendor && !showAvatar && <div className="w-10 mr-3"></div>}
-
-                              {/* Message Bubble */}
-                              <div className="flex flex-col max-w-[75%]">
-                                {/* Sender name for received messages (only show if different sender) */}
-                                {!isVendor && showAvatar && (
-                                  <div className="text-xs text-gray-400 mb-1 ml-1">
-                                    {isAdmin ? 'Admin' : message.sender_name}
+                            <div key={message.id} className={`flex ${isVendor ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`flex max-w-xs lg:max-w-md ${isVendor ? 'flex-row-reverse' : 'flex-row'}`}>
+                                {showAvatar && (
+                                  <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                      isVendor 
+                                        ? (isDarkMode ? 'bg-green-800' : 'bg-green-100')
+                                        : (isDarkMode ? 'bg-blue-800' : 'bg-primary-100')
+                                    }`}>
+                                      {isVendor ? (
+                                        <User className="w-4 h-4 text-green-600" />
+                                      ) : (
+                                        <User className="w-4 h-4 text-primary-600" />
+                                      )}
+                                    </div>
                                   </div>
                                 )}
-
-                                <div
-                                  className={`relative px-4 py-3 shadow-lg ${
+                                {!showAvatar && <div className="w-10" />}
+                                <div className={`flex flex-col ${isVendor ? 'items-end' : 'items-start'}`}>
+                                  <div className={`px-4 py-2 rounded-2xl ${
                                     isVendor
-                                      ? 'bg-[#005c4b] text-white rounded-l-2xl rounded-tr-2xl rounded-br-md'
-                                      : 'bg-white text-gray-900 rounded-r-2xl rounded-tl-2xl rounded-bl-md'
-                                  }`}
-                                >
-                                  {/* Message text */}
-                                  <div className="text-sm leading-relaxed whitespace-pre-line break-words">
-                                    {message.message}
-                                  </div>
-
-                                  {/* Timestamp and status */}
-                                  <div className={`flex items-center justify-end mt-2 space-x-1 ${
-                                    isVendor ? 'text-green-100' : 'text-gray-500'
+                                      ? (isDarkMode ? 'bg-[#005c4b] text-white rounded-br-md' : 'bg-green-600 text-white rounded-br-md')
+                                      : (isDarkMode ? 'bg-gray-700 text-white rounded-bl-md border border-gray-600' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200')
                                   }`}>
-                                    <span className="text-xs">
-                                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    {isVendor && (
-                                      <div className="flex items-center">
-                                        {message.status === 'read' ? (
-                                          <>
-                                            <span className="text-green-100 text-xs mr-0.5">✓</span>
-                                            <span className="text-green-100 text-xs">✓</span>
-                                          </>
-                                        ) : (
-                                          <span className="text-green-100 text-xs">✓</span>
-                                        )}
-                                      </div>
-                                    )}
+                                    <p className="text-sm whitespace-pre-wrap">{message.message}</p>
                                   </div>
+                                  {showTimestamp && (
+                                    <p className={`text-xs mt-1 ${isVendor ? 'text-right' : 'text-left'} ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      {new Date(message.created_at).toLocaleString()}
+                                    </p>
+                                  )}
+                                  {isVendor && (
+                                    <div className={`flex items-center mt-1 ${isVendor ? 'justify-end' : 'justify-start'}`}>
+                                      {message.status === 'read' ? (
+                                        <>
+                                          <span className="text-green-500 text-xs mr-0.5">✓</span>
+                                          <span className="text-green-500 text-xs">✓</span>
+                                        </>
+                                      ) : (
+                                        <span className="text-green-500 text-xs">✓</span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-
-                              {/* Avatar for sent messages */}
-                              {isVendor && showAvatar && (
-                                <div className="flex-shrink-0 ml-3">
-                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-semibold shadow-lg">
-                                    {profile?.full_name?.[0] || 'V'}
-                                  </div>
-                                </div>
-                              )}
-                              {isVendor && !showAvatar && <div className="w-10 ml-3"></div>}
                             </div>
                           )
                         })
@@ -346,12 +340,16 @@ export default function VendorMessages() {
                   </div>
 
                   {/* Message Input */}
-                  <div className="p-4 border-t border-gray-700 bg-[#0a0a0a]">
+                  <div className={`p-4 border-t ${isDarkMode ? 'border-gray-700 bg-[#0a0a0a]' : 'border-gray-200 bg-white'}`}>
                     {sendMessageError && (
-                      <div className="mb-3 p-3 bg-red-900 border border-red-700 rounded-lg">
+                      <div className={`mb-3 p-3 rounded-lg border ${
+                        isDarkMode 
+                          ? 'bg-red-900 border-red-700' 
+                          : 'bg-red-50 border-red-200'
+                      }`}>
                         <div className="flex items-center">
-                          <X className="w-4 h-4 text-red-400 mr-2" />
-                          <p className="text-sm text-red-300">{sendMessageError}</p>
+                          <X className={`w-4 h-4 mr-2 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
+                          <p className={`text-sm ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{sendMessageError}</p>
                         </div>
                       </div>
                     )}
@@ -366,7 +364,11 @@ export default function VendorMessages() {
                           }
                         }}
                         placeholder="Type your message..."
-                        className="flex-1 px-3 py-2 bg-[#1a1a1a] border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500 resize-none ${
+                          isDarkMode 
+                            ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' 
+                            : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
+                        }`}
                         rows={1}
                         style={{ minHeight: '40px', maxHeight: '120px' }}
                         onInput={(e) => {
@@ -378,10 +380,14 @@ export default function VendorMessages() {
                       <button
                         onClick={handleNewMessage}
                         disabled={!newMessageContent.trim() || sendingMessage}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                        className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
+                          newMessageContent.trim() && !sendingMessage
+                            ? 'bg-primary-600 text-white hover:bg-primary-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
                       >
                         {sendingMessage ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
                         ) : (
                           <Send className="w-4 h-4" />
                         )}
