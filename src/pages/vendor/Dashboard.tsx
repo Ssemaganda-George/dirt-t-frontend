@@ -33,6 +33,7 @@ export default function VendorDashboard() {
     balance: 0,
     currency: 'UGX',
     messagesCount: 0,
+    inquiriesCount: 0,
     recentBookings: [] as any[],
     recentTransactions: [] as any[]
   })
@@ -223,13 +224,13 @@ export default function VendorDashboard() {
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
           <StatCard
-            title="Messages"
-            value={stats.messagesCount}
+            title="Inquiries"
+            value={stats.inquiriesCount}
             icon={MessageSquare}
             color="purple"
             trend="0 unread"
             subtitle="Customer inquiries"
-            onClick={() => navigate('/vendor/messages')}
+            onClick={() => navigate('/vendor/inquiries')}
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
         </div>

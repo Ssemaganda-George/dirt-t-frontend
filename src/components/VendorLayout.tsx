@@ -7,6 +7,7 @@ const navigation = [
   { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
   { name: 'My Services', href: '/vendor/services', icon: ShoppingBag },
   { name: 'Bookings', href: '/vendor/bookings', icon: Map },
+  { name: 'Inquiries', href: '/vendor/inquiries', icon: MessageSquare },
   { name: 'Messages', href: '/vendor/messages', icon: MessageSquare },
   { name: 'Transactions', href: '/vendor/transactions', icon: CreditCard },
 ]

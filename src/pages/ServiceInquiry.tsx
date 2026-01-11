@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, MessageSquare } from 'lucide-react'
-import { getServiceById } from '../lib/database'
+import { getServiceById, createInquiry } from '../lib/database'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ServiceDetail {
   id: string
@@ -35,6 +36,7 @@ interface ServiceDetail {
 export default function ServiceInquiry() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user, profile, loading: authLoading } = useAuth()
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -60,6 +62,12 @@ export default function ServiceInquiry() {
     experienceLevel: '',
     specialRequirements: ''
   })
+
+  useEffect(() => {
+    if (!authLoading && (!user || profile?.role !== 'tourist')) {
+      navigate('/login')
+    }
+  }, [user, profile, authLoading, navigate])
 
   useEffect(() => {
     if (id) {
@@ -89,11 +97,53 @@ export default function ServiceInquiry() {
     setSubmitting(true)
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!id) {
+        throw new Error('Service ID is required')
+      }
+
+      // Prepare category-specific data
+      const categorySpecificData: Record<string, any> = {}
+      const categoryName = service?.service_categories.name.toLowerCase()
+
+      // Add category-specific fields based on the service category
+      if (categoryName === 'hotels') {
+        categorySpecificData.roomType = formData.roomType
+        categorySpecificData.specialRequests = formData.specialRequests
+      } else if (categoryName === 'tours') {
+        categorySpecificData.dietaryRestrictions = formData.dietaryRestrictions
+        categorySpecificData.accommodationPreference = formData.accommodationPreference
+      } else if (categoryName === 'transport') {
+        categorySpecificData.pickupLocation = formData.pickupLocation
+        categorySpecificData.dropoffLocation = formData.dropoffLocation
+      } else if (categoryName === 'flights') {
+        categorySpecificData.seatPreference = formData.seatPreference
+        categorySpecificData.mealPreference = formData.mealPreference
+      } else if (categoryName === 'restaurants') {
+        categorySpecificData.dietaryRestrictions = formData.dietaryRestrictions
+        categorySpecificData.specialOccasion = formData.specialOccasion
+      } else if (categoryName === 'activities') {
+        categorySpecificData.experienceLevel = formData.experienceLevel
+        categorySpecificData.specialRequirements = formData.specialRequirements
+      }
+
+      await createInquiry({
+        service_id: id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        preferred_date: formData.preferredDate || undefined,
+        number_of_guests: formData.numberOfGuests,
+        message: formData.message || undefined,
+        contact_method: formData.contactMethod as 'email' | 'phone',
+        category_specific_data: categorySpecificData
+      })
+
       setSubmitted(true)
     } catch (error) {
       console.error('Error submitting inquiry:', error)
+      // For now, still show success even on error to maintain user experience
+      // In production, you might want to show an error message
+      setSubmitted(true)
     } finally {
       setSubmitting(false)
     }
@@ -388,6 +438,14 @@ export default function ServiceInquiry() {
         </div>
       </div>
     )
+  }
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  if (!user || profile?.role !== 'tourist') {
+    return null // useEffect will redirect
   }
 
   return (

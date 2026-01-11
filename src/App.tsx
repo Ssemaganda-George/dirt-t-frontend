@@ -20,6 +20,7 @@ import VendorDashboard from './pages/vendor/Dashboard'
 import VendorServices from './pages/vendor/Services'
 import VendorBookings from './pages/vendor/Bookings'
 import VendorMessages from './pages/vendor/Messages'
+import VendorInquiries from './pages/vendor/Inquiries'
 import VendorTransactions from './pages/vendor/Transactions'
 import VendorProfile from './pages/vendor/Profile'
 import VendorSettings from './pages/vendor/Settings'
@@ -73,6 +74,7 @@ function App() {
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
             <Route path="messages" element={<VendorMessages />} />
+            <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
           </Route>
           

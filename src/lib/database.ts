@@ -313,6 +313,35 @@ export interface Transaction {
   created_at: string
 }
 
+export interface Inquiry {
+  id: string
+  service_id: string
+  vendor_id: string
+  name: string
+  email: string
+  phone?: string
+  preferred_date?: string
+  number_of_guests: number
+  message?: string
+  contact_method: 'email' | 'phone'
+  category_specific_data: Record<string, any>
+  status: 'unread' | 'read' | 'responded' | 'archived'
+  responded_at?: string
+  response_message?: string
+  created_at: string
+  updated_at: string
+
+  // Relations
+  services?: {
+    id: string
+    title: string
+    service_categories?: {
+      name: string
+    }
+  }
+  vendors?: Vendor
+}
+
 // Database functions
 import { supabase } from './supabaseClient'
 
@@ -1799,6 +1828,7 @@ export async function getVendorStats(vendorId: string) {
         balance: 0,
         currency: 'UGX',
         messagesCount: 0,
+        inquiriesCount: 0,
         recentBookings: [],
         recentTransactions: []
       }
@@ -1896,6 +1926,15 @@ export async function getVendorStats(vendorId: string) {
 
     if (messagesError) throw messagesError
 
+    // Get inquiries count for vendor
+    let inquiriesCount = 0
+    try {
+      inquiriesCount = await getInquiryCount(vendorId)
+    } catch (inquiryError) {
+      console.warn('Could not fetch inquiry count (table may not exist yet):', inquiryError)
+      inquiriesCount = 0
+    }
+
     // Get recent bookings
     const { data: recentBookings, error: recentBookingsError } = await supabase
       .from('bookings')
@@ -1938,11 +1977,227 @@ export async function getVendorStats(vendorId: string) {
       balance: wallet?.balance || 0,
       currency: wallet?.currency || 'UGX',
       messagesCount: finalMessagesCount || 0,
+      inquiriesCount,
       recentBookings: recentBookings || [],
       recentTransactions: recentTx || []
     }
   } catch (error) {
     console.error('Error fetching vendor stats:', error)
+    throw error
+  }
+}
+
+// Inquiry functions
+export async function createInquiry(inquiryData: {
+  service_id: string
+  name: string
+  email: string
+  phone?: string
+  preferred_date?: string
+  number_of_guests: number
+  message?: string
+  contact_method: 'email' | 'phone'
+  category_specific_data?: Record<string, any>
+}): Promise<Inquiry> {
+  try {
+    // Get the vendor_id from the service
+    const { data: service, error: serviceError } = await supabase
+      .from('services')
+      .select('vendor_id')
+      .eq('id', inquiryData.service_id)
+      .single()
+
+    if (serviceError || !service) {
+      throw new Error('Service not found')
+    }
+
+    const { data, error } = await supabase
+      .from('inquiries')
+      .insert([{
+        service_id: inquiryData.service_id,
+        vendor_id: service.vendor_id,
+        name: inquiryData.name,
+        email: inquiryData.email,
+        phone: inquiryData.phone,
+        preferred_date: inquiryData.preferred_date,
+        number_of_guests: inquiryData.number_of_guests,
+        message: inquiryData.message,
+        contact_method: inquiryData.contact_method,
+        category_specific_data: inquiryData.category_specific_data || {}
+      }])
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          service_categories (
+            name
+          )
+        ),
+        vendors (
+          id,
+          business_name,
+          business_email
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Error creating inquiry:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in createInquiry:', error)
+    throw error
+  }
+}
+
+export async function getVendorInquiries(vendorId: string): Promise<Inquiry[]> {
+  try {
+    // First try with vendorId as vendor.id
+    let query = supabase
+      .from('inquiries')
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          service_categories (
+            name
+          )
+        )
+      `)
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+
+    let { data, error } = await query
+
+    // If no inquiries found and vendorId might be a user_id, try with vendor record lookup
+    if ((!data || data.length === 0) && !error) {
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        const { data: vendorInquiries, error: vendorInquiriesError } = await supabase
+          .from('inquiries')
+          .select(`
+            *,
+            services (
+              id,
+              title,
+              service_categories (
+                name
+              )
+            )
+          `)
+          .eq('vendor_id', vendorRecord.id)
+          .order('created_at', { ascending: false })
+
+        if (!vendorInquiriesError) {
+          data = vendorInquiries
+          error = vendorInquiriesError
+        }
+      }
+    }
+
+    if (error) {
+      console.error('Error fetching vendor inquiries:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getVendorInquiries:', error)
+    throw error
+  }
+}
+
+export async function updateInquiryStatus(inquiryId: string, status: 'unread' | 'read' | 'responded' | 'archived', responseMessage?: string): Promise<Inquiry> {
+  try {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    }
+
+    if (status === 'responded' && responseMessage) {
+      updateData.responded_at = new Date().toISOString()
+      updateData.response_message = responseMessage
+    }
+
+    const { data, error } = await supabase
+      .from('inquiries')
+      .update(updateData)
+      .eq('id', inquiryId)
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          service_categories (
+            name
+          )
+        ),
+        vendors (
+          id,
+          business_name,
+          business_email
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Error updating inquiry status:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in updateInquiryStatus:', error)
+    throw error
+  }
+}
+
+export async function getInquiryCount(vendorId: string): Promise<number> {
+  try {
+    // First try with vendorId as vendor.id
+    let { count, error } = await supabase
+      .from('inquiries')
+      .select('*', { count: 'exact', head: true })
+      .eq('vendor_id', vendorId)
+
+    // If no count and vendorId might be a user_id, try with vendor record lookup
+    if ((!count || count === 0) && !error) {
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        const { count: vendorCount, error: vendorCountError } = await supabase
+          .from('inquiries')
+          .select('*', { count: 'exact', head: true })
+          .eq('vendor_id', vendorRecord.id)
+
+        if (!vendorCountError) {
+          count = vendorCount
+        }
+      }
+    }
+
+    if (error) {
+      console.error('Error fetching inquiry count:', error)
+      throw error
+    }
+
+    return count || 0
+  } catch (error) {
+    console.error('Error in getInquiryCount:', error)
     throw error
   }
 }
