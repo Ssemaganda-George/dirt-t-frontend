@@ -10,6 +10,7 @@ import { getServiceById } from '../lib/database'
 
 interface ServiceDetail {
   id: string
+  vendor_id?: string
   title: string
   description: string
   price: number

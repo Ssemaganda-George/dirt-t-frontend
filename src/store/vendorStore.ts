@@ -49,6 +49,7 @@ function ensureSeed(vendorId: string) {
         id: `b_${Date.now()}`,
         service_id: svc.id,
         tourist_id: 't_demo',
+        vendor_id: vendorId,
         booking_date: now(),
         service_date: now(),
         guests: 2,
@@ -237,4 +238,28 @@ export function getWallet(vendorId: string): Wallet {
   }
   save(key(vendorId, 'wallet'), wallet)
   return wallet
+}
+
+export function getWalletStats(vendorId: string) {
+  const txs = getTransactions(vendorId)
+  const payments = txs.filter(t => t.transaction_type === 'payment' && t.status === 'completed')
+  const withdrawals = txs.filter(t => t.transaction_type === 'withdrawal')
+
+  const totalEarned = payments.reduce((s, t) => s + t.amount, 0)
+  const totalWithdrawn = withdrawals.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0)
+  const pendingWithdrawals = withdrawals.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0)
+  const currentBalance = totalEarned - totalWithdrawn
+  const currency = txs[0]?.currency || 'UGX'
+
+  return {
+    totalEarned,
+    totalWithdrawn,
+    pendingWithdrawals,
+    currentBalance,
+    currency,
+    totalTransactions: txs.length,
+    completedPayments: payments.length,
+    completedWithdrawals: withdrawals.filter(t => t.status === 'completed').length,
+    pendingWithdrawalsCount: withdrawals.filter(t => t.status === 'pending').length
+  }
 }

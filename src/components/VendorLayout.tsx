@@ -9,7 +9,7 @@ const navigation = [
   { name: 'Bookings', href: '/vendor/bookings', icon: Map },
   { name: 'Inquiries', href: '/vendor/inquiries', icon: MessageSquare },
   { name: 'Messages', href: '/vendor/messages', icon: MessageSquare },
-  { name: 'Transactions', href: '/vendor/transactions', icon: CreditCard },
+  { name: 'My Wallet', href: '/vendor/transactions', icon: CreditCard },
 ]
 
 export default function VendorLayout() {

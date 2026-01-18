@@ -19,7 +19,7 @@ interface Message {
 }
 
 export default function VendorMessages() {
-  const { profile } = useAuth()
+  const { profile, vendor } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
@@ -94,7 +94,7 @@ export default function VendorMessages() {
   }
 
   const fetchMessages = async () => {
-    const vendorId = profile?.id || ''
+    const vendorId = vendor?.id || profile?.id || ''
     if (!vendorId) return
 
     try {

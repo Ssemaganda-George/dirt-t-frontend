@@ -286,6 +286,7 @@ export interface Booking {
   id: string;
   service_id: string;
   tourist_id: string;
+  vendor_id: string; // Added missing vendor_id field
   booking_date: string;
   service_date?: string;
   guests: number;
@@ -298,6 +299,14 @@ export interface Booking {
   updated_at: string;
   service?: Service;
   tourist_profile?: UserProfile;
+  // Transport-specific fields
+  pickup_location?: string;
+  dropoff_location?: string;
+  driver_option?: string;
+  return_trip?: boolean;
+  start_time?: string;
+  end_time?: string;
+  end_date?: string;
 }
 
 export interface Transaction {

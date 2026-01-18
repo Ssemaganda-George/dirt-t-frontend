@@ -33,6 +33,7 @@ export type TransactionStatus = 'pending' | 'completed' | 'failed'
 export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
 import type { Flight } from '../types'
+import { formatCurrency } from './utils'
 
 export interface Profile {
   id: string
@@ -276,6 +277,7 @@ export interface Booking {
   tourist_id: string
   vendor_id: string
   booking_date: string
+  service_date?: string
   booking_time?: string
   guests: number
   total_amount: number
@@ -288,6 +290,14 @@ export interface Booking {
   updated_at: string
   services?: Service
   profiles?: Profile
+  // Transport-specific fields
+  pickup_location?: string
+  dropoff_location?: string
+  driver_option?: string
+  return_trip?: boolean
+  start_time?: string
+  end_time?: string
+  end_date?: string
 }
 
 export interface Wallet {
@@ -1293,15 +1303,11 @@ export async function getAllBookings(): Promise<Booking[]> {
     .from('bookings')
     .select(`
       *,
-      services (
+      service:services (
         id,
-        title,
-        vendors (
-          id,
-          business_name
-        )
+        title
       ),
-      profiles (
+      tourist_profile:profiles (
         id,
         full_name,
         email
@@ -1315,6 +1321,174 @@ export async function getAllBookings(): Promise<Booking[]> {
   }
 
   return data || []
+}
+
+export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'vendor_id'> & { vendor_id?: string }): Promise<Booking> {
+  console.log('createBooking called with:', booking)
+
+  // If vendor_id is not provided, fetch it from the service
+  let bookingData = { ...booking }
+  if (!bookingData.vendor_id && bookingData.service_id) {
+    try {
+      const { data: service, error: serviceError } = await supabase
+        .from('services')
+        .select('vendor_id')
+        .eq('id', bookingData.service_id)
+        .single()
+
+      if (serviceError) {
+        console.error('Error fetching service vendor_id:', serviceError)
+      } else if (service?.vendor_id) {
+        bookingData.vendor_id = service.vendor_id
+        console.log('Auto-set vendor_id from service:', service.vendor_id)
+      }
+    } catch (error) {
+      console.error('Exception fetching service vendor_id:', error)
+    }
+  }
+
+  console.log('Final booking data with vendor_id:', bookingData.vendor_id)
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert([{
+      ...bookingData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating booking:', error)
+    throw error
+  }
+
+  console.log('Booking created successfully:', data)
+  return data
+}
+
+export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>>): Promise<Booking> {
+  try {
+    console.log('DB: updateBooking called with id:', id, 'updates:', updates)
+
+    // Get the current booking to check if we need to create a transaction
+    const { data: currentBooking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      console.error('DB: Error fetching current booking:', fetchError)
+      throw fetchError
+    }
+
+    console.log('DB: Current booking status:', currentBooking.status, 'payment_status:', currentBooking.payment_status)
+
+    // Update the booking
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          vendors (
+            id,
+            business_name
+          )
+        ),
+        profiles (
+          id,
+          full_name,
+          email
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('DB: Error updating booking:', error)
+      throw error
+    }
+
+    console.log('DB: Booking updated successfully. New status:', data.status, 'payment_status:', data.payment_status)
+
+    // Check if we need to create a transaction
+    // Create transaction when booking is "confirmed AND paid" (after update)
+    const finalStatus = data.status;
+    const finalPaymentStatus = data.payment_status;
+    const shouldCreateTransaction = finalStatus === 'confirmed' && finalPaymentStatus === 'paid';
+
+    console.log('DB: Transaction check - finalStatus:', finalStatus, 'finalPaymentStatus:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction);
+
+    if (shouldCreateTransaction) {
+      console.log('[Wallet Debug] Attempting to create payment transaction for booking:', id, {
+        vendor_id: data.vendor_id,
+        tourist_id: data.tourist_id,
+        amount: data.total_amount,
+        currency: data.currency,
+        transaction_type: 'payment',
+        status: 'completed',
+        payment_method: 'card',
+        reference: `PMT_${id.slice(0, 8)}_${Date.now()}`
+      });
+      // Check if a payment transaction already exists for this booking
+      const { data: existingTransaction, error: transactionCheckError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('booking_id', id)
+        .eq('transaction_type', 'payment')
+        .eq('status', 'completed')
+        .single();
+
+      if (transactionCheckError && transactionCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        // If table doesn't exist, skip transaction creation
+        if (transactionCheckError.message?.includes('relation "transactions" does not exist')) {
+          console.warn('Transactions table does not exist. Skipping payment transaction creation.');
+        } else {
+          console.error('Error checking existing transaction:', transactionCheckError);
+        }
+      } else {
+        // Only create transaction if one doesn't already exist
+        if (!existingTransaction) {
+          try {
+            const reference = `PMT_${id.slice(0, 8)}_${Date.now()}`;
+            await addTransaction({
+              booking_id: id,
+              vendor_id: data.vendor_id,
+              tourist_id: data.tourist_id,
+              amount: data.total_amount,
+              currency: data.currency,
+              transaction_type: 'payment',
+              status: 'completed',
+              payment_method: 'card', // Default payment method
+              reference
+            });
+            console.log('Created payment transaction for booking:', id);
+          } catch (transactionError) {
+            // If transactions table doesn't exist, just log and continue
+            if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
+              console.warn('Transactions table does not exist. Payment transaction not created.');
+            } else {
+              console.error('Error creating payment transaction:', transactionError);
+              // Don't throw here - the booking update was successful
+            }
+          }
+        }
+      }
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in updateBooking:', error)
+    throw error
+  }
 }
 
 export async function getAllTransactions(): Promise<Transaction[]> {
@@ -2197,6 +2371,284 @@ export async function getInquiryCount(vendorId: string): Promise<number> {
     return count || 0
   } catch (error) {
     console.error('Error in getInquiryCount:', error)
+    throw error
+  }
+}
+
+// Transaction functions
+export async function getTransactions(vendorId: string) {
+  try {
+    // First try with vendorId as vendor.id
+    let { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+
+    // If error indicates column doesn't exist, the table might not be migrated
+    if (error && error.message?.includes('column transactions.vendor_id does not exist')) {
+      console.warn('Transactions table exists but vendor_id column missing. Returning empty array.')
+      return []
+    }
+
+    // If no data and vendorId might be a user_id, try with vendor record lookup
+    if ((!data || data.length === 0) && !error) {
+      const { data: vendorRecord, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('user_id', vendorId)
+        .single()
+
+      if (!vendorError && vendorRecord) {
+        const { data: vendorData, error: vendorDataError } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('vendor_id', vendorRecord.id)
+          .order('created_at', { ascending: false })
+
+        if (!vendorDataError) {
+          data = vendorData
+          error = vendorDataError
+        }
+      }
+    }
+
+    if (error) {
+      // If table doesn't exist, return empty array
+      if (error.message?.includes('relation "transactions" does not exist')) {
+        console.warn('Transactions table does not exist yet. Returning empty array.')
+        return []
+      }
+      console.error('Error fetching transactions:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getTransactions:', error)
+    throw error
+  }
+}
+
+export async function addTransaction(transaction: {
+  booking_id?: string
+  vendor_id: string
+  tourist_id?: string
+  amount: number
+  currency: string
+  transaction_type: 'payment' | 'withdrawal' | 'refund'
+  status: 'pending' | 'completed' | 'failed'
+  payment_method: 'card' | 'mobile_money' | 'bank_transfer'
+  reference: string
+}) {
+  try {
+
+    console.log('[Wallet Debug] addTransaction called with:', transaction);
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([transaction])
+      .select()
+      .single()
+
+    if (error) {
+      // If table doesn't exist, throw a more helpful error
+      if (error.message?.includes('relation "transactions" does not exist')) {
+        throw new Error('Transactions table does not exist. Please run the database migrations first.')
+      }
+      console.error('Error adding transaction:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in addTransaction:', error)
+    throw error
+  }
+}
+
+/**
+ * Reconcile bookings: find bookings that are confirmed AND paid but have no
+ * corresponding completed payment transaction, and create one.
+ * If vendorId is provided, limit to that vendor only.
+ * Returns the number of transactions created.
+ */
+export async function reconcileMissingPaymentTransactions(vendorId?: string): Promise<number> {
+  try {
+    // Build base query
+    let query = supabase
+      .from('bookings')
+      .select('id, vendor_id, tourist_id, total_amount, currency')
+      .eq('status', 'confirmed')
+      .eq('payment_status', 'paid')
+
+    if (vendorId) {
+      query = query.eq('vendor_id', vendorId)
+    }
+
+    const { data: bookings, error: bookingsError } = await query
+    if (bookingsError) {
+      console.error('Error fetching confirmed+paid bookings for reconciliation:', bookingsError)
+      throw bookingsError
+    }
+
+    if (!bookings || bookings.length === 0) return 0
+
+    let created = 0
+
+    for (const b of bookings) {
+      try {
+        // Check existing completed payment transaction for this booking
+        const { data: existingTx, error: txCheckError } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('booking_id', b.id)
+          .eq('transaction_type', 'payment')
+          .eq('status', 'completed')
+          .single()
+
+        if (txCheckError && txCheckError.code !== 'PGRST116') {
+          console.warn('Error checking transactions for booking', b.id, txCheckError)
+          continue
+        }
+
+        if (existingTx) {
+          // already has payment
+          continue
+        }
+
+        // create transaction
+        const reference = `PMT_${b.id.slice(0, 8)}_${Date.now()}`
+        await addTransaction({
+          booking_id: b.id,
+          vendor_id: b.vendor_id,
+          tourist_id: b.tourist_id,
+          amount: b.total_amount,
+          currency: b.currency || 'UGX',
+          transaction_type: 'payment',
+          status: 'completed',
+          payment_method: 'card',
+          reference
+        })
+        created += 1
+        console.log('Reconciliation: created payment transaction for booking', b.id)
+      } catch (err) {
+        console.error('Reconciliation: failed for booking', b.id, err)
+      }
+    }
+
+    return created
+  } catch (error) {
+    console.error('Error in reconcileMissingPaymentTransactions:', error)
+    throw error
+  }
+}
+
+export async function updateTransactionStatus(transactionId: string, status: 'pending' | 'completed' | 'failed') {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({ status })
+      .eq('id', transactionId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating transaction status:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in updateTransactionStatus:', error)
+    throw error
+  }
+}
+
+export async function getWalletStats(vendorId: string) {
+  try {
+    const transactions = await getTransactions(vendorId)
+
+    // If no transactions (table doesn't exist or no data), return default stats
+    if (!transactions || transactions.length === 0) {
+      return {
+        totalEarned: 0,
+        totalWithdrawn: 0,
+        pendingWithdrawals: 0,
+        currentBalance: 0,
+        currency: 'UGX',
+        totalTransactions: 0,
+        completedPayments: 0,
+        completedWithdrawals: 0,
+        pendingWithdrawalsCount: 0
+      }
+    }
+
+    const payments = transactions.filter(t => t.transaction_type === 'payment' && t.status === 'completed')
+    const withdrawals = transactions.filter(t => t.transaction_type === 'withdrawal')
+
+    const totalEarned = payments.reduce((s, t) => s + t.amount, 0)
+    const totalWithdrawn = withdrawals.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0)
+    const pendingWithdrawals = withdrawals.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0)
+    const currentBalance = totalEarned - totalWithdrawn - pendingWithdrawals
+    const currency = transactions[0]?.currency || 'UGX'
+
+    return {
+      totalEarned,
+      totalWithdrawn,
+      pendingWithdrawals,
+      currentBalance,
+      currency,
+      totalTransactions: transactions.length,
+      completedPayments: payments.length,
+      completedWithdrawals: withdrawals.filter(t => t.status === 'completed').length,
+      pendingWithdrawalsCount: withdrawals.filter(t => t.status === 'pending').length
+    }
+  } catch (error) {
+    console.error('Error in getWalletStats:', error)
+    // Return default stats on error
+    return {
+      totalEarned: 0,
+      totalWithdrawn: 0,
+      pendingWithdrawals: 0,
+      currentBalance: 0,
+      currency: 'UGX',
+      totalTransactions: 0,
+      completedPayments: 0,
+      completedWithdrawals: 0,
+      pendingWithdrawalsCount: 0
+    }
+  }
+}
+
+export async function requestWithdrawal(vendorId: string, amount: number, currency: string) {
+  try {
+    // Get current wallet stats to validate the withdrawal amount
+    const walletStats = await getWalletStats(vendorId)
+
+    if (amount > walletStats.currentBalance) {
+      throw new Error(`Insufficient balance. Available: ${formatCurrency(walletStats.currentBalance, walletStats.currency)}`)
+    }
+
+    if (amount <= 0) {
+      throw new Error('Withdrawal amount must be greater than 0')
+    }
+
+    // Check if transactions table exists by trying to insert
+    const reference = `WD_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
+
+    const transaction = await addTransaction({
+      vendor_id: vendorId,
+      amount,
+      currency,
+      transaction_type: 'withdrawal',
+      status: 'pending',
+      payment_method: 'mobile_money',
+      reference
+    })
+
+    return transaction
+  } catch (error) {
+    console.error('Error in requestWithdrawal:', error)
     throw error
   }
 }

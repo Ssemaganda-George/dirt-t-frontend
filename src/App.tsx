@@ -32,7 +32,7 @@ import AdminProfile from './pages/admin/Profile'
 import AdminSettings from './pages/admin/Settings'
 import { Services } from './pages/admin/Services'
 import { Bookings } from './pages/admin/Bookings'
-import { Transactions } from './pages/admin/Transactions'
+import { Transactions } from './pages/admin/Wallets'
 
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
 
@@ -95,7 +95,7 @@ function App() {
             <Route path="services" element={<Services />} />
             <Route path="bookings" element={<Bookings />} />
             <Route path="messages" element={<Messages />} />
-            <Route path="transactions" element={<Transactions />} />
+            <Route path="wallets" element={<Transactions />} />
             <Route path="vendor-messages" element={
               <ProtectedRoute requiredRole="admin">
                 <AdminVendorMessages />

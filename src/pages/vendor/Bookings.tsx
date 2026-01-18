@@ -1,37 +1,128 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
-import { createBooking, getBookings, getServices, updateBookingStatus, deleteBooking } from '../../store/vendorStore'
-import { formatCurrency, formatDateTime } from '../../lib/utils'
+import { getServices } from '../../store/vendorStore'
+import { getAllBookings, createBooking as createDbBooking } from '../../lib/database'
+import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { Trash2 } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function VendorBookings() {
-  const { profile } = useAuth()
-  const vendorId = profile?.id || 'vendor_demo'
+  const { profile, vendor } = useAuth()
+  const vendorId = vendor?.id || profile?.id || 'vendor_demo'
   const { state: cartState } = useCart()
+
+  console.log('VendorBookings - profile:', profile)
+  console.log('VendorBookings - vendor:', vendor)
+  console.log('VendorBookings - vendorId:', vendorId)
+  console.log('VendorBookings - profile role:', profile?.role)
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [showBookingDetails, setShowBookingDetails] = useState(false)
 
-  const load = () => {
-    setBookings(getBookings(vendorId))
+  // Fetch bookings from Supabase for this vendor
+  const load = async () => {
+    // Get all bookings, then filter by vendor_id
+    const allBookings = await getAllBookings()
+    console.log('All bookings from database:', allBookings)
+    console.log('Looking for vendor_id:', vendorId)
+    const filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
+    console.log('Filtered bookings for vendor:', filteredBookings)
+    console.log('Bookings with different vendor_ids:', allBookings.filter(b => b.vendor_id !== vendorId))
+    setBookings(filteredBookings)
     setServices(getServices(vendorId))
   }
-  useEffect(() => { load() }, [])
 
+  // Set up real-time subscription for bookings
+  useEffect(() => {
+    if (!vendorId) return
+
+    // Initial load
+    load()
+
+    // Subscribe to real-time changes for this vendor's bookings
+    const subscription = supabase
+      .channel('vendor_bookings')
+      .on('postgres_changes', {
+        event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'bookings',
+        filter: `vendor_id=eq.${vendorId}` // Only listen to bookings for this vendor
+      }, (payload) => {
+        console.log('Real-time booking change:', payload)
+        
+        if (payload.eventType === 'INSERT') {
+          // New booking for this vendor
+          setBookings(prev => [...prev, payload.new as Booking])
+        } else if (payload.eventType === 'UPDATE') {
+          // Booking updated
+          setBookings(prev => prev.map(booking => 
+            booking.id === payload.new.id ? payload.new as Booking : booking
+          ))
+        } else if (payload.eventType === 'DELETE') {
+          // Booking deleted
+          setBookings(prev => prev.filter(booking => booking.id !== payload.old.id))
+        }
+      })
+      .subscribe()
+
+    // Cleanup subscription on unmount or vendorId change
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [vendorId])
+
+  // TODO: Implement status update via Supabase if needed
   const handleStatusChange = (bookingId: string, status: Booking['status']) => {
-    updateBookingStatus(vendorId, bookingId, status)
     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b))
+    // Optionally: call a Supabase updateBookingStatus here
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-        <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Add Booking</button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+            Live updates
+          </div>
+          <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Add Booking</button>
+        </div>
+      </div>
+
+      {/* Debug Info */}
+      <div className="bg-yellow-50 p-4 rounded-lg">
+        <h3 className="font-semibold text-yellow-800">Debug Info:</h3>
+        <p className="text-sm text-yellow-700">Profile ID: {profile?.id || 'Not logged in'}</p>
+        <p className="text-sm text-yellow-700">Vendor Record ID: {vendor?.id || 'No vendor record'}</p>
+        <p className="text-sm text-yellow-700">Using Vendor ID: {vendorId}</p>
+        <p className="text-sm text-yellow-700">Profile Role: {profile?.role || 'Unknown'}</p>
+        <p className="text-sm text-yellow-700">Bookings Count: {bookings.length}</p>
+        <p className="text-sm text-green-700">✅ Real-time updates enabled</p>
+        <div className="flex gap-2 mt-2">
+          <button 
+            onClick={async () => {
+              const all = await getAllBookings()
+              console.log('ALL BOOKINGS IN DATABASE:', all)
+              alert(`Found ${all.length} total bookings in database. Check console for details.`)
+            }}
+            className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
+          >
+            Check All Bookings in Console
+          </button>
+          <button 
+            onClick={load}
+            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -49,12 +140,19 @@ export default function VendorBookings() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {bookings.map(b => (
-                <tr key={b.id} className="hover:bg-gray-50">
+                <tr 
+                  key={b.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setSelectedBooking(b)
+                    setShowBookingDetails(true)
+                  }}
+                >
                   <td className="px-6 py-4 text-sm text-gray-900">{b.service?.title || b.service_id}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
-                  <td className="px-6 py-4"><StatusBadge status={b.status} variant="small" /></td>
+                  <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex items-center space-x-3">
                       <select value={b.status} onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])} className="border rounded-md px-2 py-1">
@@ -63,10 +161,11 @@ export default function VendorBookings() {
                         <option value="cancelled">Cancelled</option>
                         <option value="completed">Completed</option>
                       </select>
+                      {/* Delete booking functionality not implemented for Supabase yet */}
                       <button
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete booking"
-                        onClick={() => { if (confirm('Delete this booking?')) { deleteBooking(vendorId, b.id); setBookings(prev => prev.filter(x => x.id !== b.id)) } }}
+                        className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
+                        title="Delete booking (not implemented)"
+                        disabled
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -133,12 +232,97 @@ export default function VendorBookings() {
         <BookingForm
           services={services}
           onClose={() => setShowForm(false)}
-          onSubmit={(payload) => {
-            const created = createBooking(vendorId, payload as any)
+          onSubmit={async (payload) => {
+            // Create booking in Supabase
+            const created = await createDbBooking({ ...payload, vendor_id: vendorId } as any)
             setBookings(prev => [created, ...prev])
             setShowForm(false)
           }}
         />
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingDetails && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Booking Details</h3>
+              <button 
+                onClick={() => setShowBookingDetails(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-gray-900">Booking Information</h4>
+                  <div className="mt-2 space-y-2">
+                    <p><span className="font-medium">Booking ID:</span> #{selectedBooking.id.slice(0, 8)}</p>
+                    <p><span className="font-medium">Service:</span> {selectedBooking.service?.title || selectedBooking.service_id}</p>
+                    <p><span className="font-medium">Booked Date:</span> {formatDateTime(selectedBooking.booking_date)}</p>
+                    <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
+                    <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
+                    <p><span className="font-medium">Total Amount:</span> {formatCurrency(selectedBooking.total_amount, selectedBooking.currency)}</p>
+                    <p><span className="font-medium">Status:</span> <StatusBadge status={getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)} variant="small" /></p>
+                    <p><span className="font-medium">Payment Status:</span> <StatusBadge status={selectedBooking.payment_status} variant="small" /></p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">Customer Information</h4>
+                  <div className="mt-2 space-y-2">
+                    <p><span className="font-medium">Customer ID:</span> #{selectedBooking.tourist_id.slice(0, 8)}</p>
+                    <p><span className="font-medium">Name:</span> {selectedBooking.tourist_profile?.full_name || 'Not available'}</p>
+                  </div>
+                  
+                  {selectedBooking.special_requests && (
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-900">Special Requests</h4>
+                      <p className="mt-1 text-sm text-gray-600">{selectedBooking.special_requests}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Transport-specific details */}
+              {(selectedBooking.pickup_location || selectedBooking.dropoff_location || selectedBooking.driver_option) && (
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900">Transport Details</h4>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedBooking.pickup_location && (
+                      <p><span className="font-medium">Pickup Location:</span> {selectedBooking.pickup_location}</p>
+                    )}
+                    {selectedBooking.dropoff_location && (
+                      <p><span className="font-medium">Dropoff Location:</span> {selectedBooking.dropoff_location}</p>
+                    )}
+                    {selectedBooking.driver_option && (
+                      <p><span className="font-medium">Driver Option:</span> {selectedBooking.driver_option}</p>
+                    )}
+                    {selectedBooking.return_trip && (
+                      <p><span className="font-medium">Return Trip:</span> Yes</p>
+                    )}
+                    {selectedBooking.start_time && (
+                      <p><span className="font-medium">Start Time:</span> {selectedBooking.start_time}</p>
+                    )}
+                    {selectedBooking.end_time && (
+                      <p><span className="font-medium">End Time:</span> {selectedBooking.end_time}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div className="border-t pt-4 flex justify-end">
+                <button 
+                  onClick={() => setShowBookingDetails(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

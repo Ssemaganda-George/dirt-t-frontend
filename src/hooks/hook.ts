@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { Service, Booking, Transaction, Flight } from '../types';
 import type { ServiceCategory, ServiceDeleteRequest } from '../lib/database';
-import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, updateVendorStatus as updateVendorStatusDB } from '../lib/database';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, updateVendorStatus as updateVendorStatusDB, updateBooking } from '../lib/database';
+import { supabase } from '../lib/supabaseClient';
 
 // Placeholder hooks - to be updated later
 export function useVendors() {
@@ -58,11 +59,59 @@ export function useBookings() {
     }
   };
 
+  const updateBookingStatus = async (bookingId: string, status: Booking['status']) => {
+    try {
+      await updateBooking(bookingId, { status });
+      // No need to refresh - real-time subscription will update the UI
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
+  const updatePaymentStatus = async (bookingId: string, paymentStatus: Booking['payment_status']) => {
+    try {
+      console.log('Hook: Updating payment status for booking', bookingId, 'to', paymentStatus)
+      await updateBooking(bookingId, { payment_status: paymentStatus })
+      console.log('Hook: Payment status updated successfully')
+      // No need to refresh - real-time subscription will update the UI
+    } catch (err) {
+      console.error('Hook: Error updating payment status:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  };
+
   useEffect(() => {
+    // Initial fetch
     fetchBookings();
+
+    // Set up real-time subscription for all bookings
+    const subscription = supabase
+      .channel('admin_bookings')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bookings'
+      }, (payload) => {
+        console.log('Admin real-time booking change:', payload);
+        
+        if (payload.eventType === 'INSERT') {
+          setBookings(prev => [payload.new as Booking, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setBookings(prev => prev.map(booking => 
+            booking.id === payload.new.id ? payload.new as Booking : booking
+          ));
+        } else if (payload.eventType === 'DELETE') {
+          setBookings(prev => prev.filter(booking => booking.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  return { bookings, loading, error, refetch: fetchBookings };
+  return { bookings, loading, error, refetch: fetchBookings, updateBookingStatus, updatePaymentStatus };
 }
 
 export function useTransactions() {

@@ -130,7 +130,7 @@ export default function Dashboard() {
             color="teal"
             trend="+18% this month"
             subtitle="Platform earnings"
-            onClick={() => navigate('/admin/transactions')}
+            onClick={() => navigate('/admin/wallets')}
           />
 
           <StatCard

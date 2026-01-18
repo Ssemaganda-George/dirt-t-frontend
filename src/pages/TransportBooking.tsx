@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Users, CreditCard, CheckCircle, Car } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
+import { createBooking as createVendorBooking } from '../store/vendorStore'
+import { createBooking as createDatabaseBooking } from '../lib/database'
 
 interface ServiceDetail {
   id: string
+  vendor_id?: string
   title: string
   description: string
   price: number
@@ -41,13 +45,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   
+  console.log('TransportBooking - service:', service)
+  console.log('TransportBooking - service.vendor_id:', service.vendor_id)
+  
   // Get date parameters from URL
   const startDate = searchParams.get('startDate') || ''
   const endDate = searchParams.get('endDate') || ''
   
   const { addToCart } = useCart()
+  const { profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [cartSaved, setCartSaved] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
     date: startDate, // Use startDate as the main date field
     pickupLocation: service.pickup_locations?.[0] || '',
@@ -65,6 +75,28 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     endTime: '17:00',
     driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
+
+  useEffect(() => {
+    if (service?.images && service.images.length > 0) {
+      setSelectedImage(service.images[0])
+    }
+  }, [service])
+
+  const nextImage = () => {
+    if (service?.images && service.images.length > 0) {
+      const nextIndex = (currentImageIndex + 1) % service.images.length
+      setCurrentImageIndex(nextIndex)
+      setSelectedImage(service.images[nextIndex])
+    }
+  }
+
+  const prevImage = () => {
+    if (service?.images && service.images.length > 0) {
+      const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
+      setCurrentImageIndex(prevIndex)
+      setSelectedImage(service.images[prevIndex])
+    }
+  }
 
   const steps = [
     { id: 1, title: 'Trip Details', icon: Car },
@@ -113,12 +145,71 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     return true
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < steps.length) {
       // Validate current step before proceeding
       if (!validateCurrentStep()) {
         return
       }
+      
+      // If completing booking (step 3), create the actual booking
+      if (currentStep === 3) {
+        const bookingDataToSave = {
+          service_id: service.id,
+          vendor_id: service.vendor_id || 'vendor_demo',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.startDate,
+          guests: bookingData.passengers,
+          total_amount: totalPrice,
+          currency: service.currency,
+          status: 'confirmed' as const,
+          special_requests: bookingData.specialRequests,
+          // Add transport-specific data
+          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+          driver_option: bookingData.driverOption,
+          return_trip: bookingData.returnTrip,
+          start_time: bookingData.startTime,
+          end_time: bookingData.endTime,
+          end_date: bookingData.endDate
+        }
+        
+        // Create the booking for the vendor (localStorage)
+        createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
+        
+        // Also create the booking in the database for admin visibility
+        try {
+          const bookingDataToInsert = {
+            service_id: service.id,
+            tourist_id: profile?.id || 't_demo', // Use authenticated user's profile ID
+            vendor_id: service.vendor_id || 'vendor_demo',
+            booking_date: new Date().toISOString(),
+            service_date: bookingData.startDate,
+            guests: bookingData.passengers,
+            total_amount: totalPrice,
+            currency: service.currency,
+            status: 'pending' as const,
+            payment_status: 'pending' as const,
+            special_requests: bookingData.specialRequests,
+            // Transport-specific fields
+            pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+            dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+            driver_option: bookingData.driverOption,
+            return_trip: bookingData.returnTrip,
+            start_time: bookingData.startTime,
+            end_time: bookingData.endTime,
+            end_date: bookingData.endDate
+          }
+          console.log('Creating database booking with vendor_id:', bookingDataToInsert.vendor_id)
+          console.log('Service vendor_id:', service.vendor_id)
+          const result = await createDatabaseBooking(bookingDataToInsert)
+          console.log('Database booking created successfully:', result)
+        } catch (error) {
+          console.error('Failed to save booking to database:', error)
+          // Continue with the process even if database save fails
+        }
+      }
+      
       setCurrentStep(currentStep + 1)
     }
   }
@@ -709,12 +800,36 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
         {/* Service Summary */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-start space-x-4">
-            <img
-              src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-              alt={service.title}
-              className="w-20 h-20 object-cover rounded-lg"
-            />
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Image with Navigation */}
+            <div className="relative flex-shrink-0">
+              <img
+                src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                alt={service.title}
+                className="w-full max-w-xs md:max-w-sm lg:max-w-md h-64 md:h-80 object-cover rounded-lg shadow-lg border-2 border-gray-200"
+              />
+              {service.images && service.images.length > 1 && (
+                <>
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                  >
+                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                  </button>
+                  {/* Image Counter */}
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
+                    {currentImageIndex + 1} / {service.images.length}
+                  </div>
+                </>
+              )}
+            </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900">{service.title}</h2>
               <p className="text-gray-600 text-sm">{service.location}</p>
@@ -755,7 +870,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && (!bookingData.startDate || !bookingData.endDate || !bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                  (currentStep === 1 && (
+                    !bookingData.startDate || 
+                    !bookingData.endDate || 
+                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
+                  )) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"

@@ -70,3 +70,17 @@ export function slugify(text: string): string {
     .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and multiple hyphens with single hyphen
     .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
 }
+
+export function getVendorDisplayStatus(bookingStatus: string, paymentStatus: string): 'pending' | 'confirmed' | 'cancelled' | 'completed' {
+  // For vendors: booking is only "confirmed" if both booking status is confirmed AND payment is paid
+  // Otherwise, show as "pending"
+  if (bookingStatus === 'confirmed' && paymentStatus === 'paid') {
+    return 'confirmed';
+  } else if (bookingStatus === 'cancelled') {
+    return 'cancelled';
+  } else if (bookingStatus === 'completed') {
+    return 'completed';
+  } else {
+    return 'pending';
+  }
+}

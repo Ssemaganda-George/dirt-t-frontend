@@ -126,12 +126,41 @@ export default function ServiceDetail() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [selectedImage, setSelectedImage] = useState('')
 
   useEffect(() => {
     if (id) {
       fetchService()
     }
   }, [id])
+
+  useEffect(() => {
+    if (service?.images && service.images.length > 0) {
+      setSelectedImage(service.images[0])
+    }
+  }, [service])
+
+  const handleImageClick = (imageUrl: string, index: number) => {
+    setSelectedImage(imageUrl)
+    setCurrentImageIndex(index)
+  }
+
+  const nextImage = () => {
+    if (service?.images && service.images.length > 0) {
+      const nextIndex = (currentImageIndex + 1) % service.images.length
+      setCurrentImageIndex(nextIndex)
+      setSelectedImage(service.images[nextIndex])
+    }
+  }
+
+  const prevImage = () => {
+    if (service?.images && service.images.length > 0) {
+      const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
+      setCurrentImageIndex(prevIndex)
+      setSelectedImage(service.images[prevIndex])
+    }
+  }
 
   const fetchService = async () => {
     try {
@@ -909,7 +938,6 @@ export default function ServiceDetail() {
   const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
     ? service.price * calculateDays(startDate, startTime, endDate, endTime)
     : service.price * guests
-  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -941,11 +969,56 @@ export default function ServiceDetail() {
           <div className="lg:col-span-2">
             {/* Image Gallery */}
             <div className="mb-8">
-              <img
-                src={imageUrl}
-                alt={service.title}
-                className="w-full h-96 object-cover rounded-lg shadow-lg"
-              />
+              {/* Main Image Display */}
+              <div className="relative mb-4">
+                <img
+                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                  alt={service.title}
+                  className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                />
+                {service.images && service.images.length > 1 && (
+                  <>
+                    {/* Navigation Arrows */}
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                    >
+                      <ArrowLeft className="h-5 w-5 rotate-180" />
+                    </button>
+                    {/* Image Counter */}
+                    <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                      {currentImageIndex + 1} / {service.images.length}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnail Gallery */}
+              {service.images && service.images.length > 1 && (
+                <div className="flex space-x-2 overflow-x-auto pb-2">
+                  {service.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleImageClick(image, index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${service.title} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Service Info */}

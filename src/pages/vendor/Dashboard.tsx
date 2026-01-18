@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { getVendorStats } from '../../lib/database'
 import { supabase } from '../../lib/supabaseClient'
-import { formatCurrency, formatDateTime } from '../../lib/utils'
+import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import StatCard from '../../components/StatCard'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
@@ -264,7 +264,7 @@ export default function VendorDashboard() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="font-semibold text-white">{formatCurrency(b.total_amount, b.currency)}</span>
-                      <StatusBadge status={b.status} variant="small" />
+                      <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
                     </div>
                   </div>
                 ))}
