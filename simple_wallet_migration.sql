@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
     currency VARCHAR(3) NOT NULL DEFAULT 'UGX',
     transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('payment', 'withdrawal', 'refund')),
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'completed', 'failed')),
     payment_method VARCHAR(20) NOT NULL DEFAULT 'card' CHECK (payment_method IN ('card', 'mobile_money', 'bank_transfer')),
     reference VARCHAR(100) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

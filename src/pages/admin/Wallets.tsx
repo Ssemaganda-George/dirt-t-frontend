@@ -3,10 +3,9 @@ import { useAdminTransactions } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrency } from '../../lib/utils';
-import { updateTransactionStatus } from '../../lib/database';
 
 export function Transactions() {
-  const { transactions, loading, error, refetch } = useAdminTransactions();
+  const { transactions, loading, error } = useAdminTransactions();
 
   if (loading) {
     return (
@@ -24,16 +23,6 @@ export function Transactions() {
     );
   }
 
-  const handleTransactionStatusUpdate = async (transactionId: string, status: 'completed' | 'failed') => {
-    try {
-      await updateTransactionStatus(transactionId, status);
-      refetch(); // Refresh the transactions list
-    } catch (err) {
-      console.error('Error updating transaction status:', err);
-      alert('Failed to update transaction status. Please try again.');
-    }
-  };
-
   const stats = {
     total: transactions.length,
     totalAmount: transactions
@@ -48,6 +37,12 @@ export function Transactions() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Wallet Management</h1>
+        <a
+          href="/admin/finance"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+        >
+          Manage Finance
+        </a>
       </div>
 
       {/* Stats */}

@@ -29,7 +29,7 @@ export type VendorStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type ServiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'inactive'
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 export type TransactionType = 'payment' | 'withdrawal' | 'refund'
-export type TransactionStatus = 'pending' | 'completed' | 'failed'
+export type TransactionStatus = 'pending' | 'approved' | 'completed' | 'failed'
 export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
 import type { Flight } from '../types'
@@ -2585,7 +2585,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
   }
 }
 
-export async function updateTransactionStatus(transactionId: string, status: 'pending' | 'completed' | 'failed') {
+export async function updateTransactionStatus(transactionId: string, status: 'pending' | 'approved' | 'completed' | 'failed') {
   try {
     const { data, error } = await supabase
       .from('transactions')

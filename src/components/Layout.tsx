@@ -12,7 +12,8 @@ import {
   MessageSquare,
   User,
   Settings,
-  ChevronDown
+  ChevronDown,
+  DollarSign
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
   { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { name: 'Wallets', href: '/admin/wallets', icon: CreditCard },
+  { name: 'Finance', href: '/admin/finance', icon: DollarSign },
 ]
 
 export default function Layout() {

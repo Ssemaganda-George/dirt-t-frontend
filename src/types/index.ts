@@ -317,7 +317,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   transaction_type: 'payment' | 'withdrawal' | 'refund';
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'approved' | 'completed' | 'failed';
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
   created_at: string;
