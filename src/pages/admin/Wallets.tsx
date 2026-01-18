@@ -154,9 +154,6 @@ export function Transactions() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Reference
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -193,24 +190,6 @@ export function Transactions() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                       {transaction.reference}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {transaction.transaction_type === 'withdrawal' && transaction.status === 'pending' && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleTransactionStatusUpdate(transaction.id, 'completed')}
-                            className="text-green-600 hover:text-green-900 text-sm"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleTransactionStatusUpdate(transaction.id, 'failed')}
-                            className="text-red-600 hover:text-red-900 text-sm"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
                     </td>
                   </tr>
                 ))}

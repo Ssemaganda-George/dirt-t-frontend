@@ -67,8 +67,8 @@ export function Finance() {
     completedRefunds: refunds.filter(t => t.status === 'completed').length,
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    return 'default'; // StatusBadge only accepts 'default' or 'small'
+  const getStatusBadgeVariant = () => {
+    return 'default' as const; // StatusBadge only accepts 'default' or 'small'
   };
 
   const getActionButtons = (transaction: any) => {
@@ -269,7 +269,7 @@ export function Finance() {
                       {transaction.payment_method.replace('_', ' ')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={transaction.status} variant={getStatusBadgeVariant(transaction.status)} />
+                      <StatusBadge status={transaction.status} variant={getStatusBadgeVariant()} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
