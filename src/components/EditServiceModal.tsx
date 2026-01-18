@@ -6,12 +6,19 @@ interface EditServiceModalProps {
   service: Service | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedServiceData: Partial<Service>) => void;
+  onSave: (updatedServiceData: Partial<Service>) => Promise<void>;
   isLoading?: boolean;
+  saveMessage?: { type: 'success' | 'error'; text: string } | null;
 }
 
-export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading }: EditServiceModalProps) {
+export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, saveMessage }: EditServiceModalProps) {
   const [formData, setFormData] = useState<Partial<Service>>({});
+  const [arrayInputs, setArrayInputs] = useState({
+    pickup_locations: '',
+    dropoff_locations: '',
+  });
+
+  const isTransportService = service?.category_id === 'cat_transport';
 
   useEffect(() => {
     if (service) {
@@ -24,13 +31,39 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading }
         duration_hours: service.duration_hours,
         max_capacity: service.max_capacity,
         amenities: service.amenities || [],
+        // Transport-specific fields
+        vehicle_type: service.vehicle_type || '',
+        vehicle_capacity: service.vehicle_capacity || undefined,
+        pickup_locations: service.pickup_locations || [],
+        dropoff_locations: service.dropoff_locations || [],
+        route_description: service.route_description || '',
+        driver_included: service.driver_included || false,
+        air_conditioning: service.air_conditioning || false,
+        gps_tracking: service.gps_tracking || false,
+        fuel_included: service.fuel_included || false,
+        tolls_included: service.tolls_included || false,
+        insurance_included: service.insurance_included || false,
+        license_required: service.license_required || '',
+        booking_notice_hours: service.booking_notice_hours || undefined,
+        wifi_available: service.wifi_available || false,
+        usb_charging: service.usb_charging || false,
+        child_seat: service.child_seat || false,
+        roof_rack: service.roof_rack || false,
+        towing_capacity: service.towing_capacity || false,
+        four_wheel_drive: service.four_wheel_drive || false,
+        automatic_transmission: service.automatic_transmission || false,
+        transport_terms: service.transport_terms || '',
       });
     }
   }, [service]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    try {
+      await onSave(formData);
+    } catch (error) {
+      // Error handling is done in the parent component
+    }
   };
 
   const handleInputChange = (field: keyof Service, value: any) => {
@@ -45,6 +78,22 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading }
     setFormData(prev => ({
       ...prev,
       amenities: amenitiesArray
+    }));
+  };
+
+  const addToArray = (field: 'pickup_locations' | 'dropoff_locations', value: string) => {
+    if (!value.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...(prev[field] || []), value.trim()]
+    }));
+    setArrayInputs(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const removeFromArray = (field: 'pickup_locations' | 'dropoff_locations', index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: (prev[field] || []).filter((_, i) => i !== index)
     }));
   };
 
@@ -68,6 +117,32 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading }
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
+
+            {/* Save Message */}
+            {saveMessage && (
+              <div className={`mb-4 p-3 rounded-md ${
+                saveMessage.type === 'success' 
+                  ? 'bg-green-50 border border-green-200 text-green-800' 
+                  : 'bg-red-50 border border-red-200 text-red-800'
+              }`}>
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    {saveMessage.type === 'success' ? (
+                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium">{saveMessage.text}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -189,6 +264,340 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading }
                   className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
+
+              {/* Transport-specific fields */}
+              {isTransportService && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-lg font-medium text-gray-900 mb-4">Transport Service Details</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label htmlFor="vehicle_type" className="block text-sm font-medium text-gray-700">
+                        Vehicle Type
+                      </label>
+                      <select
+                        id="vehicle_type"
+                        value={formData.vehicle_type || ''}
+                        onChange={(e) => handleInputChange('vehicle_type', e.target.value)}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="">Select vehicle type</option>
+                        <option value="sedan">Sedan Car</option>
+                        <option value="suv">SUV</option>
+                        <option value="van">Van/Minivan</option>
+                        <option value="bus">Bus</option>
+                        <option value="motorcycle">Motorcycle</option>
+                        <option value="bicycle">Bicycle</option>
+                        <option value="boat">Boat</option>
+                        <option value="helicopter">Helicopter</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="vehicle_capacity" className="block text-sm font-medium text-gray-700">
+                        Vehicle Capacity
+                      </label>
+                      <input
+                        type="number"
+                        id="vehicle_capacity"
+                        value={formData.vehicle_capacity || ''}
+                        onChange={(e) => handleInputChange('vehicle_capacity', parseInt(e.target.value) || undefined)}
+                        min="1"
+                        placeholder="Number of passengers"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label htmlFor="license_required" className="block text-sm font-medium text-gray-700">
+                        License Requirements
+                      </label>
+                      <select
+                        id="license_required"
+                        value={formData.license_required || ''}
+                        onChange={(e) => handleInputChange('license_required', e.target.value)}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="">Select license type</option>
+                        <option value="none">No license required</option>
+                        <option value="car">Car license</option>
+                        <option value="motorcycle">Motorcycle license</option>
+                        <option value="boat">Boat license</option>
+                        <option value="commercial">Commercial license</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="booking_notice_hours" className="block text-sm font-medium text-gray-700">
+                        Booking Notice (hours)
+                      </label>
+                      <input
+                        type="number"
+                        id="booking_notice_hours"
+                        value={formData.booking_notice_hours || ''}
+                        onChange={(e) => handleInputChange('booking_notice_hours', parseInt(e.target.value) || undefined)}
+                        min="0"
+                        placeholder="e.g., 24"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Vehicle Features
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.air_conditioning || false}
+                          onChange={(e) => handleInputChange('air_conditioning', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Air Conditioning
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.gps_tracking || false}
+                          onChange={(e) => handleInputChange('gps_tracking', e.target.checked)}
+                          className="mr-2"
+                        />
+                        GPS Tracking
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.wifi_available || false}
+                          onChange={(e) => handleInputChange('wifi_available', e.target.checked)}
+                          className="mr-2"
+                        />
+                        WiFi Available
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.usb_charging || false}
+                          onChange={(e) => handleInputChange('usb_charging', e.target.checked)}
+                          className="mr-2"
+                        />
+                        USB Charging
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.child_seat || false}
+                          onChange={(e) => handleInputChange('child_seat', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Child Seat Available
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.roof_rack || false}
+                          onChange={(e) => handleInputChange('roof_rack', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Roof Rack
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.towing_capacity || false}
+                          onChange={(e) => handleInputChange('towing_capacity', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Towing Capacity
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.four_wheel_drive || false}
+                          onChange={(e) => handleInputChange('four_wheel_drive', e.target.checked)}
+                          className="mr-2"
+                        />
+                        4WD
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.automatic_transmission || false}
+                          onChange={(e) => handleInputChange('automatic_transmission', e.target.checked)}
+                          className="mr-2"
+                        />
+                        Automatic Transmission
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label htmlFor="pickup_locations" className="block text-sm font-medium text-gray-700">
+                      Pickup Locations
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={arrayInputs.pickup_locations}
+                        onChange={(e) => setArrayInputs(prev => ({ ...prev, pickup_locations: e.target.value }))}
+                        placeholder="e.g., Entebbe Airport, Kampala City Center"
+                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('pickup_locations', arrayInputs.pickup_locations))}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addToArray('pickup_locations', arrayInputs.pickup_locations)}
+                        className="px-3 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(formData.pickup_locations || []).map((location, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                          {location}
+                          <button
+                            type="button"
+                            onClick={() => removeFromArray('pickup_locations', idx)}
+                            className="ml-1 text-blue-600 hover:text-blue-800"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label htmlFor="dropoff_locations" className="block text-sm font-medium text-gray-700">
+                      Drop-off Locations
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={arrayInputs.dropoff_locations}
+                        onChange={(e) => setArrayInputs(prev => ({ ...prev, dropoff_locations: e.target.value }))}
+                        placeholder="e.g., Queen Elizabeth National Park, Bwindi Forest"
+                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('dropoff_locations', arrayInputs.dropoff_locations))}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addToArray('dropoff_locations', arrayInputs.dropoff_locations)}
+                        className="px-3 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(formData.dropoff_locations || []).map((location, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                          {location}
+                          <button
+                            type="button"
+                            onClick={() => removeFromArray('dropoff_locations', idx)}
+                            className="ml-1 text-green-600 hover:text-green-800"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label htmlFor="route_description" className="block text-sm font-medium text-gray-700">
+                      Route Description
+                    </label>
+                    <textarea
+                      id="route_description"
+                      value={formData.route_description || ''}
+                      onChange={(e) => handleInputChange('route_description', e.target.value)}
+                      rows={3}
+                      placeholder="Describe the route, stops, and any notable points along the way"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label htmlFor="fuel_included" className="block text-sm font-medium text-gray-700">
+                        Fuel Included
+                      </label>
+                      <select
+                        id="fuel_included"
+                        value={formData.fuel_included ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('fuel_included', e.target.value === 'yes')}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="no">No - Client pays for fuel</option>
+                        <option value="yes">Yes - Fuel included in price</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="tolls_included" className="block text-sm font-medium text-gray-700">
+                        Tolls Included
+                      </label>
+                      <select
+                        id="tolls_included"
+                        value={formData.tolls_included ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('tolls_included', e.target.value === 'yes')}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="no">No - Client pays tolls</option>
+                        <option value="yes">Yes - Tolls included in price</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label htmlFor="insurance_included" className="block text-sm font-medium text-gray-700">
+                        Insurance Included
+                      </label>
+                      <select
+                        id="insurance_included"
+                        value={formData.insurance_included ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('insurance_included', e.target.value === 'yes')}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="no">No - Client provides insurance</option>
+                        <option value="yes">Yes - Insurance included</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="driver_included" className="block text-sm font-medium text-gray-700">
+                        Driver Included
+                      </label>
+                      <select
+                        id="driver_included"
+                        value={formData.driver_included ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('driver_included', e.target.value === 'yes')}
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      >
+                        <option value="no">Self-drive available</option>
+                        <option value="yes">Driver included</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="transport_terms" className="block text-sm font-medium text-gray-700">
+                      Additional Terms & Conditions
+                    </label>
+                    <textarea
+                      id="transport_terms"
+                      value={formData.transport_terms || ''}
+                      onChange={(e) => handleInputChange('transport_terms', e.target.value)}
+                      rows={3}
+                      placeholder="Any additional terms, restrictions, or requirements for transport services"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </form>
           </div>
 

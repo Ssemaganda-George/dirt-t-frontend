@@ -45,15 +45,52 @@ interface ServiceDetail {
   check_in_time?: string
   check_out_time?: string
   facilities?: string[]
+  breakfast_included?: boolean
+  wifi_available?: boolean
+  parking_available?: boolean
+  pet_friendly?: boolean
+  generator_backup?: boolean
+  smoking_allowed?: boolean
+  children_allowed?: boolean
+  disabled_access?: boolean
+  concierge_service?: boolean
+  total_rooms?: number
+  minimum_stay?: number
+  maximum_guests?: number
+  hotel_policies?: string[]
   difficulty_level?: string
   minimum_age?: number
   languages_offered?: string[]
   included_items?: string[]
+  excluded_items?: string[]
+  itinerary?: string[]
+  meeting_point?: string
+  end_point?: string
+  transportation_included?: boolean
+  meals_included?: string[]
+  guide_included?: boolean
+  accommodation_included?: boolean
   vehicle_type?: string
   vehicle_capacity?: number
   driver_included?: boolean
   air_conditioning?: boolean
   pickup_locations?: string[]
+  dropoff_locations?: string[]
+  route_description?: string
+  license_required?: string
+  booking_notice_hours?: number
+  gps_tracking?: boolean
+  fuel_included?: boolean
+  tolls_included?: boolean
+  insurance_included?: boolean
+  usb_charging?: boolean
+  child_seat?: boolean
+  roof_rack?: boolean
+  towing_capacity?: boolean
+  four_wheel_drive?: boolean
+  automatic_transmission?: boolean
+  reservations_required?: boolean
+  transport_terms?: string
   airline?: string
   flight_number?: string
   departure_city?: string
@@ -62,10 +99,20 @@ interface ServiceDetail {
   cuisine_type?: string
   average_cost_per_person?: number
   outdoor_seating?: boolean
-  reservations_required?: boolean
+  menu_items?: string[]
+  dietary_options?: string[]
+  opening_hours?: any
+  live_music?: boolean
+  private_dining?: boolean
+  alcohol_served?: boolean
   activity_type?: string
   skill_level_required?: string
   equipment_provided?: string[]
+  languages_spoken?: string[]
+  specialties?: string[]
+  certifications?: string[]
+  years_experience?: number
+  service_area?: string
 }
 
 export default function ServiceDetail() {
@@ -74,6 +121,10 @@ export default function ServiceDetail() {
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
 
   useEffect(() => {
@@ -136,11 +187,27 @@ export default function ServiceDetail() {
   }
 
   const handleBooking = () => {
-    if (!service || !selectedDate) return
+    if (!service) return
+    
+    // For transport services, check for date range
+    if (service.service_categories?.name?.toLowerCase() === 'transport') {
+      if (!startDate || !endDate) return
+    } else {
+      if (!selectedDate) return
+    }
     
     const bookingCategory = mapCategoryToBookingFlow(service.service_categories.name)
+    
+    // For transport services, include date range and time as URL parameters
+    let bookingUrl = `/service/${id}/book/${bookingCategory}`
+    if (service.service_categories?.name?.toLowerCase() === 'transport') {
+      bookingUrl += `?startDate=${startDate}&endDate=${endDate}&startTime=${startTime}&endTime=${endTime}`
+    } else {
+      bookingUrl += `?date=${selectedDate}&guests=${guests}`
+    }
+    
     // Use React Router navigation
-    navigate(`/service/${id}/book/${bookingCategory}`)
+    navigate(bookingUrl)
   }
 
   const handleInquiry = () => {
@@ -194,6 +261,85 @@ export default function ServiceDetail() {
                   <span className="text-sm text-gray-600">{service.star_rating} Star Hotel</span>
                 </div>
               )}
+              {service.total_rooms && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Total Rooms:</span> {service.total_rooms}
+                </div>
+              )}
+              {service.minimum_stay && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Minimum Stay:</span> {service.minimum_stay} nights
+                </div>
+              )}
+              {service.maximum_guests && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Max Guests per Room:</span> {service.maximum_guests}
+                </div>
+              )}
+            </div>
+
+            {/* Hotel Amenities */}
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Hotel Amenities</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {service.breakfast_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Breakfast Included</span>
+                  </div>
+                )}
+                {service.wifi_available && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Free WiFi</span>
+                  </div>
+                )}
+                {service.parking_available && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Parking Available</span>
+                  </div>
+                )}
+                {service.pet_friendly && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Pet Friendly</span>
+                  </div>
+                )}
+                {service.generator_backup && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Generator Backup</span>
+                  </div>
+                )}
+                {service.smoking_allowed && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Smoking Allowed</span>
+                  </div>
+                )}
+                {service.children_allowed && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Children Allowed</span>
+                  </div>
+                )}
+                {service.disabled_access && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Disabled Access</span>
+                  </div>
+                )}
+                {service.concierge_service && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Concierge Service</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.room_types && service.room_types.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700">Room Types:</span>
@@ -206,21 +352,11 @@ export default function ServiceDetail() {
                   </div>
                 </div>
               )}
-              {service.check_in_time && (
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Check-in:</span> {service.check_in_time}
-                </div>
-              )}
-              {service.check_out_time && (
-                <div className="text-sm text-gray-600">
-                  <span className="font-medium">Check-out:</span> {service.check_out_time}
-                </div>
-              )}
               {service.facilities && service.facilities.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700">Facilities:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {service.facilities.slice(0, 4).map((facility, index) => (
+                    {service.facilities.map((facility, index) => (
                       <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
                         {facility}
                       </span>
@@ -228,7 +364,28 @@ export default function ServiceDetail() {
                   </div>
                 </div>
               )}
+              {service.check_in_time && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Check-in Time:</span> {service.check_in_time}
+                </div>
+              )}
+              {service.check_out_time && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Check-out Time:</span> {service.check_out_time}
+                </div>
+              )}
             </div>
+
+            {service.hotel_policies && service.hotel_policies.length > 0 && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Hotel Policies:</span>
+                <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
+                  {service.hotel_policies.map((policy, index) => (
+                    <li key={index}>{policy}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )
 
@@ -254,6 +411,50 @@ export default function ServiceDetail() {
                   <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
                 </div>
               )}
+              {service.meeting_point && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Meeting Point:</span> {service.meeting_point}
+                </div>
+              )}
+              {service.end_point && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">End Point:</span> {service.end_point}
+                </div>
+              )}
+            </div>
+
+            {/* Tour Inclusions */}
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Tour Inclusions</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {service.transportation_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Transportation</span>
+                  </div>
+                )}
+                {service.guide_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Professional Guide</span>
+                  </div>
+                )}
+                {service.accommodation_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Accommodation</span>
+                  </div>
+                )}
+                {service.meals_included && service.meals_included.length > 0 && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Meals: {service.meals_included.join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.languages_offered && service.languages_offered.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700">Languages:</span>
@@ -270,10 +471,30 @@ export default function ServiceDetail() {
                 <div>
                   <span className="text-sm font-medium text-gray-700">What's Included:</span>
                   <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
-                    {service.included_items.slice(0, 3).map((item, index) => (
+                    {service.included_items.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+              {service.excluded_items && service.excluded_items.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">What's Not Included:</span>
+                  <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
+                    {service.excluded_items.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {service.itinerary && service.itinerary.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Itinerary:</span>
+                  <ol className="text-sm text-gray-600 mt-1 list-decimal list-inside">
+                    {service.itinerary.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ol>
                 </div>
               )}
             </div>
@@ -295,28 +516,145 @@ export default function ServiceDetail() {
                   <span className="font-medium">Capacity:</span> {service.vehicle_capacity} passengers
                 </div>
               )}
-              {service.driver_included && (
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                  <span className="text-sm text-gray-600">Professional Driver Included</span>
+              {service.license_required && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">License Required:</span> {service.license_required}
                 </div>
               )}
-              {service.air_conditioning && (
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                  <span className="text-sm text-gray-600">Air Conditioning</span>
+              {service.booking_notice_hours && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Booking Notice:</span> {service.booking_notice_hours} hours
                 </div>
               )}
+            </div>
+
+            {/* Vehicle Features */}
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Vehicle Features</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {service.air_conditioning && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Air Conditioning</span>
+                  </div>
+                )}
+                {service.gps_tracking && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">GPS Tracking</span>
+                  </div>
+                )}
+                {service.usb_charging && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">USB Charging</span>
+                  </div>
+                )}
+                {service.child_seat && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Child Seat</span>
+                  </div>
+                )}
+                {service.roof_rack && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Roof Rack</span>
+                  </div>
+                )}
+                {service.towing_capacity && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Towing Capacity</span>
+                  </div>
+                )}
+                {service.four_wheel_drive && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">4WD</span>
+                  </div>
+                )}
+                {service.automatic_transmission && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Automatic</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Service Inclusions */}
+            <div className="mt-4">
+              <h4 className="text-md font-medium text-gray-900 mb-2">Service Inclusions</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {service.driver_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Professional Driver</span>
+                  </div>
+                )}
+                {service.fuel_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Fuel Included</span>
+                  </div>
+                )}
+                {service.tolls_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Tolls Included</span>
+                  </div>
+                )}
+                {service.insurance_included && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Insurance Included</span>
+                  </div>
+                )}
+                {service.reservations_required && (
+                  <div className="flex items-center">
+                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                    <span className="text-sm text-gray-600">Reservations Required</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Locations */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.pickup_locations && service.pickup_locations.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700">Pickup Locations:</span>
                   <div className="text-sm text-gray-600 mt-1">
-                    {service.pickup_locations.slice(0, 2).join(', ')}
-                    {service.pickup_locations.length > 2 && '...'}
+                    {service.pickup_locations.join(', ')}
+                  </div>
+                </div>
+              )}
+              {service.dropoff_locations && service.dropoff_locations.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Drop-off Locations:</span>
+                  <div className="text-sm text-gray-600 mt-1">
+                    {service.dropoff_locations.join(', ')}
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Route Description */}
+            {service.route_description && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Route Description:</span>
+                <p className="text-sm text-gray-600 mt-1">{service.route_description}</p>
+              </div>
+            )}
+
+            {/* Additional Terms */}
+            {service.transport_terms && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Additional Terms & Conditions:</span>
+                <p className="text-sm text-gray-600 mt-1">{service.transport_terms}</p>
+              </div>
+            )}
           </div>
         )
 
@@ -370,6 +708,24 @@ export default function ServiceDetail() {
                   <span className="text-sm text-gray-600">Outdoor Seating Available</span>
                 </div>
               )}
+              {service.live_music && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Live Music</span>
+                </div>
+              )}
+              {service.private_dining && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Private Dining Available</span>
+                </div>
+              )}
+              {service.alcohol_served && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-600">Alcohol Served</span>
+                </div>
+              )}
               {service.reservations_required && (
                 <div className="flex items-center">
                   <CheckCircle className="h-4 w-4 text-blue-500 mr-2" />
@@ -377,6 +733,51 @@ export default function ServiceDetail() {
                 </div>
               )}
             </div>
+
+            {service.menu_items && service.menu_items.length > 0 && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Popular Menu Items:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {service.menu_items.map((item, index) => (
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {service.dietary_options && service.dietary_options.length > 0 && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Dietary Options:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {service.dietary_options.map((option, index) => (
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      {option}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {service.opening_hours && (
+              <div className="mt-4">
+                <span className="text-sm font-medium text-gray-700">Opening Hours:</span>
+                <div className="text-sm text-gray-600 mt-1">
+                  {typeof service.opening_hours === 'object' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                      {Object.entries(service.opening_hours).map(([day, hours]) => (
+                        <div key={day} className="capitalize">
+                          <span className="font-medium">{day}:</span> {String(hours)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span>{service.opening_hours}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )
 
@@ -400,6 +801,16 @@ export default function ServiceDetail() {
                   <span className="font-medium">Duration:</span> {service.duration_hours} hours
                 </div>
               )}
+              {service.years_experience && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Years of Experience:</span> {service.years_experience}
+                </div>
+              )}
+              {service.service_area && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Service Area:</span> {service.service_area}
+                </div>
+              )}
               {service.equipment_provided && service.equipment_provided.length > 0 && (
                 <div>
                   <span className="text-sm font-medium text-gray-700">Equipment Provided:</span>
@@ -407,6 +818,42 @@ export default function ServiceDetail() {
                     {service.equipment_provided.map((equipment, index) => (
                       <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
                         {equipment}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.languages_spoken && service.languages_spoken.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Languages Spoken:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.languages_spoken.map((language, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        {language}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.specialties && service.specialties.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Specialties:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.specialties.map((specialty, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.certifications && service.certifications.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Certifications:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.certifications.map((certification, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        {certification}
                       </span>
                     ))}
                   </div>
@@ -445,7 +892,23 @@ export default function ServiceDetail() {
     )
   }
 
-  const totalPrice = service.price * guests
+  // Calculate number of days for transport services based on actual time difference
+  const calculateDays = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
+    if (!startDate || !endDate) return 1
+    
+    const startDateTime = new Date(`${startDate}T${startTime}`)
+    const endDateTime = new Date(`${endDate}T${endTime}`)
+    
+    const diffTime = Math.abs(endDateTime.getTime() - startDateTime.getTime())
+    const diffHours = diffTime / (1000 * 60 * 60)
+    
+    // Round up to the next day if more than 24 hours
+    return Math.ceil(diffHours / 24) || 1
+  }
+
+  const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
+    ? service.price * calculateDays(startDate, startTime, endDate, endTime)
+    : service.price * guests
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
   return (
@@ -511,7 +974,7 @@ export default function ServiceDetail() {
 
               {/* Service Details */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {service.duration_hours && (
+                {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 text-gray-400 mr-2" />
                     <span className="text-sm text-gray-600">
@@ -598,49 +1061,108 @@ export default function ServiceDetail() {
                 <div className="text-3xl font-bold text-gray-900">
                   {formatCurrency(service.price, service.currency)}
                 </div>
-                <div className="text-sm text-gray-500">per person</div>
+                <div className="text-sm text-gray-500">
+                  {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
+                </div>
               </div>
 
               <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select date
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <input
-                      type="date"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
+                {service.service_categories?.name?.toLowerCase() === 'transport' ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Pick-up date & time
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                          <input
+                            type="date"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <input
+                          type="time"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Drop-off date & time
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                          <input
+                            type="date"
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            min={startDate || new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <input
+                          type="time"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select date
+                    </label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <input
+                        type="date"
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of guests
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <select
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={guests}
-                      onChange={(e) => setGuests(Number(e.target.value))}
-                    >
-                      {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
-                      ))}
-                    </select>
+                {service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of guests
+                    </label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <select
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={guests}
+                        onChange={(e) => setGuests(Number(e.target.value))}
+                      >
+                        {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="border-t pt-4 mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">
-                    {formatCurrency(service.price, service.currency)} × {guests} guest{guests > 1 ? 's' : ''}
+                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
+                      `${formatCurrency(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                    ) : (
+                      `${formatCurrency(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`
+                    )}
                   </span>
                   <span className="font-medium">
                     {formatCurrency(totalPrice, service.currency)}
@@ -655,7 +1177,11 @@ export default function ServiceDetail() {
               <div className="flex space-x-3">
                 <button
                   onClick={handleBooking}
-                  disabled={!selectedDate}
+                  disabled={
+                    service?.service_categories?.name?.toLowerCase() === 'transport'
+                      ? !startDate || !endDate
+                      : !selectedDate
+                  }
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
                 >
                   {service ? getBookingButtonText(service.service_categories.name) : 'Check Availability'}

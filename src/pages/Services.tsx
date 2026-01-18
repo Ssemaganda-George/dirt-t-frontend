@@ -290,6 +290,11 @@ interface ServiceCardProps {
 function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
   
+  // Provide fallback image if no images exist
+  const displayImage = service.images && service.images.length > 0 
+    ? service.images[0] 
+    : 'https://via.placeholder.com/400x300/f3f4f6/9ca3af?text=No+Image'
+  
   return (
     <div 
       onClick={onClick}
@@ -299,7 +304,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
         {/* Image Container */}
         <div className="relative">
           <img
-            src={service.images[0]}
+            src={displayImage}
             alt={service.title}
             className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500"
           />
@@ -362,7 +367,9 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
             <span className="text-xl font-bold text-gray-900">
               {formatCurrency(service.price, service.currency)}
             </span>
-            <span className="text-xs text-gray-500">per person</span>
+            <span className="text-xs text-gray-500">
+              {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
+            </span>
           </div>
         </div>
       </div>
@@ -378,6 +385,11 @@ interface ServiceDetailProps {
 
 function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) {
   const [isSaved, setIsSaved] = useState(false)
+
+  // Provide fallback image if no images exist
+  const displayImage = service.images && service.images.length > 0 
+    ? service.images[0] 
+    : 'https://via.placeholder.com/800x400/f3f4f6/9ca3af?text=No+Image'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -399,7 +411,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
       {/* Hero Image */}
       <div className="relative h-96 bg-gray-900">
         <img
-          src={service.images[0]}
+          src={displayImage}
           alt={service.title}
           className="w-full h-full object-cover opacity-90"
         />
@@ -509,7 +521,9 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
                     {formatCurrency(service.price, service.currency)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">per person</p>
+                <p className="text-sm text-gray-600">
+                  {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
+                </p>
               </div>
 
               <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-semibold text-lg transition-colors mb-4">

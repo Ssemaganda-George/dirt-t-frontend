@@ -612,38 +612,78 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   booking_requirements?: string
   cancellation_policy?: string
 }>): Promise<any> {
-  // Separate basic fields from additional fields
-  const basicFields = {
-    title: updates.title,
-    description: updates.description,
-    price: updates.price,
-    currency: updates.currency,
-    images: updates.images,
-    location: updates.location,
-    duration_hours: updates.duration_hours,
-    max_capacity: updates.max_capacity,
-    amenities: updates.amenities,
-    status: updates.status,
-    category_id: updates.category_id,
-    updated_at: new Date().toISOString()
-  }
+  // Whitelist of columns that actually exist in the database
+  const validColumns = new Set([
+    'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours',
+    'max_capacity', 'amenities', 'status', 'category_id', 'updated_at',
+    // Enhanced general fields
+    'duration_days', 'group_size_min', 'group_size_max', 'best_time_to_visit', 'what_to_bring',
+    'age_restrictions', 'health_requirements', 'accessibility_features', 'sustainability_certified', 'eco_friendly',
+    // Hotel fields (note: check_in_time and check_out_time don't exist, but check_in_process does)
+    'total_rooms', 'room_amenities', 'nearby_attractions', 'parking_available', 'pet_friendly',
+    'breakfast_included', 'star_rating', 'property_type', 'facilities', 'wifi_available',
+    'minimum_stay', 'maximum_guests', 'common_facilities', 'generator_backup', 'smoking_allowed',
+    'children_allowed', 'disabled_access', 'concierge_service', 'house_rules', 'local_recommendations',
+    'check_in_process',
+    // Tour fields
+    'itinerary', 'included_items', 'excluded_items', 'difficulty_level', 'minimum_age', 'languages_offered',
+    'tour_highlights', 'meeting_point', 'end_point', 'transportation_included', 'meals_included',
+    'guide_included', 'accommodation_included',
+    // Transport fields
+    'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
+    'license_required', 'booking_notice_hours', 'usb_charging', 'child_seat', 'roof_rack',
+    'towing_capacity', 'four_wheel_drive', 'automatic_transmission', 'transport_terms',
+    'driver_included', 'air_conditioning', 'gps_tracking', 'fuel_included', 'tolls_included',
+    'insurance_included', 'reservations_required',
+    // Restaurant fields
+    'cuisine_type', 'opening_hours', 'menu_items', 'dietary_options', 'average_cost_per_person',
+    'price_range', 'advance_booking_days', 'dress_code', 'menu_highlights', 'restaurant_atmosphere',
+    'restaurant_notes', 'outdoor_seating', 'live_music', 'private_dining', 'alcohol_served',
+    // Guide fields
+    'languages_spoken', 'specialties', 'certifications', 'years_experience', 'service_area',
+    'first_aid_certified', 'emergency_contact',
+    // Activity fields
+    'activity_type', 'skill_level_required', 'equipment_provided', 'safety_briefing_required',
+    'weather_dependent', 'seasonal_availability',
+    // Equipment rental fields
+    'rental_items', 'rental_duration', 'deposit_required', 'insurance_required', 'delivery_available',
+    'maintenance_included', 'replacement_value', 'delivery_radius', 'usage_instructions',
+    'maintenance_requirements', 'training_provided', 'cleaning_included', 'repair_service',
+    'equipment_condition', 'rental_terms',
+    // Event fields
+    'event_type', 'event_date', 'event_duration_hours', 'max_participants', 'materials_included',
+    'prerequisites', 'learning_outcomes', 'instructor_credentials', 'certificates_provided',
+    'refreshments_included', 'take_home_materials', 'photography_allowed', 'recording_allowed',
+    'group_discounts', 'event_status', 'event_datetime', 'registration_deadline', 'ticket_price',
+    'early_bird_price', 'ticket_purchase_link', 'event_location', 'event_highlights',
+    'event_inclusions', 'event_prerequisites', 'event_description', 'event_cancellation_policy',
+    // Travel agency fields
+    'services_offered', 'destinations_covered', 'booking_fee', 'customization_available',
+    'emergency_support', 'website_url', 'social_media', 'emergency_phone', 'booking_deadline_hours',
+    'payment_methods', 'refund_policy', 'iata_number', 'specializations', 'success_stories',
+    'insurance_brokerage', 'visa_assistance', 'group_bookings', 'corporate_accounts', 'agency_description',
+    // Flight fields
+    'flight_number', 'airline', 'aircraft_type', 'departure_city', 'arrival_city', 'departure_airport',
+    'arrival_airport', 'departure_time', 'arrival_time', 'duration_minutes', 'economy_price',
+    'business_price', 'first_class_price', 'total_seats', 'available_seats', 'flight_class',
+    'flight_status', 'baggage_allowance', 'flight_amenities', 'flexible_booking', 'lounge_access',
+    'priority_boarding', 'flight_meals_included', 'flight_notes',
+    // General metadata
+    'tags', 'contact_info', 'booking_requirements', 'cancellation_policy'
+  ]);
 
-  // Filter out undefined values from basic fields
-  const filteredBasicFields: any = {}
-  Object.keys(basicFields).forEach(key => {
-    if (basicFields[key as keyof typeof basicFields] !== undefined) {
-      filteredBasicFields[key] = basicFields[key as keyof typeof basicFields]
-    }
-  })
-
-  // Extract additional fields
-  const additionalFields: any = {}
-  const basicKeys = Object.keys(basicFields)
+  // Filter updates to only include valid columns
+  const filteredUpdates: any = {};
   Object.keys(updates).forEach(key => {
-    if (!basicKeys.includes(key) && updates[key as keyof typeof updates] !== undefined) {
-      additionalFields[key] = updates[key as keyof typeof updates]
+    if (validColumns.has(key) && updates[key as keyof typeof updates] !== undefined) {
+      filteredUpdates[key] = updates[key as keyof typeof updates];
     }
-  })
+  });
+
+  // Always include updated_at
+  filteredUpdates.updated_at = new Date().toISOString();
+
+  console.log('Valid updates:', filteredUpdates);
 
   try {
     // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
@@ -663,10 +703,11 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       }
     }
 
-    // First, update the basic fields
+    console.log('All updates being sent:', filteredUpdates)
+
     const { data, error } = await supabase
       .from('services')
-      .update(filteredBasicFields)
+      .update(filteredUpdates)
       .eq('id', serviceId)
       .select(`
         *,
@@ -686,51 +727,9 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       .single()
 
     if (error) {
-      console.error('Error updating basic service fields:', error)
+      console.error('Error updating service:', error)
+      console.error('Update data that failed:', filteredUpdates)
       throw error
-    }
-
-    // If there are additional fields and the basic update succeeded,
-    // try to update the additional fields (this will work if the migration has been run)
-    if (Object.keys(additionalFields).length > 0) {
-      try {
-        await supabase
-          .from('services')
-          .update({
-            ...additionalFields,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', serviceId)
-
-        // Re-fetch the service with updated data
-        const { data: updatedData, error: updateError } = await supabase
-          .from('services')
-          .select(`
-            *,
-            vendors (
-              id,
-              business_name,
-              business_description,
-              business_email,
-              status
-            ),
-            service_categories (
-              id,
-              name,
-              icon
-            )
-          `)
-          .eq('id', serviceId)
-          .single()
-
-        if (!updateError) {
-          return updatedData
-        }
-      } catch (additionalError) {
-        // If updating additional fields fails, just return the basic service data
-        // This allows service updates to work even without the comprehensive migration
-        console.warn('Failed to update additional service fields:', additionalError)
-      }
     }
 
     return data

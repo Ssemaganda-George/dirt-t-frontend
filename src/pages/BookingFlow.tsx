@@ -29,6 +29,12 @@ interface ServiceDetail {
   service_categories: {
     name: string
   }
+  vehicle_type?: string
+  vehicle_capacity?: number
+  driver_included?: boolean
+  fuel_included?: boolean
+  pickup_locations?: string[]
+  dropoff_locations?: string[]
 }
 
 export default function BookingFlow() {

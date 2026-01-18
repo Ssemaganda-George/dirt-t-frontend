@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Users, CreditCard, CheckCircle, Car } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
@@ -26,6 +26,9 @@ interface ServiceDetail {
     name: string
   }
   vehicle_type?: string
+  vehicle_capacity?: number
+  driver_included?: boolean
+  fuel_included?: boolean
   pickup_locations?: string[]
   dropoff_locations?: string[]
 }
@@ -36,11 +39,17 @@ interface TransportBookingProps {
 
 export default function TransportBooking({ service }: TransportBookingProps) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  
+  // Get date parameters from URL
+  const startDate = searchParams.get('startDate') || ''
+  const endDate = searchParams.get('endDate') || ''
+  
   const { addToCart } = useCart()
   const [currentStep, setCurrentStep] = useState(1)
   const [cartSaved, setCartSaved] = useState(false)
   const [bookingData, setBookingData] = useState({
-    date: '',
+    date: startDate, // Use startDate as the main date field
     pickupLocation: service.pickup_locations?.[0] || '',
     dropoffLocation: service.dropoff_locations?.[0] || '',
     passengers: 1,
@@ -49,7 +58,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     contactName: '',
     contactEmail: '',
     contactPhone: '',
-    paymentMethod: 'card'
+    paymentMethod: 'card',
+    startDate: startDate,
+    endDate: endDate,
+    startTime: '09:00',
+    endTime: '17:00',
+    driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
 
   const steps = [
@@ -59,8 +73,52 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     { id: 4, title: 'Confirmation', icon: CheckCircle }
   ]
 
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        // Validate trip details
+        if (!bookingData.startDate || !bookingData.endDate) {
+          alert('Please select both start and end dates.')
+          return false
+        }
+        if (bookingData.driverOption === 'with-driver') {
+          if (!bookingData.pickupLocation || !bookingData.dropoffLocation) {
+            alert('Please enter both pickup and drop-off locations when booking with driver.')
+            return false
+          }
+        }
+        if (bookingData.passengers < 1 || bookingData.passengers > (service.vehicle_capacity || service.max_capacity)) {
+          alert(`Number of passengers must be between 1 and ${service.vehicle_capacity || service.max_capacity}.`)
+          return false
+        }
+        break
+      case 2:
+        // Validate contact details
+        if (!bookingData.contactName.trim()) {
+          alert('Please enter your full name.')
+          return false
+        }
+        if (!bookingData.contactEmail.trim() || !bookingData.contactEmail.includes('@')) {
+          alert('Please enter a valid email address.')
+          return false
+        }
+        if (!bookingData.contactPhone.trim()) {
+          alert('Please enter your phone number.')
+          return false
+        }
+        break
+      default:
+        break
+    }
+    return true
+  }
+
   const handleNext = () => {
     if (currentStep < steps.length) {
+      // Validate current step before proceeding
+      if (!validateCurrentStep()) {
+        return
+      }
       setCurrentStep(currentStep + 1)
     }
   }
@@ -77,7 +135,28 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     setBookingData(prev => ({ ...prev, [field]: value }))
   }
 
-  const totalPrice = bookingData.returnTrip ? service.price * 2 : service.price
+  // Calculate number of days for transport services based on actual time difference
+  const calculateDays = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
+    if (!startDate || !endDate) return 1
+    
+    const startDateTime = new Date(`${startDate}T${startTime}`)
+    const endDateTime = new Date(`${endDate}T${endTime}`)
+    
+    const diffTime = Math.abs(endDateTime.getTime() - startDateTime.getTime())
+    const diffHours = diffTime / (1000 * 60 * 60)
+    
+    // Round up to the next day if more than 24 hours
+    return Math.ceil(diffHours / 24) || 1
+  }
+
+  const totalPrice = (() => {
+    const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+    const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0 // 30% extra for driver only if not already included
+    return basePrice + driverCost
+  })()
+
+  const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+  const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
 
   const handleSaveToCart = () => {
     addToCart({
@@ -86,10 +165,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       bookingData: {
         ...bookingData,
         guests: bookingData.passengers, // Map passengers to guests
-        checkInDate: '',
-        checkOutDate: '',
+        checkInDate: bookingData.startDate,
+        checkOutDate: bookingData.endDate,
         rooms: 1,
-        roomType: ''
+        roomType: '',
+        date: bookingData.startDate // Keep date for compatibility
       },
       category: 'transport',
       totalPrice,
@@ -108,15 +188,43 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Travel Date
+                    Pick-up Date & Time
                   </label>
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={bookingData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={bookingData.startDate}
+                      onChange={(e) => handleInputChange('startDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                    <input
+                      type="time"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={bookingData.startTime || '09:00'}
+                      onChange={(e) => handleInputChange('startTime', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Drop-off Date & Time
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={bookingData.endDate}
+                      onChange={(e) => handleInputChange('endDate', e.target.value)}
+                      min={bookingData.startDate || new Date().toISOString().split('T')[0]}
+                    />
+                    <input
+                      type="time"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={bookingData.endTime || '17:00'}
+                      onChange={(e) => handleInputChange('endTime', e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -132,43 +240,76 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Driver Option
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
+                    onChange={(e) => handleInputChange('driverOption', e.target.value)}
+                  >
+                    {!service.driver_included && (
+                      <option value="self-drive">Self-drive</option>
+                    )}
+                    <option value="with-driver">
+                      {service.driver_included ? 'With driver (included)' : 'With driver (+30% extra cost)'}
+                    </option>
+                  </select>
+                  {service.driver_included === false && (
+                    <p className="text-xs text-gray-500 mt-1">Self-drive available</p>
+                  )}
+                  {service.driver_included === true && (
+                    <p className="text-xs text-amber-600 mt-1">Driver included in base price</p>
+                  )}
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-medium text-blue-900 mb-1">Fuel Policy</h4>
+                    {service.fuel_included ? (
+                      <p className="text-xs text-blue-700">Fuel is included in your rental - no extra charges for fuel.</p>
+                    ) : (
+                      <div className="text-xs text-blue-700">
+                        {bookingData.driverOption === 'self-drive' ? (
+                          <p>Fuel costs are your responsibility. You'll be charged for fuel used during your rental.</p>
+                        ) : (
+                          <p>Fuel costs are your responsibility. The driver will coordinate fuel stops during your trip.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Location
-                </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.pickupLocation}
-                  onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
-                >
-                  {service.pickup_locations?.map((location, index) => (
-                    <option key={index} value={location}>{location}</option>
-                  )) || (
-                    <option value="">Select pickup location</option>
-                  )}
-                </select>
+            {bookingData.driverOption === 'with-driver' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pickup Location *
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={bookingData.pickupLocation}
+                    onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
+                    placeholder="Enter pickup location"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Drop-off Location *
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={bookingData.dropoffLocation}
+                    onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
+                    placeholder="Enter drop-off location"
+                    required
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Drop-off Location
-                </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.dropoffLocation}
-                  onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
-                >
-                  {service.dropoff_locations?.map((location, index) => (
-                    <option key={index} value={location}>{location}</option>
-                  )) || (
-                    <option value="">Select drop-off location</option>
-                  )}
-                </select>
-              </div>
-            </div>
+            )}
 
             <div>
               <label className="flex items-center">
@@ -199,8 +340,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <h4 className="font-semibold text-blue-900 mb-2">Vehicle Information</h4>
               <div className="text-sm text-blue-800">
                 <p>• Vehicle: {service.vehicle_type || 'Standard vehicle'}</p>
-                <p>• Capacity: Up to {service.max_capacity} passengers</p>
-                <p>• Duration: {service.duration_hours} hours</p>
+                <p>• Capacity: {service.vehicle_capacity ? `Up to ${service.vehicle_capacity} passengers` : service.max_capacity ? `Up to ${service.max_capacity} passengers` : 'Capacity not specified'}</p>
+                <p>• Daily rental service</p>
               </div>
             </div>
           </div>
@@ -257,14 +398,51 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-600">Transportation: {service.title}</span>
-                <span className="font-medium">{formatCurrency(service.price, service.currency)} {bookingData.returnTrip ? '× 2' : ''}</span>
+                <span className="text-gray-600">Transportation: {service.title} ({calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days)</span>
+                <span className="font-medium">{formatCurrency(basePrice, service.currency)}</span>
               </div>
-              <div className="flex justify-between items-center text-lg font-bold">
+              {driverCost > 0 && (
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">Driver service (30% extra)</span>
+                  <span className="font-medium">{formatCurrency(driverCost, service.currency)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
                 <span>Total Amount</span>
                 <span>{formatCurrency(totalPrice, service.currency)}</span>
               </div>
             </div>
+            
+            {/* Fuel Responsibility Notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-amber-900 mb-2">Fuel Policy</h4>
+              {service.fuel_included ? (
+                <p className="text-sm text-amber-800">
+                  Fuel costs are included in your booking. No additional fuel charges will apply.
+                </p>
+              ) : (
+                <div className="text-sm text-amber-800">
+                  {bookingData.driverOption === 'self-drive' ? (
+                    <div>
+                      <p className="font-medium mb-1">Fuel costs are your responsibility</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>You'll be charged for fuel used during your rental</li>
+                        <li>Fuel costs will be calculated at current market rates</li>
+                      </ul>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-medium mb-1">Fuel costs are your responsibility</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>The driver will coordinate fuel stops during your trip</li>
+                        <li>You'll be responsible for all fuel costs incurred</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Payment Method
@@ -577,7 +755,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && (!bookingData.date || !bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                  (currentStep === 1 && (!bookingData.startDate || !bookingData.endDate || !bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"

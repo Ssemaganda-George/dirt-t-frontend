@@ -215,10 +215,8 @@ export default function VendorServices() {
       if (updates.amenities !== undefined) validUpdates.amenities = updates.amenities
       if (updates.category_id !== undefined) validUpdates.category_id = updates.category_id
 
-      // Hotel fields
+      // Hotel fields (note: check_in_time and check_out_time don't exist in database, use check_in_process instead)
       if (updates.room_types !== undefined) validUpdates.room_types = updates.room_types
-      if (updates.check_in_time !== undefined) validUpdates.check_in_time = updates.check_in_time
-      if (updates.check_out_time !== undefined) validUpdates.check_out_time = updates.check_out_time
       if (updates.star_rating !== undefined && updates.star_rating !== null && updates.star_rating >= 1 && updates.star_rating <= 5) {
         validUpdates.star_rating = updates.star_rating
       }
@@ -240,6 +238,22 @@ export default function VendorServices() {
       if (updates.pickup_locations !== undefined) validUpdates.pickup_locations = updates.pickup_locations
       if (updates.dropoff_locations !== undefined) validUpdates.dropoff_locations = updates.dropoff_locations
       if (updates.route_description !== undefined) validUpdates.route_description = updates.route_description
+      if (updates.license_required !== undefined) validUpdates.license_required = updates.license_required
+      if (updates.booking_notice_hours !== undefined) validUpdates.booking_notice_hours = updates.booking_notice_hours
+      if (updates.air_conditioning !== undefined) validUpdates.air_conditioning = updates.air_conditioning
+      if (updates.gps_tracking !== undefined) validUpdates.gps_tracking = updates.gps_tracking
+      if (updates.fuel_included !== undefined) validUpdates.fuel_included = updates.fuel_included
+      if (updates.tolls_included !== undefined) validUpdates.tolls_included = updates.tolls_included
+      if (updates.insurance_included !== undefined) validUpdates.insurance_included = updates.insurance_included
+      if (updates.driver_included !== undefined) validUpdates.driver_included = updates.driver_included
+      if (updates.usb_charging !== undefined) validUpdates.usb_charging = updates.usb_charging
+      if (updates.child_seat !== undefined) validUpdates.child_seat = updates.child_seat
+      if (updates.roof_rack !== undefined) validUpdates.roof_rack = updates.roof_rack
+      if (updates.towing_capacity !== undefined) validUpdates.towing_capacity = updates.towing_capacity
+      if (updates.four_wheel_drive !== undefined) validUpdates.four_wheel_drive = updates.four_wheel_drive
+      if (updates.automatic_transmission !== undefined) validUpdates.automatic_transmission = updates.automatic_transmission
+      if (updates.transport_terms !== undefined) validUpdates.transport_terms = updates.transport_terms
+      if (updates.reservations_required !== undefined) validUpdates.reservations_required = updates.reservations_required
 
       // Restaurant fields
       if (updates.cuisine_type !== undefined) validUpdates.cuisine_type = updates.cuisine_type
@@ -254,19 +268,6 @@ export default function VendorServices() {
       if (updates.certifications !== undefined) validUpdates.certifications = updates.certifications
       if (updates.years_experience !== undefined) validUpdates.years_experience = updates.years_experience
       if (updates.service_area !== undefined) validUpdates.service_area = updates.service_area
-
-      // Shop fields
-      if (updates.shop_type !== undefined) validUpdates.shop_type = updates.shop_type
-      if (updates.store_size !== undefined) validUpdates.store_size = updates.store_size
-      if (updates.opening_time !== undefined) validUpdates.opening_time = updates.opening_time
-      if (updates.closing_time !== undefined) validUpdates.closing_time = updates.closing_time
-      if (updates.products_offered !== undefined) validUpdates.products_offered = updates.products_offered
-      if (updates.in_store_pickup !== undefined) validUpdates.in_store_pickup = updates.in_store_pickup
-      if (updates.online_orders !== undefined) validUpdates.online_orders = updates.online_orders
-      if (updates.minimum_order_value !== undefined) validUpdates.minimum_order_value = updates.minimum_order_value
-      if (updates.delivery_fee !== undefined) validUpdates.delivery_fee = updates.delivery_fee
-      if (updates.shop_policies !== undefined) validUpdates.shop_policies = updates.shop_policies
-      if (updates.shop_notes !== undefined) validUpdates.shop_notes = updates.shop_notes
 
       // General fields
       if (updates.tags !== undefined) validUpdates.tags = updates.tags
@@ -570,10 +571,19 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
     // Hotel fields
     room_types: initial?.room_types || [],
-    check_in_time: initial?.check_in_time || '',
-    check_out_time: initial?.check_out_time || '',
     star_rating: initial?.star_rating || undefined,
     facilities: initial?.facilities || [],
+    property_type: initial?.property_type || '',
+    total_rooms: initial?.total_rooms || undefined,
+    breakfast_included: initial?.breakfast_included || false,
+    wifi_available: initial?.wifi_available || false,
+    parking_available: initial?.parking_available || false,
+    pet_friendly: initial?.pet_friendly || false,
+    generator_backup: initial?.generator_backup || false,
+    smoking_allowed: initial?.smoking_allowed || false,
+    children_allowed: initial?.children_allowed || false,
+    disabled_access: initial?.disabled_access || false,
+    concierge_service: initial?.concierge_service || false,
 
     // Tour fields
     itinerary: initial?.itinerary || [],
@@ -582,6 +592,14 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     difficulty_level: initial?.difficulty_level || undefined,
     minimum_age: initial?.minimum_age || undefined,
     languages_offered: initial?.languages_offered || [],
+    best_time_to_visit: initial?.best_time_to_visit || '',
+    max_participants: initial?.max_participants || undefined,
+    meeting_point: initial?.meeting_point || '',
+    end_point: initial?.end_point || '',
+    transportation_included: initial?.transportation_included || false,
+    meals_included: initial?.meals_included || [],
+    guide_included: initial?.guide_included || false,
+    accommodation_included: initial?.accommodation_included || false,
 
     // Transport fields
     vehicle_type: initial?.vehicle_type || '',
@@ -589,6 +607,21 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     pickup_locations: initial?.pickup_locations || [],
     dropoff_locations: initial?.dropoff_locations || [],
     route_description: initial?.route_description || '',
+    license_required: initial?.license_required || '',
+    booking_notice_hours: initial?.booking_notice_hours || undefined,
+    transport_terms: initial?.transport_terms || '',
+    air_conditioning: initial?.air_conditioning || false,
+    gps_tracking: initial?.gps_tracking || false,
+    fuel_included: initial?.fuel_included || false,
+    tolls_included: initial?.tolls_included || false,
+    insurance_included: initial?.insurance_included || false,
+    usb_charging: initial?.usb_charging || false,
+    child_seat: initial?.child_seat || false,
+    roof_rack: initial?.roof_rack || false,
+    four_wheel_drive: initial?.four_wheel_drive || false,
+    automatic_transmission: initial?.automatic_transmission || false,
+    reservations_required: initial?.reservations_required || false,
+    driver_included: initial?.driver_included || false,
 
     // Restaurant fields
     cuisine_type: initial?.cuisine_type || '',
@@ -596,6 +629,10 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     menu_items: initial?.menu_items || [],
     dietary_options: initial?.dietary_options || [],
     average_cost_per_person: initial?.average_cost_per_person || undefined,
+    outdoor_seating: initial?.outdoor_seating || false,
+    live_music: initial?.live_music || false,
+    private_dining: initial?.private_dining || false,
+    alcohol_served: initial?.alcohol_served || false,
 
     // Guide fields
     languages_spoken: initial?.languages_spoken || [],
@@ -603,6 +640,37 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     certifications: initial?.certifications || [],
     years_experience: initial?.years_experience || undefined,
     service_area: initial?.service_area || '',
+    first_aid_certified: initial?.first_aid_certified || false,
+
+    // Equipment rental fields
+    insurance_required: initial?.insurance_required || false,
+    delivery_available: initial?.delivery_available || false,
+    maintenance_included: initial?.maintenance_included || false,
+    training_provided: initial?.training_provided || false,
+    cleaning_included: initial?.cleaning_included || false,
+    repair_service: initial?.repair_service || false,
+
+    // Event fields
+    certificates_provided: initial?.certificates_provided || false,
+    refreshments_included: initial?.refreshments_included || false,
+    take_home_materials: initial?.take_home_materials || false,
+    photography_allowed: initial?.photography_allowed || false,
+    recording_allowed: initial?.recording_allowed || false,
+    group_discounts: initial?.group_discounts || false,
+
+    // Travel agency fields
+    customization_available: initial?.customization_available || false,
+    emergency_support: initial?.emergency_support || false,
+    visa_assistance: initial?.visa_assistance || false,
+    group_bookings: initial?.group_bookings || false,
+    corporate_accounts: initial?.corporate_accounts || false,
+    insurance_brokerage: initial?.insurance_brokerage || false,
+
+    // Flight fields
+    flexible_booking: initial?.flexible_booking || false,
+    lounge_access: initial?.lounge_access || false,
+    priority_boarding: initial?.priority_boarding || false,
+    flight_meals_included: initial?.flight_meals_included || false,
 
     // General fields
     tags: initial?.tags || [],
@@ -675,7 +743,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   const renderCategorySpecificFields = () => {
     const selectedCategory = categories.find(cat => cat.id === form.category_id)
     const categoryName = selectedCategory?.name?.toLowerCase() || ''
-    
+
     switch (categoryName) {
       case 'hotels':
         return (

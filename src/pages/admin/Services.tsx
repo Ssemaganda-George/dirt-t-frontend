@@ -18,6 +18,7 @@ export function Services() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<string>('all');
   const [vendors, setVendors] = useState<any[]>([]);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -141,6 +142,7 @@ export function Services() {
   const handleCloseEditModal = () => {
     setEditingService(null);
     setIsEditModalOpen(false);
+    setSaveMessage(null);
   };
 
   const handleDeleteService = async (serviceId: string, serviceTitle: string) => {
@@ -174,11 +176,20 @@ export function Services() {
     if (!editingService) return;
     
     setUpdatingStatus(editingService.id);
+    setSaveMessage(null); // Clear any previous messages
+    
     try {
       await updateService(editingService.id, updatedServiceData);
-      handleCloseEditModal();
+      
+      // Show success message
+      setSaveMessage({ type: 'success', text: 'Service updated successfully!' });
+      
     } catch (err) {
       console.error('Failed to update service:', err);
+      setSaveMessage({ 
+        type: 'error', 
+        text: err instanceof Error ? err.message : 'Failed to update service. Please try again.' 
+      });
     } finally {
       setUpdatingStatus(null);
     }
@@ -510,6 +521,7 @@ export function Services() {
         onClose={handleCloseEditModal}
         onSave={handleSaveService}
         isLoading={updatingStatus === editingService?.id}
+        saveMessage={saveMessage}
       />
     </div>
   );
