@@ -321,6 +321,10 @@ export interface Transaction {
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
   created_at: string;
+  vendors?: {
+    business_name: string;
+    user_id: string;
+  };
 }
 
 export interface Wallet {

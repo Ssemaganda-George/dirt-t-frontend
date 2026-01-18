@@ -111,6 +111,15 @@ CREATE POLICY "Admins can view all transactions" ON transactions
         )
     );
 
+-- Admins can update all transactions (for approving/rejecting withdrawals)
+CREATE POLICY "Admins can update all transactions" ON transactions
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE id = auth.uid() AND role = 'admin'
+        )
+    );
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_transactions_vendor_id ON transactions(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Service, Booking, Transaction, Flight } from '../types';
 import type { ServiceCategory, ServiceDeleteRequest } from '../lib/database';
-import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, updateVendorStatus as updateVendorStatusDB, updateBooking } from '../lib/database';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, getAllTransactionsForAdmin, updateVendorStatus as updateVendorStatusDB, updateBooking } from '../lib/database';
 import { supabase } from '../lib/supabaseClient';
 
 // Placeholder hooks - to be updated later
@@ -124,6 +124,31 @@ export function useTransactions() {
       setLoading(true);
       setError(null);
       const data = await getAllTransactions();
+      setTransactions(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  return { transactions, loading, error, refetch: fetchTransactions };
+}
+
+export function useAdminTransactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getAllTransactionsForAdmin();
       setTransactions(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

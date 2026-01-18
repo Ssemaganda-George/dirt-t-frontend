@@ -1516,6 +1516,48 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   return data || []
 }
 
+export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
+  try {
+    // First check if user is admin
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      throw new Error('User not authenticated')
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile || profile.role !== 'admin') {
+      throw new Error('Access denied: Admin role required')
+    }
+
+    // Simple query without complex joins that might fail due to RLS
+    const { data, error } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        vendors (
+          business_name,
+          user_id
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching admin transactions:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getAllTransactionsForAdmin:', error)
+    throw error
+  }
+}
+
 export async function getAllUsers(): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('profiles')
