@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'completed', 'failed')),
     payment_method VARCHAR(20) NOT NULL DEFAULT 'card' CHECK (payment_method IN ('card', 'mobile_money', 'bank_transfer')),
     reference VARCHAR(100) UNIQUE NOT NULL,
+    receipt_url TEXT, -- URL to payment receipt document
+    payment_notes TEXT, -- Additional notes about the payment
+    processed_by UUID REFERENCES auth.users(id), -- Who processed the payment
+    processed_at TIMESTAMPTZ, -- When payment was processed
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

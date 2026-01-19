@@ -320,6 +320,10 @@ export interface Transaction {
   status: 'pending' | 'approved' | 'completed' | 'failed';
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
+  receipt_url?: string;
+  payment_notes?: string;
+  processed_by?: string;
+  processed_at?: string;
   created_at: string;
   vendors?: {
     business_name: string;

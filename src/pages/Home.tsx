@@ -50,11 +50,11 @@ export default function Home() {
       // Fallback to basic categories if database fetch fails
       setCategories([
         { id: 'all', name: 'All', icon: Map },
-        { id: 'cat_hotels', name: 'Hotels', icon: Hotel },
-        { id: 'cat_tour_packages', name: 'Tour Packages', icon: Map },
+        { id: 'cat_hotels', name: 'Accommodation', icon: Hotel },
+        { id: 'cat_tour_packages', name: 'Tours', icon: Map },
         { id: 'cat_transport', name: 'Transport', icon: Car },
-        { id: 'cat_restaurants', name: 'Restaurants', icon: Utensils },
-        { id: 'cat_activities', name: 'Activities', icon: Target },
+        { id: 'cat_restaurants', name: 'Food', icon: Utensils },
+        { id: 'cat_activities', name: 'Events', icon: Target },
         { id: 'cat_flights', name: 'Flights', icon: Plane },
         { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])

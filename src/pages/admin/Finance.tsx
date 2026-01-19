@@ -1,14 +1,15 @@
 import { format } from 'date-fns';
 import { useAdminTransactions } from '../../hooks/hook';
-import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrency } from '../../lib/utils';
-import { updateTransactionStatus } from '../../lib/database';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 export function Finance() {
   const { transactions, loading, error, refetch } = useAdminTransactions();
   const [activeTab, setActiveTab] = useState<'withdrawals' | 'payments' | 'refunds'>('withdrawals');
+  const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
+  const [paymentNotes, setPaymentNotes] = useState<{[key: string]: string}>({});
 
   if (loading) {
     return (
@@ -26,31 +27,77 @@ export function Finance() {
     );
   }
 
-  const handleTransactionStatusUpdate = async (transactionId: string, status: 'approved' | 'completed' | 'failed') => {
+  const handleReceiptUpload = async (transactionId: string, file: File) => {
+    setUploadingReceipt(transactionId);
     try {
-      await updateTransactionStatus(transactionId, status);
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${transactionId}-receipt-${Date.now()}.${fileExt}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(filePath);
+
+      // Update transaction with receipt URL and notes
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          receipt_url: publicUrl,
+          payment_notes: paymentNotes[transactionId] || '',
+          processed_by: (await supabase.auth.getUser()).data.user?.id,
+          processed_at: new Date().toISOString(),
+          status: 'completed'
+        })
+        .eq('id', transactionId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Clear payment notes for this transaction
+      setPaymentNotes(prev => ({ ...prev, [transactionId]: '' }));
+
       refetch(); // Refresh the transactions list
+      alert('Receipt uploaded and payment confirmed successfully!');
     } catch (err) {
-      console.error('Error updating transaction status:', err);
-      alert('Failed to update transaction status. Please try again.');
+      console.error('Error uploading receipt:', err);
+      alert('Failed to upload receipt. Please try again.');
+    } finally {
+      setUploadingReceipt(null);
     }
   };
 
-  // Filter transactions by type and tab
-  const withdrawals = transactions.filter(t => t.transaction_type === 'withdrawal');
-  const payments = transactions.filter(t => t.transaction_type === 'payment');
-  const refunds = transactions.filter(t => t.transaction_type === 'refund');
+  // Filter transactions by type and status for finance processing
+  const approvedWithdrawals = transactions.filter(t => 
+    t.transaction_type === 'withdrawal' && t.status === 'approved'
+  );
+  const completedPayments = transactions.filter(t => 
+    t.transaction_type === 'payment' && t.status === 'completed'
+  );
+  const completedRefunds = transactions.filter(t => 
+    t.transaction_type === 'refund' && t.status === 'completed'
+  );
 
   const getCurrentTransactions = () => {
     switch (activeTab) {
       case 'withdrawals':
-        return withdrawals;
+        return approvedWithdrawals;
       case 'payments':
-        return payments;
+        return completedPayments;
       case 'refunds':
-        return refunds;
+        return completedRefunds;
       default:
-        return withdrawals;
+        return approvedWithdrawals;
     }
   };
 
@@ -58,48 +105,44 @@ export function Finance() {
 
   // Calculate stats
   const stats = {
-    pendingWithdrawals: withdrawals.filter(t => t.status === 'pending').length,
-    approvedWithdrawals: withdrawals.filter(t => t.status === 'approved').length,
-    completedWithdrawals: withdrawals.filter(t => t.status === 'completed').length,
-    totalPayments: payments.length,
-    completedPayments: payments.filter(t => t.status === 'completed').length,
-    totalRefunds: refunds.length,
-    completedRefunds: refunds.filter(t => t.status === 'completed').length,
-  };
-
-  const getStatusBadgeVariant = () => {
-    return 'default' as const; // StatusBadge only accepts 'default' or 'small'
+    approvedWithdrawals: approvedWithdrawals.length,
+    approvedAmount: approvedWithdrawals.reduce((sum, t) => sum + t.amount, 0),
+    completedPayments: completedPayments.length,
+    completedRefunds: completedRefunds.length,
   };
 
   const getActionButtons = (transaction: any) => {
-    if (transaction.transaction_type === 'withdrawal') {
-      if (transaction.status === 'pending') {
-        return (
-          <button
-            onClick={() => handleTransactionStatusUpdate(transaction.id, 'approved')}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-          >
-            Approve
-          </button>
-        );
-      } else if (transaction.status === 'approved') {
-        return (
-          <div className="flex space-x-2">
-            <button
-              onClick={() => handleTransactionStatusUpdate(transaction.id, 'completed')}
-              className="text-green-600 hover:text-green-900 text-sm"
-            >
-              Mark Paid
-            </button>
-            <button
-              onClick={() => handleTransactionStatusUpdate(transaction.id, 'failed')}
-              className="text-red-600 hover:text-red-900 text-sm"
-            >
-              Reject
-            </button>
+    // Only approved withdrawals should appear in Finance page
+    if (transaction.transaction_type === 'withdrawal' && transaction.status === 'approved') {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleReceiptUpload(transaction.id, file);
+                }
+              }}
+              disabled={uploadingReceipt === transaction.id}
+              className="text-xs border border-gray-300 rounded px-2 py-1"
+            />
+            <span className="text-xs text-gray-500">Upload Receipt</span>
           </div>
-        );
-      }
+          <textarea
+            placeholder="Payment notes (optional)"
+            value={paymentNotes[transaction.id] || ''}
+            onChange={(e) => setPaymentNotes(prev => ({ ...prev, [transaction.id]: e.target.value }))}
+            className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+            rows={2}
+          />
+          {uploadingReceipt === transaction.id && (
+            <div className="text-xs text-blue-600">Uploading...</div>
+          )}
+        </div>
+      );
     }
     return null;
   };
@@ -116,14 +159,14 @@ export function Finance() {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.pendingWithdrawals}</span>
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">{stats.approvedWithdrawals}</span>
                 </div>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Withdrawals</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.pendingWithdrawals}</dd>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Approved for Payment</dt>
+                  <dd className="text-lg font-medium text-gray-900">{stats.approvedWithdrawals}</dd>
                 </dl>
               </div>
             </div>
@@ -134,14 +177,16 @@ export function Finance() {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.approvedWithdrawals}</span>
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">$</span>
                 </div>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Approved Withdrawals</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.approvedWithdrawals}</dd>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Payment Amount</dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {formatCurrency(stats.approvedAmount, 'UGX')}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -197,7 +242,7 @@ export function Finance() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Withdrawals ({withdrawals.length})
+              Approved Withdrawals ({approvedWithdrawals.length})
             </button>
             <button
               onClick={() => setActiveTab('payments')}
@@ -207,7 +252,7 @@ export function Finance() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Payments ({payments.length})
+              Completed Payments ({completedPayments.length})
             </button>
             <button
               onClick={() => setActiveTab('refunds')}
@@ -217,7 +262,7 @@ export function Finance() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Refunds ({refunds.length})
+              Completed Refunds ({completedRefunds.length})
             </button>
           </nav>
         </div>
@@ -269,7 +314,9 @@ export function Finance() {
                       {transaction.payment_method.replace('_', ' ')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={transaction.status} variant={getStatusBadgeVariant()} />
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Approved
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
