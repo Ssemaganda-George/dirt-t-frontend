@@ -88,3 +88,5 @@ This is an MVP for Uganda's tourism industry. Future contributions welcome for:
 ## 📄 License
 
 Private project for DirtTrails tourism marketplace.
+
+## ALTER TABLE profiles DISABLE ROW LEVEL SECURITY; disable profiles RLS if users cant login

@@ -6,6 +6,7 @@ import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
+import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
   id: string
@@ -53,7 +54,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const endDate = searchParams.get('endDate') || ''
   
   const { addToCart } = useCart()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [cartSaved, setCartSaved] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -81,6 +82,47 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       setSelectedImage(service.images[0])
     }
   }, [service])
+
+  // Auto-populate contact information for logged-in users
+  useEffect(() => {
+    const fetchTouristData = async () => {
+      if (!user) return
+
+      try {
+        // Get tourist profile data
+        const { data: touristData, error } = await supabase
+          .from('tourists')
+          .select('first_name, last_name, phone')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error('Error fetching tourist data:', error)
+        } else if (touristData) {
+          // Auto-populate contact fields
+          setBookingData(prev => ({
+            ...prev,
+            contactName: touristData.first_name && touristData.last_name 
+              ? `${touristData.first_name} ${touristData.last_name}`.trim()
+              : profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail,
+            contactPhone: touristData.phone || prev.contactPhone
+          }))
+        } else {
+          // Fallback to profile data if no tourist record exists
+          setBookingData(prev => ({
+            ...prev,
+            contactName: profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching tourist data:', error)
+      }
+    }
+
+    fetchTouristData()
+  }, [user, profile])
 
   const nextImage = () => {
     if (service?.images && service.images.length > 0) {
@@ -181,7 +223,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         try {
           const bookingDataToInsert = {
             service_id: service.id,
-            tourist_id: profile?.id || 't_demo', // Use authenticated user's profile ID
+            tourist_id: profile?.id,
             vendor_id: service.vendor_id || 'vendor_demo',
             booking_date: new Date().toISOString(),
             service_date: bookingData.startDate,
@@ -191,6 +233,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             status: 'pending' as const,
             payment_status: 'pending' as const,
             special_requests: bookingData.specialRequests,
+            // Guest booking fields
+            guest_name: profile ? undefined : bookingData.contactName,
+            guest_email: profile ? undefined : bookingData.contactEmail,
+            guest_phone: profile ? undefined : bookingData.contactPhone,
             // Transport-specific fields
             pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
             dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,

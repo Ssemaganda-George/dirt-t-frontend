@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle, Bed, Wifi, Car } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
+import { createBooking } from '../lib/database'
+import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
   id: string
+  vendor_id?: string
   title: string
   description: string
   price: number
@@ -16,6 +20,7 @@ interface ServiceDetail {
   max_capacity: number
   amenities: string[]
   vendors?: {
+    id?: string
     business_name: string
     business_description: string
     business_phone: string
@@ -40,8 +45,11 @@ interface HotelBookingProps {
 export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
   const { addToCart } = useCart()
+  const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [cartSaved, setCartSaved] = useState(false)
+  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [bookingData, setBookingData] = useState({
     checkInDate: '',
     checkOutDate: '',
@@ -54,6 +62,47 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     contactPhone: '',
     paymentMethod: 'card'
   })
+
+  // Auto-populate contact information for logged-in users
+  useEffect(() => {
+    const fetchTouristData = async () => {
+      if (!user) return
+
+      try {
+        // Get tourist profile data
+        const { data: touristData, error } = await supabase
+          .from('tourists')
+          .select('first_name, last_name, phone')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error('Error fetching tourist data:', error)
+        } else if (touristData) {
+          // Auto-populate contact fields
+          setBookingData(prev => ({
+            ...prev,
+            contactName: touristData.first_name && touristData.last_name 
+              ? `${touristData.first_name} ${touristData.last_name}`.trim()
+              : profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail,
+            contactPhone: touristData.phone || prev.contactPhone
+          }))
+        } else {
+          // Fallback to profile data if no tourist record exists
+          setBookingData(prev => ({
+            ...prev,
+            contactName: profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching tourist data:', error)
+      }
+    }
+
+    fetchTouristData()
+  }, [user, profile])
 
   const steps = [
     { id: 1, title: 'Select Dates & Rooms', icon: Calendar },
@@ -106,6 +155,41 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       currency: service.currency
     })
     setCartSaved(true)
+  }
+
+  const handleCompleteBooking = async () => {
+    setIsSubmitting(true)
+    try {
+      const booking = await createBooking({
+        service_id: service.id,
+        vendor_id: service.vendor_id || service.vendors?.id || '',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.checkInDate,
+        guests: bookingData.guests,
+        total_amount: totalPrice,
+        currency: 'UGX',
+        status: 'pending',
+        payment_status: 'pending',
+        special_requests: bookingData.specialRequests,
+        // Guest booking fields
+        tourist_id: user?.id,
+        guest_name: user ? undefined : bookingData.contactName,
+        guest_email: user ? undefined : bookingData.contactEmail,
+        guest_phone: user ? undefined : bookingData.contactPhone,
+        // Hotel-specific fields
+        start_time: service.check_in_time,
+        end_time: service.check_out_time,
+        end_date: bookingData.checkOutDate
+      })
+
+      setBookingId(booking.id)
+      setCurrentStep(5) // Go to confirmation step
+    } catch (error) {
+      console.error('Error creating booking:', error)
+      alert('Failed to complete booking. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const renderStepContent = () => {
@@ -409,9 +493,14 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             </div>
             <div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-2">
                 Your hotel booking has been successfully confirmed. You will receive a confirmation email shortly.
               </p>
+              {bookingId && (
+                <p className="text-sm text-blue-600 font-medium">
+                  Booking Reference: {bookingId}
+                </p>
+              )}
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-left">
               <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
@@ -643,14 +732,15 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 Save to Cart
               </button>
               <button
-                onClick={handleNext}
+                onClick={currentStep === 4 ? handleCompleteBooking : handleNext}
                 disabled={
+                  isSubmitting ||
                   (currentStep === 1 && (!bookingData.checkInDate || !bookingData.checkOutDate)) ||
                   (currentStep === 3 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                {currentStep === 4 ? 'Complete Booking' : 'Next'}
+                {isSubmitting ? 'Processing...' : (currentStep === 4 ? 'Complete Booking' : 'Next')}
               </button>
             </div>
           </div>

@@ -1,24 +1,29 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown } from 'lucide-react'
+import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
 import SupportModal from './SupportModal'
+import LoginModal from './LoginModal'
 import { useServiceCategories } from '../hooks/hook'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function PublicLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState('UG')
   const [selectedCurrency, setSelectedCurrency] = useState('UGX')
-  const [showSignInDropdown, setShowSignInDropdown] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const userDropdownRef = useRef<HTMLDivElement>(null)
   const { categories } = useServiceCategories()
   const { getCartCount } = useCart()
+  const { user, profile, signOut } = useAuth()
 
   // Map category IDs to navigation items
   const getNavigationItems = () => {
@@ -63,11 +68,14 @@ export default function PublicLayout() {
 
   const navigation = getNavigationItems()
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowSignInDropdown(false)
+        // No dropdown to close anymore
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false)
       }
     }
 
@@ -76,6 +84,18 @@ export default function PublicLayout() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  const handleSignOut = async () => {
+    const confirmed = window.confirm('Are you sure you want to log out?')
+    if (!confirmed) return
+
+    try {
+      await signOut()
+      navigate('/')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,46 +151,84 @@ export default function PublicLayout() {
                 )}
               </button>
 
-              {/* Sign In Dropdown */}
-              <div className="relative" ref={dropdownRef}>
+              {/* Sign In Button or User Account Dropdown */}
+              {user && profile?.role === 'tourist' ? (
+                <div className="relative" ref={userDropdownRef}>
+                  <button
+                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                    className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
+                      <span className="text-sm font-bold text-white">
+                        {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ml-1 ${showUserDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {showUserDropdown && (
+                    <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-2 border-b border-gray-200">
+                          <p className="text-sm font-medium text-gray-900">My Account</p>
+                          <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
+                        </div>
+                        <Link
+                          to="/profile"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <User className="h-4 w-4 mr-3" />
+                          Profile
+                        </Link>
+                        <Link
+                          to="/bookings"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <ShoppingBag className="h-4 w-4 mr-3" />
+                          My Bookings
+                        </Link>
+                        <Link
+                          to="/saved"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <Heart className="h-4 w-4 mr-3" />
+                          Saved Items
+                        </Link>
+                        <Link
+                          to="/settings"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <Settings className="h-4 w-4 mr-3" />
+                          Settings
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false)
+                            handleSignOut()
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4 mr-3" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <button
-                  onClick={() => setShowSignInDropdown(!showSignInDropdown)}
+                  onClick={() => setShowLoginModal(true)}
                   className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
                 >
                   <User className="h-5 w-5" />
-                  <ChevronDown className="h-4 w-4 ml-1" />
+                  <span className="ml-2 text-sm font-medium">Sign In</span>
                 </button>
-
-                {showSignInDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">Select Account</p>
-                    </div>
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setShowSignInDropdown(false)
-                          navigate('/login')
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      >
-                        <User className="h-4 w-4 inline mr-2" />
-                        Tourist
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowSignInDropdown(false)
-                          navigate('/vendor-login')
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      >
-                        <ShoppingBag className="h-4 w-4 inline mr-2" />
-                        Business
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Mobile menu button */}
               <button
@@ -231,26 +289,51 @@ export default function PublicLayout() {
                   My Bookings
                 </Link>
                 <div className="border-t border-gray-200 pt-2 mt-2">
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      navigate('/login')
-                    }}
-                    className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                  >
-                    <User className="h-5 w-5 mr-2" />
-                    Sign in as Tourist
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      navigate('/vendor-login')
-                    }}
-                    className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                  >
-                    <ShoppingBag className="h-5 w-5 mr-2" />
-                    Sign in as Vendor
-                  </button>
+                  {user && profile?.role === 'tourist' ? (
+                    <>
+                      <div className="px-3 py-2 border-b border-gray-200 mb-2">
+                        <p className="text-sm font-medium text-gray-900">My Account</p>
+                        <p className="text-xs text-gray-500">{profile?.email}</p>
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <User className="h-5 w-5 mr-2" />
+                        Profile
+                      </Link>
+                      <Link
+                        to="/settings"
+                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Settings className="h-5 w-5 mr-2" />
+                        Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setMobileMenuOpen(false)
+                          handleSignOut()
+                        }}
+                        className="w-full text-left px-3 py-2 text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md flex items-center"
+                      >
+                        <LogOut className="h-5 w-5 mr-2" />
+                        Sign Out
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        setShowLoginModal(true)
+                      }}
+                      className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
+                    >
+                      <User className="h-5 w-5 mr-2" />
+                      Sign In
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -272,6 +355,12 @@ export default function PublicLayout() {
       <SupportModal
         isOpen={showSupportModal}
         onClose={() => setShowSupportModal(false)}
+      />
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
       />
 
       {/* Main Content */}

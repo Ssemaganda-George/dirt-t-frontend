@@ -55,6 +55,9 @@ export interface Tourist {
   phone?: string
   emergency_contact?: string
   emergency_phone?: string
+  emergency_relationship?: string
+  emergency_email?: string
+  emergency_address?: string
   travel_preferences?: string
   dietary_restrictions?: string
   medical_conditions?: string
@@ -274,7 +277,7 @@ export interface ServiceDeleteRequest {
 export interface Booking {
   id: string
   service_id: string
-  tourist_id: string
+  tourist_id?: string // Made optional for guest bookings
   vendor_id: string
   booking_date: string
   service_date?: string
@@ -290,6 +293,11 @@ export interface Booking {
   updated_at: string
   services?: Service
   profiles?: Profile
+  // Guest booking fields
+  guest_name?: string
+  guest_email?: string
+  guest_phone?: string
+  is_guest_booking?: boolean
   // Transport-specific fields
   pickup_location?: string
   dropoff_location?: string
@@ -1326,6 +1334,13 @@ export async function getAllBookings(): Promise<Booking[]> {
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'vendor_id'> & { vendor_id?: string }): Promise<Booking> {
   console.log('createBooking called with:', booking)
 
+  // Check if this is a guest booking
+  const isGuestBooking = !booking.tourist_id
+
+  if (isGuestBooking && (!booking.guest_name || !booking.guest_email || !booking.guest_phone)) {
+    throw new Error('Guest name, email, and phone are required for guest bookings')
+  }
+
   // If vendor_id is not provided, fetch it from the service
   let bookingData = { ...booking }
   if (!bookingData.vendor_id && bookingData.service_id) {
@@ -1353,6 +1368,7 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
     .from('bookings')
     .insert([{
       ...bookingData,
+      is_guest_booking: isGuestBooking,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }])
@@ -2692,5 +2708,58 @@ export async function requestWithdrawal(vendorId: string, amount: number, curren
   } catch (error) {
     console.error('Error in requestWithdrawal:', error)
     throw error
+  }
+}
+
+// Guest booking support functions
+export async function getBookingsForUser(userId: string): Promise<Booking[]> {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        services (
+          id,
+          title,
+          description,
+          price,
+          currency,
+          images,
+          location,
+          vendors (
+            business_name,
+            business_phone,
+            business_email
+          )
+        )
+      `)
+      .or(`tourist_id.eq.${userId},and(is_guest_booking.eq.true,guest_email.eq.${await getUserEmail(userId)})`)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching bookings:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getBookingsForUser:', error)
+    throw error
+  }
+}
+
+async function getUserEmail(userId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', userId)
+      .single()
+
+    if (error) throw error
+    return data?.email || ''
+  } catch (error) {
+    console.error('Error getting user email:', error)
+    return ''
   }
 }

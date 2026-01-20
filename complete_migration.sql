@@ -53,7 +53,66 @@ CREATE TABLE IF NOT EXISTS vendors (
 CREATE OR REPLACE TRIGGER update_vendors_updated_at BEFORE UPDATE ON vendors
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 3. Create service_categories table
+-- 3. Create tourists table
+CREATE TABLE IF NOT EXISTS tourists (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    first_name TEXT,
+    last_name TEXT,
+    phone TEXT,
+    emergency_contact TEXT,
+    emergency_phone TEXT,
+    travel_preferences TEXT,
+    dietary_restrictions TEXT,
+    medical_conditions TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Create trigger for tourists updated_at
+CREATE OR REPLACE TRIGGER update_tourists_updated_at BEFORE UPDATE ON tourists
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create index for faster lookups by user_id
+CREATE INDEX IF NOT EXISTS idx_tourists_user_id ON tourists(user_id);
+
+-- Enable Row Level Security for tourists
+ALTER TABLE tourists ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for tourists
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tourists' AND policyname = 'Users can view own tourist data') THEN
+        CREATE POLICY "Users can view own tourist data" ON tourists
+            FOR SELECT USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tourists' AND policyname = 'Users can insert own tourist data') THEN
+        CREATE POLICY "Users can insert own tourist data" ON tourists
+            FOR INSERT WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tourists' AND policyname = 'Users can update own tourist data') THEN
+        CREATE POLICY "Users can update own tourist data" ON tourists
+            FOR UPDATE USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tourists' AND policyname = 'Users can delete own tourist data') THEN
+        CREATE POLICY "Users can delete own tourist data" ON tourists
+            FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+-- 4. Create service_categories table
 CREATE TABLE IF NOT EXISTS service_categories (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
@@ -180,32 +239,6 @@ BEGIN
     END IF;
 END $$;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Admins can view all profiles') THEN
-        CREATE POLICY "Admins can view all profiles" ON profiles
-            FOR SELECT USING (
-                EXISTS (
-                    SELECT 1 FROM profiles p
-                    WHERE p.id = auth.uid() AND p.role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'Admins can update all profiles') THEN
-        CREATE POLICY "Admins can update all profiles" ON profiles
-            FOR UPDATE USING (
-                EXISTS (
-                    SELECT 1 FROM profiles p
-                    WHERE p.id = auth.uid() AND p.role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
 -- Create RLS policies for vendors
 DO $$
 BEGIN
@@ -220,32 +253,6 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vendors' AND policyname = 'Vendors can update their own record') THEN
         CREATE POLICY "Vendors can update their own record" ON vendors
             FOR UPDATE USING (auth.uid() = user_id);
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vendors' AND policyname = 'Admins can view all vendors') THEN
-        CREATE POLICY "Admins can view all vendors" ON vendors
-            FOR SELECT USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vendors' AND policyname = 'Admins can update all vendors') THEN
-        CREATE POLICY "Admins can update all vendors" ON vendors
-            FOR UPDATE USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
     END IF;
 END $$;
 
@@ -288,32 +295,6 @@ BEGIN
     END IF;
 END $$;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'services' AND policyname = 'Admins can view all services') THEN
-        CREATE POLICY "Admins can view all services" ON services
-            FOR SELECT USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'services' AND policyname = 'Admins can update all services') THEN
-        CREATE POLICY "Admins can update all services" ON services
-            FOR UPDATE USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
 -- Create RLS policies for bookings
 DO $$
 BEGIN
@@ -351,32 +332,6 @@ BEGIN
     END IF;
 END $$;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'bookings' AND policyname = 'Admins can view all bookings') THEN
-        CREATE POLICY "Admins can view all bookings" ON bookings
-            FOR SELECT USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'bookings' AND policyname = 'Admins can update all bookings') THEN
-        CREATE POLICY "Admins can update all bookings" ON bookings
-            FOR UPDATE USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
 -- Create RLS policies for transactions
 DO $$
 BEGIN
@@ -398,47 +353,11 @@ BEGIN
     END IF;
 END $$;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'transactions' AND policyname = 'Admins can view all transactions') THEN
-        CREATE POLICY "Admins can view all transactions" ON transactions
-            FOR SELECT USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'transactions' AND policyname = 'Admins can insert transactions') THEN
-        CREATE POLICY "Admins can insert transactions" ON transactions
-            FOR INSERT WITH CHECK (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'transactions' AND policyname = 'Admins can update transactions') THEN
-        CREATE POLICY "Admins can update transactions" ON transactions
-            FOR UPDATE USING (
-                EXISTS (
-                    SELECT 1 FROM profiles
-                    WHERE id = auth.uid() AND role = 'admin'
-                )
-            );
-    END IF;
-END $$;
-
 -- Create triggers for updated_at
 CREATE OR REPLACE TRIGGER update_vendors_updated_at BEFORE UPDATE ON vendors
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE TRIGGER update_tourists_updated_at BEFORE UPDATE ON tourists
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE OR REPLACE TRIGGER update_services_updated_at BEFORE UPDATE ON services

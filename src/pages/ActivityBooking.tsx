@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
+import { createBooking } from '../lib/database'
+import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
   id: string
@@ -15,7 +18,9 @@ interface ServiceDetail {
   duration_hours: number
   max_capacity: number
   amenities: string[]
+  vendor_id?: string
   vendors?: {
+    id?: string
     business_name: string
     business_description: string
     business_phone: string
@@ -34,8 +39,11 @@ interface ActivityBookingProps {
 export default function ActivityBooking({ service }: ActivityBookingProps) {
   const navigate = useNavigate()
   const { addToCart } = useCart()
+  const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [cartSaved, setCartSaved] = useState(false)
+  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [bookingData, setBookingData] = useState({
     date: '',
     guests: 1,
@@ -46,11 +54,53 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     paymentMethod: 'card'
   })
 
+  // Auto-populate contact information for logged-in users
+  useEffect(() => {
+    const fetchTouristData = async () => {
+      if (!user) return
+
+      try {
+        // Get tourist profile data
+        const { data: touristData, error } = await supabase
+          .from('tourists')
+          .select('first_name, last_name, phone')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error('Error fetching tourist data:', error)
+        } else if (touristData) {
+          // Auto-populate contact fields
+          setBookingData(prev => ({
+            ...prev,
+            contactName: touristData.first_name && touristData.last_name 
+              ? `${touristData.first_name} ${touristData.last_name}`.trim()
+              : profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail,
+            contactPhone: touristData.phone || prev.contactPhone
+          }))
+        } else {
+          // Fallback to profile data if no tourist record exists
+          setBookingData(prev => ({
+            ...prev,
+            contactName: profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching tourist data:', error)
+      }
+    }
+
+    fetchTouristData()
+  }, [user, profile])
+
   const steps = [
     { id: 1, title: 'Select Date & Guests', icon: Calendar },
     { id: 2, title: 'Your Details', icon: Users },
     { id: 3, title: 'Payment', icon: CreditCard },
-    { id: 4, title: 'Confirmation', icon: CheckCircle }
+    { id: 4, title: 'Processing', icon: CheckCircle },
+    { id: 5, title: 'Confirmation', icon: CheckCircle }
   ]
 
   const handleNext = () => {
@@ -72,6 +122,39 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   }
 
   const totalPrice = service.price * bookingData.guests
+
+  const handleCompleteBooking = async () => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
+      const booking = await createBooking({
+        service_id: service.id,
+        vendor_id: service.vendor_id || service.vendors?.id || '',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.date,
+        guests: bookingData.guests,
+        total_amount: totalPrice,
+        currency: service.currency,
+        status: 'pending',
+        payment_status: 'pending',
+        special_requests: bookingData.specialRequests,
+        // Guest booking fields
+        tourist_id: user?.id,
+        guest_name: user ? undefined : bookingData.contactName,
+        guest_email: user ? undefined : bookingData.contactEmail,
+        guest_phone: user ? undefined : bookingData.contactPhone
+      })
+
+      setBookingId(booking.id)
+      setCurrentStep(5) // Go to confirmation step
+    } catch (error) {
+      console.error('Error creating booking:', error)
+      alert('Failed to complete booking. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleSaveToCart = () => {
     addToCart({
@@ -275,6 +358,21 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       case 4:
         return (
           <div className="text-center space-y-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto animate-spin">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing Your Booking</h3>
+              <p className="text-gray-600">
+                Please wait while we process your activity booking...
+              </p>
+            </div>
+          </div>
+        )
+
+      case 5:
+        return (
+          <div className="text-center space-y-6">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
@@ -288,6 +386,10 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
+                  <span className="text-gray-600">Booking ID:</span>
+                  <span className="font-medium">#{bookingId?.slice(0, 8)}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-600">Activity:</span>
                   <span className="font-medium">{service.title}</span>
                 </div>
@@ -300,7 +402,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   <span className="font-medium">{bookingData.guests}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Paid:</span>
+                  <span className="text-gray-600">Total:</span>
                   <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
                 </div>
               </div>
@@ -472,7 +574,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         </div>
 
         {/* Navigation */}
-        {currentStep < 4 && (
+        {currentStep < 5 && (
           <div className="flex justify-between mt-6">
             <button
               onClick={handleBack}
@@ -488,14 +590,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 Save to Cart
               </button>
               <button
-                onClick={handleNext}
+                onClick={currentStep === 3 ? handleCompleteBooking : handleNext}
                 disabled={
+                  isSubmitting ||
                   (currentStep === 1 && !bookingData.date) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                {currentStep === 3 ? 'Complete Booking' : 'Next'}
+                {isSubmitting ? 'Processing...' : currentStep === 3 ? 'Complete Booking' : 'Next'}
               </button>
             </div>
           </div>

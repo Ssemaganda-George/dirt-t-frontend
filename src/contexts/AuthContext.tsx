@@ -11,6 +11,7 @@ interface Profile {
   id: string
   email: string
   full_name: string
+  avatar_url?: string
   role: 'admin' | 'vendor' | 'tourist'
   status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
   created_at: string
@@ -31,7 +32,7 @@ interface AuthContextType {
   profile: Profile | null
   vendor: Vendor | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
@@ -100,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -117,10 +118,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setVendor(null)
       }
+
+      return data as Profile
     } catch (error) {
       console.error('Error fetching profile:', error)
       setProfile(null)
       setVendor(null)
+      return null
     }
   }
 
@@ -149,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<Profile | null> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -158,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
 
     const u = data.user
-    if (!u) return
+    if (!u) return null
 
     const normalizedUser: User = {
       id: u.id,
@@ -168,10 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(normalizedUser)
     // Ensure profile (and role) is loaded before route guards run
-    await fetchProfile(u.id)
+    const userProfile = await fetchProfile(u.id)
 
     // Check if user is suspended and prevent login
-    if (profile?.status === 'suspended') {
+    if (userProfile?.status === 'suspended') {
       // Sign out the user immediately
       await supabase.auth.signOut()
       setUser(null)
@@ -179,6 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setVendor(null)
       throw new Error('Your account has been suspended. Please contact support for assistance.')
     }
+
+    return userProfile
   }
 
   const signUp = async (

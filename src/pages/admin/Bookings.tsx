@@ -400,9 +400,19 @@ export function Bookings() {
                 <div>
                   <h4 className="font-medium text-gray-900">Customer Information</h4>
                   <div className="mt-2 space-y-2">
-                    <p><span className="font-medium">Customer ID:</span> #{selectedBooking.tourist_id.slice(0, 8)}</p>
-                    <p><span className="font-medium">Name:</span> {selectedBooking.tourist_profile?.full_name || 'Not available'}</p>
-                    <p><span className="font-medium">Phone:</span> {selectedBooking.tourist_profile?.phone || 'Not available'}</p>
+                    {selectedBooking.is_guest_booking ? (
+                      <>
+                        <p><span className="font-medium">Guest Name:</span> {selectedBooking.guest_name}</p>
+                        <p><span className="font-medium">Guest Email:</span> {selectedBooking.guest_email}</p>
+                        <p><span className="font-medium">Guest Phone:</span> {selectedBooking.guest_phone}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p><span className="font-medium">Customer ID:</span> #{selectedBooking.tourist_id?.slice(0, 8)}</p>
+                        <p><span className="font-medium">Name:</span> {selectedBooking.tourist_profile?.full_name || 'Not available'}</p>
+                        <p><span className="font-medium">Phone:</span> {selectedBooking.tourist_profile?.phone || 'Not available'}</p>
+                      </>
+                    )}
                   </div>
                   
                   {selectedBooking.special_requests && (

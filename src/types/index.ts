@@ -285,7 +285,7 @@ export interface Service {
 export interface Booking {
   id: string;
   service_id: string;
-  tourist_id: string;
+  tourist_id?: string; // Made optional for guest bookings
   vendor_id: string; // Added missing vendor_id field
   booking_date: string;
   service_date?: string;
@@ -299,6 +299,11 @@ export interface Booking {
   updated_at: string;
   service?: Service;
   tourist_profile?: UserProfile;
+  // Guest booking fields
+  is_guest_booking?: boolean;
+  guest_name?: string;
+  guest_email?: string;
+  guest_phone?: string;
   // Transport-specific fields
   pickup_location?: string;
   dropoff_location?: string;
@@ -362,6 +367,20 @@ export interface Flight {
   flight_class: 'economy' | 'business' | 'first_class';
   amenities: string[];
   baggage_allowance?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  email_bookings: boolean;
+  email_promotions: boolean;
+  push_bookings: boolean;
+  push_promotions: boolean;
+  language: string;
+  timezone: string;
+  currency: string;
   created_at: string;
   updated_at: string;
 }

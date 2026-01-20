@@ -31,11 +31,17 @@ import Messages from './pages/admin/Messages'
 import AdminProfile from './pages/admin/Profile'
 import AdminSettings from './pages/admin/Settings'
 import { Services } from './pages/admin/Services'
-import { Bookings } from './pages/admin/Bookings'
+import { Bookings as AdminBookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Wallets'
 import { Finance } from './pages/admin/Finance'
 
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
+
+// Tourist pages
+import Bookings from './pages/Bookings'
+import Saved from './pages/Saved'
+import Settings from './pages/Settings'
+import EditProfile from './pages/EditProfile'
 
 function App() {
   return (
@@ -59,6 +65,40 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/vendor-login" element={<VendorLogin />} />
           <Route path="/vendor-pending" element={<VendorPending />} />
+          
+          {/* Tourist Routes */}
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <Bookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/saved"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <Saved />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edit-profile"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <EditProfile />
+              </ProtectedRoute>
+            }
+          />
           
           {/* Vendor Routes */}
           <Route
@@ -94,7 +134,7 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="vendors" element={<Vendors />} />
             <Route path="services" element={<Services />} />
-            <Route path="bookings" element={<Bookings />} />
+            <Route path="bookings" element={<AdminBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="finance" element={<Finance />} />
