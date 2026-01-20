@@ -154,6 +154,22 @@ export default function VendorTransactions() {
 
               <div className="bg-white shadow rounded-lg p-6">
                 <div>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Completed Bookings Balance</dt>
+                  <dd className="text-2xl font-bold text-green-700 mt-1">{formatCurrency(walletStats.completedBalance, walletStats.currency)}</dd>
+                  <dd className="text-xs text-gray-500 mt-1">Money for completed bookings</dd>
+                </div>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-6">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Bookings Balance</dt>
+                  <dd className="text-2xl font-bold text-yellow-600 mt-1">{formatCurrency(walletStats.pendingBalance, walletStats.currency)}</dd>
+                  <dd className="text-xs text-gray-500 mt-1">Money paid but booking not completed</dd>
+                </div>
+              </div>
+
+              <div className="bg-white shadow rounded-lg p-6">
+                <div>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Earned</dt>
                   <dd className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(walletStats.totalEarned, walletStats.currency)}</dd>
                 </div>

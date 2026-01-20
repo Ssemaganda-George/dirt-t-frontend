@@ -256,36 +256,42 @@ export function Bookings() {
                       <StatusBadge status={booking.payment_status} variant="small" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex flex-col space-y-1">
-                        <select
-                          value={booking.status}
-                          onChange={(e) => updateBookingStatus(booking.id, e.target.value as Booking['status'])}
-                          className="border rounded px-2 py-1 text-xs"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                        <select
-                          value={booking.payment_status}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value as Booking['payment_status'];
-                            console.log('Admin: Payment status dropdown changed for booking', booking.id, 'from', booking.payment_status, 'to', newStatus);
-                            try {
-                              await updatePaymentStatus(booking.id, newStatus);
-                              console.log('Admin: Payment status update completed');
-                            } catch (err) {
-                              console.error('Admin: Payment status update failed:', err);
-                              alert('Failed to update payment status: ' + (err instanceof Error ? err.message : 'Unknown error'));
-                            }
-                          }}
-                          className="border rounded px-2 py-1 text-xs"
-                        >
-                          <option value="pending">Payment Pending</option>
-                          <option value="paid">Paid</option>
-                          <option value="refunded">Refunded</option>
-                        </select>
+                      <div className="flex flex-col space-y-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Booking Status</label>
+                          <select
+                            value={booking.status}
+                            onChange={(e) => updateBookingStatus(booking.id, e.target.value as Booking['status'])}
+                            className="border rounded px-2 py-1 text-xs w-full"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Status</label>
+                          <select
+                            value={booking.payment_status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value as Booking['payment_status'];
+                              console.log('Admin: Payment status dropdown changed for booking', booking.id, 'from', booking.payment_status, 'to', newStatus);
+                              try {
+                                await updatePaymentStatus(booking.id, newStatus);
+                                console.log('Admin: Payment status update completed');
+                              } catch (err) {
+                                console.error('Admin: Payment status update failed:', err);
+                                alert('Failed to update payment status: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                              }
+                            }}
+                            className="border rounded px-2 py-1 text-xs w-full"
+                          >
+                            <option value="pending">Payment Pending</option>
+                            <option value="paid">Paid</option>
+                            <option value="refunded">Refunded</option>
+                          </select>
+                        </div>
                       </div>
                     </td>
                   </tr>

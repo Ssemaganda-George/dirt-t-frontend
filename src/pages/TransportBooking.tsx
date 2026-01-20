@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Users, CreditCard, CheckCircle, Car } from 'lucide-react'
+import { ArrowLeft, Users, CreditCard, CheckCircle, Car, XCircle } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -56,7 +56,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const { addToCart } = useCart()
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
-  const [cartSaved, setCartSaved] = useState(false)
+  // Removed unused cartSaved state
+  const [bookingConfirmed, setBookingConfirmed] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
@@ -193,9 +195,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       if (!validateCurrentStep()) {
         return
       }
-      
+
       // If completing booking (step 3), create the actual booking
       if (currentStep === 3) {
+        setBookingError(null)
+        // Prepare booking data for localStorage (vendor panel)
         const bookingDataToSave = {
           service_id: service.id,
           vendor_id: service.vendor_id || 'vendor_demo',
@@ -205,6 +209,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           total_amount: totalPrice,
           currency: service.currency,
           status: 'confirmed' as const,
+          payment_status: 'paid' as const, // keep vendor demo as paid
           special_requests: bookingData.specialRequests,
           // Add transport-specific data
           pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
@@ -215,47 +220,48 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           end_time: bookingData.endTime,
           end_date: bookingData.endDate
         }
-        
-        // Create the booking for the vendor (localStorage)
+        // Save to vendor localStorage for demo panel
         createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
-        
-        // Also create the booking in the database for admin visibility
-        try {
-          const bookingDataToInsert = {
-            service_id: service.id,
-            tourist_id: profile?.id,
-            vendor_id: service.vendor_id || 'vendor_demo',
-            booking_date: new Date().toISOString(),
-            service_date: bookingData.startDate,
-            guests: bookingData.passengers,
-            total_amount: totalPrice,
-            currency: service.currency,
-            status: 'pending' as const,
-            payment_status: 'pending' as const,
-            special_requests: bookingData.specialRequests,
-            // Guest booking fields
-            guest_name: profile ? undefined : bookingData.contactName,
-            guest_email: profile ? undefined : bookingData.contactEmail,
-            guest_phone: profile ? undefined : bookingData.contactPhone,
-            // Transport-specific fields
-            pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-            dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-            driver_option: bookingData.driverOption,
-            return_trip: bookingData.returnTrip,
-            start_time: bookingData.startTime,
-            end_time: bookingData.endTime,
-            end_date: bookingData.endDate
-          }
-          console.log('Creating database booking with vendor_id:', bookingDataToInsert.vendor_id)
-          console.log('Service vendor_id:', service.vendor_id)
-          const result = await createDatabaseBooking(bookingDataToInsert)
-          console.log('Database booking created successfully:', result)
-        } catch (error) {
-          console.error('Failed to save booking to database:', error)
-          // Continue with the process even if database save fails
+
+        // Prepare booking data for Supabase (admin/vendor visibility)
+        const bookingDataToInsert = {
+          service_id: service.id,
+          tourist_id: profile?.id,
+          vendor_id: service.vendor_id || 'vendor_demo',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.startDate,
+          guests: bookingData.passengers,
+          total_amount: totalPrice,
+          currency: service.currency,
+          status: 'confirmed' as const,
+          payment_status: 'pending' as const, // always pending for admin
+          special_requests: bookingData.specialRequests,
+          // Guest booking fields
+          guest_name: profile ? undefined : bookingData.contactName,
+          guest_email: profile ? undefined : bookingData.contactEmail,
+          guest_phone: profile ? undefined : bookingData.contactPhone,
+          // Transport-specific fields
+          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+          driver_option: bookingData.driverOption,
+          return_trip: bookingData.returnTrip,
+          start_time: bookingData.startTime,
+          end_time: bookingData.endTime,
+          end_date: bookingData.endDate
         }
+        try {
+          const result = await createDatabaseBooking(bookingDataToInsert)
+          if (result && result.id) {
+            setBookingConfirmed(true)
+            setCurrentStep(currentStep + 1)
+          } else {
+            setBookingError('Booking could not be confirmed. Please try again.')
+          }
+        } catch (error: any) {
+          setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
+        }
+        return // Only advance step if booking is successful
       }
-      
       setCurrentStep(currentStep + 1)
     }
   }
@@ -312,7 +318,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       totalPrice,
       currency: service.currency
     })
-    setCartSaved(true)
+  // setCartSaved removed (no longer needed)
   }
 
   const renderStepContent = () => {
@@ -721,8 +727,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  // Show cart confirmation screen
-  if (cartSaved) {
+  // Show booking confirmation screen only if booking is confirmed in Supabase
+  if (bookingConfirmed) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center space-y-6">
@@ -730,9 +736,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Saved to Cart!</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
             <p className="text-gray-600">
-              Your transportation booking has been saved to cart. You can complete the booking later.
+              Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
             </p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-left">
@@ -763,7 +769,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 <span className="font-medium">{bookingData.returnTrip ? 'Yes' : 'No'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Total:</span>
+                <span className="text-gray-600">Total Paid:</span>
                 <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
               </div>
             </div>
@@ -788,6 +794,29 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               Home
             </button>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if booking failed
+  if (bookingError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center space-y-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <XCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Failed</h3>
+            <p className="text-gray-600">{bookingError}</p>
+          </div>
+          <button
+            onClick={() => setCurrentStep(1)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     )

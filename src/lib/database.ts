@@ -34,6 +34,7 @@ export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
 import type { Flight } from '../types'
 import { formatCurrency } from './utils'
+import { creditWallet } from './creditWallet'
 
 export interface Profile {
   id: string
@@ -1435,8 +1436,8 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
 
     console.log('DB: Booking updated successfully. New status:', data.status, 'payment_status:', data.payment_status)
 
-    // Check if we need to create a transaction
-    // Create transaction when booking is "confirmed AND paid" (after update)
+    // Check if we need to create a transaction and credit wallets
+    // Create transaction and credit wallets when booking is "confirmed AND paid" (after update)
     const finalStatus = data.status;
     const finalPaymentStatus = data.payment_status;
     const shouldCreateTransaction = finalStatus === 'confirmed' && finalPaymentStatus === 'paid';
@@ -1487,6 +1488,14 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
               reference
             });
             console.log('Created payment transaction for booking:', id);
+            // Credit vendor wallet
+            await creditWallet(data.vendor_id, data.total_amount, data.currency);
+            // Credit admin wallet (platform fee logic can be added here)
+            const adminId = await getAdminProfileId();
+            if (adminId) {
+              // For now, credit full amount to admin as well. Adjust for fee split if needed.
+              await creditWallet(adminId, data.total_amount, data.currency);
+            }
           } catch (transactionError) {
             // If transactions table doesn't exist, just log and continue
             if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
@@ -2641,23 +2650,49 @@ export async function getWalletStats(vendorId: string) {
       }
     }
 
-    const payments = transactions.filter(t => t.transaction_type === 'payment' && t.status === 'completed')
-    const withdrawals = transactions.filter(t => t.transaction_type === 'withdrawal')
+    // Payments for bookings that are paid but not yet completed
+    const pendingPayments = transactions.filter(t => t.transaction_type === 'payment' && t.status === 'completed' && t.booking_id)
+    // To distinguish, we need to check booking status for each payment
+    // We'll fetch all related bookings and map their status
+    let completedBookingIds = [];
+    let pendingBookingIds = [];
+    if (pendingPayments.length > 0) {
+      const bookingIds = pendingPayments.map(t => t.booking_id).filter(Boolean);
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id, status')
+        .in('id', bookingIds);
+      if (!bookingsError && bookings) {
+        completedBookingIds = bookings.filter(b => b.status === 'completed').map(b => b.id);
+        pendingBookingIds = bookings.filter(b => b.status !== 'completed').map(b => b.id);
+      }
+    }
 
-    const totalEarned = payments.reduce((s, t) => s + t.amount, 0)
-    const totalWithdrawn = withdrawals.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0)
-    const pendingWithdrawals = withdrawals.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0)
-    const currentBalance = totalEarned - totalWithdrawn - pendingWithdrawals
-    const currency = transactions[0]?.currency || 'UGX'
+    // Payments for completed bookings
+    const completedPayments = pendingPayments.filter(t => completedBookingIds.includes(t.booking_id));
+    // Payments for bookings not yet completed
+    const notCompletedPayments = pendingPayments.filter(t => pendingBookingIds.includes(t.booking_id));
+
+    const withdrawals = transactions.filter(t => t.transaction_type === 'withdrawal');
+    const totalEarned = pendingPayments.reduce((s, t) => s + t.amount, 0);
+    const totalWithdrawn = withdrawals.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0);
+    const pendingWithdrawals = withdrawals.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0);
+    const completedBalance = completedPayments.reduce((s, t) => s + t.amount, 0) - totalWithdrawn - pendingWithdrawals;
+    const pendingBalance = notCompletedPayments.reduce((s, t) => s + t.amount, 0);
+    const currentBalance = completedBalance + pendingBalance;
+    const currency = transactions[0]?.currency || 'UGX';
 
     return {
       totalEarned,
       totalWithdrawn,
       pendingWithdrawals,
       currentBalance,
+      completedBalance, // money for completed bookings
+      pendingBalance,   // money for paid but not yet completed bookings
       currency,
       totalTransactions: transactions.length,
-      completedPayments: payments.length,
+      completedPayments: completedPayments.length,
+      pendingPayments: notCompletedPayments.length,
       completedWithdrawals: withdrawals.filter(t => t.status === 'completed').length,
       pendingWithdrawalsCount: withdrawals.filter(t => t.status === 'pending').length
     }

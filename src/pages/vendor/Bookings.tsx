@@ -155,16 +155,43 @@ export default function VendorBookings() {
                   <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
                   <td className="px-6 py-4 text-sm">
                     <div className="flex items-center space-x-3">
-                      <select value={b.status} onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])} className="border rounded-md px-2 py-1">
+                      <select
+                        value={b.status}
+                        onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
+                        className="border rounded-md px-2 py-1"
+                        disabled={b.payment_status !== 'paid'}
+                        title={b.payment_status !== 'paid' ? 'You can only update status after payment is marked as Paid by admin.' : ''}
+                      >
                         <option value="pending">Pending</option>
                         <option value="confirmed">Confirmed</option>
                         <option value="cancelled">Cancelled</option>
                         <option value="completed">Completed</option>
                       </select>
+                      {/* Accept/Reject buttons only if payment is paid and status is pending */}
+                      {b.payment_status === 'paid' && b.status === 'pending' && (
+                        <>
+                          <button
+                            className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                            title="Accept booking"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleStatusChange(b.id, 'confirmed');
+                            }}
+                          >Accept</button>
+                          <button
+                            className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+                            title="Reject booking"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleStatusChange(b.id, 'cancelled');
+                            }}
+                          >Reject</button>
+                        </>
+                      )}
                       {/* Delete booking functionality not implemented for Supabase yet */}
                       <button
                         className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
-                        title="Delete booking (not implemented)"
+                        title={b.payment_status !== 'paid' ? 'You can only delete after payment is marked as Paid by admin.' : 'Delete booking (not implemented)'}
                         disabled
                       >
                         <Trash2 className="h-4 w-4" />
