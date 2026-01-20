@@ -368,21 +368,7 @@ import { supabase } from './supabaseClient'
 export async function getServices(vendorId?: string) {
   let query = supabase
     .from('services')
-    .select(`
-      *,
-      vendors (
-        id,
-        business_name,
-        business_description,
-        business_email,
-        status
-      ),
-      service_categories (
-        id,
-        name,
-        icon
-      )
-    `)
+    .select('*')
 
   if (vendorId) {
     query = query.eq('vendor_id', vendorId)
@@ -401,23 +387,7 @@ export async function getServices(vendorId?: string) {
 export async function getServiceById(serviceId: string) {
   const { data, error } = await supabase
     .from('services')
-    .select(`
-      *,
-      vendors (
-        id,
-        business_name,
-        business_description,
-        business_phone,
-        business_email,
-        business_address,
-        status
-      ),
-      service_categories (
-        id,
-        name,
-        icon
-      )
-    `)
+    .select('*')
     .eq('id', serviceId)
     .maybeSingle()
 
@@ -544,21 +514,7 @@ export async function createService(serviceData: {
         // Re-fetch the service with updated data
         const { data: updatedData, error: updateError } = await supabase
           .from('services')
-          .select(`
-            *,
-            vendors (
-              id,
-              business_name,
-              business_description,
-              business_email,
-              status
-            ),
-            service_categories (
-              id,
-              name,
-              icon
-            )
-          `)
+          .select('*')
           .eq('id', data.id)
           .single()
 
@@ -1310,18 +1266,7 @@ export async function getAllVendors(): Promise<Vendor[]> {
 export async function getAllBookings(): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select(`
-      *,
-      service:services (
-        id,
-        title
-      ),
-      tourist_profile:profiles (
-        id,
-        full_name,
-        email
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -1519,18 +1464,7 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
 export async function getAllTransactions(): Promise<Transaction[]> {
   const { data, error } = await supabase
     .from('transactions')
-    .select(`
-      *,
-      bookings (
-        id,
-        services (
-          title,
-          vendors (
-            business_name
-          )
-        )
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -1562,13 +1496,7 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
     // Simple query without complex joins that might fail due to RLS
     const { data, error } = await supabase
       .from('transactions')
-      .select(`
-        *,
-        vendors (
-          business_name,
-          user_id
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -1580,6 +1508,25 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
   } catch (error) {
     console.error('Error in getAllTransactionsForAdmin:', error)
     throw error
+  }
+}
+
+export async function getAllVendorWallets(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('wallets')
+      .select('*')
+      .order('balance', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching all vendor wallets:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getAllVendorWallets:', error)
+    return []
   }
 }
 
