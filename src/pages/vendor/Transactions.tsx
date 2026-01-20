@@ -4,12 +4,13 @@ import { Transaction } from '../../types'
 import { getTransactions, requestWithdrawal, getWalletStats } from '../../lib/database'
 import { formatCurrency, formatDateTime } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
+import { supabase } from '../../lib/supabaseClient'
 
 export default function VendorTransactions() {
-  const { profile, vendor } = useAuth()
+  const { profile, vendor, loading: authLoading } = useAuth()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
 
-  console.log('VendorTransactions: Auth data:', { profile, vendor, vendorId })
+  console.log('VendorTransactions: Auth data:', { profile, vendor, vendorId, authLoading })
 
   const [txs, setTxs] = useState<Transaction[]>([])
   const [showWithdraw, setShowWithdraw] = useState(false)
@@ -20,6 +21,11 @@ export default function VendorTransactions() {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = async () => {
+    if (authLoading) {
+      console.log('VendorTransactions: Auth still loading, skipping refresh')
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -61,7 +67,54 @@ export default function VendorTransactions() {
     }
   }
 
-  useEffect(() => { refresh() }, [])
+  useEffect(() => { 
+    if (!authLoading && vendorId && vendorId !== 'vendor_demo') {
+      refresh() 
+    }
+  }, [authLoading, vendorId])
+
+  // Set up real-time subscriptions for wallet and transaction updates
+  useEffect(() => {
+    if (authLoading || !vendorId || vendorId === 'vendor_demo') return
+
+    console.log('Setting up real-time subscriptions for vendor:', vendorId)
+
+    // Subscribe to transactions changes for this vendor
+    const transactionsSubscription = supabase
+      .channel('vendor_transactions_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transactions',
+        filter: `vendor_id=eq.${vendorId}`
+      }, (payload: any) => {
+        console.log('Real-time transaction change:', payload)
+        // Refresh data when transactions change
+        refresh()
+      })
+      .subscribe()
+
+    // Subscribe to wallets changes for this vendor
+    const walletsSubscription = supabase
+      .channel('vendor_wallets_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallets',
+        filter: `vendor_id=eq.${vendorId}`
+      }, (payload: any) => {
+        console.log('Real-time wallet change:', payload)
+        // Refresh data when wallet changes
+        refresh()
+      })
+      .subscribe()
+
+    // Cleanup subscriptions
+    return () => {
+      transactionsSubscription.unsubscribe()
+      walletsSubscription.unsubscribe()
+    }
+  }, [vendorId, authLoading])
 
   const handleWithdraw = async () => {
     if (!amount || amount <= 0) return

@@ -140,12 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If vendor record doesn't exist, set vendor to null
         setVendor(null)
       } else {
-        // Get status from profile
-        const profileStatus = profile?.status as 'pending' | 'approved' | 'rejected' | 'suspended' | undefined
-        setVendor({
-          ...data,
-          status: profileStatus || 'pending'
-        } as Vendor)
+        // Use the actual vendor status from the vendor record
+        setVendor(data as Vendor)
       }
     } catch (error) {
       console.error('Error fetching vendor:', error)

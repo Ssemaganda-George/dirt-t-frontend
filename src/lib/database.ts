@@ -2445,55 +2445,63 @@ export async function getInquiryCount(vendorId: string): Promise<number> {
 // Transaction functions
 export async function getTransactions(vendorId: string) {
   try {
-    // First try with vendorId as vendor.id
-    let { data, error } = await supabase
+    console.log('getTransactions: Querying transactions for vendorId:', vendorId)
+    
+    // Try RPC function first (if it exists)
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_vendor_transactions', {
+        vendor_id_param: vendorId
+      })
+      
+      if (!rpcError && rpcData) {
+        console.log('getTransactions: Got transactions via RPC:', rpcData.length)
+        return rpcData
+      }
+      
+      console.log('getTransactions: RPC failed or not available:', rpcError)
+    } catch (rpcErr) {
+      console.log('getTransactions: RPC not available, using fallback')
+    }
+    
+    // Try querying through vendors relationship
+    const { data: vendorData, error: vendorError } = await supabase
+      .from('vendors')
+      .select(`
+        id,
+        transactions (*)
+      `)
+      .eq('id', vendorId)
+      .single()
+
+    console.log('getTransactions: Vendor query result:', vendorData, 'error:', vendorError)
+
+    if (!vendorError && vendorData?.transactions) {
+      console.log('getTransactions: Got transactions through vendor relationship:', vendorData.transactions.length)
+      return vendorData.transactions
+    }
+
+    // Fallback: direct query (might be blocked by RLS)
+    console.log('getTransactions: Using direct query...')
+    const { data, error } = await supabase
       .from('transactions')
       .select('*')
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: false })
 
-    // If error indicates column doesn't exist, the table might not be migrated
-    if (error && error.message?.includes('column transactions.vendor_id does not exist')) {
-      console.warn('Transactions table exists but vendor_id column missing. Returning empty array.')
-      return []
-    }
-
-    // If no data and vendorId might be a user_id, try with vendor record lookup
-    if ((!data || data.length === 0) && !error) {
-      const { data: vendorRecord, error: vendorError } = await supabase
-        .from('vendors')
-        .select('id')
-        .eq('user_id', vendorId)
-        .single()
-
-      if (!vendorError && vendorRecord) {
-        const { data: vendorData, error: vendorDataError } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('vendor_id', vendorRecord.id)
-          .order('created_at', { ascending: false })
-
-        if (!vendorDataError) {
-          data = vendorData
-          error = vendorDataError
-        }
-      }
-    }
+    console.log('getTransactions: Direct query result - data length:', data?.length, 'error:', error)
 
     if (error) {
-      // If table doesn't exist, return empty array
-      if (error.message?.includes('relation "transactions" does not exist')) {
-        console.warn('Transactions table does not exist yet. Returning empty array.')
+      if (error.message?.includes('permission denied') || error.message?.includes('insufficient_privilege')) {
+        console.warn('RLS blocking transactions query, returning empty array')
         return []
       }
-      console.error('Error fetching transactions:', error)
       throw error
     }
 
     return data || []
   } catch (error) {
     console.error('Error in getTransactions:', error)
-    throw error
+    return []
   }
 }
 
@@ -2651,34 +2659,34 @@ export async function getWalletStats(vendorId: string) {
     }
 
     // Payments for bookings that are paid but not yet completed
-    const pendingPayments = transactions.filter(t => t.transaction_type === 'payment' && t.status === 'completed' && t.booking_id)
+    const pendingPayments = transactions.filter((t: Transaction) => t.transaction_type === 'payment' && t.status === 'completed' && t.booking_id)
     // To distinguish, we need to check booking status for each payment
     // We'll fetch all related bookings and map their status
-    let completedBookingIds = [];
-    let pendingBookingIds = [];
+    let completedBookingIds: string[] = [];
+    let pendingBookingIds: string[] = [];
     if (pendingPayments.length > 0) {
-      const bookingIds = pendingPayments.map(t => t.booking_id).filter(Boolean);
+      const bookingIds = pendingPayments.map((t: Transaction) => t.booking_id).filter(Boolean) as string[];
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('id, status')
         .in('id', bookingIds);
       if (!bookingsError && bookings) {
-        completedBookingIds = bookings.filter(b => b.status === 'completed').map(b => b.id);
-        pendingBookingIds = bookings.filter(b => b.status !== 'completed').map(b => b.id);
+        completedBookingIds = bookings.filter((b: any) => b.status === 'completed').map((b: any) => b.id);
+        pendingBookingIds = bookings.filter((b: any) => b.status !== 'completed').map((b: any) => b.id);
       }
     }
 
     // Payments for completed bookings
-    const completedPayments = pendingPayments.filter(t => completedBookingIds.includes(t.booking_id));
+    const completedPayments = pendingPayments.filter((t: Transaction) => completedBookingIds.includes(t.booking_id!));
     // Payments for bookings not yet completed
-    const notCompletedPayments = pendingPayments.filter(t => pendingBookingIds.includes(t.booking_id));
+    const notCompletedPayments = pendingPayments.filter((t: Transaction) => pendingBookingIds.includes(t.booking_id!));
 
-    const withdrawals = transactions.filter(t => t.transaction_type === 'withdrawal');
-    const totalEarned = pendingPayments.reduce((s, t) => s + t.amount, 0);
-    const totalWithdrawn = withdrawals.filter(t => t.status === 'completed').reduce((s, t) => s + t.amount, 0);
-    const pendingWithdrawals = withdrawals.filter(t => t.status === 'pending').reduce((s, t) => s + t.amount, 0);
-    const completedBalance = completedPayments.reduce((s, t) => s + t.amount, 0) - totalWithdrawn - pendingWithdrawals;
-    const pendingBalance = notCompletedPayments.reduce((s, t) => s + t.amount, 0);
+    const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal');
+    const totalEarned = pendingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
+    const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0);
+    const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0);
+    const completedBalance = completedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) - totalWithdrawn - pendingWithdrawals;
+    const pendingBalance = notCompletedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
     const currentBalance = completedBalance + pendingBalance;
     const currency = transactions[0]?.currency || 'UGX';
 
@@ -2693,8 +2701,8 @@ export async function getWalletStats(vendorId: string) {
       totalTransactions: transactions.length,
       completedPayments: completedPayments.length,
       pendingPayments: notCompletedPayments.length,
-      completedWithdrawals: withdrawals.filter(t => t.status === 'completed').length,
-      pendingWithdrawalsCount: withdrawals.filter(t => t.status === 'pending').length
+      completedWithdrawals: withdrawals.filter((t: Transaction) => t.status === 'completed').length,
+      pendingWithdrawalsCount: withdrawals.filter((t: Transaction) => t.status === 'pending').length
     }
   } catch (error) {
     console.error('Error in getWalletStats:', error)

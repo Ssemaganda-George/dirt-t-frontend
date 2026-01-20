@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 export default function VendorDashboard() {
-  const { profile, user } = useAuth()
+  const { profile, user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [vendorId, setVendorId] = useState<string | null>(null)
   const [vendorLoading, setVendorLoading] = useState(true)
@@ -42,8 +42,7 @@ export default function VendorDashboard() {
   // Check if user is a vendor and set vendorId accordingly
   useEffect(() => {
     const checkVendorStatus = async () => {
-      if (!user?.id) {
-        setVendorLoading(false)
+      if (authLoading || !user?.id) {
         return
       }
 
@@ -131,7 +130,7 @@ export default function VendorDashboard() {
     }
 
     checkVendorStatus()
-  }, [user?.id])
+  }, [authLoading, user?.id])
 
   const refresh = async () => {
     if (!vendorId) {
@@ -154,6 +153,49 @@ export default function VendorDashboard() {
       refresh() 
     }
   }, [vendorId, vendorLoading])
+
+  // Set up real-time subscriptions for wallet and transaction updates
+  useEffect(() => {
+    if (authLoading || !vendorId || vendorLoading) return
+
+    console.log('Dashboard: Setting up real-time subscriptions for vendor:', vendorId)
+
+    // Subscribe to wallets changes for this vendor (affects balance stat)
+    const walletsSubscription = supabase
+      .channel('dashboard_wallets_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallets',
+        filter: `vendor_id=eq.${vendorId}`
+      }, (payload: any) => {
+        console.log('Dashboard: Real-time wallet change:', payload)
+        // Refresh stats when wallet changes
+        refresh()
+      })
+      .subscribe()
+
+    // Subscribe to transactions changes for this vendor (affects balance stat)
+    const transactionsSubscription = supabase
+      .channel('dashboard_transactions_realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transactions',
+        filter: `vendor_id=eq.${vendorId}`
+      }, (payload: any) => {
+        console.log('Dashboard: Real-time transaction change:', payload)
+        // Refresh stats when transactions change
+        refresh()
+      })
+      .subscribe()
+
+    // Cleanup subscriptions
+    return () => {
+      walletsSubscription.unsubscribe()
+      transactionsSubscription.unsubscribe()
+    }
+  }, [authLoading, vendorId, vendorLoading])
 
   if (loading || vendorLoading) {
     return (

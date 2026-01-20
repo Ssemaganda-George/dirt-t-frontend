@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
 import { getServices } from '../../store/vendorStore'
-import { getAllBookings, createBooking as createDbBooking } from '../../lib/database'
+import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
 import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { Trash2 } from 'lucide-react'
@@ -77,10 +77,15 @@ export default function VendorBookings() {
     }
   }, [vendorId])
 
-  // TODO: Implement status update via Supabase if needed
-  const handleStatusChange = (bookingId: string, status: Booking['status']) => {
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b))
-    // Optionally: call a Supabase updateBookingStatus here
+  const handleStatusChange = async (bookingId: string, status: Booking['status']) => {
+    try {
+      await updateBooking(bookingId, { status })
+      // Real-time subscription will update the UI automatically
+    } catch (error) {
+      console.error('Error updating booking status:', error)
+      // Revert local state on error
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
+    }
   }
 
   return (

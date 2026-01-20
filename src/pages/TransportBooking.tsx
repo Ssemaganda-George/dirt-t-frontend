@@ -199,7 +199,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       // If completing booking (step 3), create the actual booking
       if (currentStep === 3) {
         setBookingError(null)
-        // Allow guest bookings: only include tourist_id when user is signed in.
         // Prepare booking data for localStorage (vendor panel)
         const bookingDataToSave = {
           service_id: service.id,
@@ -225,8 +224,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
 
         // Prepare booking data for Supabase (admin/vendor visibility)
-        const bookingDataToInsert: any = {
+        const bookingDataToInsert = {
           service_id: service.id,
+          tourist_id: profile?.id,
           vendor_id: service.vendor_id || 'vendor_demo',
           booking_date: new Date().toISOString(),
           service_date: bookingData.startDate,
@@ -248,10 +248,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           start_time: bookingData.startTime,
           end_time: bookingData.endTime,
           end_date: bookingData.endDate
-        }
-
-        if (profile?.id) {
-          bookingDataToInsert.tourist_id = profile.id
         }
         try {
           const result = await createDatabaseBooking(bookingDataToInsert)
