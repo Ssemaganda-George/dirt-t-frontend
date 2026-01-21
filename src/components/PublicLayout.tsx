@@ -46,13 +46,13 @@ export default function PublicLayout() {
 
         const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
         return {
-          name: cat.name,
+          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
           href: `/category/${urlSlug}`
         }
       })
       .sort((a, b) => {
-        // Custom sorting: flights first, activities last, others alphabetical
-        const order = { 'flights': 0, 'activities': 2 }
+        // Custom sorting: flights first, events last, others alphabetical
+        const order = { 'flights': 0, 'events': 2 }
         const aPriority = order[a.href.split('/').pop() as keyof typeof order] ?? 1
         const bPriority = order[b.href.split('/').pop() as keyof typeof order] ?? 1
         

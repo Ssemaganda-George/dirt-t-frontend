@@ -28,11 +28,11 @@ export default function CategoryPage() {
   }
 
   const categoryNames: { [key: string]: string } = {
-    'hotels': 'Hotels',
+    'hotels': 'Accommodation',
     'tours': 'Tour Packages',
     'restaurants': 'Restaurants',
     'transport': 'Transport',
-    'activities': 'Activities',
+    'activities': 'Events',
     'flights': 'Flights',
     'shops': 'Shops',
     'services': 'Services'
@@ -45,11 +45,11 @@ export default function CategoryPage() {
       return [
         { key: 'all', label: 'All' },
         { key: 'flights', label: 'Flights' },
-        { key: 'hotels', label: 'Hotels' },
+        { key: 'hotels', label: 'Accommodation' },
         { key: 'tours', label: 'Tours' },
         { key: 'restaurants', label: 'Restaurants' },
         { key: 'transport', label: 'Transport' },
-        { key: 'activities', label: 'Activities' },
+        { key: 'activities', label: 'Events' },
         { key: 'shops', label: 'Shops' }
       ]
     } else if (category && categoryMapping[category]) {
@@ -98,7 +98,7 @@ export default function CategoryPage() {
           ]
         case 'cat_activities':
           return [
-            { key: 'all', label: 'All Activities' },
+            { key: 'all', label: 'All Events' },
             { key: 'outdoor', label: 'Outdoor' },
             { key: 'indoor', label: 'Indoor' },
             { key: 'water', label: 'Water Sports' },
@@ -355,7 +355,7 @@ function ServiceCard({ service }: ServiceCardProps) {
       case 'cat_hotels':
         return {
           icon: Hotel,
-          label: 'Hotel',
+          label: 'Accommodation',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
           secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
         }
@@ -383,8 +383,8 @@ function ServiceCard({ service }: ServiceCardProps) {
       case 'cat_activities':
         return {
           icon: Target,
-          label: 'Activity',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
+          label: 'Event',
+          primaryInfo: service.duration_hours ? `${service.duration_hours}h event` : 'Adventure',
           secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
         }
       case 'cat_flights':

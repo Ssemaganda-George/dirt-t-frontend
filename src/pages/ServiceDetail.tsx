@@ -282,7 +282,7 @@ export default function ServiceDetail() {
       case 'hotels':
         return (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Hotel Details</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Accommodation Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.star_rating && (
                 <div className="flex items-center">
@@ -813,7 +813,7 @@ export default function ServiceDetail() {
       case 'activities':
         return (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Details</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.activity_type && (
                 <div className="text-sm text-gray-600">

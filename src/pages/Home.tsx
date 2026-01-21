@@ -28,7 +28,7 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
-      // Sort categories so Activities comes last
+      // Sort categories so Events comes last
       const sortedCategories = dbCategories.sort((a, b) => {
         if (a.id === 'cat_activities') return 1
         if (b.id === 'cat_activities') return -1
@@ -40,7 +40,7 @@ export default function Home() {
         { id: 'all', name: 'All', icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
-          name: cat.name,
+          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
           icon: cat.icon || MapPinIcon
         }))
       ]
@@ -108,11 +108,13 @@ export default function Home() {
                          (service.service_categories?.name && service.service_categories.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
                          // Also check for common category variations and partial matches
                          searchQuery.toLowerCase().includes('hotel') && service.category_id === 'cat_hotels' ||
+                         searchQuery.toLowerCase().includes('accommodation') && service.category_id === 'cat_hotels' ||
                          searchQuery.toLowerCase().includes('tour') && service.category_id === 'cat_tour_packages' ||
                          searchQuery.toLowerCase().includes('restaurant') && service.category_id === 'cat_restaurants' ||
                          searchQuery.toLowerCase().includes('flight') && service.category_id === 'cat_flights' ||
                          searchQuery.toLowerCase().includes('transport') && service.category_id === 'cat_transport' ||
                          searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities' ||
+                         searchQuery.toLowerCase().includes('event') && service.category_id === 'cat_activities' ||
                          searchQuery.toLowerCase().includes('shop') && service.category_id === 'cat_shops'
 
     const matchesCategory = selectedCategory === 'all' ||
@@ -206,7 +208,6 @@ export default function Home() {
                   : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
             >
-              <span className="text-xs hidden md:inline">{renderIcon(category.icon, "h-3 w-3")}</span>
               <span>{category.name}</span>
             </button>
           ))}
@@ -287,7 +288,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
       case 'cat_hotels':
         return {
           icon: Hotel,
-          label: 'Hotel',
+          label: 'Accommodation',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
           secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
         }

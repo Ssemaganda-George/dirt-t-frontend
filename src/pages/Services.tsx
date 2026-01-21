@@ -8,7 +8,7 @@ import type { Service } from '../types'
 
 const categories = [
   {
-    name: 'Hotels',
+    name: 'Accommodation',
     href: '/category/hotels',
     icon: Hotel,
     description: 'Find the perfect accommodation for your stay',
