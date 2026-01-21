@@ -74,7 +74,7 @@ export default function ContactUs() {
     {
       icon: Building,
       title: 'Head Office',
-      details: ['Plot 123 Kampala Road', 'Nakawa, Kampala, Uganda', 'P.O. Box 12345']
+      details: ['Plot Pool Road', 'Makerere MIICHub, Kampala, Uganda', 'P.O. Box ']
     },
     {
       icon: Clock,
@@ -86,12 +86,12 @@ export default function ContactUs() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-900 mb-4">Contact Us</h1>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Get in touch with our team. We're here to help you plan your perfect Ugandan adventure.
+            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Contact Us</h1>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-snug antialiased">
+              Get in touch with our team. We're here to help you plan your perfect adventure.
             </p>
           </div>
         </div>
@@ -101,33 +101,33 @@ export default function ContactUs() {
         {/* Contact Methods */}
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">How can we help you?</h2>
-            <p className="text-lg text-slate-600">Choose the best way to reach our support team</p>
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight antialiased">How can we help you?</h2>
+            <p className="text-lg text-slate-600 leading-snug antialiased">Choose the best way to reach our support team</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {contactMethods.map((method, index) => (
-              <div key={index} className={`bg-white rounded-xl shadow-sm border p-8 text-center transition-all duration-200 hover:shadow-md ${
-                method.primary ? 'border-blue-200 bg-blue-50/50' : 'border-slate-200'
+              <div key={index} className={`bg-slate-700 shadow-sm border p-8 text-center transition-all duration-200 hover:shadow-md ${
+                method.primary ? 'border-slate-600 bg-slate-600' : 'border-slate-600'
               }`}>
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-6 ${
-                  method.primary ? 'bg-blue-100' : 'bg-slate-100'
+                <div className={`w-16 h-16 flex items-center justify-center mx-auto mb-6 ${
+                  method.primary ? 'bg-slate-500' : 'bg-slate-500'
                 }`}>
                   <method.icon className={`h-8 w-8 ${
-                    method.primary ? 'text-blue-600' : 'text-slate-600'
+                    method.primary ? 'text-white' : 'text-white'
                   }`} />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">{method.title}</h3>
-                <p className="text-slate-600 mb-6">{method.description}</p>
-                <ul className="text-sm text-slate-600 space-y-1 mb-6">
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight antialiased">{method.title}</h3>
+                <p className="text-slate-200 mb-6 leading-snug antialiased">{method.description}</p>
+                <ul className="text-sm text-slate-200 space-y-1 mb-6">
                   {method.details.map((detail, idx) => (
                     <li key={idx}>{detail}</li>
                   ))}
                 </ul>
-                <button className={`w-full py-3 px-6 rounded-lg font-medium transition-colors ${
+                <button className={`w-full py-3 px-6 font-semibold transition-colors ${
                   method.primary
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-600'
+                    : 'bg-slate-600 text-slate-200 hover:bg-slate-500 border border-slate-500'
                 }`}>
                   {method.action}
                 </button>
@@ -138,10 +138,10 @@ export default function ContactUs() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           {/* Contact Form */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+          <div className="bg-slate-700 shadow-sm border border-slate-600 p-8">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Send us a Message</h2>
-              <p className="text-slate-600">Fill out the form below and we'll get back to you within 24 hours.</p>
+              <h2 className="text-2xl font-black text-white mb-2 tracking-tight antialiased">Send us a Message</h2>
+              <p className="text-slate-200 leading-snug antialiased">Fill out the form below and we'll get back to you within 24 hours.</p>
             </div>
 
             {submitted ? (
@@ -149,8 +149,8 @@ export default function ContactUs() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Send className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">Message Sent!</h3>
-                <p className="text-slate-600">
+                <h3 className="text-xl font-bold text-white mb-2 tracking-tight antialiased">Message Sent!</h3>
+                <p className="text-slate-200 leading-snug antialiased">
                   Thank you for contacting us. We'll get back to you within 24 hours.
                 </p>
               </div>
@@ -158,7 +158,7 @@ export default function ContactUs() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="name" className="block text-sm font-semibold text-slate-200 mb-2 tracking-tight antialiased">
                       Full Name *
                     </label>
                     <input
@@ -168,13 +168,13 @@ export default function ContactUs() {
                       required
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-slate-600 bg-slate-600 text-white placeholder-slate-400 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors"
                       placeholder="Your full name"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-semibold text-slate-200 mb-2 tracking-tight antialiased">
                       Email Address *
                     </label>
                     <input
@@ -184,14 +184,14 @@ export default function ContactUs() {
                       required
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 border border-slate-600 bg-slate-600 text-white placeholder-slate-400 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors"
                       placeholder="your@email.com"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="category" className="block text-sm font-semibold text-slate-200 mb-2 tracking-tight antialiased">
                     Category
                   </label>
                   <select
@@ -199,7 +199,7 @@ export default function ContactUs() {
                     name="category"
                     value={formData.category}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-slate-600 bg-slate-600 text-white focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors"
                   >
                     <option value="general">General Inquiry</option>
                     <option value="booking">Booking Support</option>
@@ -211,7 +211,7 @@ export default function ContactUs() {
                 </div>
 
                 <div>
-                  <label htmlFor="subject" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="subject" className="block text-sm font-semibold text-slate-200 mb-2 tracking-tight antialiased">
                     Subject *
                   </label>
                   <input
@@ -221,13 +221,13 @@ export default function ContactUs() {
                     required
                     value={formData.subject}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-slate-600 bg-slate-600 text-white placeholder-slate-400 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors"
                     placeholder="Brief description of your inquiry"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="message" className="block text-sm font-semibold text-slate-200 mb-2 tracking-tight antialiased">
                     Message *
                   </label>
                   <textarea
@@ -237,7 +237,7 @@ export default function ContactUs() {
                     rows={6}
                     value={formData.message}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                    className="w-full px-4 py-3 border border-slate-600 bg-slate-600 text-white placeholder-slate-400 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors resize-none"
                     placeholder="Please provide details about your inquiry..."
                   />
                 </div>
@@ -245,7 +245,7 @@ export default function ContactUs() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium transition-colors"
+                  className="w-full bg-slate-800 text-white py-4 px-6 hover:bg-slate-700 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold transition-colors border border-slate-600"
                 >
                   {isSubmitting ? (
                     <>
@@ -266,18 +266,18 @@ export default function ContactUs() {
           {/* Office Information */}
           <div className="space-y-8">
             {officeInfo.map((info, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+              <div key={index} className="bg-slate-700 shadow-sm border border-slate-600 p-8">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                      <info.icon className="h-6 w-6 text-slate-600" />
+                    <div className="w-12 h-12 bg-slate-500 flex items-center justify-center">
+                      <info.icon className="h-6 w-6 text-white" />
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-slate-900 mb-3">{info.title}</h3>
+                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{info.title}</h3>
                     <div className="space-y-1">
                       {info.details.map((detail, idx) => (
-                        <p key={idx} className="text-slate-600">{detail}</p>
+                        <p key={idx} className="text-slate-200 leading-snug antialiased">{detail}</p>
                       ))}
                     </div>
                   </div>
@@ -286,12 +286,12 @@ export default function ContactUs() {
             ))}
 
             {/* Map Placeholder */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-              <div className="flex items-center justify-center h-64 bg-slate-50 rounded-lg">
+            <div className="bg-slate-700 shadow-sm border border-slate-600 p-8">
+              <div className="flex items-center justify-center h-64 bg-slate-600">
                 <div className="text-center">
-                  <MapPin className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-slate-900 mb-2">Find Us</h4>
-                  <p className="text-slate-600">Interactive map coming soon</p>
+                  <MapPin className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-bold text-white mb-2 tracking-tight antialiased">Find Us</h4>
+                  <p className="text-slate-300 leading-snug antialiased">Interactive map coming soon</p>
                 </div>
               </div>
             </div>

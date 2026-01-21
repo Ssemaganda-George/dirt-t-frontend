@@ -68,7 +68,7 @@ const faqCategories = [
 const guides = [
   {
     title: "Getting Started Guide",
-    description: "Learn the basics of using DirtTrails to book services in Uganda.",
+    description: "Learn the basics of using DirtTrails to book tourim services.",
     icon: BookOpen,
     link: "#"
   },
@@ -112,11 +112,11 @@ export default function HelpCenter() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-900 mb-4">Help Center</h1>
-            <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Help Center</h1>
+            <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-snug antialiased">
               Find answers to common questions and get the help you need to make the most of your DirtTrails experience.
             </p>
 
@@ -128,7 +128,7 @@ export default function HelpCenter() {
                 placeholder="Search for help..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg"
+                className="w-full pl-12 pr-4 py-4 border border-slate-600 bg-slate-700 text-white placeholder-slate-400 focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-colors text-lg"
               />
             </div>
           </div>
@@ -139,27 +139,27 @@ export default function HelpCenter() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-8">
-              <h3 className="font-semibold text-slate-900 mb-4">Categories</h3>
+            <div className="bg-slate-700 shadow-sm border border-slate-600 p-6 sticky top-8">
+              <h3 className="font-bold text-white mb-4 tracking-tight antialiased">Categories</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                  className={`w-full text-left px-3 py-2 transition-colors ${
                     selectedCategory === 'all'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-slate-600 hover:bg-slate-50'
+                      ? 'bg-slate-600 text-white border border-slate-500'
+                      : 'text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  All Topics
+                  All Categories
                 </button>
                 {faqCategories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center ${
+                    className={`w-full text-left px-3 py-2 transition-colors flex items-center ${
                       selectedCategory === category.id
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-slate-600 hover:bg-slate-50'
+                        ? 'bg-slate-600 text-white border border-slate-500'
+                        : 'text-slate-300 hover:bg-slate-600'
                     }`}
                   >
                     <category.icon className="h-4 w-4 mr-2" />
@@ -169,21 +169,21 @@ export default function HelpCenter() {
               </div>
 
               {/* Contact Card */}
-              <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <h4 className="font-medium text-slate-900 mb-3">Need More Help?</h4>
+              <div className="mt-8 p-4 bg-slate-600 border border-slate-500">
+                <h4 className="font-bold text-white mb-3 tracking-tight antialiased">Need More Help?</h4>
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center text-slate-600">
+                  <div className="flex items-center text-slate-300">
                     <Phone className="h-4 w-4 mr-2" />
                     <span>+256 414 123 456</span>
                   </div>
-                  <div className="flex items-center text-slate-600">
+                  <div className="flex items-center text-slate-300">
                     <Mail className="h-4 w-4 mr-2" />
                     <span>support@dirtrails.ug</span>
                   </div>
                 </div>
                 <Link
                   to="/contact"
-                  className="mt-3 inline-flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm"
+                  className="mt-3 inline-flex items-center text-slate-300 hover:text-white font-semibold text-sm tracking-tight antialiased"
                 >
                   Contact Support →
                 </Link>
@@ -194,22 +194,22 @@ export default function HelpCenter() {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {/* FAQ Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-8">
+            <div className="bg-slate-700 shadow-sm border border-slate-600 p-8 mb-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Frequently Asked Questions</h2>
-                <span className="text-sm text-slate-500">{filteredFaqs.length} results</span>
+                <h2 className="text-2xl font-black text-white tracking-tight antialiased">Frequently Asked Questions</h2>
+                <span className="text-sm text-slate-400 font-semibold tracking-tight antialiased">{filteredFaqs.length} results</span>
               </div>
 
               {filteredFaqs.length === 0 ? (
                 <div className="text-center py-12">
-                  <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-600">No FAQs found matching your search.</p>
+                  <Search className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+                  <p className="text-slate-300 leading-snug antialiased">No FAQs found matching your search.</p>
                   <button
                     onClick={() => {
                       setSearchTerm('')
                       setSelectedCategory('all')
                     }}
-                    className="mt-2 text-blue-600 hover:text-blue-700 font-medium"
+                    className="mt-2 text-slate-300 hover:text-white font-semibold tracking-tight antialiased"
                   >
                     Clear filters
                   </button>
@@ -217,22 +217,22 @@ export default function HelpCenter() {
               ) : (
                 <div className="space-y-3">
                   {filteredFaqs.map((faq, index) => (
-                    <div key={index} className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div key={index} className="border border-slate-600 bg-slate-600 overflow-hidden">
                       <button
                         onClick={() => toggleFaq(index)}
-                        className="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors"
+                        className="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-inset transition-colors"
                       >
-                        <span className="font-medium text-slate-900 pr-4">{faq.question}</span>
+                        <span className="font-bold text-white pr-4 tracking-tight antialiased">{faq.question}</span>
                         {expandedFaq === index ? (
-                          <ChevronUp className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                          <ChevronUp className="h-5 w-5 text-slate-300 flex-shrink-0" />
                         ) : (
-                          <ChevronDown className="h-5 w-5 text-slate-500 flex-shrink-0" />
+                          <ChevronDown className="h-5 w-5 text-slate-300 flex-shrink-0" />
                         )}
                       </button>
 
                       {expandedFaq === index && (
-                        <div className="px-6 pb-5 border-t border-slate-100">
-                          <p className="text-slate-600 leading-relaxed pt-4">{faq.answer}</p>
+                        <div className="px-6 pb-5 border-t border-slate-500">
+                          <p className="text-slate-200 leading-snug antialiased pt-4">{faq.answer}</p>
                         </div>
                       )}
                     </div>
@@ -242,23 +242,23 @@ export default function HelpCenter() {
             </div>
 
             {/* Guides Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-6">Helpful Guides</h2>
+            <div className="bg-slate-700 shadow-sm border border-slate-600 p-8">
+              <h2 className="text-2xl font-black text-white mb-6 tracking-tight antialiased">Helpful Guides</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {guides.map((guide, index) => (
-                  <div key={index} className="border border-slate-200 rounded-lg p-6 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+                  <div key={index} className="border border-slate-600 bg-slate-600 p-6 hover:bg-slate-500 transition-all duration-200">
                     <div className="flex items-start space-x-4">
                       <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                          <guide.icon className="h-5 w-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-slate-500 flex items-center justify-center">
+                          <guide.icon className="h-5 w-5 text-white" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-2">{guide.title}</h3>
-                        <p className="text-slate-600 text-sm mb-4 leading-relaxed">{guide.description}</p>
+                        <h3 className="font-bold text-white mb-2 tracking-tight antialiased">{guide.title}</h3>
+                        <p className="text-slate-200 text-sm mb-4 leading-snug antialiased">{guide.description}</p>
                         <Link
                           to={guide.link}
-                          className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium text-sm group"
+                          className="inline-flex items-center text-slate-300 hover:text-white font-semibold text-sm tracking-tight antialiased group"
                         >
                           Read Guide
                           <ChevronDown className="h-4 w-4 ml-1 transform rotate-[-90deg] group-hover:translate-x-1 transition-transform" />

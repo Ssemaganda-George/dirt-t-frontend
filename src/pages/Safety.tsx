@@ -16,7 +16,7 @@ export default function Safety() {
     {
       icon: AlertTriangle,
       title: "Health Precautions",
-      description: "Take necessary health precautions before and during your trip to Uganda.",
+      description: "Take necessary health precautions before and during your trip.",
       details: [
         "Consult a travel health clinic",
         "Get recommended vaccinations",
@@ -86,11 +86,11 @@ export default function Safety() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-slate-800 border-b border-slate-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-900 mb-4">Safety & Security</h1>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Safety & Security</h1>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto leading-snug antialiased">
               Your safety is our top priority. Learn about safety measures and emergency contacts for a worry-free experience.
             </p>
           </div>
@@ -101,18 +101,18 @@ export default function Safety() {
         {/* Safety Features */}
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Our Safety Commitments</h2>
-            <p className="text-lg text-slate-600">How we ensure your safety throughout your journey</p>
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight antialiased">Our Safety Commitments</h2>
+            <p className="text-lg text-slate-600 leading-snug antialiased">How we ensure your safety throughout your journey</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {safetyFeatures.map((feature, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center hover:shadow-md transition-shadow duration-200">
-                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-6">
-                  <feature.icon className="h-8 w-8 text-blue-600" />
+              <div key={index} className="bg-slate-700 shadow-sm border border-slate-600 p-8 text-center hover:shadow-md transition-shadow duration-200">
+                <div className="w-16 h-16 bg-slate-600 flex items-center justify-center mx-auto mb-6">
+                  <feature.icon className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-3">{feature.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{feature.title}</h3>
+                <p className="text-slate-300 leading-snug antialiased">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -121,27 +121,29 @@ export default function Safety() {
         {/* Safety Tips */}
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Essential Safety Tips</h2>
-            <p className="text-lg text-slate-600">Prepare for a safe and enjoyable trip to Uganda</p>
+            <div className="inline-block bg-slate-800 px-8 py-4 mb-6">
+              <h2 className="text-4xl font-black text-white mb-2 tracking-tight antialiased">Essential Safety Tips</h2>
+              <p className="text-lg text-slate-300 leading-snug antialiased font-semibold">Prepare for a safe and enjoyable trip</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {safetyTips.map((tip, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 hover:shadow-md transition-shadow duration-200">
+              <div key={index} className="bg-slate-700 shadow-sm border border-slate-600 p-8 hover:bg-slate-600 transition-all duration-200">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <tip.icon className="h-6 w-6 text-green-600" />
+                    <div className="w-12 h-12 bg-slate-500 flex items-center justify-center">
+                      <tip.icon className="h-6 w-6 text-white" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-slate-900 mb-3">{tip.title}</h3>
-                    <p className="text-slate-600 mb-6 leading-relaxed">{tip.description}</p>
+                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{tip.title}</h3>
+                    <p className="text-slate-200 mb-6 leading-snug antialiased">{tip.description}</p>
                     <ul className="space-y-2">
                       {tip.details.map((detail, idx) => (
-                        <li key={idx} className="flex items-start text-slate-600">
-                          <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                          <span className="leading-relaxed">{detail}</span>
+                        <li key={idx} className="flex items-start text-slate-200">
+                          <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <span className="leading-snug antialiased">{detail}</span>
                         </li>
                       ))}
                     </ul>
@@ -155,27 +157,27 @@ export default function Safety() {
         {/* Emergency Contacts */}
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Emergency Contacts</h2>
-            <p className="text-lg text-slate-600">Important numbers to keep handy during your trip</p>
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight antialiased">Emergency Contacts</h2>
+            <p className="text-lg text-slate-600 leading-snug antialiased">Important numbers to keep handy during your trip</p>
           </div>
 
           <div className="max-w-md mx-auto">
             {emergencyContacts.map((category, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+              <div key={index} className="bg-slate-700 shadow-sm border border-slate-600 p-8">
                 <div className="flex items-center mb-6">
-                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-                    <category.icon className="h-5 w-5 text-red-600" />
+                  <div className="w-10 h-10 bg-slate-600 flex items-center justify-center mr-3">
+                    <category.icon className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-900">{category.category}</h3>
+                  <h3 className="text-xl font-bold text-white tracking-tight antialiased">{category.category}</h3>
                 </div>
 
                 <div className="space-y-4">
                   {category.contacts.map((contact, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-3 px-4 bg-slate-50 rounded-lg">
-                      <span className="text-slate-700 font-medium">{contact.name}</span>
+                    <div key={idx} className="flex justify-between items-center py-3 px-4 bg-slate-600">
+                      <span className="text-slate-100 font-semibold tracking-tight antialiased">{contact.name}</span>
                       <a
                         href={`tel:${contact.number}`}
-                        className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                        className="text-slate-200 hover:text-white font-bold transition-colors underline tracking-tight antialiased"
                       >
                         {contact.number}
                       </a>
@@ -188,75 +190,101 @@ export default function Safety() {
         </div>
 
         {/* Safety Policy */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+        <div className="bg-slate-800 shadow-sm border border-slate-700 p-8 mb-16">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-4">Our Safety Policy</h2>
-            <p className="text-lg text-slate-600">Comprehensive measures for your peace of mind</p>
+            <h2 className="text-3xl font-black text-white mb-4 tracking-tight antialiased">Our Safety Policy</h2>
+            <p className="text-lg text-slate-300 leading-snug antialiased">Comprehensive measures for your peace of mind</p>
           </div>
 
           <div className="prose prose-slate max-w-none">
-            <p className="text-slate-600 mb-6 leading-relaxed">
+            <p className="text-slate-300 mb-6 leading-snug antialiased">
               At DirtTrails, we are committed to providing a safe and secure platform for travelers and service providers alike.
               Our comprehensive safety measures include:
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="space-y-4">
-                <h4 className="font-semibold text-slate-900 text-lg">For Travelers:</h4>
-                <ul className="space-y-3 text-slate-600">
+                <h4 className="font-bold text-white text-lg tracking-tight antialiased">For Travelers:</h4>
+                <ul className="space-y-3 text-slate-300">
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Rigorous verification of all service providers</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Rigorous verification of all service providers</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Secure payment processing and protection</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Secure payment processing and protection</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>24/7 emergency support hotline</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">24/7 emergency support hotline</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Regular safety audits of partner services</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Regular safety audits of partner services</span>
                   </li>
                 </ul>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-semibold text-slate-900 text-lg">For Service Providers:</h4>
-                <ul className="space-y-3 text-slate-600">
+                <h4 className="font-bold text-white text-lg tracking-tight antialiased">For Service Providers:</h4>
+                <ul className="space-y-3 text-slate-300">
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Background checks and credential verification</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Background checks and credential verification</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Training on safety and customer service standards</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Training on safety and customer service standards</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Regular quality and safety inspections</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Regular quality and safety inspections</span>
                   </li>
                   <li className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Dedicated support team for compliance</span>
+                    <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug antialiased">Dedicated support team for compliance</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+            <div className="bg-amber-600 border border-amber-700 p-6">
               <div className="flex items-start space-x-3">
-                <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                {/* <AlertTriangle className="h-6 w-6 text-amber-200 flex-shrink-0 mt-0.5" /> */}
                 <div>
-                  <h4 className="font-semibold text-amber-800 mb-2">Important Notice</h4>
-                  <p className="text-amber-700 leading-relaxed">
+                  <h4 className="font-bold text-amber-100 mb-2 tracking-tight antialiased">Important Notice</h4>
+                  <p className="text-amber-50 leading-snug antialiased">
                     While we take every precaution to ensure safety, travel inherently involves some risks.
                     Always exercise caution, follow local laws, and contact emergency services if needed.
                     DirtTrails is not liable for incidents beyond our reasonable control.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="bg-slate-800 border-t border-slate-700">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <h3 className="text-2xl font-black text-white mb-4 tracking-tight antialiased">Travel Safe with DirtTrails</h3>
+            <p className="text-slate-300 mb-6 max-w-2xl mx-auto leading-snug antialiased">
+              Your safety and security are our highest priorities. We're here to ensure you have a worry-free experience.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-8">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-slate-400" />
+                <span className="text-slate-300 font-semibold tracking-tight antialiased">Verified Partners</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-5 w-5 text-slate-400" />
+                <span className="text-slate-300 font-semibold tracking-tight antialiased">24/7 Support</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-slate-400" />
+                <span className="text-slate-300 font-semibold tracking-tight antialiased">Safety First</span>
               </div>
             </div>
           </div>
