@@ -169,7 +169,86 @@ export function Bookings() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Bookings</h3>
-          <div className="overflow-x-auto">
+          
+          {/* Mobile Card View */}
+          <div className="block md:hidden space-y-4">
+            {bookings.map((booking) => (
+              <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      #{booking.id.slice(0, 8)}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {booking.service?.title || 'Unknown Service'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {booking.tourist_profile?.full_name || 'Unknown Tourist'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatCurrency(booking.total_amount, booking.currency)}
+                    </div>
+                    <div className="flex gap-1 mt-1">
+                      <StatusBadge status={booking.status} variant="small" />
+                      <StatusBadge status={booking.payment_status} variant="small" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Booking Status</label>
+                    <select
+                      value={booking.status}
+                      onChange={(e) => updateBookingStatus(booking.id, e.target.value as Booking['status'])}
+                      className="w-full border rounded px-2 py-2 text-sm"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Status</label>
+                    <select
+                      value={booking.payment_status}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value as Booking['payment_status'];
+                        console.log('Admin: Payment status dropdown changed for booking', booking.id, 'from', booking.payment_status, 'to', newStatus);
+                        try {
+                          await updatePaymentStatus(booking.id, newStatus);
+                          console.log('Admin: Payment status update completed');
+                        } catch (err) {
+                          console.error('Admin: Payment status update failed:', err);
+                          alert('Failed to update payment status: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                        }
+                      }}
+                      className="w-full border rounded px-2 py-2 text-sm"
+                    >
+                      <option value="pending">Payment Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowBookingDetails(true);
+                    }}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded text-sm font-medium hover:bg-blue-700"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

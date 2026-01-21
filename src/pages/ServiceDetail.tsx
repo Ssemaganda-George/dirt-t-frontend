@@ -225,7 +225,7 @@ export default function ServiceDetail() {
       if (!selectedDate) return
     }
     
-    const bookingCategory = mapCategoryToBookingFlow(service.service_categories.name)
+    const bookingCategory = mapCategoryToBookingFlow(service.service_categories?.name || 'service')
     
     // For transport services, include date range and time as URL parameters
     let bookingUrl = `/service/${id}/book/${bookingCategory}`
@@ -276,7 +276,7 @@ export default function ServiceDetail() {
 
   // Render category-specific information
   const renderCategorySpecificInfo = (service: ServiceDetail) => {
-    const categoryName = service.service_categories.name.toLowerCase()
+    const categoryName = service.service_categories?.name?.toLowerCase() || 'service'
 
     switch (categoryName) {
       case 'hotels':
@@ -1025,7 +1025,7 @@ export default function ServiceDetail() {
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {service.service_categories.name}
+                  {service.service_categories?.name || 'Service'}
                 </span>
                 <div className="flex items-center">
                   <Star className="h-5 w-5 text-yellow-400 fill-current" />
@@ -1257,13 +1257,13 @@ export default function ServiceDetail() {
                   }
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
                 >
-                  {service ? getBookingButtonText(service.service_categories.name) : 'Check Availability'}
+                  {service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}
                 </button>
                 <button
                   onClick={handleInquiry}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300"
                 >
-                  {service ? getInquiryButtonText(service.service_categories.name) : 'Contact Vendor'}
+                  {service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Vendor'}
                 </button>
               </div>
 

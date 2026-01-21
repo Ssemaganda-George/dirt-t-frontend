@@ -387,7 +387,11 @@ export async function getServices(vendorId?: string) {
 export async function getServiceById(serviceId: string) {
   const { data, error } = await supabase
     .from('services')
-    .select('*')
+    .select(`
+      *,
+      service_categories(*),
+      vendors(*)
+    `)
     .eq('id', serviceId)
     .maybeSingle()
 

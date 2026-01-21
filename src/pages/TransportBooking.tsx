@@ -224,9 +224,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
 
         // Prepare booking data for Supabase (admin/vendor visibility)
+        console.log('TransportBooking: Creating booking with user:', user)
+        console.log('TransportBooking: User ID:', user?.id)
         const bookingDataToInsert = {
           service_id: service.id,
-          tourist_id: profile?.id,
+          tourist_id: user?.id,
           vendor_id: service.vendor_id || 'vendor_demo',
           booking_date: new Date().toISOString(),
           service_date: bookingData.startDate,

@@ -131,87 +131,164 @@ export default function VendorBookings() {
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booked</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        {/* Mobile Card View */}
+        <div className="block md:hidden">
+          {bookings.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-gray-500">
+              No bookings yet.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
               {bookings.map(b => (
-                <tr 
-                  key={b.id} 
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => {
-                    setSelectedBooking(b)
-                    setShowBookingDetails(true)
-                  }}
-                >
-                  <td className="px-6 py-4 text-sm text-gray-900">{b.service?.title || b.service_id}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
-                  <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex items-center space-x-3">
-                      <select
-                        value={b.status}
-                        onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                        className="border rounded-md px-2 py-1"
-                        disabled={b.payment_status !== 'paid'}
-                        title={b.payment_status !== 'paid' ? 'You can only update status after payment is marked as Paid by admin.' : ''}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                      {/* Accept/Reject buttons only if payment is paid and status is pending */}
-                      {b.payment_status === 'paid' && b.status === 'pending' && (
-                        <>
-                          <button
-                            className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-                            title="Accept booking"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleStatusChange(b.id, 'confirmed');
-                            }}
-                          >Accept</button>
-                          <button
-                            className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                            title="Reject booking"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleStatusChange(b.id, 'cancelled');
-                            }}
-                          >Reject</button>
-                        </>
-                      )}
-                      {/* Delete booking functionality not implemented for Supabase yet */}
-                      <button
-                        className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
-                        title={b.payment_status !== 'paid' ? 'You can only delete after payment is marked as Paid by admin.' : 'Delete booking (not implemented)'}
-                        disabled
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                <div key={b.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-900">{b.service?.title || b.service_id}</h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formatDateTime(b.booking_date)} • {b.guests} guests
+                      </p>
                     </div>
-                  </td>
-                </tr>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900">
+                        {formatCurrency(b.total_amount, b.currency)}
+                      </div>
+                      <div className="mt-1">
+                        <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Action Buttons */}
+                  <div className="flex flex-col gap-2">
+                    <select
+                      value={b.status}
+                      onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      disabled={b.payment_status !== 'paid'}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="completed">Completed</option>
+                    </select>
+
+                    {b.payment_status === 'paid' && b.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <button
+                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                          onClick={() => handleStatusChange(b.id, 'confirmed')}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                          onClick={() => handleStatusChange(b.id, 'cancelled')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setSelectedBooking(b)
+                        setShowBookingDetails(true)
+                      }}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
               ))}
-              {bookings.length === 0 && (
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booked</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {bookings.map(b => (
+                  <tr 
+                    key={b.id} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setSelectedBooking(b)
+                      setShowBookingDetails(true)
+                    }}
+                  >
+                    <td className="px-6 py-4 text-sm text-gray-900">{b.service?.title || b.service_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
+                    <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex items-center space-x-3">
+                        <select
+                          value={b.status}
+                          onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
+                          className="border rounded-md px-2 py-1"
+                          disabled={b.payment_status !== 'paid'}
+                          title={b.payment_status !== 'paid' ? 'You can only update status after payment is marked as Paid by admin.' : ''}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                        {/* Accept/Reject buttons only if payment is paid and status is pending */}
+                        {b.payment_status === 'paid' && b.status === 'pending' && (
+                          <>
+                            <button
+                              className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                              title="Accept booking"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleStatusChange(b.id, 'confirmed');
+                              }}
+                            >Accept</button>
+                            <button
+                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+                              title="Reject booking"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleStatusChange(b.id, 'cancelled');
+                              }}
+                            >Reject</button>
+                          </>
+                        )}
+                        {/* Delete booking functionality not implemented for Supabase yet */}
+                        <button
+                          className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
+                          title={b.payment_status !== 'paid' ? 'You can only delete after payment is marked as Paid by admin.' : 'Delete booking (not implemented)'}
+                          disabled
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {bookings.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

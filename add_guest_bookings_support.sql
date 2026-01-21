@@ -30,7 +30,7 @@ DROP POLICY IF EXISTS "Allow all operations for testing" ON bookings;
 -- Policy for authenticated users (tourists) - can view/modify their own bookings
 CREATE POLICY "Users can view their own bookings" ON bookings
   FOR SELECT USING (
-    auth.uid()::text = tourist_id OR
+    auth.uid() = tourist_id OR
     (is_guest_booking = TRUE AND guest_email = (auth.jwt() ->> 'email'))
   );
 
@@ -39,7 +39,7 @@ CREATE POLICY "Users can create bookings" ON bookings
 
 CREATE POLICY "Users can update their own bookings" ON bookings
   FOR UPDATE USING (
-    auth.uid()::text = tourist_id OR
+    auth.uid() = tourist_id OR
     (is_guest_booking = TRUE AND guest_email = (auth.jwt() ->> 'email'))
   );
 
@@ -47,7 +47,7 @@ CREATE POLICY "Users can update their own bookings" ON bookings
 CREATE POLICY "Vendors can view bookings for their services" ON bookings
   FOR SELECT USING (
     vendor_id IN (
-      SELECT id::text FROM vendors WHERE user_id = auth.uid()
+      SELECT id FROM vendors WHERE user_id = auth.uid()
     )
   );
 

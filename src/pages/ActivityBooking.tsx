@@ -184,14 +184,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date & Number of Guests</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Activity Date
                   </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     value={bookingData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
@@ -202,7 +202,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     Number of Participants
                   </label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     value={bookingData.guests}
                     onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
                   >
@@ -232,14 +232,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name *
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactName}
                   onChange={(e) => handleInputChange('contactName', e.target.value)}
                   required
@@ -251,19 +251,19 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 </label>
                 <input
                   type="email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactEmail}
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                   required
                 />
               </div>
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number *
                 </label>
                 <input
                   type="tel"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactPhone}
                   onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                   required
@@ -325,7 +325,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   <input
                     type="text"
                     placeholder="1234 5678 9012 3456"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -336,7 +336,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     <input
                       type="text"
                       placeholder="MM/YY"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     />
                   </div>
                   <div>
@@ -346,7 +346,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     <input
                       type="text"
                       placeholder="123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     />
                   </div>
                 </div>
@@ -407,22 +407,22 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
               <button
                 onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 Similar Services
               </button>
               <button
                 onClick={() => navigate(`/service/${service.id}/inquiry`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 Send Inquiry
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 Home
               </button>
@@ -513,14 +513,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             {steps.map((step, index) => {
               const Icon = step.icon
               const isActive = step.id === currentStep
               const isCompleted = step.id < currentStep
 
               return (
-                <div key={step.id} className="flex items-center">
+                <div key={step.id} className="flex items-center mb-4 sm:mb-0">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
                     isCompleted
                       ? 'bg-green-600 text-white'
@@ -530,13 +530,13 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   }`}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
+                  <span className={`ml-3 text-sm font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                   }`}>
                     {step.title}
                   </span>
                   {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-4 ${
+                    <div className={`hidden sm:block w-12 h-0.5 mx-4 ${
                       isCompleted ? 'bg-green-600' : 'bg-gray-200'
                     }`} />
                   )}
@@ -547,19 +547,19 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         </div>
 
         {/* Service Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-start space-x-4">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-4 sm:space-y-0">
             <img
               src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
               alt={service.title}
-              className="w-20 h-20 object-cover rounded-lg"
+              className="w-full sm:w-20 h-48 sm:h-20 object-cover rounded-lg"
             />
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900">{service.title}</h2>
               <p className="text-gray-600 text-sm">{service.location}</p>
               <p className="text-gray-600 text-sm">{service.service_categories.name}</p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <div className="text-lg font-bold text-gray-900">
                 {formatCurrency(totalPrice, service.currency)}
               </div>
@@ -575,17 +575,17 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
         {/* Navigation */}
         {currentStep < 5 && (
-          <div className="flex justify-between mt-6">
+          <div className="mt-6 space-y-4 sm:space-y-0 sm:flex sm:justify-between">
             <button
               onClick={handleBack}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </button>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <button
                 onClick={handleSaveToCart}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors order-2 sm:order-1"
               >
                 Save to Cart
               </button>
@@ -596,7 +596,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   (currentStep === 1 && !bookingData.date) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors order-1 sm:order-2"
               >
                 {isSubmitting ? 'Processing...' : currentStep === 3 ? 'Complete Booking' : 'Next'}
               </button>
