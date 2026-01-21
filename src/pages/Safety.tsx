@@ -1,4 +1,4 @@
-import { Shield, AlertTriangle, Phone, MapPin, Heart, Users, Car, Home } from 'lucide-react'
+import { Shield, AlertTriangle, Phone, MapPin, Heart, Users, Car, Home, CheckCircle } from 'lucide-react'
 
 export default function Safety() {
   const safetyTips = [
@@ -50,29 +50,12 @@ export default function Safety() {
 
   const emergencyContacts = [
     {
-      category: "Medical Emergencies",
-      contacts: [
-        { name: "Ambulance", number: "911 or 112" },
-        { name: "International Hospital Kampala", number: "+256 414 320 000" },
-        { name: "Case Hospital", number: "+256 414 595 945" },
-        { name: "Travel Health Clinic", number: "+256 414 301 000" }
-      ]
-    },
-    {
-      category: "Police & Security",
-      contacts: [
-        { name: "Police Emergency", number: "999" },
-        { name: "Tourist Police", number: "+256 414 595 945" },
-        { name: "Kampala Metropolitan Police", number: "+256 414 595 945" },
-        { name: "Uganda Police Force", number: "999" }
-      ]
-    },
-    {
       category: "DirtTrails Support",
+      icon: Phone,
       contacts: [
         { name: "24/7 Support Hotline", number: "+256 414 123 456" },
-        { name: "Emergency WhatsApp", number: "+256 701 234 567" },
-        { name: "Email Support", number: "emergency@dirtrails.ug" }
+        { name: "Emergency WhatsApp", number: "+256759918649" },
+        { name: "Email Support", number: "emergency@dirtrails.com" }
       ]
     }
   ]
@@ -101,42 +84,50 @@ export default function Safety() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Safety & Security</h1>
-            <p className="text-lg text-gray-600">
+            <h1 className="text-4xl font-bold text-slate-900 mb-4">Safety & Security</h1>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
               Your safety is our top priority. Learn about safety measures and emergency contacts for a worry-free experience.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Safety Features */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Our Safety Commitments</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Our Safety Commitments</h2>
+            <p className="text-lg text-slate-600">How we ensure your safety throughout your journey</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {safetyFeatures.map((feature, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm p-6 text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <feature.icon className="h-6 w-6 text-blue-600" />
+              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center hover:shadow-md transition-shadow duration-200">
+                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-6">
+                  <feature.icon className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600 text-sm">{feature.description}</p>
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">{feature.title}</h3>
+                <p className="text-slate-600 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Safety Tips */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Essential Safety Tips</h2>
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Essential Safety Tips</h2>
+            <p className="text-lg text-slate-600">Prepare for a safe and enjoyable trip to Uganda</p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {safetyTips.map((tip, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm p-6">
+              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -144,13 +135,13 @@ export default function Safety() {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{tip.title}</h3>
-                    <p className="text-gray-600 mb-4">{tip.description}</p>
-                    <ul className="space-y-1">
+                    <h3 className="text-xl font-semibold text-slate-900 mb-3">{tip.title}</h3>
+                    <p className="text-slate-600 mb-6 leading-relaxed">{tip.description}</p>
+                    <ul className="space-y-2">
                       {tip.details.map((detail, idx) => (
-                        <li key={idx} className="text-sm text-gray-600 flex items-center">
-                          <span className="w-1.5 h-1.5 bg-green-600 rounded-full mr-2 flex-shrink-0"></span>
-                          {detail}
+                        <li key={idx} className="flex items-start text-slate-600">
+                          <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                          <span className="leading-relaxed">{detail}</span>
                         </li>
                       ))}
                     </ul>
@@ -162,22 +153,29 @@ export default function Safety() {
         </div>
 
         {/* Emergency Contacts */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Emergency Contacts</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Emergency Contacts</h2>
+            <p className="text-lg text-slate-600">Important numbers to keep handy during your trip</p>
+          </div>
+
+          <div className="max-w-md mx-auto">
             {emergencyContacts.map((category, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Phone className="h-5 w-5 mr-2 text-red-600" />
-                  {category.category}
-                </h3>
-                <div className="space-y-3">
+              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div className="flex items-center mb-6">
+                  <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <category.icon className="h-5 w-5 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900">{category.category}</h3>
+                </div>
+
+                <div className="space-y-4">
                   {category.contacts.map((contact, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                      <span className="text-gray-700 font-medium">{contact.name}</span>
+                    <div key={idx} className="flex justify-between items-center py-3 px-4 bg-slate-50 rounded-lg">
+                      <span className="text-slate-700 font-medium">{contact.name}</span>
                       <a
                         href={`tel:${contact.number}`}
-                        className="text-blue-600 hover:text-blue-800 font-semibold"
+                        className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
                       >
                         {contact.number}
                       </a>
@@ -190,42 +188,70 @@ export default function Safety() {
         </div>
 
         {/* Safety Policy */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Safety Policy</h2>
-          <div className="prose prose-gray max-w-none">
-            <p className="text-gray-600 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Our Safety Policy</h2>
+            <p className="text-lg text-slate-600">Comprehensive measures for your peace of mind</p>
+          </div>
+
+          <div className="prose prose-slate max-w-none">
+            <p className="text-slate-600 mb-6 leading-relaxed">
               At DirtTrails, we are committed to providing a safe and secure platform for travelers and service providers alike.
               Our comprehensive safety measures include:
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">For Travelers:</h4>
-                <ul className="text-gray-600 space-y-1">
-                  <li>• Rigorous verification of all service providers</li>
-                  <li>• Secure payment processing and protection</li>
-                  <li>• 24/7 emergency support hotline</li>
-                  <li>• Regular safety audits of partner services</li>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-900 text-lg">For Travelers:</h4>
+                <ul className="space-y-3 text-slate-600">
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Rigorous verification of all service providers</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Secure payment processing and protection</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>24/7 emergency support hotline</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Regular safety audits of partner services</span>
+                  </li>
                 </ul>
               </div>
 
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">For Service Providers:</h4>
-                <ul className="text-gray-600 space-y-1">
-                  <li>• Background checks and credential verification</li>
-                  <li>• Training on safety and customer service standards</li>
-                  <li>• Regular quality and safety inspections</li>
-                  <li>• Dedicated support team for compliance</li>
+              <div className="space-y-4">
+                <h4 className="font-semibold text-slate-900 text-lg">For Service Providers:</h4>
+                <ul className="space-y-3 text-slate-600">
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Background checks and credential verification</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Training on safety and customer service standards</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Regular quality and safety inspections</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Dedicated support team for compliance</span>
+                  </li>
                 </ul>
               </div>
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0 mt-0.5" />
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-yellow-800 mb-1">Important Notice</h4>
-                  <p className="text-yellow-700 text-sm">
+                  <h4 className="font-semibold text-amber-800 mb-2">Important Notice</h4>
+                  <p className="text-amber-700 leading-relaxed">
                     While we take every precaution to ensure safety, travel inherently involves some risks.
                     Always exercise caution, follow local laws, and contact emergency services if needed.
                     DirtTrails is not liable for incidents beyond our reasonable control.

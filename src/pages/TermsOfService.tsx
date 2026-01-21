@@ -1,153 +1,321 @@
-import { FileText, Shield, Scale, AlertCircle } from 'lucide-react'
+import { FileText, Shield, Scale, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 
 export default function TermsOfService() {
-  const sections = [
+  const keyTerms = [
     {
       icon: FileText,
       title: "Acceptance of Terms",
-      content: `By accessing and using DirtTrails ("the Platform"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.`
+      description: "By using DirtTrails, you agree to be bound by these terms and conditions.",
+      details: [
+        "Access constitutes acceptance",
+        "Applicable to all users",
+        "Regular review recommended"
+      ]
     },
     {
       icon: Shield,
       title: "User Responsibilities",
-      content: `Users are responsible for maintaining the confidentiality of their account credentials and for all activities that occur under their account. You agree to provide accurate and complete information when creating an account or making a booking.`
+      description: "Maintain account security and provide accurate information.",
+      details: [
+        "Secure account credentials",
+        "Accurate information required",
+        "Report unauthorized access"
+      ]
     },
     {
       icon: Scale,
       title: "Booking Terms",
-      content: `All bookings are subject to availability and confirmation. Prices are subject to change without notice. Payment is required at the time of booking for most services. Cancellations and refunds are subject to the specific policies of each service provider.`
+      description: "All bookings subject to availability and provider policies.",
+      details: [
+        "Subject to availability",
+        "Prices may change",
+        "Provider-specific policies"
+      ]
     },
     {
       icon: AlertCircle,
       title: "Liability Limitations",
-      content: `DirtTrails acts as a platform connecting travelers with service providers. We are not responsible for the quality, safety, or legality of services provided by third-party vendors. Users assume all risks associated with using our platform.`
+      description: "Platform connecting users with service providers.",
+      details: [
+        "Third-party services",
+        "Users assume risks",
+        "Limited liability scope"
+      ]
     }
   ]
 
-  const detailedTerms = [
+  const detailedSections = [
     {
-      title: "1. Service Description",
-      content: `DirtTrails is an online platform that connects travelers with tourism service providers in Uganda, including hotels, tours, restaurants, transportation, and activities.`
+      number: "1",
+      title: "Service Description",
+      content: "DirtTrails is an online platform that connects travelers with tourism service providers in Uganda, including hotels, tours, restaurants, transportation, and activities. We facilitate bookings and payments between users and verified service providers.",
+      subsections: [
+        "Platform for tourism services",
+        "Verified service providers only",
+        "Booking and payment facilitation",
+        "Available throughout Uganda"
+      ]
     },
     {
-      title: "2. User Accounts",
-      content: `To access certain features, you must create an account. You are responsible for maintaining the security of your account and password. You agree to notify us immediately of any unauthorized use of your account.`
+      number: "2",
+      title: "User Accounts",
+      content: "To access certain features of our platform, you must create an account. You are responsible for maintaining the security of your account credentials and for all activities that occur under your account.",
+      subsections: [
+        "Account creation required for bookings",
+        "User responsible for security",
+        "Immediate notification of breaches",
+        "One account per user"
+      ]
     },
     {
-      title: "3. Booking and Payment",
-      content: `When you make a booking through our platform, you enter into a contract directly with the service provider. Payment processing is handled by third-party payment providers. All fees and charges are clearly displayed before payment.`
+      number: "3",
+      title: "Booking and Payment",
+      content: "When you make a booking through our platform, you enter into a direct contract with the service provider. Payment processing is handled securely through third-party payment providers. All fees and applicable taxes are clearly displayed before payment.",
+      subsections: [
+        "Direct contract with provider",
+        "Secure payment processing",
+        "Transparent fee structure",
+        "Confirmation upon payment"
+      ]
     },
     {
-      title: "4. Cancellation and Refunds",
-      content: `Cancellation policies vary by service provider. Generally, cancellations made 24-48 hours in advance may be eligible for partial refunds. No refunds for no-shows or last-minute cancellations.`
+      number: "4",
+      title: "Cancellation and Refunds",
+      content: "Cancellation policies vary by service provider and are clearly stated during the booking process. Generally, cancellations made 24-48 hours in advance may be eligible for partial refunds, subject to provider policies.",
+      subsections: [
+        "Provider-specific policies",
+        "24-48 hour advance notice preferred",
+        "Partial refunds possible",
+        "No refunds for no-shows"
+      ]
     },
     {
-      title: "5. User Conduct",
-      content: `You agree not to use the platform for any unlawful purpose or to conduct any unlawful activity. You must not attempt to gain unauthorized access to our systems or interfere with the proper functioning of the platform.`
+      number: "5",
+      title: "User Conduct",
+      content: "You agree to use the platform responsibly and not engage in any unlawful activities. This includes not attempting to gain unauthorized access to our systems or interfere with the platform's proper functioning.",
+      subsections: [
+        "Lawful use only",
+        "No system interference",
+        "Respect other users",
+        "Report violations"
+      ]
     },
     {
-      title: "6. Content and Intellectual Property",
-      content: `All content on the platform, including text, graphics, logos, and software, is owned by DirtTrails or our licensors. You may not reproduce, distribute, or create derivative works without permission.`
+      number: "6",
+      title: "Content and Intellectual Property",
+      content: "All content on the platform, including text, graphics, logos, and software, is owned by DirtTrails or our licensors and is protected by intellectual property laws. You may not reproduce or distribute content without permission.",
+      subsections: [
+        "Platform content ownership",
+        "Intellectual property protection",
+        "Limited use permissions",
+        "User-generated content guidelines"
+      ]
     },
     {
-      title: "7. Privacy Policy",
-      content: `Your privacy is important to us. Please review our Privacy Policy, which also governs your use of the platform, to understand our practices.`
+      number: "7",
+      title: "Privacy Policy",
+      content: "Your privacy is important to us. Our Privacy Policy, which governs your use of the platform, explains how we collect, use, and protect your personal information. Please review it carefully.",
+      subsections: [
+        "Data collection practices",
+        "Information usage policies",
+        "Security measures",
+        "User rights and choices"
+      ]
     },
     {
-      title: "8. Disclaimers",
-      content: `The platform is provided "as is" without warranties of any kind. We do not guarantee the accuracy, completeness, or reliability of any content or services.`
+      number: "8",
+      title: "Disclaimers",
+      content: "The platform is provided 'as is' without warranties of any kind. We do not guarantee the accuracy, completeness, or reliability of any content or services offered through our platform.",
+      subsections: [
+        "No warranties provided",
+        "Content accuracy not guaranteed",
+        "Service quality varies",
+        "Use at your own risk"
+      ]
     },
     {
-      title: "9. Limitation of Liability",
-      content: `In no event shall DirtTrails be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the platform.`
+      number: "9",
+      title: "Limitation of Liability",
+      content: "In no event shall DirtTrails be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the platform or services booked through it.",
+      subsections: [
+        "Limited liability scope",
+        "No consequential damages",
+        "Maximum liability caps",
+        "Force majeure exceptions"
+      ]
     },
     {
-      title: "10. Governing Law",
-      content: `These terms are governed by the laws of Uganda. Any disputes shall be resolved in the courts of Uganda.`
+      number: "10",
+      title: "Governing Law",
+      content: "These terms are governed by the laws of the Republic of Uganda. Any disputes arising from these terms or your use of the platform shall be resolved in the courts of Uganda.",
+      subsections: [
+        "Ugandan law applies",
+        "Court jurisdiction in Uganda",
+        "Dispute resolution process",
+        "Applicable legal framework"
+      ]
     },
     {
-      title: "11. Changes to Terms",
-      content: `We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting on the platform. Continued use constitutes acceptance of the modified terms.`
+      number: "11",
+      title: "Changes to Terms",
+      content: "We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting on the platform. Continued use of the platform constitutes acceptance of modified terms.",
+      subsections: [
+        "Right to modify terms",
+        "Immediate effect upon posting",
+        "User notification methods",
+        "Continued use implies acceptance"
+      ]
     },
     {
-      title: "12. Contact Information",
-      content: `If you have questions about these terms, please contact us at legal@dirtrails.ug or +256 414 123 456.`
+      number: "12",
+      title: "Contact Information",
+      content: "If you have questions about these terms or need to report violations, please contact our legal team. We are committed to addressing your concerns promptly and fairly.",
+      subsections: [
+        "Legal team contact",
+        "Questions and concerns",
+        "Violation reporting",
+        "Response time commitment"
+      ]
     }
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Terms of Service</h1>
-            <p className="text-lg text-gray-600">
-              Please read these terms carefully before using DirtTrails platform.
+            <h1 className="text-4xl font-bold text-slate-900 mb-4">Terms of Service</h1>
+            <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-4">
+              Please read these terms carefully before using the DirtTrails platform.
             </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            <div className="flex items-center justify-center space-x-2 text-slate-500">
+              <Clock className="h-5 w-5" />
+              <span className="text-sm">
+                Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {sections.map((section, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <section.icon className="h-5 w-5 text-blue-600" />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Key Terms Overview */}
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Key Terms Overview</h2>
+            <p className="text-lg text-slate-600">Important points you should know about using DirtTrails</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {keyTerms.map((term, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 hover:shadow-md transition-shadow duration-200">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <term.icon className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-slate-900 mb-3">{term.title}</h3>
+                    <p className="text-slate-600 mb-4 leading-relaxed">{term.description}</p>
+                    <ul className="space-y-2">
+                      {term.details.map((detail, idx) => (
+                        <li key={idx} className="flex items-center text-slate-600 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <span>{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{section.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{section.content}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Detailed Terms */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Detailed Terms and Conditions</h2>
-
-          <div className="space-y-8">
-            {detailedTerms.map((term, index) => (
-              <div key={index} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{term.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{term.content}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Agreement Section */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mt-8">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-lg font-semibold text-yellow-800 mb-2">Agreement to Terms</h3>
-              <p className="text-yellow-700 mb-4">
-                By using DirtTrails, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
-                If you do not agree to these terms, please do not use our platform.
-              </p>
-              <p className="text-yellow-700 text-sm">
-                For questions about these terms or to report violations, please contact our legal team at legal@dirtrails.ug
-              </p>
+        {/* Detailed Terms */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">Detailed Terms and Conditions</h2>
+            <p className="text-lg text-slate-600">Complete terms governing your use of DirtTrails</p>
+          </div>
+
+          <div className="space-y-12">
+            {detailedSections.map((section, index) => (
+              <div key={index} className="border-b border-slate-100 pb-8 last:border-b-0 last:pb-0">
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-semibold text-slate-600">{section.number}</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-slate-900 mb-4">{section.title}</h3>
+                    <p className="text-slate-600 leading-relaxed mb-6">{section.content}</p>
+
+                    <div className="bg-slate-50 rounded-lg p-6">
+                      <h4 className="font-medium text-slate-900 mb-3">Key Points:</h4>
+                      <ul className="space-y-2">
+                        {section.subsections.map((subsection, idx) => (
+                          <li key={idx} className="flex items-start text-slate-600">
+                            <CheckCircle className="h-5 w-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                            <span className="leading-relaxed">{subsection}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Agreement and Contact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Agreement Section */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-8">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-xl font-semibold text-amber-800 mb-3">Agreement to Terms</h3>
+                <p className="text-amber-700 leading-relaxed mb-4">
+                  By accessing and using DirtTrails, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
+                </p>
+                <p className="text-amber-700 text-sm">
+                  If you do not agree to these terms, please discontinue use of our platform immediately.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Section */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
+            <div className="flex items-start space-x-3">
+              <FileText className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-xl font-semibold text-blue-800 mb-3">Questions About Terms?</h3>
+                <p className="text-blue-700 leading-relaxed mb-4">
+                  If you have questions about these terms or need clarification on any section, our legal team is here to help.
+                </p>
+                <div className="space-y-2 text-sm text-blue-700">
+                  <p><strong>Email:</strong> legal@dirtrails.ug</p>
+                  <p><strong>Phone:</strong> +256 414 123 456</p>
+                  <p><strong>Response Time:</strong> Within 24 hours</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-12 pt-8 border-t border-gray-200">
-          <p className="text-gray-600">
-            These terms were last updated on {new Date().toLocaleDateString()}.
-            We reserve the right to update these terms at any time.
+        <div className="text-center mt-16 pt-8 border-t border-slate-200">
+          <p className="text-slate-600 mb-2">
+            These terms were last updated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
+          </p>
+          <p className="text-slate-500 text-sm">
+            We reserve the right to update these terms at any time. Continued use of DirtTrails constitutes acceptance of any changes.
           </p>
         </div>
       </div>
