@@ -143,7 +143,7 @@ export default function VendorBookings() {
                 <div key={b.id} className="p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">{b.service?.title || b.service_id}</h3>
+                      <h3 className="text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</h3>
                       <p className="text-xs text-gray-500 mt-1">
                         {formatDateTime(b.booking_date)} • {b.guests} guests
                       </p>

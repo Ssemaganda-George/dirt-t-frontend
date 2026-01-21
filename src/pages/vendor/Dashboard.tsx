@@ -17,7 +17,8 @@ import {
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
-  MessageSquare
+  MessageSquare,
+  CreditCard
 } from 'lucide-react'
 
 export default function VendorDashboard() {
@@ -32,6 +33,9 @@ export default function VendorDashboard() {
     completedBookings: 0,
     balance: 0,
     currency: 'UGX',
+    balanceTrend: '+0%',
+    balanceStatus: 'healthy' as 'healthy' | 'warning' | 'critical',
+    pendingBalance: 0,
     messagesCount: 0,
     inquiriesCount: 0,
     recentBookings: [] as any[],
@@ -259,10 +263,31 @@ export default function VendorDashboard() {
             title="Wallet Balance"
             value={formatCurrency(stats.balance, stats.currency)}
             icon={DollarSign}
-            color="teal"
-            trend="+24% this month"
-            subtitle="Available earnings"
+            color={stats.balanceStatus === 'critical' ? 'red' : stats.balanceStatus === 'warning' ? 'yellow' : 'teal'}
+            trend={stats.balanceTrend}
+            subtitle={
+              stats.pendingBalance > 0 
+                ? `${formatCurrency(stats.pendingBalance, stats.currency)} pending • ${stats.balanceStatus === 'critical' ? 'Low balance' : stats.balanceStatus === 'warning' ? 'Balance running low' : 'Available earnings'}`
+                : stats.balanceStatus === 'critical' 
+                  ? 'Low balance - consider adding funds' 
+                  : stats.balanceStatus === 'warning' 
+                    ? 'Balance running low' 
+                    : 'Available earnings'
+            }
             onClick={() => navigate('/vendor/transactions')}
+            isWalletCard={true}
+            actions={
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate('/vendor/transactions')
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-sm font-medium rounded-md transition-all duration-200 backdrop-blur-sm"
+              >
+                <CreditCard className="h-4 w-4" />
+                Withdraw Funds
+              </button>
+            }
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           />
           <StatCard
@@ -278,35 +303,37 @@ export default function VendorDashboard() {
         </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {/* Recent Bookings - Takes 2 columns */}
         <div className="xl:col-span-2">
           <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-blue-300" />
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-300" />
                   Recent Bookings
                 </h3>
-                <span className="text-sm text-gray-300">{stats.recentBookings.length} total</span>
+                <span className="text-xs sm:text-sm text-gray-300">{stats.recentBookings.length} total</span>
               </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {stats.recentBookings.map((b) => (
-                  <div key={b.id} className="flex items-center justify-between p-4 bg-gray-700 hover:bg-gray-600 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-100 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
+                  <div key={b.id} className="bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 flex items-center justify-center flex-shrink-0 rounded-full">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white text-sm sm:text-base truncate">{b.services?.title || b.service_id}</p>
+                          <p className="text-xs sm:text-sm text-gray-300">{formatDateTime(b.created_at)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-white">{b.service?.name || b.service_id}</p>
-                        <p className="text-sm text-gray-300">{formatDateTime(b.created_at)}</p>
+                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 flex-shrink-0">
+                        <span className="font-semibold text-white text-sm sm:text-base">{formatCurrency(b.total_amount, b.currency)}</span>
+                        <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="font-semibold text-white">{formatCurrency(b.total_amount, b.currency)}</span>
-                      <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
                     </div>
                   </div>
                 ))}
@@ -325,45 +352,63 @@ export default function VendorDashboard() {
         {/* Recent Transactions - Takes 1 column */}
         <div className="xl:col-span-1">
           <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 bg-gray-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-300" />
-                  Transactions
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
+                  Recent Transactions
                 </h3>
-                <span className="text-sm text-gray-300">{stats.recentTransactions.length} recent</span>
+                <span className="text-xs sm:text-sm text-gray-300">{stats.recentTransactions.length} recent</span>
               </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {stats.recentTransactions.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 border border-gray-600 hover:border-gray-500 transition-colors bg-gray-700">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        t.transaction_type === 'payment' ? 'bg-green-800' : 'bg-blue-800'
-                      }`}>
-                        {t.transaction_type === 'payment' ? (
-                          <ArrowDownRight className="h-4 w-4 text-green-300" />
-                        ) : (
-                          <ArrowUpRight className="h-4 w-4 text-blue-300" />
-                        )}
+                  <div key={t.id} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 transition-all duration-200 rounded-lg p-3 sm:p-4 border border-gray-600/50 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Transaction Icon and Type */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          t.transaction_type === 'payment' ? 'bg-emerald-900/50 border border-emerald-700/50' : 'bg-blue-900/50 border border-blue-700/50'
+                        }`}>
+                          {t.transaction_type === 'payment' ? (
+                            <ArrowDownRight className="h-4 w-4 text-emerald-400" />
+                          ) : (
+                            <ArrowUpRight className="h-4 w-4 text-blue-400" />
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white capitalize">{t.transaction_type}</p>
-                        <p className="text-xs text-gray-300">{formatDateTime(t.created_at)}</p>
+
+                      {/* Transaction Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white capitalize leading-tight">
+                              {t.transaction_type === 'payment' ? 'Payment Received' : 'Withdrawal'}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">{formatDateTime(t.created_at)}</p>
+                            {t.description && (
+                              <p className="text-xs text-gray-500 mt-1 truncate">{t.description}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <p className={`text-sm font-bold ${
+                              t.transaction_type === 'payment' ? 'text-emerald-400' : 'text-blue-400'
+                            }`}>
+                              {t.transaction_type === 'payment' ? '+' : '-'}{formatCurrency(t.amount, t.currency)}
+                            </p>
+                            <StatusBadge status={t.status} variant="small" />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-white">{formatCurrency(t.amount, t.currency)}</p>
-                      <StatusBadge status={t.status} variant="small" />
                     </div>
                   </div>
                 ))}
                 {stats.recentTransactions.length === 0 && (
                   <div className="text-center py-8">
                     <TrendingUp className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                    <p className="text-gray-400">No transactions yet</p>
-                    <p className="text-sm text-gray-400">Your transactions will appear here</p>
+                    <p className="text-gray-400 font-medium">No transactions yet</p>
+                    <p className="text-sm text-gray-400 mt-1">Your recent transactions will appear here</p>
                   </div>
                 )}
               </div>

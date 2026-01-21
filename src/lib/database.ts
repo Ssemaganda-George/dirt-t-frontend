@@ -1344,7 +1344,15 @@ export async function getAllVendors(): Promise<Vendor[]> {
 export async function getAllBookings(): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('bookings')
-    .select('*')
+    .select(`
+      *,
+      services (
+        title
+      ),
+      profiles (
+        full_name
+      )
+    `)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -2192,6 +2200,9 @@ export async function getVendorStats(vendorId: string) {
         completedBookings: 0,
         balance: 0,
         currency: 'UGX',
+        balanceTrend: '+0%',
+        balanceStatus: 'healthy' as const,
+        pendingBalance: 0,
         messagesCount: 0,
         inquiriesCount: 0,
         recentBookings: [],
@@ -2242,54 +2253,73 @@ export async function getVendorStats(vendorId: string) {
     const pendingBookings = bookings?.filter(b => b.status === 'pending').length || 0
     const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
 
-    // Get wallet - try to get vendor wallet, fallback to user wallet if vendorId is user.id
+    // Get wallet - try multiple possibilities due to data inconsistency
     let wallet = null
-    try {
-      wallet = await getVendorWallet(vendorId)
-    } catch (error) {
-      console.log('getVendorStats: Could not get wallet with vendorId, trying with user lookup')
-      // If vendorId might be a user_id, try to find the vendor record
-      const { data: vendorRecord, error: vendorError } = await supabase
+    const walletAttempts = [vendorId] // Start with vendorId as-is
+
+    // Check if vendorId is a vendor.id or user.id
+    const { data: vendorById, error: vendorByIdError } = await supabase
+      .from('vendors')
+      .select('user_id')
+      .eq('id', vendorId)
+      .single()
+
+    let vendorByUserId: any = null
+    let vendorByUserIdError: any = null
+
+    if (!vendorByIdError && vendorById?.user_id) {
+      // vendorId is a vendor.id, add the corresponding user_id
+      walletAttempts.push(vendorById.user_id)
+    } else {
+      // vendorId might be a user.id, try to get the vendor.id
+      const result = await supabase
         .from('vendors')
         .select('id')
         .eq('user_id', vendorId)
         .single()
 
-      if (!vendorError && vendorRecord) {
-        wallet = await getVendorWallet(vendorRecord.id)
+      vendorByUserId = result.data
+      vendorByUserIdError = result.error
+
+      if (!vendorByUserIdError && vendorByUserId?.id) {
+        // vendorId is a user.id, add the corresponding vendor.id
+        walletAttempts.push(vendorByUserId.id)
       }
     }
 
-    // Get messages count for vendor
-    const { count: messagesCount, error: messagesError } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('recipient_id', vendorId)
-      .eq('recipient_role', 'vendor')
-
-    // If no messages found, try with vendor.id if vendorId is user.id
-    let finalMessagesCount = messagesCount
-    if ((!messagesCount || messagesCount === 0) && !messagesError) {
-      const { data: vendorRecord, error: vendorError } = await supabase
-        .from('vendors')
-        .select('id')
-        .eq('user_id', vendorId)
-        .single()
-
-      if (!vendorError && vendorRecord) {
-        const { count: vendorMessagesCount, error: vendorMessagesError } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('recipient_id', vendorRecord.id)
-          .eq('recipient_role', 'vendor')
-
-        if (!vendorMessagesError && vendorMessagesCount) {
-          finalMessagesCount = vendorMessagesCount
-        }
+    // Try all possibilities
+    for (const attemptId of walletAttempts) {
+      try {
+        wallet = await getVendorWallet(attemptId)
+        if (wallet) break
+      } catch (error) {
+        // Continue to next attempt
       }
     }
 
-    if (messagesError) throw messagesError
+    // Get messages count for vendor - try multiple possibilities
+    let finalMessagesCount = 0
+    const messageAttempts = [vendorId]
+
+    // Use the same vendor lookup results as above
+    if (!vendorByIdError && vendorById?.user_id) {
+      messageAttempts.push(vendorById.user_id)
+    } else if (!vendorByUserIdError && vendorByUserId?.id) {
+      messageAttempts.push(vendorByUserId.id)
+    }
+
+    for (const attemptId of messageAttempts) {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('recipient_id', attemptId)
+        .eq('recipient_role', 'vendor')
+
+      if (!error && count && count > 0) {
+        finalMessagesCount = count
+        break
+      }
+    }
 
     // Get inquiries count for vendor
     let inquiriesCount = 0
@@ -2319,21 +2349,85 @@ export async function getVendorStats(vendorId: string) {
     if (recentBookingsError) throw recentBookingsError
 
     // Get recent transactions
-    const { data: recentTx, error: recentTxError } = await supabase
-      .from('transactions')
-      .select(`
-        *,
-        bookings (
-          services (
-            title
-          )
-        )
-      `)
-      .eq('vendor_id', vendorId)
-      .order('created_at', { ascending: false })
-      .limit(5)
+    let recentTx: any[] = []
+    try {
+      const { data, error: recentTxError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+        .limit(5)
 
-    if (recentTxError) throw recentTxError
+      if (recentTxError) {
+        console.warn('Could not fetch recent transactions:', recentTxError)
+        recentTx = []
+      } else {
+        recentTx = data || []
+      }
+    } catch (error) {
+      console.warn('Exception fetching recent transactions:', error)
+      recentTx = []
+    }
+
+    // Calculate balance trend (last 30 days)
+    let balanceTrend = '+0%'
+    try {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      const { data: monthlyTransactions, error: trendError } = await supabase
+        .from('transactions')
+        .select('amount, type, created_at')
+        .eq('vendor_id', vendorId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .eq('status', 'completed')
+
+      if (!trendError && monthlyTransactions && monthlyTransactions.length > 0) {
+        const totalChange = monthlyTransactions.reduce((sum, tx) => {
+          return tx.type === 'credit' ? sum + tx.amount : sum - tx.amount
+        }, 0)
+
+        // Calculate percentage change from current balance
+        const currentBalance = wallet?.balance || 0
+        if (currentBalance > 0) {
+          const percentageChange = (totalChange / currentBalance) * 100
+          const sign = percentageChange >= 0 ? '+' : ''
+          balanceTrend = `${sign}${percentageChange.toFixed(1)}%`
+        } else if (totalChange > 0) {
+          balanceTrend = `+${totalChange.toLocaleString()}`
+        }
+      }
+    } catch (error) {
+      console.warn('Could not calculate balance trend:', error)
+      balanceTrend = '+0%'
+    }
+
+    // Calculate balance status
+    let balanceStatus: 'healthy' | 'warning' | 'critical' = 'healthy'
+    const currentBalance = wallet?.balance || 0
+    if (currentBalance < 50000) { // Less than UGX 50,000
+      balanceStatus = 'critical'
+    } else if (currentBalance < 200000) { // Less than UGX 200,000
+      balanceStatus = 'warning'
+    }
+
+    // Calculate pending balance from incomplete bookings
+    let pendingBalance = 0
+    try {
+      const { data: pendingTransactions, error: pendingError } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('vendor_id', vendorId)
+        .eq('status', 'pending')
+        .eq('type', 'credit')
+
+      if (!pendingError && pendingTransactions) {
+        pendingBalance = pendingTransactions.reduce((sum, tx) => sum + tx.amount, 0)
+      }
+    } catch (error) {
+      console.warn('Could not calculate pending balance:', error)
+      pendingBalance = 0
+    }
 
     return {
       servicesCount: services?.length || 0,
@@ -2341,6 +2435,9 @@ export async function getVendorStats(vendorId: string) {
       completedBookings,
       balance: wallet?.balance || 0,
       currency: wallet?.currency || 'UGX',
+      balanceTrend,
+      balanceStatus,
+      pendingBalance,
       messagesCount: finalMessagesCount || 0,
       inquiriesCount,
       recentBookings: recentBookings || [],
@@ -2529,38 +2626,47 @@ export async function updateInquiryStatus(inquiryId: string, status: 'unread' | 
 
 export async function getInquiryCount(vendorId: string): Promise<number> {
   try {
-    // First try with vendorId as vendor.id
-    let { count, error } = await supabase
-      .from('inquiries')
-      .select('*', { count: 'exact', head: true })
-      .eq('vendor_id', vendorId)
+    let finalCount = 0
+    const inquiryAttempts = [vendorId]
 
-    // If no count and vendorId might be a user_id, try with vendor record lookup
-    if ((!count || count === 0) && !error) {
-      const { data: vendorRecord, error: vendorError } = await supabase
+    // Check if vendorId is a vendor.id or user.id
+    const { data: vendorById, error: vendorByIdError } = await supabase
+      .from('vendors')
+      .select('user_id')
+      .eq('id', vendorId)
+      .single()
+
+    if (!vendorByIdError && vendorById?.user_id) {
+      // vendorId is a vendor.id, add the corresponding user_id
+      inquiryAttempts.push(vendorById.user_id)
+    } else {
+      // vendorId might be a user.id, try to get the vendor.id
+      const { data: vendorByUserId, error: vendorByUserIdError } = await supabase
         .from('vendors')
         .select('id')
         .eq('user_id', vendorId)
         .single()
 
-      if (!vendorError && vendorRecord) {
-        const { count: vendorCount, error: vendorCountError } = await supabase
-          .from('inquiries')
-          .select('*', { count: 'exact', head: true })
-          .eq('vendor_id', vendorRecord.id)
-
-        if (!vendorCountError) {
-          count = vendorCount
-        }
+      if (!vendorByUserIdError && vendorByUserId?.id) {
+        // vendorId is a user.id, add the corresponding vendor.id
+        inquiryAttempts.push(vendorByUserId.id)
       }
     }
 
-    if (error) {
-      console.error('Error fetching inquiry count:', error)
-      throw error
+    // Try all possibilities
+    for (const attemptId of inquiryAttempts) {
+      const { count, error } = await supabase
+        .from('inquiries')
+        .select('*', { count: 'exact', head: true })
+        .eq('vendor_id', attemptId)
+
+      if (!error && count && count > 0) {
+        finalCount = count
+        break
+      }
     }
 
-    return count || 0
+    return finalCount
   } catch (error) {
     console.error('Error in getInquiryCount:', error)
     throw error
