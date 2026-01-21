@@ -322,7 +322,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   transaction_type: 'payment' | 'withdrawal' | 'refund';
-  status: 'pending' | 'approved' | 'completed' | 'failed';
+  status: 'pending' | 'approved' | 'completed' | 'failed' | 'rejected';
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
   receipt_url?: string;

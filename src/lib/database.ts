@@ -29,7 +29,7 @@ export type VendorStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
 export type ServiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'inactive'
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 export type TransactionType = 'payment' | 'withdrawal' | 'refund'
-export type TransactionStatus = 'pending' | 'approved' | 'completed' | 'failed'
+export type TransactionStatus = 'pending' | 'approved' | 'completed' | 'failed' | 'rejected'
 export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
 import type { Flight } from '../types'
@@ -1462,17 +1462,54 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
 }
 
 export async function getAllTransactions(): Promise<Transaction[]> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .order('created_at', { ascending: false })
+  try {
+    // First get all transactions
+    const { data: transactions, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching transactions:', error)
-    throw error
+    if (error) {
+      console.error('Error fetching transactions:', error)
+      throw error
+    }
+
+    if (!transactions || transactions.length === 0) {
+      return []
+    }
+
+    // Get vendor IDs from transactions
+    const vendorIds = transactions.map(t => t.vendor_id).filter(id => id)
+
+    if (vendorIds.length === 0) {
+      return transactions
+    }
+
+    // Fetch vendor information separately
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('id, business_name, business_email, status')
+      .in('id', vendorIds)
+
+    if (vendorsError) {
+      console.error('Error fetching vendors for transactions:', vendorsError)
+      // Return transactions without vendor info rather than failing
+      return transactions
+    }
+
+    // Map vendor information to transactions
+    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+
+    const transactionsWithVendors = transactions.map(transaction => ({
+      ...transaction,
+      vendors: vendorMap.get(transaction.vendor_id) || null
+    }))
+
+    return transactionsWithVendors
+  } catch (error) {
+    console.error('Error in getAllTransactions:', error)
+    return []
   }
-
-  return data || []
 }
 
 export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
@@ -1493,8 +1530,8 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
       throw new Error('Access denied: Admin role required')
     }
 
-    // Simple query without complex joins that might fail due to RLS
-    const { data, error } = await supabase
+    // First get all transactions
+    const { data: transactions, error } = await supabase
       .from('transactions')
       .select('*')
       .order('created_at', { ascending: false })
@@ -1504,7 +1541,38 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
       throw error
     }
 
-    return data || []
+    if (!transactions || transactions.length === 0) {
+      return []
+    }
+
+    // Get vendor IDs from transactions
+    const vendorIds = transactions.map(t => t.vendor_id).filter(id => id)
+
+    if (vendorIds.length === 0) {
+      return transactions
+    }
+
+    // Fetch vendor information separately
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('id, business_name, business_email, status')
+      .in('id', vendorIds)
+
+    if (vendorsError) {
+      console.error('Error fetching vendors for admin transactions:', vendorsError)
+      // Return transactions without vendor info rather than failing
+      return transactions
+    }
+
+    // Map vendor information to transactions
+    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+
+    const transactionsWithVendors = transactions.map(transaction => ({
+      ...transaction,
+      vendors: vendorMap.get(transaction.vendor_id) || null
+    }))
+
+    return transactionsWithVendors
   } catch (error) {
     console.error('Error in getAllTransactionsForAdmin:', error)
     throw error
@@ -1513,17 +1581,49 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
 
 export async function getAllVendorWallets(): Promise<any[]> {
   try {
-    const { data, error } = await supabase
+    // First get all wallets
+    const { data: wallets, error: walletsError } = await supabase
       .from('wallets')
       .select('*')
       .order('balance', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching all vendor wallets:', error)
-      throw error
+    if (walletsError) {
+      console.error('Error fetching wallets:', walletsError)
+      throw walletsError
     }
 
-    return data || []
+    if (!wallets || wallets.length === 0) {
+      return []
+    }
+
+    // Get vendor IDs from wallets
+    const vendorIds = wallets.map(w => w.vendor_id).filter(id => id)
+
+    if (vendorIds.length === 0) {
+      return wallets
+    }
+
+    // Fetch vendor information separately
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('id, business_name, business_email, status, created_at')
+      .in('id', vendorIds)
+
+    if (vendorsError) {
+      console.error('Error fetching vendors:', vendorsError)
+      // Return wallets without vendor info rather than failing
+      return wallets
+    }
+
+    // Map vendor information to wallets
+    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+
+    const walletsWithVendors = wallets.map(wallet => ({
+      ...wallet,
+      vendors: vendorMap.get(wallet.vendor_id) || null
+    }))
+
+    return walletsWithVendors
   } catch (error) {
     console.error('Error in getAllVendorWallets:', error)
     return []
