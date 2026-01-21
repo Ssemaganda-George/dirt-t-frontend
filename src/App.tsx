@@ -41,6 +41,12 @@ import Partnerships from './pages/admin/Partnerships'
 import PartnerWithUs from './pages/PartnerWithUs'
 import ConnectionTest from './pages/ConnectionTest'
 
+// Support pages
+import HelpCenter from './pages/HelpCenter'
+import ContactUs from './pages/ContactUs'
+import Safety from './pages/Safety'
+import TermsOfService from './pages/TermsOfService'
+
 // Tourist pages
 import Bookings from './pages/Bookings'
 import Saved from './pages/Saved'
@@ -65,6 +71,11 @@ function App() {
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<Profile />} />
             <Route path="category/:category" element={<CategoryPage />} />
+            {/* Support Pages */}
+            <Route path="help" element={<HelpCenter />} />
+            <Route path="contact" element={<ContactUs />} />
+            <Route path="safety" element={<Safety />} />
+            <Route path="terms" element={<TermsOfService />} />
           </Route>
           
           {/* Auth Routes */}
