@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -15,7 +15,6 @@ const navigation = [
 export default function VendorLayout() {
   const { profile, signOut } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -39,7 +38,7 @@ export default function VendorLayout() {
 
     try {
       await signOut()
-      navigate('/vendor-login')
+      window.location.href = '/'
     } catch (error) {
       console.error('Error signing out:', error)
     }

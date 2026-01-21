@@ -9,7 +9,7 @@ export default function VendorPending() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      navigate('/vendor-login')
+      window.location.href = '/'
     } catch (error) {
       console.error('Error signing out:', error)
     }

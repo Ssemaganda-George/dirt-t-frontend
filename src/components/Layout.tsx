@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   ShoppingBag,
@@ -30,7 +30,6 @@ const navigation = [
 export default function Layout() {
   const { profile, signOut } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -53,7 +52,7 @@ export default function Layout() {
 
     try {
       await signOut()
-      navigate('/login')
+      window.location.href = '/'
     } catch (error) {
       console.error('Error signing out:', error)
     }

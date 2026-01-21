@@ -1,6 +1,34 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
+interface VendorSignupEmailPayload {
+  userId: string
+  email: string
+  fullName: string
+}
+
+/**
+ * Trigger a server-side email for vendor signup onboarding.
+ */
+async function sendVendorSignupEmail(payload: VendorSignupEmailPayload) {
+  const url = (import.meta.env && (import.meta.env.VITE_VENDOR_EMAIL_ENDPOINT as string)) || '/api/send-vendor-email'
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Vendor email request failed: ${res.status} ${text}`)
+  }
+
+  return res.json()
+}
+
 interface User {
   id: string
   email: string
@@ -88,7 +116,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        fetchProfile(u.id)
+
+        // fetch profile and vendor info; if this is a vendor who just verified their email,
+        // trigger the 'post-verify' email (account under review). We guard with localStorage
+        // to avoid sending multiple times from repeated auth events.
+        const p = await fetchProfile(u.id)
+        try {
+          if (p?.role === 'vendor') {
+            // fetch vendor record to inspect status
+            const { data: vendorData, error: vErr } = await supabase
+              .from('vendors')
+              .select('*')
+              .eq('user_id', u.id)
+              .single()
+
+            if (!vErr && vendorData && vendorData.status === 'pending') {
+              // Check if user's email is confirmed. Supabase user object may have 'email_confirmed_at' or 'confirmed_at'
+              const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
+              const flagKey = `vendorPostVerifySent:${u.id}`
+              if (confirmedAt && !localStorage.getItem(flagKey)) {
+                // request server to send post-verify email (account under review)
+                sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch((e: unknown) =>
+                  console.error('Failed to request post-verify vendor email:', e)
+                )
+                try {
+                  localStorage.setItem(flagKey, '1')
+                } catch (e) {}
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error checking vendor post-verify criteria:', e)
+        }
       } else {
         setUser(null)
         setProfile(null)
@@ -213,6 +272,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role,
     })
     if (profileError) throw profileError
+
+    // If vendor, create vendor record
+    if (role === 'vendor') {
+      const { error: vendorError } = await supabase.from('vendors').insert({
+        user_id: u.id,
+        business_name: '',
+        status: 'pending',
+      })
+      if (vendorError) throw vendorError
+    }
+
+    // If this is a vendor signup, notify the backend to send custom vendor onboarding email
+    // (this will typically send a verification / next-steps email specific to vendors)
+    if (role === 'vendor') {
+      // fire-and-forget; don't block signup if email service is not available
+      sendVendorSignupEmail({ userId: u.id, email, fullName }).catch((e: unknown) =>
+        console.error('Failed to request vendor signup email:', e)
+      )
+    }
 
     setUser(normalizedUser)
     // Ensure profile (and role) is loaded before route guards run
