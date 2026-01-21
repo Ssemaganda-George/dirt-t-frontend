@@ -1,0 +1,476 @@
+import React, { useState, useEffect } from 'react';
+import {
+  getPartnerRequests,
+  getPartners,
+  addPartner,
+  updatePartner,
+  updatePartnerRequestStatus,
+  PartnerRequest,
+  Partner
+} from '../../lib/database';
+
+
+const emptyPartner = {
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+  website: '',
+  description: '',
+  status: 'active',
+};
+
+const Partnerships: React.FC = () => {
+  const [filter, setFilter] = useState<'requests' | 'all'>('requests');
+  const [partnerRequests, setPartnerRequests] = useState<PartnerRequest[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editPartner, setEditPartner] = useState<Partner | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<PartnerRequest | null>(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [form, setForm] = useState<any>(emptyPartner);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [reqs, all] = await Promise.all([
+        getPartnerRequests(),
+        getPartners(),
+      ]);
+      setPartnerRequests(reqs);
+      setPartners(all);
+    } catch (e) {
+      // handle error
+    }
+    setLoading(false);
+  };
+
+  const openAddModal = () => {
+    setEditPartner(null);
+    setForm(emptyPartner);
+    setShowModal(true);
+    setFormError(null);
+  };
+
+  const openRequestModal = (request: PartnerRequest) => {
+    setSelectedRequest(request);
+    setShowRequestModal(true);
+  };
+
+  const closeRequestModal = () => {
+    setSelectedRequest(null);
+    setShowRequestModal(false);
+  };
+
+  const openEditModal = (partner: Partner) => {
+    setEditPartner(partner);
+    setForm(partner);
+    setShowModal(true);
+    setFormError(null);
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      if (editPartner) {
+        await updatePartner(editPartner.id, form);
+      } else {
+        await addPartner(form);
+      }
+      setShowModal(false);
+      fetchData();
+    } catch (err) {
+      setFormError('Failed to save partner.');
+    }
+    setFormLoading(false);
+  };
+
+  const handleRequestStatus = async (id: string, status: string) => {
+    await updatePartnerRequestStatus(id, status);
+    fetchData();
+  };
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Partnerships</h1>
+      <div className="mb-4 flex gap-2">
+        <button
+          className={`px-4 py-2 rounded ${filter === 'requests' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setFilter('requests')}
+        >
+          Partner Requests
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setFilter('all')}
+        >
+          All Partners
+        </button>
+      </div>
+      {filter === 'requests' ? (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Partnership Requests</h2>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : partnerRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No partnership requests yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {partnerRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
+                  onClick={() => openRequestModal(req)}
+                >
+                <div
+                  key={req.id}
+                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
+                  onClick={() => openRequestModal(req)}
+                >
+                  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                    {/* Request Summary */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">{req.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                          </span>
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                        {req.company && <span><strong>Company:</strong> {req.company}</span>}
+                        <span><strong>Email:</strong> {req.email}</span>
+                        {req.phone && <span><strong>Phone:</strong> {req.phone}</span>}
+                      </div>
+
+                      {req.message && (
+                        <p className="text-gray-700 text-sm line-clamp-2 bg-gray-50 p-2 rounded">
+                          {req.message.length > 150 ? `${req.message.substring(0, 150)}...` : req.message}
+                        </p>
+                      )}
+
+                      <div className="text-xs text-gray-500">
+                        {new Date(req.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex flex-col gap-2 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+                      {req.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <button
+                            className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestStatus(req.id, 'approved');
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-700 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestStatus(req.id, 'rejected');
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`mailto:${req.email}?subject=Partnership Inquiry - ${req.company || req.name}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-purple-700 transition-colors flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=Meeting with ${req.name} - Partnership&details=Partnership discussion with ${req.company || req.name}&add=${req.email}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Request Details Modal */}
+      {showRequestModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Partnership Inquiry Details</h2>
+                <button
+                  onClick={closeRequestModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">{selectedRequest.name}</h3>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${
+                      selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(selectedRequest.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <a
+                        href={`mailto:${selectedRequest.email}`}
+                        className="text-blue-600 hover:underline break-all"
+                      >
+                        {selectedRequest.email}
+                      </a>
+                    </div>
+
+                    {selectedRequest.phone && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <a
+                          href={`tel:${selectedRequest.phone}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {selectedRequest.phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    {selectedRequest.company && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                        <span className="text-gray-900">{selectedRequest.company}</span>
+                      </div>
+                    )}
+
+                    {selectedRequest.website && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                        <a
+                          href={selectedRequest.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {selectedRequest.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message */}
+                {selectedRequest.message && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {selectedRequest.message}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                  {selectedRequest.status === 'pending' && (
+                    <>
+                      <button
+                        className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-colors"
+                        onClick={() => {
+                          handleRequestStatus(selectedRequest.id, 'approved');
+                          closeRequestModal();
+                        }}
+                      >
+                        ✅ Approve Request
+                      </button>
+                      <button
+                        className="bg-red-600 text-white px-4 py-2 rounded-md font-medium hover:bg-red-700 transition-colors"
+                        onClick={() => {
+                          handleRequestStatus(selectedRequest.id, 'rejected');
+                          closeRequestModal();
+                        }}
+                      >
+                        ❌ Reject Request
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    onClick={() => window.open(`mailto:${selectedRequest.email}?subject=Partnership Inquiry - ${selectedRequest.company || selectedRequest.name}&body=Dear ${selectedRequest.name},%0A%0AThank you for your interest in partnering with Dirt Trails...`, '_blank')}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Send Email
+                  </button>
+
+                  <button
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=Meeting with ${selectedRequest.name} - Partnership&details=Partnership discussion with ${selectedRequest.company || selectedRequest.name}. Contact: ${selectedRequest.email}${selectedRequest.phone ? ' | ' + selectedRequest.phone : ''}&add=${selectedRequest.email}`, '_blank')}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Schedule Meeting
+                  </button>
+
+                  {selectedRequest.status === 'approved' && (
+                    <button
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+                      onClick={() => {
+                        const newPartner = {
+                          name: selectedRequest.name,
+                          email: selectedRequest.email,
+                          phone: selectedRequest.phone || '',
+                          company: selectedRequest.company || '',
+                          website: selectedRequest.website || '',
+                          description: selectedRequest.message || '',
+                          status: 'active'
+                        };
+                        setForm(newPartner);
+                        setEditPartner(null);
+                        setShowModal(true);
+                        closeRequestModal();
+                      }}
+                    >
+                      Convert to Partner
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      ) : (
+        <div>
+          <h2 className="text-xl font-semibold mb-2">All Partners</h2>
+          <div className="mb-4">
+            <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={openAddModal}>Add Partner</button>
+          </div>
+          {loading ? <div>Loading...</div> : (
+            <ul>
+              {partners.map((partner) => (
+                <li key={partner.id} className="border p-2 mb-2 rounded flex flex-col md:flex-row md:justify-between md:items-center">
+                  <div>
+                    <div className="font-semibold">{partner.name} {partner.company && <span className="text-xs text-gray-500">({partner.company})</span>}</div>
+                    <div className="text-sm text-gray-600">{partner.email} {partner.phone && <>| {partner.phone}</>}</div>
+                    {partner.website && <div className="text-xs text-blue-600"><a href={partner.website} target="_blank" rel="noopener noreferrer">{partner.website}</a></div>}
+                    {partner.description && <div className="text-sm mt-1">{partner.description}</div>}
+                  </div>
+                  <div className="flex gap-2 mt-2 md:mt-0">
+                    <span className={partner.status === 'active' ? 'text-green-600' : 'text-gray-500'}>{partner.status}</span>
+                    <button className="text-blue-600 hover:underline" onClick={() => openEditModal(partner)}>Edit</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* Modal for add/edit partner */}
+          {showModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
+                <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowModal(false)}>&times;</button>
+                <h3 className="text-lg font-bold mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
+                <form onSubmit={handleFormSubmit} className="space-y-3">
+                  <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border p-2 rounded" required />
+                  <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email*" className="w-full border p-2 rounded" required type="email" />
+                  <input name="phone" value={form.phone} onChange={handleFormChange} placeholder="Phone" className="w-full border p-2 rounded" />
+                  <input name="company" value={form.company} onChange={handleFormChange} placeholder="Company" className="w-full border p-2 rounded" />
+                  <input name="website" value={form.website} onChange={handleFormChange} placeholder="Company Website" className="w-full border p-2 rounded" />
+                  <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" className="w-full border p-2 rounded" rows={3} />
+                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border p-2 rounded">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  {formError && <div className="text-red-600 text-sm">{formError}</div>}
+                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save'}</button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Partnerships;

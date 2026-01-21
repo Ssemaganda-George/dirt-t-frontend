@@ -1,3 +1,77 @@
+// Partnership types
+export interface PartnerRequest {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  website?: string;
+  message?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface Partner {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  website?: string;
+  description?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Partner Requests API
+export async function getPartnerRequests(): Promise<PartnerRequest[]> {
+  const { data, error } = await supabase
+    .from('partner_requests')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as PartnerRequest[];
+}
+
+export async function updatePartnerRequestStatus(id: string, status: string): Promise<void> {
+  const { error } = await supabase
+    .from('partner_requests')
+    .update({ status })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// Partners API
+export async function getPartners(): Promise<Partner[]> {
+  const { data, error } = await supabase
+    .from('partners')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as Partner[];
+}
+
+export async function addPartner(partner: Omit<Partner, 'id' | 'created_at' | 'updated_at'>): Promise<Partner> {
+  const { data, error } = await supabase
+    .from('partners')
+    .insert([{ ...partner }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Partner;
+}
+
+export async function updatePartner(id: string, updates: Partial<Omit<Partner, 'id' | 'created_at' | 'updated_at'>>): Promise<Partner> {
+  const { data, error } = await supabase
+    .from('partners')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Partner;
+}
 // Utility to get the first admin profile's ID
 
 /**

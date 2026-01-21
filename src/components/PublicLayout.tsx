@@ -289,6 +289,16 @@ export default function PublicLayout() {
                   My Bookings
                 </Link>
                 <div className="border-t border-gray-200 pt-2 mt-2">
+                  <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">For Businesses</p>
+                  <a
+                    href="http://localhost:5173/vendor-login"
+                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    List Your Business
+                  </a>
+                </div>
+                <div className="border-t border-gray-200 pt-2 mt-2">
                   {user && profile?.role === 'tourist' ? (
                     <>
                       <div className="px-3 py-2 border-b border-gray-200 mb-2">
@@ -407,7 +417,7 @@ export default function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-4">For Businesses</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/vendor-signup" className="hover:text-white">List Your Business</Link></li>
+                <li><a href="http://localhost:5173/vendor-login" className="hover:text-white">List Your Business</a></li>
                 <li><Link to="/vendor-login" className="hover:text-white">Vendor Portal</Link></li>
                 <li><Link to="/partner" className="hover:text-white">Partner with Us</Link></li>
               </ul>

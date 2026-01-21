@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Services', href: '/admin/services', icon: ShoppingBag },
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
   { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
+  { name: 'Partnerships', href: '/admin/partnerships', icon: Users },
   { name: 'Wallets', href: '/admin/wallets', icon: CreditCard },
   { name: 'Finance', href: '/admin/finance', icon: DollarSign },
 ]

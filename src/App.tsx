@@ -35,7 +35,11 @@ import { Bookings as AdminBookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Wallets'
 import { Finance } from './pages/admin/Finance'
 
+
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
+import Partnerships from './pages/admin/Partnerships'
+import PartnerWithUs from './pages/PartnerWithUs'
+import ConnectionTest from './pages/ConnectionTest'
 
 // Tourist pages
 import Bookings from './pages/Bookings'
@@ -51,6 +55,8 @@ function App() {
           <Router>
             <Routes>
           {/* Public Routes */}
+          <Route path="/partner" element={<PartnerWithUs />} />
+          <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
             <Route path="service/:id" element={<ServiceDetail />} />
@@ -136,6 +142,7 @@ function App() {
             <Route path="services" element={<Services />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="partnerships" element={<Partnerships />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="finance" element={<Finance />} />
             <Route path="vendor-messages" element={
@@ -144,6 +151,7 @@ function App() {
               </ProtectedRoute>
             } />
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
+import Partnerships from './pages/admin/Partnerships'
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">
