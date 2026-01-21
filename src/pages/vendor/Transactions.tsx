@@ -285,32 +285,12 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Wallet & Transactions</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Business Dashboard</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Manage your earnings, view transaction history, and generate reports
+                Monitor your performance, manage transactions, and access business insights
               </p>
             </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
-              <button
-                onClick={exportToCSV}
-                disabled={filteredTxs.length === 0}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                </svg>
-                Export CSV
-              </button>
-              <button
-                onClick={generateReport}
-                disabled={filteredTxs.length === 0}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Generate Report
-              </button>
+            <div className="mt-4 sm:mt-0">
               <button
                 onClick={() => setShowWithdraw(true)}
                 disabled={!walletStats || walletStats.currentBalance <= 0}
@@ -319,7 +299,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                 </svg>
-                Request Withdrawal
+                Withdraw Funds
               </button>
             </div>
           </div>
@@ -348,6 +328,16 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 }`}
               >
                 Transaction History
+              </button>
+              <button
+                onClick={() => setActiveTab('recommendations')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'recommendations'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Business Recommendations
               </button>
             </nav>
           </div>
@@ -532,7 +522,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center">
                           <div className="flex-shrink-0">
                             <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,7 +541,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </div>
                       </div>
 
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center">
                           <div className="flex-shrink-0">
                             <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -570,7 +560,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </div>
                       </div>
 
-                      <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center">
                           <div className="flex-shrink-0">
                             <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,6 +728,26 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           Filters
                         </button>
                         <button
+                          onClick={exportToCSV}
+                          disabled={filteredTxs.length === 0}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                          </svg>
+                          Export CSV
+                        </button>
+                        <button
+                          onClick={generateReport}
+                          disabled={filteredTxs.length === 0}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Generate Report
+                        </button>
+                        <button
                           onClick={refresh}
                           className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
@@ -811,6 +821,190 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Business Recommendations Tab Content */}
+            {activeTab === 'recommendations' && (
+              <>
+                <div className="bg-white shadow rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">Business Recommendations</h3>
+                      <p className="text-sm text-gray-500">Professional advice to optimize your business performance</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-indigo-600">
+                        
+                      </div>
+                      <div className="text-sm text-gray-500">AI-Powered Insights</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Financial Health Recommendations */}
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                          </svg>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="text-lg font-semibold text-green-800 mb-2">Financial Health</h4>
+                          <div className="space-y-3">
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Cash Flow Management</h5>
+                              <p className="text-sm text-gray-600">
+                                Maintain at least 3 months of operating expenses in your account. Your current balance of {formatCurrency(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX')} 
+                                {walletStats?.currentBalance < 500000 ? 'is below recommended levels. Consider reducing expenses or increasing prices.' : 'is healthy. Keep up the good work!'}
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Withdrawal Strategy</h5>
+                              <p className="text-sm text-gray-600">
+                                Withdraw profits regularly but leave enough for business operations. Consider withdrawing {Math.round((walletStats?.currentBalance || 0) * 0.3)} UGX monthly to maintain healthy cash reserves.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Performance Optimization */}
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="text-lg font-semibold text-blue-800 mb-2">Performance Optimization</h4>
+                          <div className="space-y-3">
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Success Rate Improvement</h5>
+                              <p className="text-sm text-gray-600">
+                                Your current success rate is {filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%. 
+                                {filteredTxs.length > 0 && Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) < 80 
+                                  ? 'Focus on improving service quality and customer communication to increase completion rates.' 
+                                  : 'Excellent completion rate! Maintain your high standards.'}
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Pricing Strategy</h5>
+                              <p className="text-sm text-gray-600">
+                                Your average transaction is {filteredTxs.length > 0 ? formatCurrency(filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length, currency) : 'N/A'}. 
+                                Consider competitive pricing while maintaining profit margins. Regular price reviews can help optimize revenue.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Growth Recommendations */}
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                          </svg>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="text-lg font-semibold text-purple-800 mb-2">Growth Opportunities</h4>
+                          <div className="space-y-3">
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Expansion Strategies</h5>
+                              <p className="text-sm text-gray-600">
+                                With {filteredTxs.length} total transactions, consider expanding your service offerings or targeting new customer segments. 
+                                Consistent performance like yours suggests readiness for business growth.
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Customer Retention</h5>
+                              <p className="text-sm text-gray-600">
+                                Focus on building long-term customer relationships. Satisfied customers often return and provide referrals, creating sustainable business growth.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Risk Management */}
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="text-lg font-semibold text-orange-800 mb-2">Risk Management</h4>
+                          <div className="space-y-3">
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Transaction Monitoring</h5>
+                              <p className="text-sm text-gray-600">
+                                Monitor failed/rejected transactions ({filteredTxs.filter(tx => tx.status === 'failed' || tx.status === 'rejected').length} total). 
+                                High failure rates may indicate service issues that need immediate attention.
+                              </p>
+                            </div>
+                            <div className="bg-white p-4 rounded-md shadow-sm">
+                              <h5 className="font-medium text-gray-900 mb-1">Contingency Planning</h5>
+                              <p className="text-sm text-gray-600">
+                                Prepare for seasonal fluctuations. Build emergency funds and have backup plans for service disruptions to ensure business continuity.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Items */}
+                    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Recommended Actions</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-indigo-600">1</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Review Pricing Strategy</p>
+                            <p className="text-xs text-gray-500">Monthly assessment of competitive pricing</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-indigo-600">2</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Customer Feedback Collection</p>
+                            <p className="text-xs text-gray-500">Implement regular feedback mechanisms</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-indigo-600">3</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Cash Reserve Building</p>
+                            <p className="text-xs text-gray-500">Maintain 3-month expense buffer</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-medium text-indigo-600">4</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Performance Monitoring</p>
+                            <p className="text-xs text-gray-500">Weekly review of key metrics</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
