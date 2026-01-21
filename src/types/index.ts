@@ -298,7 +298,9 @@ export interface Booking {
   created_at: string;
   updated_at: string;
   service?: Service;
+  services?: { title: string }; // Added for Supabase joins
   tourist_profile?: UserProfile;
+  profiles?: { full_name: string }; // Added for Supabase joins
   // Guest booking fields
   is_guest_booking?: boolean;
   guest_name?: string;

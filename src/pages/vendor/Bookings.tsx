@@ -14,26 +14,21 @@ export default function VendorBookings() {
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
   const { state: cartState } = useCart()
 
-  console.log('VendorBookings - profile:', profile)
-  console.log('VendorBookings - vendor:', vendor)
-  console.log('VendorBookings - vendorId:', vendorId)
-  console.log('VendorBookings - profile role:', profile?.role)
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [serviceFilter, setServiceFilter] = useState<string>('all')
 
   // Fetch bookings from Supabase for this vendor
   const load = async () => {
     // Get all bookings, then filter by vendor_id
     const allBookings = await getAllBookings()
-    console.log('All bookings from database:', allBookings)
-    console.log('Looking for vendor_id:', vendorId)
     const filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
-    console.log('Filtered bookings for vendor:', filteredBookings)
-    console.log('Bookings with different vendor_ids:', allBookings.filter(b => b.vendor_id !== vendorId))
     setBookings(filteredBookings)
     setServices(getServices(vendorId))
   }
@@ -88,10 +83,42 @@ export default function VendorBookings() {
     }
   }
 
+  // Filtered bookings
+  const filteredBookings = bookings.filter(b => {
+    const statusMatch = statusFilter === 'all' || b.status === statusFilter
+    const serviceMatch = serviceFilter === 'all' || b.service_id === serviceFilter
+    return statusMatch && serviceMatch
+  })
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select
+              value={serviceFilter}
+              onChange={e => setServiceFilter(e.target.value)}
+              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="all">All Services</option>
+              {services.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center text-sm text-green-600">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
@@ -101,55 +128,26 @@ export default function VendorBookings() {
         </div>
       </div>
 
-      {/* Debug Info */}
-      <div className="bg-yellow-50 p-4 rounded-lg">
-        <h3 className="font-semibold text-yellow-800">Debug Info:</h3>
-        <p className="text-sm text-yellow-700">Profile ID: {profile?.id || 'Not logged in'}</p>
-        <p className="text-sm text-yellow-700">Vendor Record ID: {vendor?.id || 'No vendor record'}</p>
-        <p className="text-sm text-yellow-700">Using Vendor ID: {vendorId}</p>
-        <p className="text-sm text-yellow-700">Profile Role: {profile?.role || 'Unknown'}</p>
-        <p className="text-sm text-yellow-700">Bookings Count: {bookings.length}</p>
-        <p className="text-sm text-green-700">✅ Real-time updates enabled</p>
-        <div className="flex gap-2 mt-2">
-          <button 
-            onClick={async () => {
-              const all = await getAllBookings()
-              console.log('ALL BOOKINGS IN DATABASE:', all)
-              alert(`Found ${all.length} total bookings in database. Check console for details.`)
-            }}
-            className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
-          >
-            Check All Bookings in Console
-          </button>
-          <button 
-            onClick={load}
-            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-          >
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+  <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
         {/* Mobile Card View */}
-        <div className="block md:hidden">
-          {bookings.length === 0 ? (
+  <div className="block md:hidden">
+          {filteredBookings.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-500">
               No bookings yet.
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {bookings.map(b => (
-                <div key={b.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</h3>
+              {filteredBookings.map(b => (
+                <div key={b.id} className="p-4 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-xl shadow-sm mb-3 border border-gray-100 hover:shadow-md transition-all">
+                  <div className="flex justify-between items-start mb-3 gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-primary-700 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</h3>
                       <p className="text-xs text-gray-500 mt-1">
-                        {formatDateTime(b.booking_date)} • {b.guests} guests
+                        {formatDateTime(b.booking_date)} • <span className="font-medium text-gray-700">{b.guests} guests</span>
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="text-right flex flex-col items-end">
+                      <div className="text-lg font-bold text-primary-900">
                         {formatCurrency(b.total_amount, b.currency)}
                       </div>
                       <div className="mt-1">
@@ -159,11 +157,11 @@ export default function VendorBookings() {
                   </div>
 
                   {/* Mobile Action Buttons */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 mt-2">
                     <select
                       value={b.status}
                       onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
                       disabled={b.payment_status !== 'paid'}
                     >
                       <option value="pending">Pending</option>
@@ -194,7 +192,7 @@ export default function VendorBookings() {
                         setSelectedBooking(b)
                         setShowBookingDetails(true)
                       }}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                      className="w-full px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm transition-all"
                     >
                       View Details
                     </button>
@@ -220,7 +218,7 @@ export default function VendorBookings() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {bookings.map(b => (
+                {filteredBookings.map(b => (
                   <tr 
                     key={b.id} 
                     className="hover:bg-gray-50 cursor-pointer"
@@ -229,7 +227,7 @@ export default function VendorBookings() {
                       setShowBookingDetails(true)
                     }}
                   >
-                    <td className="px-6 py-4 text-sm text-gray-900">{b.service?.title || b.service_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
@@ -281,7 +279,7 @@ export default function VendorBookings() {
                     </td>
                   </tr>
                 ))}
-                {bookings.length === 0 && (
+                {filteredBookings.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
                   </tr>
@@ -369,7 +367,7 @@ export default function VendorBookings() {
                   <h4 className="font-medium text-gray-900">Booking Information</h4>
                   <div className="mt-2 space-y-2">
                     <p><span className="font-medium">Booking ID:</span> #{selectedBooking.id.slice(0, 8)}</p>
-                    <p><span className="font-medium">Service:</span> {selectedBooking.service?.title || selectedBooking.service_id}</p>
+                    <p><span className="font-medium">Service:</span> {selectedBooking.services?.title || selectedBooking.service?.title || `Service ${selectedBooking.service_id}`}</p>
                     <p><span className="font-medium">Booked Date:</span> {formatDateTime(selectedBooking.booking_date)}</p>
                     <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
                     <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>

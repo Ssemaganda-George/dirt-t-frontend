@@ -326,7 +326,7 @@ export default function VendorDashboard() {
                           <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white text-sm sm:text-base truncate">{b.services?.title || b.service_id}</p>
+                          <p className="font-medium text-white text-sm sm:text-base truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
                           <p className="text-xs sm:text-sm text-gray-300">{formatDateTime(b.created_at)}</p>
                         </div>
                       </div>
