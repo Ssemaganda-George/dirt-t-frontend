@@ -232,7 +232,7 @@ export default function HelpCenter() {
 
                       {expandedFaq === index && (
                         <div className="px-6 pb-5 border-t border-slate-500">
-                          <p className="text-slate-200 leading-snug antialiased pt-4">{faq.answer}</p>
+                          <p className="text-slate-200 leading-snug antialiased pt-4 text-elegant">{faq.answer}</p>
                         </div>
                       )}
                     </div>
@@ -255,7 +255,7 @@ export default function HelpCenter() {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-white mb-2 tracking-tight antialiased">{guide.title}</h3>
-                        <p className="text-slate-200 text-sm mb-4 leading-snug antialiased">{guide.description}</p>
+                        <p className="text-slate-200 text-sm mb-4 leading-snug antialiased text-elegant">{guide.description}</p>
                         <Link
                           to={guide.link}
                           className="inline-flex items-center text-slate-300 hover:text-white font-semibold text-sm tracking-tight antialiased group"

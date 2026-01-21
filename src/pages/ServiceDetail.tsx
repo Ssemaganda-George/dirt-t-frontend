@@ -1041,7 +1041,7 @@ export default function ServiceDetail() {
                 {service.location}
               </div>
 
-              <p className="text-gray-700 leading-relaxed mb-6">
+              <p className="text-gray-700 leading-relaxed mb-6 text-elegant">
                 {service.description}
               </p>
 
@@ -1100,7 +1100,7 @@ export default function ServiceDetail() {
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-900">{service.vendors.business_name || 'Vendor'}</h4>
-                    <p className="text-gray-600 text-sm mb-3">
+                    <p className="text-gray-600 text-sm mb-3 text-elegant">
                       {service.vendors.business_description || 'No description available'}
                     </p>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">

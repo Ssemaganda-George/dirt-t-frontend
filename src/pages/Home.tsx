@@ -152,10 +152,10 @@ export default function Home() {
         ></div>
         
         <div className="relative h-full flex flex-col items-center justify-center px-4">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
             Explore Uganda
           </h1>
-          <p className="text-xl text-white/90 mb-8 text-center max-w-2xl">
+          <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
             Discover the Pearl of Africa with authentic experiences
           </p>
           

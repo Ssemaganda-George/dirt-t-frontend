@@ -6,6 +6,12 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['Poppins', 'system-ui', 'sans-serif'],
+        'serif': ['Source Serif Pro', 'Georgia', 'serif'],
+        'heading': ['Poppins', 'system-ui', 'sans-serif'],
+        'body': ['Source Serif Pro', 'system-ui', 'sans-serif'],
+      },
       colors: {
         primary: {
           50: '#f0f9ff',

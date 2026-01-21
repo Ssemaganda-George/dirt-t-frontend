@@ -112,7 +112,7 @@ export default function Safety() {
                   <feature.icon className="h-8 w-8 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{feature.title}</h3>
-                <p className="text-slate-300 leading-snug antialiased">{feature.description}</p>
+                <p className="text-slate-300 leading-snug antialiased text-elegant">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -138,7 +138,7 @@ export default function Safety() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{tip.title}</h3>
-                    <p className="text-slate-200 mb-6 leading-snug antialiased">{tip.description}</p>
+                    <p className="text-slate-200 mb-6 leading-snug antialiased text-elegant">{tip.description}</p>
                     <ul className="space-y-2">
                       {tip.details.map((detail, idx) => (
                         <li key={idx} className="flex items-start text-slate-200">

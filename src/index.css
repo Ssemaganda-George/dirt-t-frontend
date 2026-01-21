@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Serif+Pro:wght@400;600;700&display=swap');
+
 /* Tailwind CSS directives - these are valid and expected in a Tailwind project */
 @tailwind base;
 @tailwind components;
@@ -5,11 +7,21 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
   }
-  
+
   body {
     @apply bg-gray-50 text-gray-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  .font-serif {
+    font-family: 'Source Serif Pro', Georgia, serif;
   }
 }
 
@@ -20,5 +32,17 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .text-elegant {
+    font-family: 'Source Serif Pro', Georgia, serif;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  .text-heading {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
 }

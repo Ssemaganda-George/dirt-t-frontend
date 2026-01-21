@@ -271,7 +271,7 @@ export default function Services() {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900">{category.name}</h3>
                 </div>
-                <p className="text-gray-600">{category.description}</p>
+                <p className="text-gray-600 text-elegant">{category.description}</p>
               </Link>
             ))}
           </div>
