@@ -45,4 +45,61 @@
     font-weight: 600;
     letter-spacing: -0.025em;
   }
+
+  /* Page transition animations */
+  .page-enter {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: pageEnter 0.6s ease-out forwards;
+  }
+
+  .page-exit {
+    opacity: 1;
+    transform: translateY(0);
+    animation: pageExit 0.3s ease-in forwards;
+  }
+
+  @keyframes pageEnter {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pageExit {
+    to {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Loading spinner animation */
+  .loading-pulse {
+    animation: loadingPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loadingPulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Smooth fade in */
+  .fade-in-slow {
+    animation: fadeInSlow 0.8s ease-out forwards;
+  }
+
+  @keyframes fadeInSlow {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

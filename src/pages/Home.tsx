@@ -454,7 +454,7 @@ export default function Home() {
       </div>
 
       {/* Sticky Filter Tabs below Hero */}
-      <div className="sticky top-24 z-20 bg-white border-b border-gray-200 shadow-sm">
+      <div className="hidden md:block sticky top-24 z-20 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {categories.map((category) => (
@@ -474,8 +474,29 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Mobile Filter - positioned above bottom nav */}
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategorySelect(category.id)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
+                  selectedCategory === category.id
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <span>{category.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-32 md:pb-12">
 
         {/* Results Header */}
         <div className="flex items-center justify-between mb-6">

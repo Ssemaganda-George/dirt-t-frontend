@@ -1,58 +1,61 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
 import { CartProvider } from './contexts/CartContext'
 import PublicLayout from './components/PublicLayout'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import Home from './pages/Home'
-import ServiceDetail from './pages/ServiceDetail'
-import BookingFlow from './pages/BookingFlow'
-import ServiceInquiry from './pages/ServiceInquiry'
-import CategoryPage from './pages/CategoryPage'
-import ServiceCategories from './pages/Services'
-import Profile from './pages/Profile'
-import Login from './pages/Login'
-import VendorLogin from './pages/VendorLogin'
-import VendorPending from './pages/VendorPending'
 import VendorLayout from './components/VendorLayout'
-import VendorDashboard from './pages/vendor/Dashboard'
-import VendorServices from './pages/vendor/Services'
-import VendorBookings from './pages/vendor/Bookings'
-import VendorMessages from './pages/vendor/Messages'
-import VendorInquiries from './pages/vendor/Inquiries'
-import VendorTransactions from './pages/vendor/Transactions'
-import VendorProfile from './pages/vendor/Profile'
-import VendorSettings from './pages/vendor/Settings'
-import Dashboard from './pages/admin/Dashboard'
-import Users from './pages/admin/Users'
-import Vendors from './pages/admin/Vendors'
-import Messages from './pages/admin/Messages'
-import AdminProfile from './pages/admin/Profile'
-import AdminSettings from './pages/admin/Settings'
-import { Services } from './pages/admin/Services'
-import { Bookings as AdminBookings } from './pages/admin/Bookings'
-import { Transactions } from './pages/admin/Wallets'
-import { Finance } from './pages/admin/Finance'
-import HeroVideoManager from './pages/admin/HeroVideoManager'
+import { LoadingSpinner } from './components/LoadingSpinner'
+import { PageTransition } from './components/PageTransition'
 
-
-import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
-import Partnerships from './pages/admin/Partnerships'
-import PartnerWithUs from './pages/PartnerWithUs'
-import ConnectionTest from './pages/ConnectionTest'
+// Lazy load all page components for better UX with loading states
+const Home = lazy(() => import('./pages/Home'))
+const ServiceDetail = lazy(() => import('./pages/ServiceDetail'))
+const BookingFlow = lazy(() => import('./pages/BookingFlow'))
+const ServiceInquiry = lazy(() => import('./pages/ServiceInquiry'))
+const CategoryPage = lazy(() => import('./pages/CategoryPage'))
+const ServiceCategories = lazy(() => import('./pages/Services'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Login = lazy(() => import('./pages/Login'))
+const VendorLogin = lazy(() => import('./pages/VendorLogin'))
+const VendorPending = lazy(() => import('./pages/VendorPending'))
+const VendorDashboard = lazy(() => import('./pages/vendor/Dashboard'))
+const VendorServices = lazy(() => import('./pages/vendor/Services'))
+const VendorBookings = lazy(() => import('./pages/vendor/Bookings'))
+const VendorMessages = lazy(() => import('./pages/vendor/Messages'))
+const VendorInquiries = lazy(() => import('./pages/vendor/Inquiries'))
+const VendorTransactions = lazy(() => import('./pages/vendor/Transactions'))
+const VendorProfile = lazy(() => import('./pages/vendor/Profile'))
+const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
+const Users = lazy(() => import('./pages/admin/Users'))
+const Vendors = lazy(() => import('./pages/admin/Vendors'))
+const Messages = lazy(() => import('./pages/admin/Messages'))
+const AdminProfile = lazy(() => import('./pages/admin/Profile'))
+const AdminSettings = lazy(() => import('./pages/admin/Settings'))
+const AdminServices = lazy(() => import('./pages/admin/Services').then(module => ({ default: module.Services })))
+const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module => ({ default: module.Bookings })))
+const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
+const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
+const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
+const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
+const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
+const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
+const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 
 // Support pages
-import HelpCenter from './pages/HelpCenter'
-import ContactUs from './pages/ContactUs'
-import Safety from './pages/Safety.tsx'
-import TermsOfService from './pages/TermsOfService.tsx'
+const HelpCenter = lazy(() => import('./pages/HelpCenter'))
+const ContactUs = lazy(() => import('./pages/ContactUs'))
+const Safety = lazy(() => import('./pages/Safety'))
+const TermsOfService = lazy(() => import('./pages/TermsOfService'))
 
 // Tourist pages
-import Bookings from './pages/Bookings'
-import Saved from './pages/Saved'
-import Settings from './pages/Settings'
-import EditProfile from './pages/EditProfile'
+const TouristBookings = lazy(() => import('./pages/Bookings'))
+const Saved = lazy(() => import('./pages/Saved'))
+const UserSettings = lazy(() => import('./pages/Settings'))
+const EditProfile = lazy(() => import('./pages/EditProfile'))
 
 function App() {
   return (
@@ -60,7 +63,15 @@ function App() {
       <CartProvider>
         <BookingProvider>
           <Router>
-            <Routes>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="text-center">
+                  <LoadingSpinner size="lg" className="mb-4" />
+                  <p className="text-gray-600 animate-pulse">Loading page...</p>
+                </div>
+              </div>
+            }>
+              <Routes>
           {/* Public Routes */}
           <Route path="/partner" element={<PartnerWithUs />} />
           <Route path="/connection-test" element={<ConnectionTest />} />
@@ -71,7 +82,7 @@ function App() {
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="category/:category" element={<CategoryPage />} />
+            <Route path="category/:category" element={<PageTransition delay={1200}><CategoryPage /></PageTransition>} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />
@@ -89,7 +100,7 @@ function App() {
             path="/bookings"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <Bookings />
+                <TouristBookings />
               </ProtectedRoute>
             }
           />
@@ -105,7 +116,7 @@ function App() {
             path="/settings"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <Settings />
+                <UserSettings />
               </ProtectedRoute>
             }
           />
@@ -151,7 +162,7 @@ function App() {
             <Route path="settings" element={<AdminSettings />} />
             <Route path="users" element={<Users />} />
             <Route path="vendors" element={<Vendors />} />
-            <Route path="services" element={<Services />} />
+            <Route path="services" element={<AdminServices />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="partnerships" element={<Partnerships />} />
@@ -163,8 +174,6 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
-import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
-import Partnerships from './pages/admin/Partnerships'
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">
@@ -175,6 +184,7 @@ import Partnerships from './pages/admin/Partnerships'
             </div>
           } />
         </Routes>
+            </Suspense>
       </Router>
     </BookingProvider>
     </CartProvider>

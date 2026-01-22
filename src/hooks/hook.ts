@@ -51,6 +51,10 @@ export function useBookings() {
       setLoading(true);
       setError(null);
       const data = await getAllBookings();
+
+      // Add artificial delay for better UX (showing loading states)
+      await new Promise(resolve => setTimeout(resolve, 900));
+
       setBookings(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -173,8 +177,12 @@ export function useServices(vendorId?: string) {
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await getServices(vendorId);
+
+      // Add artificial delay for better UX (showing loading states)
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
       setServices(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -442,8 +450,12 @@ export function useServiceCategories() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await getServiceCategories();
+
+      // Add artificial delay for better UX (showing loading states)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       setCategories(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
