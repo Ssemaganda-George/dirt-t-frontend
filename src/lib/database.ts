@@ -443,7 +443,21 @@ import { supabase } from './supabaseClient'
 export async function getServices(vendorId?: string) {
   let query = supabase
     .from('services')
-    .select('*')
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
 
   if (vendorId) {
     query = query.eq('vendor_id', vendorId)

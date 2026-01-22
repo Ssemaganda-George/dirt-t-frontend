@@ -19,6 +19,22 @@ export default function Home() {
   // Use the reactive useServices hook
   const { services: allServices, loading: servicesLoading } = useServices()
 
+  // Debug: Log services when they load
+  useEffect(() => {
+    if (allServices.length > 0) {
+      console.log('Services loaded:', allServices.length, 'services');
+      console.log('First service sample:', {
+        title: allServices[0].title,
+        description: allServices[0].description?.substring(0, 100),
+        location: allServices[0].location,
+        vendor: allServices[0].vendors?.business_name,
+        category: allServices[0].service_categories?.name,
+        amenities: allServices[0].amenities,
+        status: allServices[0].status
+      });
+    }
+  }, [allServices]);
+
   // Combined loading state
   const isLoading = servicesLoading
 
@@ -236,29 +252,103 @@ export default function Home() {
     const isApproved = service.status === 'approved' && 
                       (!service.vendors || service.vendors.status !== 'suspended')
 
-    const matchesSearch = !searchQuery || // If no search query, show all
-                         service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (service.description && service.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (service.location && service.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (service.vendors?.business_name && service.vendors.business_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (service.service_categories?.name && service.service_categories.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         // Also check for common category variations and partial matches
-                         searchQuery.toLowerCase().includes('hotel') && service.category_id === 'cat_hotels' ||
-                         searchQuery.toLowerCase().includes('accommodation') && service.category_id === 'cat_hotels' ||
-                         searchQuery.toLowerCase().includes('tour') && service.category_id === 'cat_tour_packages' ||
-                         searchQuery.toLowerCase().includes('restaurant') && service.category_id === 'cat_restaurants' ||
-                         searchQuery.toLowerCase().includes('flight') && service.category_id === 'cat_flights' ||
-                         searchQuery.toLowerCase().includes('transport') && service.category_id === 'cat_transport' ||
-                         searchQuery.toLowerCase().includes('activit') && service.category_id === 'cat_activities' ||
-                         searchQuery.toLowerCase().includes('event') && service.category_id === 'cat_activities' ||
-                         searchQuery.toLowerCase().includes('shop') && service.category_id === 'cat_shops'
+    const matchesSearch = !searchQuery || (() => {
+      const query = searchQuery.toLowerCase();
+
+      // Helper function to safely check if a string contains the query
+      const containsQuery = (text: string | undefined | null): boolean => {
+        return text ? text.toLowerCase().includes(query) : false;
+      };
+
+      // Helper function to safely check if an array contains items that include the query
+      const arrayContainsQuery = (arr: string[] | undefined | null): boolean => {
+        return arr ? arr.some(item => item.toLowerCase().includes(query)) : false;
+      };
+
+      // Search through all relevant fields - prioritize basic fields
+      let result = containsQuery(service.title) ||
+             containsQuery(service.description) ||
+             containsQuery(service.location) ||
+             containsQuery(service.vendors?.business_name) ||
+             containsQuery(service.service_categories?.name);
+
+      // Debug: Log which basic field matched
+      if (searchQuery && result) {
+        console.log('Search match found for query:', searchQuery, 'in service:', service.title);
+        if (containsQuery(service.title)) console.log('  - Match in TITLE');
+        if (containsQuery(service.description)) console.log('  - Match in DESCRIPTION');
+        if (containsQuery(service.location)) console.log('  - Match in LOCATION');
+        if (containsQuery(service.vendors?.business_name)) console.log('  - Match in VENDOR NAME');
+        if (containsQuery(service.service_categories?.name)) console.log('  - Match in CATEGORY NAME');
+      }
+
+      // If no match in basic fields, check additional fields and category synonyms
+      if (!result) {
+        result = arrayContainsQuery(service.amenities) ||
+                 arrayContainsQuery(service.facilities) ||
+                 arrayContainsQuery(service.room_amenities) ||
+                 arrayContainsQuery(service.nearby_attractions) ||
+                 arrayContainsQuery(service.itinerary) ||
+                 arrayContainsQuery(service.included_items) ||
+                 arrayContainsQuery(service.tour_highlights) ||
+                 arrayContainsQuery(service.room_types) ||
+                 arrayContainsQuery(service.languages_offered) ||
+                 containsQuery(service.property_type) ||
+                 containsQuery(service.cuisine_type) ||
+                 containsQuery(service.difficulty_level) ||
+                 containsQuery(service.vehicle_type) ||
+                 containsQuery(service.best_time_to_visit) ||
+                 arrayContainsQuery(service.what_to_bring) ||
+                 arrayContainsQuery(service.accessibility_features) ||
+                 // Category synonyms and common search terms
+                 (query.includes('accommodation') && service.category_id === 'cat_hotels') ||
+                 (query.includes('hotel') && service.category_id === 'cat_hotels') ||
+                 (query.includes('stay') && service.category_id === 'cat_hotels') ||
+                 (query.includes('lodging') && service.category_id === 'cat_hotels') ||
+                 (query.includes('transport') && service.category_id === 'cat_transport') ||
+                 (query.includes('travel') && service.category_id === 'cat_transport') ||
+                 (query.includes('ride') && service.category_id === 'cat_transport') ||
+                 (query.includes('car') && service.category_id === 'cat_transport') ||
+                 (query.includes('shop') && service.category_id === 'cat_shops') ||
+                 (query.includes('shopping') && service.category_id === 'cat_shops') ||
+                 (query.includes('store') && service.category_id === 'cat_shops') ||
+                 (query.includes('restaurant') && service.category_id === 'cat_restaurants') ||
+                 (query.includes('food') && service.category_id === 'cat_restaurants') ||
+                 (query.includes('eat') && service.category_id === 'cat_restaurants') ||
+                 (query.includes('dining') && service.category_id === 'cat_restaurants') ||
+                 (query.includes('flight') && service.category_id === 'cat_flights') ||
+                 (query.includes('plane') && service.category_id === 'cat_flights') ||
+                 (query.includes('air') && service.category_id === 'cat_flights') ||
+                 (query.includes('tour') && service.category_id === 'cat_tour_packages') ||
+                 (query.includes('safari') && service.category_id === 'cat_tour_packages') ||
+                 (query.includes('activity') && service.category_id === 'cat_activities') ||
+                 (query.includes('event') && service.category_id === 'cat_activities') ||
+                 (query.includes('experience') && service.category_id === 'cat_activities');
+
+        // Debug: Log which additional field matched
+        if (searchQuery && result) {
+          console.log('Match in ADDITIONAL FIELD or CATEGORY SYNONYM for query:', searchQuery, 'service:', service.title);
+        }
+      }
+
+      return result;
+    })()
 
     const matchesCategory = selectedCategory === 'all' ||
                            service.category_id === selectedCategory
 
     // If there's a search query, ignore category filter; otherwise apply category filter
-    return isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
+    const shouldInclude = isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
+
+    return shouldInclude;
   })
+
+  // Debug: Log filtering results
+  useEffect(() => {
+    if (searchQuery) {
+      console.log('Search query:', searchQuery, 'Total services:', allServices.length, 'Filtered services:', filteredServices.length);
+    }
+  }, [searchQuery, filteredServices.length, allServices.length]);
 
   const currentItems = filteredServices
   const currentItemCount = currentItems.length
@@ -276,7 +366,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
+      <div className="relative min-h-[450px] md:min-h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         <div className="absolute inset-0 bg-black/30"></div>
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -312,7 +402,7 @@ export default function Home() {
           ))
         )}
         
-  <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
             Explore Uganda
           </h1>
@@ -320,35 +410,64 @@ export default function Home() {
             Discover the Pearl of Africa with authentic experiences
           </p>
           
-          {/* Search Box */}
-          <div className="w-full max-w-4xl bg-white rounded-full shadow-2xl p-2">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center px-4">
-                <Search className="h-5 w-5 text-gray-400 mr-3" />
-                <input
-                  type="text"
-                  placeholder="I want ..."
-                  className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          {/* Sticky Search Bar within Hero */}
+          <div className="sticky top-16 z-30 w-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-2xl p-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 flex items-center px-4">
+                    <Search className="h-5 w-5 text-gray-400 mr-3" />
+                    <input
+                      type="text"
+                      placeholder="I want ..."
+                      className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        console.log('Search input changed:', newValue);
+                        setSearchQuery(newValue);
+                      }}
+                    />
+                  </div>
+                  <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-full font-semibold transition-colors whitespace-nowrap">
+                    Search
+                  </button>
+                </div>
               </div>
-              <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-full font-semibold transition-colors whitespace-nowrap">
-                Search
-              </button>
+
+              {/* Quick Categories */}
+              <div className="mt-4 hidden flex-wrap justify-center gap-4">
+                {categories.slice(1, 7).map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat.id)}
+                    className="bg-white/90 hover:bg-white px-5 py-2 rounded-full text-gray-800 font-medium shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {renderIcon(cat.icon, "h-4 w-4 mr-2")}
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Quick Categories */}
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            {categories.slice(1, 7).map((cat) => (
+      {/* Sticky Filter Tabs below Hero */}
+      <div className="sticky top-24 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+            {categories.map((category) => (
               <button
-                key={cat.id}
-                onClick={() => handleCategorySelect(cat.id)}
-                className="bg-white/90 hover:bg-white px-5 py-2 rounded-full text-gray-800 font-medium shadow-lg hover:shadow-xl transition-all"
+                key={category.id}
+                onClick={() => handleCategorySelect(category.id)}
+                className={`flex items-center gap-0.5 md:gap-2 px-1 py-0.5 md:px-3 md:py-2 rounded-full text-[10px] md:text-sm font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
+                  selectedCategory === category.id
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }`}
               >
-                {renderIcon(cat.icon, "h-4 w-4 mr-2")}
-                {cat.name}
+                <span>{category.name}</span>
               </button>
             ))}
           </div>
@@ -357,22 +476,6 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategorySelect(category.id)}
-              className={`flex items-center gap-0.5 md:gap-2 px-1 py-0.5 md:px-3 md:py-2 rounded-full text-[10px] md:text-sm font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
-                selectedCategory === category.id
-                  ? 'bg-black text-white border-black'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <span>{category.name}</span>
-            </button>
-          ))}
-        </div>
 
         {/* Results Header */}
         <div className="flex items-center justify-between mb-6">
