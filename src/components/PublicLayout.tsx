@@ -3,6 +3,7 @@ import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
+import GlobalSearchModal from './GlobalSearchModal'
 import SupportModal from './SupportModal'
 import LoginModal from './LoginModal'
 import { useServiceCategories } from '../hooks/hook'
@@ -16,6 +17,7 @@ export default function PublicLayout() {
   const [selectedCurrency, setSelectedCurrency] = useState('UGX')
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -128,7 +130,7 @@ export default function PublicLayout() {
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
               {/* Currency/Region Button */}
-              <button 
+              <button
                 onClick={() => setShowPreferences(true)}
                 className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
               >
@@ -408,13 +410,22 @@ export default function PublicLayout() {
         onClose={() => setShowLoginModal(false)}
       />
 
+      {/* Global Search Modal */}
+      <GlobalSearchModal
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+      />
+
       {/* Main Content */}
       <main className="pb-16 md:pb-0">
         <Outlet />
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav onSupportClick={() => setShowSupportModal(true)} />
+      <MobileBottomNav 
+        onSupportClick={() => setShowSupportModal(true)} 
+        onSearchClick={() => setShowGlobalSearch(true)}
+      />
 
       {/* Footer */}
       <footer className="hidden md:block bg-gray-900 text-white">
