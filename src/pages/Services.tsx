@@ -50,7 +50,7 @@ const categories = [
     color: 'bg-indigo-500'
   },
   {
-    name: 'Activities',
+    name: 'Events',
     href: '/category/activities',
     icon: Target,
     description: 'Book exciting activities and adventures',
@@ -86,7 +86,7 @@ export default function Services() {
   const fetchCategories = async () => {
     try {
       const categories = await getServiceCategories()
-      // Sort categories so Activities comes last
+      // Sort categories so Events comes last
       const sortedCategories = categories.sort((a, b) => {
         if (a.id === 'cat_activities') return 1
         if (b.id === 'cat_activities') return -1
@@ -113,7 +113,7 @@ export default function Services() {
         { id: 'cat_restaurant', name: 'Restaurants', icon: Utensils },
         { id: 'cat_transport', name: 'Transport', icon: Car },
         { id: 'cat_flights', name: 'Flights', icon: Plane },
-        { id: 'cat_activities', name: 'Activities', icon: Target }
+        { id: 'cat_activities', name: 'Events', icon: Target }
       ])
     }
   }

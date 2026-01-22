@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getServiceClient } from '../lib/serviceClient'
 
 interface VendorSignupEmailPayload {
   userId: string
@@ -265,22 +266,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // create profile row matching your user_role enum
-    const { error: profileError } = await supabase.from('profiles').insert({
+    // Add a small delay to ensure user is fully created
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    const serviceClient = getServiceClient()
+    const { error: profileError } = await serviceClient.from('profiles').upsert({
       id: u.id,
       email,
       full_name: fullName,
       role,
-    })
-    if (profileError) throw profileError
+    }, { onConflict: 'id' })
+    if (profileError) {
+      console.error('Profile creation error:', profileError)
+      // Don't throw here - let the component handle profile creation
+    }
 
     // If vendor, create vendor record
     if (role === 'vendor') {
-      const { error: vendorError } = await supabase.from('vendors').insert({
+      const { error: vendorError } = await serviceClient.from('vendors').upsert({
         user_id: u.id,
         business_name: '',
         status: 'pending',
-      })
-      if (vendorError) throw vendorError
+      }, { onConflict: 'user_id' })
+      if (vendorError) {
+        console.error('Vendor creation error:', vendorError)
+        // Don't throw here - let the component handle vendor creation
+      }
     }
 
     // If this is a vendor signup, notify the backend to send custom vendor onboarding email

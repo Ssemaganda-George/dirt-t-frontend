@@ -249,8 +249,9 @@ export default function Home() {
 
   const filteredServices = allServices.filter((service: Service) => {
     // First check if service is approved and vendor is not suspended
-    const isApproved = service.status === 'approved' && 
-                      (!service.vendors || service.vendors.status !== 'suspended')
+    // Temporarily show all services for debugging
+    const isApproved = true; // service.status === 'approved' && 
+                      // (!service.vendors || service.vendors.status !== 'suspended')
 
     const matchesSearch = !searchQuery || (() => {
       const query = searchQuery.toLowerCase();

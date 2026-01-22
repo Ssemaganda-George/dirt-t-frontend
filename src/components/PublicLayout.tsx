@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut } from 'lucide-react'
+import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Share, GraduationCap } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -129,7 +129,6 @@ export default function PublicLayout() {
 
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
-              {/* Currency/Region Button */}
               <button
                 onClick={() => setShowPreferences(true)}
                 className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
@@ -138,20 +137,19 @@ export default function PublicLayout() {
                 <span className="text-sm font-medium text-gray-700">{selectedCurrency}</span>
               </button>
 
-              <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600">
-                <Heart className="h-4 w-4 mr-1.5" />
-                <span className="text-sm">Saved</span>
-              </button>
-              
-              <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600 relative">
-                <ShoppingBag className="h-4 w-4 mr-1.5" />
-                <span className="text-sm">Cart</span>
-                {getCartCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {getCartCount()}
-                  </span>
-                )}
-              </button>
+              {user && profile?.role === 'tourist' && (
+                <>
+                  <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600 relative">
+                    <ShoppingBag className="h-4 w-4 mr-1.5" />
+                    <span className="text-sm">Cart</span>
+                    {getCartCount() > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {getCartCount()}
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
 
               {/* Sign In Button or User Account Dropdown */}
               {user && profile?.role === 'tourist' ? (
@@ -228,7 +226,6 @@ export default function PublicLayout() {
                   className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
                 >
                   <User className="h-4 w-4" />
-                  <span className="ml-2 text-sm font-medium hidden md:inline">Sign In</span>
                 </button>
               )}
 
@@ -250,7 +247,7 @@ export default function PublicLayout() {
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
-            <div className="max-h-[80vh] overflow-y-auto">
+            <div className="max-h-[calc(100vh-4rem)] overflow-y-auto">
               {/* Navigation Section */}
               <div className="px-4 py-6">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Explore</h3>
@@ -319,6 +316,22 @@ export default function PublicLayout() {
                   <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
                   List Your Business
                 </a>
+                <Link
+                  to="/refer-business"
+                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Share className="h-4 w-4 mr-3 text-gray-500" />
+                  Refer a Business
+                </Link>
+                <Link
+                  to="/hospitality-class"
+                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <GraduationCap className="h-4 w-4 mr-3 text-gray-500" />
+                  Join a Hospitality Class
+                </Link>
               </div>
 
               {/* Authentication Section */}
@@ -443,8 +456,11 @@ export default function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-4">Explore</h3>
               <ul className="space-y-2 text-sm text-gray-400">
+                <li><Link to="/" className="hover:text-white">Home</Link></li>
+                <li><Link to="/category/flights" className="hover:text-white">Flights</Link></li>
                 <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
                 <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
+                <li><Link to="/category/activities" className="hover:text-white">Events</Link></li>
                 <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
                 <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
               </ul>
@@ -457,14 +473,18 @@ export default function PublicLayout() {
                 <li><Link to="/contact" className="hover:text-white">Contact Us</Link></li>
                 <li><Link to="/safety" className="hover:text-white">Safety</Link></li>
                 <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="hover:text-white">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="hover:text-white">Visa Processing</Link></li>
+                <li><Link to="/internet-connectivity" className="hover:text-white">Internet & Connectivity</Link></li>
               </ul>
             </div>
             
             <div>
               <h3 className="font-semibold mb-4">For Businesses</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="http://localhost:5173/vendor-login" className="hover:text-white">List Your Business</a></li>
-                <li><Link to="/vendor-login" className="hover:text-white">Vendor Portal</Link></li>
+                <li><Link to="/vendor-login" className="hover:text-white">List Your Business</Link></li>
+                <li><Link to="/refer-business" className="hover:text-white">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="hover:text-white">Join a Hospitality Class</Link></li>
                 <li><Link to="/partner" className="hover:text-white">Partner with Us</Link></li>
               </ul>
             </div>

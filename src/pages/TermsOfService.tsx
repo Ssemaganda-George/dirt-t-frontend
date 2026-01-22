@@ -48,7 +48,7 @@ export default function TermsOfService() {
     {
       number: "1",
       title: "Service Description",
-      content: "DirtTrails is an online platform that connects travelers with tourism service providers, including hotels, tours, restaurants, transportation, and activities. We facilitate bookings and payments between users and verified service providers.",
+      content: "DirtTrails is an online platform that connects travelers with tourism service providers, including hotels, tours, restaurants, transportation, and events. We facilitate bookings and payments between users and verified service providers.",
       subsections: [
         "Platform for tourism services",
         "Verified service providers only",
@@ -179,16 +179,16 @@ export default function TermsOfService() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700">
+      <div className="bg-black border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
             <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Terms of Service</h1>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto mb-4 leading-snug antialiased">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4 leading-snug antialiased">
               Please read these terms carefully before using the DirtTrails platform.
             </p>
-            <div className="flex items-center justify-center space-x-2 text-slate-400">
+            <div className="flex items-center justify-center space-x-2 text-gray-500">
               <Clock className="h-5 w-5" />
               <span className="text-sm font-semibold tracking-tight antialiased">
                 Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -202,26 +202,26 @@ export default function TermsOfService() {
         {/* Key Terms Overview */}
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight antialiased">Key Terms Overview</h2>
-            <p className="text-lg text-slate-600 leading-snug antialiased">Important points you should know about using DirtTrails</p>
+            <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">Key Terms Overview</h2>
+            <p className="text-lg text-gray-600 leading-snug antialiased">Important points you should know about using DirtTrails</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {keyTerms.map((term, index) => (
-              <div key={index} className="bg-slate-700 shadow-sm border border-slate-600 p-8 hover:shadow-md transition-shadow duration-200">
+              <div key={index} className="bg-white shadow-sm border border-gray-200 p-8 hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-slate-500 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-black flex items-center justify-center">
                       <term.icon className="h-6 w-6 text-white" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">{term.title}</h3>
-                    <p className="text-slate-200 mb-4 leading-snug antialiased">{term.description}</p>
+                    <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">{term.title}</h3>
+                    <p className="text-gray-700 mb-4 leading-snug antialiased">{term.description}</p>
                     <ul className="space-y-2">
                       {term.details.map((detail, idx) => (
-                        <li key={idx} className="flex items-center text-slate-200 text-sm">
-                          <CheckCircle className="h-4 w-4 text-slate-400 mr-2 flex-shrink-0" />
+                        <li key={idx} className="flex items-center text-gray-700 text-sm">
+                          <CheckCircle className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
                           <span className="leading-snug antialiased">{detail}</span>
                         </li>
                       ))}
@@ -234,31 +234,31 @@ export default function TermsOfService() {
         </div>
 
         {/* Detailed Terms */}
-        <div className="bg-slate-700 shadow-sm border border-slate-600 p-8 mb-16">
+        <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-white mb-4 tracking-tight antialiased">Detailed Terms and Conditions</h2>
-            <p className="text-lg text-slate-200 leading-snug antialiased">Complete terms governing your use of DirtTrails</p>
+            <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">Detailed Terms and Conditions</h2>
+            <p className="text-lg text-gray-700 leading-snug antialiased">Complete terms governing your use of DirtTrails</p>
           </div>
 
           <div className="space-y-12">
             {detailedSections.map((section, index) => (
-              <div key={index} className="border-b border-slate-100 pb-8 last:border-b-0 last:pb-0">
+              <div key={index} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-semibold text-slate-600">{section.number}</span>
+                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-semibold text-gray-600">{section.number}</span>
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-4 tracking-tight antialiased">{section.title}</h3>
-                    <p className="text-slate-200 leading-snug antialiased mb-6">{section.content}</p>
+                    <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">{section.title}</h3>
+                    <p className="text-gray-700 leading-snug antialiased mb-6">{section.content}</p>
 
-                    <div className="bg-slate-600 p-6">
-                      <h4 className="font-bold text-white mb-3 tracking-tight antialiased">Key Points:</h4>
+                    <div className="bg-gray-50 p-6">
+                      <h4 className="font-bold text-black mb-3 tracking-tight antialiased">Key Points:</h4>
                       <ul className="space-y-2">
                         {section.subsections.map((subsection, idx) => (
-                          <li key={idx} className="flex items-start text-slate-200">
-                            <CheckCircle className="h-5 w-5 text-slate-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <li key={idx} className="flex items-start text-gray-700">
+                            <CheckCircle className="h-5 w-5 text-gray-500 mr-3 mt-0.5 flex-shrink-0" />
                             <span className="leading-snug antialiased">{subsection}</span>
                           </li>
                         ))}
@@ -274,15 +274,15 @@ export default function TermsOfService() {
         {/* Agreement and Contact */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Agreement Section */}
-          <div className="bg-slate-600 border border-slate-500 p-8">
+          <div className="bg-white border border-gray-200 p-8">
             <div className="flex items-start space-x-3">
               <AlertCircle className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">Agreement to Terms</h3>
-                <p className="text-slate-200 leading-snug antialiased mb-4">
+                <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">Agreement to Terms</h3>
+                <p className="text-gray-700 leading-snug antialiased mb-4">
                   By accessing and using DirtTrails, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
                 </p>
-                <p className="text-slate-300 text-sm leading-snug antialiased">
+                <p className="text-gray-600 text-sm leading-snug antialiased">
                   If you do not agree to these terms, please discontinue use of our platform immediately.
                 </p>
               </div>
@@ -290,15 +290,15 @@ export default function TermsOfService() {
           </div>
 
           {/* Contact Section */}
-          <div className="bg-slate-600 border border-slate-500 p-8">
+          <div className="bg-white border border-gray-200 p-8">
             <div className="flex items-start space-x-3">
-              <FileText className="h-6 w-6 text-slate-300 flex-shrink-0 mt-0.5" />
+              <FileText className="h-6 w-6 text-gray-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-xl font-bold text-white mb-3 tracking-tight antialiased">Questions About Terms?</h3>
-                <p className="text-slate-200 leading-snug antialiased mb-4">
+                <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">Questions About Terms?</h3>
+                <p className="text-gray-700 leading-snug antialiased mb-4">
                   If you have questions about these terms or need clarification on any section, our legal team is here to help.
                 </p>
-                <div className="space-y-2 text-sm text-slate-200">
+                <div className="space-y-2 text-sm text-gray-700">
                   <p className="leading-snug antialiased"><strong>Email:</strong> legal@dirtrails.com</p>
                   <p className="leading-snug antialiased"><strong>Phone:</strong> +256 414 123 456</p>
                   <p className="leading-snug antialiased"><strong>Response Time:</strong> Within 24 hours</p>
@@ -309,11 +309,11 @@ export default function TermsOfService() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-16 pt-8 border-t border-slate-600">
-          <p className="text-slate-500 mb-2 leading-snug antialiased">
+        <div className="text-center mt-16 pt-8 border-t border-gray-200">
+          <p className="text-gray-500 mb-2 leading-snug antialiased">
             These terms were last updated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
           </p>
-          <p className="text-slate-600 text-sm leading-snug antialiased">
+          <p className="text-gray-600 text-sm leading-snug antialiased">
             We reserve the right to update these terms at any time. Continued use of DirtTrails constitutes acceptance of any changes.
           </p>
         </div>

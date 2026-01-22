@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { X, HelpCircle, MessageCircle, Shield, FileText, ShoppingBag, User, Handshake } from 'lucide-react'
+import { X } from 'lucide-react'
 
 interface SupportModalProps {
   isOpen: boolean
@@ -9,48 +9,54 @@ interface SupportModalProps {
 const supportServices = [
   {
     name: 'Help Center',
-    href: '/help',
-    icon: HelpCircle,
-    description: 'Find answers to common questions'
+    href: '/help'
   },
   {
     name: 'Contact Us',
-    href: '/contact',
-    icon: MessageCircle,
-    description: 'Get in touch with our support team'
+    href: '/contact'
   },
   {
     name: 'Safety',
-    href: '/safety',
-    icon: Shield,
-    description: 'Travel safely with our guidelines'
+    href: '/safety'
   },
   {
     name: 'Terms of Service',
-    href: '/terms',
-    icon: FileText,
-    description: 'Read our terms and conditions'
+    href: '/terms'
+  },
+  {
+    name: 'Travel Insurance',
+    href: '/travel-insurance'
+  },
+  {
+    name: 'Visa Processing',
+    href: '/visa-processing'
+  },
+  {
+    name: 'Internet & Connectivity',
+    href: '/internet-connectivity'
   }
 ]
 
 const businessServices = [
   {
     name: 'List Your Business',
-    href: '/vendor-signup',
-    icon: ShoppingBag,
-    description: 'Join our platform as a service provider'
+    href: '/vendor-signup'
   },
   {
     name: 'Vendor Portal',
-    href: '/vendor-login',
-    icon: User,
-    description: 'Access your vendor dashboard'
+    href: '/vendor-login'
   },
   {
     name: 'Partner with Us',
-    href: '/partner',
-    icon: Handshake,
-    description: 'Explore partnership opportunities'
+    href: '/partner'
+  },
+  {
+    name: 'Refer a Business',
+    href: '/refer-business'
+  },
+  {
+    name: 'Join a Hospitality Class',
+    href: '/hospitality-class'
   }
 ]
 
@@ -66,70 +72,53 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative bg-slate-800 shadow-2xl w-full max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700 flex-shrink-0">
-          <h2 className="text-xl font-semibold text-white tracking-tight">Support & Business</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-xl font-bold text-black tracking-tight">Support & Business</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors duration-200"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
             aria-label="Close modal"
           >
-            <X className="h-5 w-5 text-slate-400 hover:text-white" />
+            <X className="h-5 w-5 text-gray-500 hover:text-black" />
           </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 pb-8">
           {/* Support Services */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-white mb-4">Support</h3>
-            <div className="space-y-3">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-black mb-4">Support</h3>
+            <div className="space-y-2">
               {supportServices.map((service) => (
                 <Link
                   key={service.name}
                   to={service.href}
                   onClick={onClose}
-                  className="flex items-center p-4 border border-slate-600 hover:border-blue-400 hover:bg-slate-700 transition-all duration-200 group"
+                  className="block py-2 text-base font-medium text-black hover:text-blue-600 transition-colors duration-200"
                 >
-                  <div className="flex-shrink-0">
-                    <service.icon className="h-6 w-6 text-blue-400 group-hover:text-blue-300" />
-                  </div>
-                  <div className="ml-4 flex-1 min-w-0">
-                    <h3 className="font-medium text-white group-hover:text-blue-200 text-base leading-tight">
-                      {service.name}
-                    </h3>
-                    <p className="text-xs text-slate-300 group-hover:text-blue-300 mt-1 leading-tight">
-                      {service.description}
-                    </p>
-                  </div>
+                  {service.name}
                 </Link>
               ))}
             </div>
           </div>
 
+          {/* Divider */}
+          <div className="h-px bg-gray-300 mb-6"></div>
+
           {/* Business Services */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">For Businesses</h3>
-            <div className="space-y-3">
+            <h3 className="text-lg font-bold text-black mb-4">Business</h3>
+            <div className="space-y-2">
               {businessServices.map((service) => (
                 <Link
                   key={service.name}
                   to={service.href}
                   onClick={onClose}
-                  className="flex items-center p-4 border border-slate-600 hover:border-green-400 hover:bg-slate-700 transition-all duration-200 group"
+                  className="block py-2 text-base font-medium text-black hover:text-green-600 transition-colors duration-200"
                 >
-                  <div className="flex-shrink-0">
-                    <service.icon className="h-6 w-6 text-green-400 group-hover:text-green-300" />
-                  </div>
-                  <div className="ml-4 flex-1 min-w-0">
-                    <h3 className="font-medium text-white group-hover:text-green-200 text-base leading-tight">
-                      {service.name}
-                    </h3>
-                    <p className="text-xs text-slate-300 group-hover:text-green-300 mt-1 leading-tight">
-                      {service.description}
-                    </p>
-                  </div>
+                  {service.name}
                 </Link>
               ))}
             </div>

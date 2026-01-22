@@ -1,0 +1,586 @@
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabaseClient'
+import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
+
+export default function VendorLogin() {
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [businessName, setBusinessName] = useState('')
+  const [businessType, setBusinessType] = useState('')
+  const [businessDescription, setBusinessDescription] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const { signIn, signUp } = useAuth()
+  const navigate = useNavigate()
+
+  // Step validation functions
+  const validateStep1 = () => {
+    return fullName.trim() !== '' && email.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const validateStep2 = () => {
+    return businessName.trim() !== '' && businessType !== '' && businessDescription.trim() !== ''
+  }
+
+  const validateStep3 = () => {
+    return password.length >= 6 && password === confirmPassword
+  }
+
+  // Navigation functions
+  const nextStep = () => {
+    if (currentStep === 1 && validateStep1()) {
+      setCurrentStep(2)
+      setError('')
+    } else if (currentStep === 2 && validateStep2()) {
+      setCurrentStep(3)
+      setError('')
+    }
+  }
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+      setError('')
+    }
+  }
+
+  const resetForm = () => {
+    setCurrentStep(1)
+    setFullName('')
+    setEmail('')
+    setBusinessName('')
+    setBusinessType('')
+    setBusinessDescription('')
+    setPassword('')
+    setConfirmPassword('')
+    setError('')
+  }
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      await signIn(email, password)
+      navigate('/vendor', { replace: true })
+    } catch (error: any) {
+      setError(error.message || 'Failed to sign in')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validate all steps before submission
+    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+      setError('Please complete all required fields')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      // First create the user account
+      await signUp(email, password, fullName, 'vendor')
+      
+      // Then create the vendor profile with business details
+      const { data: user } = await supabase.auth.getUser()
+      if (user.user) {
+        // Set vendor status in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            status: 'pending',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.user.id)
+
+        if (profileError) {
+          console.error('Error updating profile status:', profileError)
+          setError('Account created but status update failed. Please contact support.')
+        }
+
+        // Create vendor business details
+        const { error: vendorError } = await supabase
+          .from('vendors')
+          .insert([{
+            user_id: user.user.id,
+            business_name: businessName,
+            business_description: businessDescription,
+            business_email: email
+          }])
+
+        if (vendorError) {
+          console.error('Error creating vendor profile:', vendorError)
+          setError('Account created but vendor profile setup failed. Please contact support.')
+        }
+      }
+
+      navigate('/', { replace: true })
+    } catch (error: any) {
+      setError(error.message || 'Failed to sign up')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="bg-gray-900 border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <Store className="h-20 w-20 text-white mx-auto mb-6" />
+            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Vendor Portal</h1>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed antialiased">
+              Join our network of trusted service providers. Manage your listings, bookings, and grow your business with DirtTrails.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Benefits Section */}
+        <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
+          <h2 className="text-3xl font-black text-black mb-8 tracking-tight antialiased">Why Join Our Vendor Network?</h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
+                <User className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Easy Management</h3>
+              <p className="text-gray-700 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
+                <Store className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Grow Your Business</h3>
+              <p className="text-gray-700 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
+            </div>
+
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
+                <Shield className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Secure & Reliable</h3>
+              <p className="text-gray-700 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for vendors.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Authentication Section */}
+        <div className="bg-white shadow-sm border border-gray-200 p-8">
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">
+                {isSignUp ? 'Create Vendor Account' : 'Vendor Sign In'}
+              </h2>
+              <p className="text-gray-700 leading-snug antialiased">
+                {isSignUp ? 'Join our network of trusted service providers' : 'Access your vendor dashboard and manage your business'}
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
+
+            {!isSignUp ? (
+              // Sign In Form
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                    placeholder="your@email.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Signing in...' : 'Sign In to Vendor Portal'}
+                </button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(true)
+                      resetForm()
+                    }}
+                    className="text-black hover:text-gray-700 font-medium transition-colors"
+                  >
+                    Don't have an account? Create one
+                  </button>
+                </div>
+              </form>
+            ) : (
+              // Sign Up Form - 3 Step Process
+              <div>
+                {/* Progress Indicator */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-center space-x-4">
+                    {[1, 2, 3].map((step) => (
+                      <div key={step} className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                          currentStep >= step 
+                            ? 'bg-black text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {step}
+                        </div>
+                        {step < 3 && (
+                          <div className={`w-12 h-0.5 mx-2 ${
+                            currentStep > step ? 'bg-black' : 'bg-gray-200'
+                          }`} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-center mt-2 space-x-8 text-xs text-gray-600">
+                    <span className={currentStep >= 1 ? 'font-semibold text-black' : ''}>Personal Info</span>
+                    <span className={currentStep >= 2 ? 'font-semibold text-black' : ''}>Business Info</span>
+                    <span className={currentStep >= 3 ? 'font-semibold text-black' : ''}>Account Setup</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSignUpSubmit} className="space-y-6">
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-bold text-black mb-2 tracking-tight antialiased">Create Vendor Account</h3>
+                    <p className="text-gray-700 leading-snug antialiased">Join our vendor network</p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Step 1: Personal Information */}
+                  {currentStep === 1 && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Full Name</label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          placeholder="Your full name"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          placeholder="your@email.com"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Business Information */}
+                  {currentStep === 2 && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Name</label>
+                        <input
+                          type="text"
+                          value={businessName}
+                          onChange={(e) => setBusinessName(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          placeholder="Your business name"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Type</label>
+                        <select
+                          value={businessType}
+                          onChange={(e) => setBusinessType(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          required
+                        >
+                          <option value="">Select business type</option>
+                          <option value="hotel">Hotel/Resort</option>
+                          <option value="restaurant">Restaurant</option>
+                          <option value="transport">Transport Service</option>
+                          <option value="activity">Activity/Experience</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Description</label>
+                        <textarea
+                          value={businessDescription}
+                          onChange={(e) => setBusinessDescription(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          placeholder="Describe your business and services"
+                          rows={3}
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Account Security */}
+                  {currentStep === 3 && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                            placeholder="Create a password (min 6 characters)"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Confirm Password</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          placeholder="Confirm your password"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-black mb-2 tracking-tight antialiased">Create Vendor Account</h3>
+                  <p className="text-gray-700 leading-snug antialiased">Join our vendor network</p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Full Name</label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      placeholder="Your full name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      placeholder="your@email.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Name</label>
+                    <input
+                      type="text"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      placeholder="Your business name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Type</label>
+                    <select
+                      value={businessType}
+                      onChange={(e) => setBusinessType(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      required
+                    >
+                      <option value="">Select business type</option>
+                      <option value="hotel">Hotel/Resort</option>
+                      <option value="restaurant">Restaurant</option>
+                      <option value="transport">Transport Service</option>
+                      <option value="activity">Activity/Experience</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Description</label>
+                    <textarea
+                      value={businessDescription}
+                      onChange={(e) => setBusinessDescription(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      placeholder="Describe your business and services"
+                      rows={3}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                        placeholder="Create a password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                      placeholder="Confirm your password"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex space-x-4">
+                {currentStep > 1 && (
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="flex-1 bg-gray-200 text-gray-800 py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Previous
+                  </button>
+                )}
+
+                {currentStep < 3 ? (
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={
+                      (currentStep === 1 && !validateStep1()) ||
+                      (currentStep === 2 && !validateStep2())
+                    }
+                    className="flex-1 bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={loading || !validateStep3()}
+                    className="flex-1 bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Creating account...' : 'Create Vendor Account'}
+                  </button>
+                )}
+              </div>
+
+              <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(false)
+                      resetForm()
+                    }}
+                    className="text-black hover:text-gray-700 font-medium transition-colors"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

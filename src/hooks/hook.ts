@@ -178,13 +178,16 @@ export function useServices(vendorId?: string) {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching services...');
       const data = await getServices(vendorId);
+      console.log('Services fetched:', data?.length || 0);
 
       // Add artificial delay for better UX (showing loading states)
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // await new Promise(resolve => setTimeout(resolve, 1200));
 
       setServices(data);
     } catch (err) {
+      console.error('Error in useServices:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

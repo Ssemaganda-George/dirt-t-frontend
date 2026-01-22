@@ -50,6 +50,11 @@ const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const ContactUs = lazy(() => import('./pages/ContactUs'))
 const Safety = lazy(() => import('./pages/Safety'))
 const TermsOfService = lazy(() => import('./pages/TermsOfService'))
+const TravelInsurance = lazy(() => import('./pages/TravelInsurance'))
+const VisaProcessing = lazy(() => import('./pages/VisaProcessing'))
+const InternetConnectivity = lazy(() => import('./pages/InternetConnectivity'))
+const ReferBusiness = lazy(() => import('./pages/ReferBusiness'))
+const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
@@ -73,7 +78,6 @@ function App() {
             }>
               <Routes>
           {/* Public Routes */}
-          <Route path="/partner" element={<PartnerWithUs />} />
           <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
@@ -88,11 +92,18 @@ function App() {
             <Route path="contact" element={<ContactUs />} />
             <Route path="safety" element={<Safety />} />
             <Route path="terms" element={<TermsOfService />} />
+            <Route path="travel-insurance" element={<TravelInsurance />} />
+            <Route path="visa-processing" element={<VisaProcessing />} />
+            <Route path="internet-connectivity" element={<InternetConnectivity />} />
+            <Route path="refer-business" element={<ReferBusiness />} />
+            <Route path="hospitality-class" element={<HospitalityClass />} />
+            {/* Partner and Vendor Login Pages */}
+            <Route path="partner" element={<PartnerWithUs />} />
+            <Route path="vendor-login" element={<VendorLogin />} />
           </Route>
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/vendor-login" element={<VendorLogin />} />
           <Route path="/vendor-pending" element={<VendorPending />} />
           
           {/* Tourist Routes */}
