@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, MessageSquare } from 'lucide-react'
-import { getServiceById, createInquiry } from '../lib/database'
+import { getServiceBySlug, createInquiry } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 
 interface ServiceDetail {
   id: string
+  slug?: string
   title: string
   description: string
   price: number
@@ -34,7 +35,7 @@ interface ServiceDetail {
 }
 
 export default function ServiceInquiry() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { user, profile, loading: authLoading } = useAuth()
   const [service, setService] = useState<ServiceDetail | null>(null)
@@ -70,16 +71,16 @@ export default function ServiceInquiry() {
   }, [user, profile, authLoading, navigate])
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       fetchService()
     }
-  }, [id])
+  }, [slug])
 
   const fetchService = async () => {
     try {
-      if (!id) return
+      if (!slug) return
       
-      const serviceData = await getServiceById(id)
+      const serviceData = await getServiceBySlug(slug)
       setService(serviceData)
       setLoading(false)
     } catch (error) {
@@ -97,7 +98,7 @@ export default function ServiceInquiry() {
     setSubmitting(true)
 
     try {
-      if (!id) {
+      if (!service?.id) {
         throw new Error('Service ID is required')
       }
 
@@ -127,7 +128,7 @@ export default function ServiceInquiry() {
       }
 
       await createInquiry({
-        service_id: id,
+        service_id: service.id,
         name: formData.name,
         email: formData.email,
         phone: formData.phone || undefined,
@@ -422,7 +423,7 @@ export default function ServiceInquiry() {
             </p>
             <div className="space-y-4">
               <button
-                onClick={() => navigate(`/service/${service.id}`)}
+                onClick={() => navigate(`/service/${service.slug || service.id}`)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors mr-4"
               >
                 Back to Service
@@ -454,7 +455,7 @@ export default function ServiceInquiry() {
       <div className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
-            onClick={() => navigate(`/service/${service.id}`)}
+            onClick={() => navigate(`/service/${service.slug || service.id}`)}
             className="flex items-center text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />

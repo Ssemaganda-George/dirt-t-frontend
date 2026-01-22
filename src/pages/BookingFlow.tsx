@@ -6,7 +6,7 @@ import TourBooking from './TourBooking.tsx'
 import RestaurantBooking from './RestaurantBooking.tsx'
 import ActivityBooking from './ActivityBooking.tsx'
 import FlightBooking from './FlightBooking.tsx'
-import { getServiceById } from '../lib/database'
+import { getServiceBySlug } from '../lib/database'
 
 interface ServiceDetail {
   id: string
@@ -39,21 +39,21 @@ interface ServiceDetail {
 }
 
 export default function BookingFlow() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       fetchService()
     }
-  }, [id])
+  }, [slug])
 
   const fetchService = async () => {
     try {
-      if (!id) return
+      if (!slug) return
       
-      const serviceData = await getServiceById(id)
+      const serviceData = await getServiceBySlug(slug)
       setService(serviceData)
       setLoading(false)
     } catch (error) {

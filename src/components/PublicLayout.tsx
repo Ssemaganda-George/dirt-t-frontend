@@ -137,12 +137,12 @@ export default function PublicLayout() {
               </button>
 
               <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600">
-                <Heart className="h-5 w-5 mr-1" />
+                <Heart className="h-4 w-4 mr-1.5" />
                 <span className="text-sm">Saved</span>
               </button>
               
               <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600 relative">
-                <ShoppingBag className="h-5 w-5 mr-1" />
+                <ShoppingBag className="h-4 w-4 mr-1.5" />
                 <span className="text-sm">Cart</span>
                 {getCartCount() > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -225,8 +225,8 @@ export default function PublicLayout() {
                   onClick={() => setShowLoginModal(true)}
                   className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
                 >
-                  <User className="h-5 w-5" />
-                  <span className="ml-2 text-sm font-medium">Sign In</span>
+                  <User className="h-4 w-4" />
+                  <span className="ml-2 text-sm font-medium hidden md:inline">Sign In</span>
                 </button>
               )}
 
@@ -236,9 +236,9 @@ export default function PublicLayout() {
                 className="md:hidden text-gray-700 hover:text-blue-600"
               >
                 {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" />
                 )}
               </button>
             </div>
@@ -247,104 +247,139 @@ export default function PublicLayout() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`block px-3 py-2 text-base font-medium rounded-md transition-colors ${
-                    location.pathname === item.href
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <div className="border-t border-gray-200 pt-2">
-                <button
-                  onClick={() => {
-                    setShowPreferences(true)
-                    setMobileMenuOpen(false)
-                  }}
-                  className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                >
-                  <Globe className="h-5 w-5 mr-2" />
-                  Currency & Region ({selectedCurrency})
-                </button>
-                <Link
-                  to="/saved"
-                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Saved
-                </Link>
-                <Link
-                  to="/bookings"
-                  className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Bookings
-                </Link>
-                <div className="border-t border-gray-200 pt-2 mt-2">
-                  <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">For Businesses</p>
-                  <a
-                    href="http://localhost:5173/vendor-login"
-                    className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
+            <div className="max-h-[80vh] overflow-y-auto">
+              {/* Navigation Section */}
+              <div className="px-4 py-6">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Explore</h3>
+                <nav className="space-y-1">
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        location.pathname === item.href
+                          ? 'text-blue-600 bg-blue-50 border border-blue-100'
+                          : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+
+              {/* User Actions Section */}
+              <div className="px-4 py-4 border-t border-gray-100 bg-gray-50/50">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Account</h3>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setShowPreferences(true)
+                      setMobileMenuOpen(false)
+                    }}
+                    className="w-full flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
+                  >
+                    <Globe className="h-4 w-4 mr-3 text-gray-500" />
+                    <span className="flex-1 text-left">Currency & Region</span>
+                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">{selectedCurrency}</span>
+                  </button>
+
+                  <Link
+                    to="/saved"
+                    className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    List Your Business
-                  </a>
+                    <Heart className="h-4 w-4 mr-3 text-gray-500" />
+                    Saved Items
+                  </Link>
+
+                  <Link
+                    to="/bookings"
+                    className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
+                    My Bookings
+                  </Link>
                 </div>
-                <div className="border-t border-gray-200 pt-2 mt-2">
-                  {user && profile?.role === 'tourist' ? (
-                    <>
-                      <div className="px-3 py-2 border-b border-gray-200 mb-2">
-                        <p className="text-sm font-medium text-gray-900">My Account</p>
-                        <p className="text-xs text-gray-500">{profile?.email}</p>
+              </div>
+
+              {/* Business Section */}
+              <div className="px-4 py-4 border-t border-gray-100">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">For Businesses</h3>
+                <a
+                  href="http://localhost:5173/vendor-login"
+                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
+                  List Your Business
+                </a>
+              </div>
+
+              {/* Authentication Section */}
+              <div className="px-4 py-4 border-t border-gray-100 bg-gray-50/30">
+                {user && profile?.role === 'tourist' ? (
+                  <>
+                    <div className="px-3 py-3 mb-3 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center shadow-sm">
+                          <span className="text-sm font-bold text-white">
+                            {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <div className="ml-3 flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">My Account</p>
+                          <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
                       <Link
                         to="/profile"
-                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+                        className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <User className="h-5 w-5 mr-2" />
+                        <User className="h-4 w-4 mr-3 text-gray-500" />
                         Profile
                       </Link>
+
                       <Link
                         to="/settings"
-                        className="flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
+                        className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <Settings className="h-5 w-5 mr-2" />
+                        <Settings className="h-4 w-4 mr-3 text-gray-500" />
                         Settings
                       </Link>
+
                       <button
                         onClick={() => {
                           setMobileMenuOpen(false)
                           handleSignOut()
                         }}
-                        className="w-full text-left px-3 py-2 text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md flex items-center"
+                        className="w-full flex items-center px-3 py-3 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
                       >
-                        <LogOut className="h-5 w-5 mr-2" />
+                        <LogOut className="h-4 w-4 mr-3" />
                         Sign Out
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false)
-                        setShowLoginModal(true)
-                      }}
-                      className="w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                    >
-                      <User className="h-5 w-5 mr-2" />
-                      Sign In
-                    </button>
-                  )}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      setShowLoginModal(true)
+                    }}
+                    className="w-full flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border-2 border-dashed border-gray-300"
+                  >
+                    <User className="h-4 w-4 mr-3 text-gray-500" />
+                    Sign In
+                  </button>
+                )}
               </div>
             </div>
           </div>

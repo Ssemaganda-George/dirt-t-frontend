@@ -414,7 +414,7 @@ function ServiceCard({ service }: ServiceCardProps) {
   const categoryInfo = getCategoryInfo()
 
   return (
-    <Link to={`/service/${service.id}`} className="group">
+    <Link to={`/service/${service.slug || service.id}`} className="group">
       <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
         {/* Image Container - Fixed height */}
         <div className="relative h-48 overflow-hidden">

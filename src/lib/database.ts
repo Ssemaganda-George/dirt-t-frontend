@@ -173,6 +173,7 @@ export interface ServiceCategory {
 
 export interface Service {
   id: string
+  slug?: string
   vendor_id: string
   category_id: string
   title: string
@@ -471,6 +472,25 @@ export async function getServiceById(serviceId: string) {
 
   if (error) {
     console.error('Error fetching service:', error)
+    throw error
+  }
+
+  return data
+}
+
+export async function getServiceBySlug(serviceSlug: string) {
+  const { data, error } = await supabase
+    .from('services')
+    .select(`
+      *,
+      service_categories(*),
+      vendors(*)
+    `)
+    .eq('slug', serviceSlug)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching service by slug:', error)
     throw error
   }
 

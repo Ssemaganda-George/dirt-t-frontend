@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
   id: string
+  slug?: string
   vendor_id?: string
   title: string
   description: string
@@ -122,7 +123,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     } else {
-      navigate(`/service/${service.id}`)
+      navigate(`/service/${service.slug || service.id}`)
     }
   }
 
@@ -543,7 +544,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 Similar Services
               </button>
               <button
-                onClick={() => navigate(`/service/${service.id}/inquiry`)}
+                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
                 Send Inquiry
@@ -618,7 +619,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               Similar Services
             </button>
             <button
-              onClick={() => navigate(`/service/${service.id}/inquiry`)}
+              onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Send Inquiry

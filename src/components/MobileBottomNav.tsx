@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Briefcase, Plane, HelpCircle, User } from 'lucide-react'
+import { Home, Briefcase, HelpCircle } from 'lucide-react'
 
 interface MobileBottomNavProps {
   onSupportClick?: () => void
@@ -8,9 +8,7 @@ interface MobileBottomNavProps {
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Services', href: '/category/services', icon: Briefcase },
-  { name: 'Flights', href: '/category/flights', icon: Plane },
   { name: 'Support', href: '/support', icon: HelpCircle, isModal: true },
-  { name: 'Profile', href: '/profile', icon: User },
 ]
 
 export default function MobileBottomNav({ onSupportClick }: MobileBottomNavProps) {
@@ -35,7 +33,7 @@ export default function MobileBottomNav({ onSupportClick }: MobileBottomNavProps
             >
               {item.isModal ? (
                 <div className="flex flex-col items-center">
-                  <item.icon className="h-6 w-6 mb-1 text-gray-600" />
+                  <item.icon className="h-5 w-5 mb-1 text-gray-600" />
                   <span className="text-xs font-medium text-gray-600">
                     {item.name}
                   </span>
@@ -48,7 +46,7 @@ export default function MobileBottomNav({ onSupportClick }: MobileBottomNavProps
                   }`}
                 >
                   <item.icon
-                    className={`h-6 w-6 mb-1 ${
+                    className={`h-5 w-5 mb-1 ${
                       isActive ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   />

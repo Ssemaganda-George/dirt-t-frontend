@@ -14,10 +14,11 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
-import { getServiceById } from '../lib/database'
+import { getServiceBySlug } from '../lib/database'
 
 interface ServiceDetail {
   id: string
+  slug?: string
   title: string
   description: string
   price: number
@@ -116,7 +117,7 @@ interface ServiceDetail {
 }
 
 export default function ServiceDetail() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -130,10 +131,10 @@ export default function ServiceDetail() {
   const [selectedImage, setSelectedImage] = useState('')
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       fetchService()
     }
-  }, [id])
+  }, [slug])
 
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
@@ -164,19 +165,19 @@ export default function ServiceDetail() {
 
   const fetchService = async () => {
     try {
-      if (!id) {
-        console.error('No service ID provided')
+      if (!slug) {
+        console.error('No service slug provided')
         setService(null)
         setLoading(false)
         return
       }
       
-      console.log('Fetching service with ID:', id)
-      const serviceData = await getServiceById(id)
+      console.log('Fetching service with slug:', slug)
+      const serviceData = await getServiceBySlug(slug)
       console.log('Service data received:', serviceData)
       
       if (!serviceData) {
-        console.log('No service found with ID:', id)
+        console.log('No service found with slug:', slug)
         setService(null)
       } else {
         setService(serviceData)
@@ -227,22 +228,22 @@ export default function ServiceDetail() {
     
     const bookingCategory = mapCategoryToBookingFlow(service.service_categories?.name || 'service')
     
-    // For transport services, include date range and time as URL parameters
-    let bookingUrl = `/service/${id}/book/${bookingCategory}`
-    if (service.service_categories?.name?.toLowerCase() === 'transport') {
-      bookingUrl += `?startDate=${startDate}&endDate=${endDate}&startTime=${startTime}&endTime=${endTime}`
-    } else {
-      bookingUrl += `?date=${selectedDate}&guests=${guests}`
-    }
+    // Navigate to clean booking URL without query parameters
+    const bookingUrl = `/service/${service.slug}/book/${bookingCategory}`
     
-    // Use React Router navigation
-    navigate(bookingUrl)
+    // Pass selected dates via navigation state
+    const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
+      ? { startDate, endDate }
+      : { selectedDate }
+    
+    // Use React Router navigation with state
+    navigate(bookingUrl, { state: navigationState })
   }
 
   const handleInquiry = () => {
     if (!service) return
     // Navigate to inquiry form
-    navigate(`/service/${id}/inquiry`)
+    navigate(`/service/${service.slug}/inquiry`)
   }
 
   // Get appropriate button text based on category

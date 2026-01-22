@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Users, CreditCard, CheckCircle, Car, XCircle } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
   id: string
+  slug?: string
   vendor_id?: string
   title: string
   description: string
@@ -44,14 +45,10 @@ interface TransportBookingProps {
 
 export default function TransportBooking({ service }: TransportBookingProps) {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const location = useLocation()
   
   console.log('TransportBooking - service:', service)
   console.log('TransportBooking - service.vendor_id:', service.vendor_id)
-  
-  // Get date parameters from URL
-  const startDate = searchParams.get('startDate') || ''
-  const endDate = searchParams.get('endDate') || ''
   
   const { addToCart } = useCart()
   const { user, profile } = useAuth()
@@ -62,7 +59,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
-    date: startDate, // Use startDate as the main date field
+    date: '', // No longer pre-filled from URL params
     pickupLocation: service.pickup_locations?.[0] || '',
     dropoffLocation: service.dropoff_locations?.[0] || '',
     passengers: 1,
@@ -72,12 +69,31 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     contactEmail: '',
     contactPhone: '',
     paymentMethod: 'card',
-    startDate: startDate,
-    endDate: endDate,
+    startDate: '',
+    endDate: '',
     startTime: '09:00',
     endTime: '17:00',
     driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
+
+  // Pre-fill dates from navigation state if available
+  useEffect(() => {
+    if (location.state) {
+      const { startDate, endDate, selectedDate } = location.state as any
+      if (startDate && endDate) {
+        setBookingData(prev => ({
+          ...prev,
+          startDate,
+          endDate
+        }))
+      } else if (selectedDate) {
+        setBookingData(prev => ({
+          ...prev,
+          date: selectedDate
+        }))
+      }
+    }
+  }, [location.state])
 
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
@@ -272,7 +288,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     } else {
-      navigate(`/service/${service.id}`)
+      navigate(`/service/${service.slug || service.id}`)
     }
   }
 
@@ -330,53 +346,53 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Transportation Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     Pick-up Date & Time
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                       value={bookingData.startDate}
                       onChange={(e) => handleInputChange('startDate', e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
                     />
                     <input
                       type="time"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                       value={bookingData.startTime || '09:00'}
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     Drop-off Date & Time
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                       value={bookingData.endDate}
                       onChange={(e) => handleInputChange('endDate', e.target.value)}
                       min={bookingData.startDate || new Date().toISOString().split('T')[0]}
                     />
                     <input
                       type="time"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                       value={bookingData.endTime || '17:00'}
                       onChange={(e) => handleInputChange('endTime', e.target.value)}
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     Number of Passengers
                   </label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     value={bookingData.passengers}
                     onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
                   >
@@ -385,12 +401,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
                     Driver Option
                   </label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                     value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
                     onChange={(e) => handleInputChange('driverOption', e.target.value)}
                   >
@@ -401,7 +417,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       {service.driver_included ? 'With driver (included)' : 'With driver (+30% extra cost)'}
                     </option>
                   </select>
-                  {service.driver_included === false && (
+                  {service.driver_included === false && bookingData.driverOption === 'with-driver' && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Additional 30% charge for driver service
+                    </p>
+                  )}
+                  {service.driver_included === false && bookingData.driverOption === 'self-drive' && (
                     <p className="text-xs text-gray-500 mt-1">Self-drive available</p>
                   )}
                   {service.driver_included === true && (
@@ -496,38 +517,38 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         return (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Full Name *
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactName}
                   onChange={(e) => handleInputChange('contactName', e.target.value)}
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Email Address *
                 </label>
                 <input
                   type="email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactEmail}
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                   required
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Phone Number *
                 </label>
                 <input
                   type="tel"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
                   value={bookingData.contactPhone}
                   onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                   required
@@ -709,7 +730,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 Similar Services
               </button>
               <button
-                onClick={() => navigate(`/service/${service.id}/inquiry`)}
+                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
                 Send Inquiry
@@ -784,7 +805,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               Similar Services
             </button>
             <button
-              onClick={() => navigate(`/service/${service.id}/inquiry`)}
+              onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Send Inquiry
@@ -827,7 +848,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={handleBack}
@@ -839,85 +860,112 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+      {/* Progress Steps - Sticky */}
+      <div className="bg-white shadow-sm sticky top-16 z-20 border-b border-gray-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between w-full flex-nowrap">
             {steps.map((step, index) => {
               const Icon = step.icon
               const isActive = step.id === currentStep
               const isCompleted = step.id < currentStep
 
               return (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                <div key={step.id} className="flex items-center flex-none">
+                  <div className={`flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full ${
                     isCompleted
                       ? 'bg-green-600 text-white'
                       : isActive
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
+                  <span className={`ml-0.5 md:ml-1 text-[10px] md:text-xs font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                   }`}>
-                    {step.title}
+                    {step.id === 1 ? 'Trip' : step.id === 2 ? 'Details' : step.id === 3 ? 'Payment' : 'Confirmation'}
                   </span>
                   {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-4 ${
-                      isCompleted ? 'bg-green-600' : 'bg-gray-200'
-                    }`} />
+                    <div className={`${isCompleted ? 'bg-green-600' : 'bg-gray-200'} w-2 md:w-3 h-0.5 mx-0.5 md:mx-1`} />
                   )}
                 </div>
               )
             })}
           </div>
         </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
 
         {/* Service Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col md:flex-row items-start gap-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
+          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
             {/* Image with Navigation */}
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-shrink-0 w-full md:w-auto">
               <img
                 src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                 alt={service.title}
-                className="w-full max-w-xs md:max-w-sm lg:max-w-md h-64 md:h-80 object-cover rounded-lg shadow-lg border-2 border-gray-200"
+                className="w-full md:max-w-xs lg:max-w-sm xl:max-w-md h-48 md:h-64 lg:h-80 object-cover rounded-lg shadow-lg border-2 border-gray-200"
               />
               {service.images && service.images.length > 1 && (
                 <>
-                  {/* Navigation Arrows */}
+                  {/* Navigation Arrows - Larger touch targets on mobile */}
                   <button
                     onClick={prevImage}
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                    className="absolute left-2 md:left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 md:p-2 rounded-full hover:bg-opacity-75 transition-all touch-manipulation"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
                   </button>
                   <button
                     onClick={nextImage}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
+                    className="absolute right-2 md:right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 md:p-2 rounded-full hover:bg-opacity-75 transition-all touch-manipulation"
                   >
-                    <ArrowLeft className="h-4 w-4 rotate-180" />
+                    <ArrowLeft className="h-5 w-5 md:h-4 md:w-4 rotate-180" />
                   </button>
                   {/* Image Counter */}
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-3 py-1 md:px-2 md:py-1 rounded-full text-sm md:text-xs">
                     {currentImageIndex + 1} / {service.images.length}
                   </div>
                 </>
               )}
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{service.title}</h2>
-              <p className="text-gray-600 text-sm">{service.location}</p>
-              <p className="text-gray-600 text-sm">{service.service_categories.name}</p>
+            <div className="flex-1 w-full md:w-auto">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">{service.title}</h2>
+              <p className="text-gray-600 text-sm mb-1">{service.location}</p>
+              <p className="text-gray-600 text-sm mb-3">{service.service_categories.name}</p>
+              
+              {/* Mobile: Show key details */}
+              <div className="block md:hidden space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600 text-sm">Duration:</span>
+                  <span className="font-medium text-sm">{calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600 text-sm">Passengers:</span>
+                  <span className="font-medium text-sm">{bookingData.passengers}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600 text-sm">Driver:</span>
+                  <span className="font-medium text-sm">{bookingData.driverOption === 'with-driver' ? 'Included' : 'Self-drive'}</span>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-lg font-bold text-gray-900">
+            <div className="text-right w-full md:w-auto md:text-right">
+              <div className="text-xl md:text-lg font-bold text-gray-900 mb-1">
                 {formatCurrency(totalPrice, service.currency)}
               </div>
               <div className="text-sm text-gray-500">
                 {bookingData.returnTrip ? 'Return trip' : 'One way'}
+              </div>
+              
+              {/* Desktop: Show additional details */}
+              <div className="hidden md:block mt-2 space-y-1">
+                <div className="text-xs text-gray-500">
+                  {calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days
+                </div>
+                <div className="text-xs text-gray-500">
+                  {bookingData.passengers} passengers
+                </div>
               </div>
             </div>
           </div>
@@ -930,34 +978,67 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
         {/* Navigation */}
         {currentStep < 4 && (
-          <div className="flex justify-between mt-6">
-            <button
-              onClick={handleBack}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              {currentStep === 1 ? 'Cancel' : 'Back'}
-            </button>
-            <div className="flex space-x-4">
+          <div className="mt-6">
+            {/* Mobile: Horizontal layout with smaller buttons */}
+            <div className="flex md:hidden justify-between gap-2">
+              <button
+                onClick={handleBack}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                {currentStep === 1 ? 'Cancel' : 'Back'}
+              </button>
               <button
                 onClick={handleSaveToCart}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
               >
-                Save to Cart
+                Save Cart
               </button>
               <button
                 onClick={handleNext}
                 disabled={
                   (currentStep === 1 && (
-                    !bookingData.startDate || 
-                    !bookingData.endDate || 
+                    !bookingData.startDate ||
+                    !bookingData.endDate ||
                     (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
                   )) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
                 }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
               >
-                {currentStep === 3 ? 'Complete Booking' : 'Next'}
+                {currentStep === 3 ? 'Complete' : 'Next'}
               </button>
+            </div>
+
+            {/* Desktop: Horizontal layout */}
+            <div className="hidden md:flex justify-between">
+              <button
+                onClick={handleBack}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {currentStep === 1 ? 'Cancel' : 'Back'}
+              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleSaveToCart}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  Save to Cart
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={
+                    (currentStep === 1 && (
+                      !bookingData.startDate ||
+                      !bookingData.endDate ||
+                      (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
+                    )) ||
+                    (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
+                  }
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  {currentStep === 3 ? 'Complete Booking' : 'Next'}
+                </button>
+              </div>
             </div>
           </div>
         )}

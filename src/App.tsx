@@ -66,9 +66,9 @@ function App() {
           <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
-            <Route path="service/:id" element={<ServiceDetail />} />
-            <Route path="service/:id/book/:category" element={<BookingFlow />} />
-            <Route path="service/:id/inquiry" element={<ServiceInquiry />} />
+            <Route path="service/:slug" element={<ServiceDetail />} />
+            <Route path="service/:slug/book/:category" element={<BookingFlow />} />
+            <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<Profile />} />
             <Route path="category/:category" element={<CategoryPage />} />

@@ -33,6 +33,7 @@ export interface Vendor {
 
 export interface Service {
   id: string
+  slug?: string
   vendor_id: string
   category_id: string
   title: string
