@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import type { Service } from '../types'
 
 export default function Home() {
+  const [heroMediaList, setHeroMediaList] = useState<Array<{ url: string; type: 'image' | 'video' }>>([])
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const slideInterval = useRef<NodeJS.Timeout | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false)
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -23,7 +29,85 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories()
+    fetchHeroMediaList()
+    
+    // Enable auto-play on first user interaction
+    const enableAutoPlay = () => {
+      setAutoPlayEnabled(true)
+      document.removeEventListener('click', enableAutoPlay)
+      document.removeEventListener('touchstart', enableAutoPlay)
+      document.removeEventListener('keydown', enableAutoPlay)
+    }
+    
+    document.addEventListener('click', enableAutoPlay)
+    document.addEventListener('touchstart', enableAutoPlay)
+    document.addEventListener('keydown', enableAutoPlay)
+    
+    return () => {
+      document.removeEventListener('click', enableAutoPlay)
+      document.removeEventListener('touchstart', enableAutoPlay)
+      document.removeEventListener('keydown', enableAutoPlay)
+    }
   }, [])
+
+  // Fetch all active hero images/videos from DB
+  const fetchHeroMediaList = async () => {
+    const { data } = await supabase
+      .from('hero_videos')
+      .select('url, type')
+      .eq('is_active', true)
+      .order('order', { ascending: true })
+    if (data) setHeroMediaList(data)
+  }
+
+  // Carousel effect for hero media
+  useEffect(() => {
+    if (heroMediaList.length < 2) return
+    if (slideInterval.current) clearInterval(slideInterval.current)
+    const currentMedia = heroMediaList[currentSlide]
+    if (currentMedia?.type === 'video') {
+      // For videos, don't set interval - wait for video to end
+      return
+    } else {
+      // For images, use timer
+      slideInterval.current = setInterval(() => {
+        setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
+      }, 5000)
+      return () => {
+        if (slideInterval.current) clearInterval(slideInterval.current)
+      }
+    }
+  }, [heroMediaList, currentSlide])
+
+  // Handle video end to move to next slide
+  useEffect(() => {
+    const currentMedia = heroMediaList[currentSlide]
+    if (currentMedia?.type === 'video' && videoRef.current) {
+      const video = videoRef.current
+      const onEnded = () => {
+        setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
+      }
+      video.addEventListener('ended', onEnded)
+      return () => {
+        video.removeEventListener('ended', onEnded)
+      }
+    }
+  }, [currentSlide, heroMediaList])
+
+  // Ensure video plays when slide changes to video
+  useEffect(() => {
+    const currentMedia = heroMediaList[currentSlide]
+    if (currentMedia?.type === 'video' && videoRef.current && autoPlayEnabled) {
+      const video = videoRef.current
+      video.currentTime = 0
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log('Video play failed on slide change:', error)
+        })
+      }
+    }
+  }, [currentSlide, heroMediaList, autoPlayEnabled])
 
   const fetchCategories = async () => {
     try {
@@ -142,16 +226,41 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         <div className="absolute inset-0 bg-black/30"></div>
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'url(https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        ></div>
+        {heroMediaList.length > 0 && (
+          heroMediaList.map((media, idx) => (
+            <div
+              key={media.url}
+              className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${currentSlide === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+            >
+              {media.type === 'video' ? (
+                <video
+                  ref={currentSlide === idx ? videoRef : undefined}
+                  src={media.url}
+                  autoPlay={autoPlayEnabled}
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  style={{ opacity: 0.6 }}
+                  key={currentSlide === idx ? media.url : undefined}
+                />
+              ) : (
+                <div
+                  className="w-full h-full"
+                  style={{
+                    backgroundImage: `url(${media.url})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    width: '100%',
+                    height: '100%',
+                    opacity: 0.2
+                  }}
+                ></div>
+              )}
+            </div>
+          ))
+        )}
         
-        <div className="relative h-full flex flex-col items-center justify-center px-4">
+  <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
             Explore Uganda
           </h1>

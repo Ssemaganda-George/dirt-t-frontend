@@ -34,6 +34,7 @@ import { Services } from './pages/admin/Services'
 import { Bookings as AdminBookings } from './pages/admin/Bookings'
 import { Transactions } from './pages/admin/Wallets'
 import { Finance } from './pages/admin/Finance'
+import HeroVideoManager from './pages/admin/HeroVideoManager'
 
 
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
@@ -44,8 +45,8 @@ import ConnectionTest from './pages/ConnectionTest'
 // Support pages
 import HelpCenter from './pages/HelpCenter'
 import ContactUs from './pages/ContactUs'
-import Safety from './pages/Safety'
-import TermsOfService from './pages/TermsOfService'
+import Safety from './pages/Safety.tsx'
+import TermsOfService from './pages/TermsOfService.tsx'
 
 // Tourist pages
 import Bookings from './pages/Bookings'
@@ -161,6 +162,7 @@ function App() {
                 <AdminVendorMessages />
               </ProtectedRoute>
             } />
+            <Route path="hero-video" element={<HeroVideoManager />} />
 import AdminVendorMessages from './pages/vendor/AdminVendorMessages'
 import Partnerships from './pages/admin/Partnerships'
           </Route>

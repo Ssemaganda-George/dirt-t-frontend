@@ -26,6 +26,7 @@ const navigation = [
   { name: 'Partnerships', href: '/admin/partnerships', icon: Users },
   { name: 'Wallets', href: '/admin/wallets', icon: CreditCard },
   { name: 'Finance', href: '/admin/finance', icon: DollarSign },
+  { name: 'Hero Video', href: '/admin/hero-video', icon: BarChart3 },
 ]
 
 export default function Layout() {
