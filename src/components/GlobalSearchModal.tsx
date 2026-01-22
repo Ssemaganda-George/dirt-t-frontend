@@ -280,46 +280,52 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-20 px-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-16 px-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden border border-gray-200">
         {/* Search Header */}
-        <div className="flex items-center border-b border-gray-200 p-4">
-          <Search className="h-5 w-5 text-gray-400 mr-3" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips..."
-            className="flex-1 text-lg outline-none placeholder-gray-400"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
+        <div className="flex items-center border-b border-gray-200 p-6 bg-gray-50">
+          <div className="flex items-center flex-1 bg-white rounded-lg border border-gray-300 px-4 py-3 shadow-sm">
+            <Search className="h-5 w-5 text-gray-400 mr-3" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips..."
+              className="flex-1 text-base outline-none placeholder-gray-500 text-gray-900"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
           <button
             onClick={onClose}
-            className="ml-3 p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="ml-4 p-2 hover:bg-gray-200 rounded-full transition-colors duration-200"
           >
-            <X className="h-5 w-5 text-gray-400" />
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
         {/* Search Results */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[60vh] overflow-y-auto">
           {query.trim() === '' ? (
-            <div className="p-8 text-center text-gray-500">
-              <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">Start typing to search</p>
-              <p className="text-sm">Find hotels, tours, restaurants, transport, FAQs, safety tips, and more</p>
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Search DirtTrails</h3>
+              <p className="text-gray-600 max-w-md mx-auto">Find hotels, tours, restaurants, transport services, FAQs, safety tips, and more</p>
             </div>
           ) : isLoading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Searching...</p>
+            <div className="p-12 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Searching...</p>
             </div>
           ) : results.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">No results found</p>
-              <p className="text-sm">Try different keywords or check your spelling</p>
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
+              <p className="text-gray-600">Try different keywords or check your spelling</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
@@ -331,10 +337,11 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       key={`service-${service.id}`}
                       to={`/service/${service.slug}`}
                       onClick={onClose}
-                      className="block p-4 hover:bg-gray-50 transition-colors"
+                      className="block p-3 hover:bg-blue-50 transition-all duration-200 border-l-4 border-transparent hover:border-blue-500"
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-16 h-16 bg-gray-200 rounded-lg overflow-hidden">
+                        {/* Service Image */}
+                        <div className="flex-shrink-0 w-12 h-12 bg-blue-50 rounded-xl overflow-hidden shadow-sm border border-gray-200">
                           {service.images && service.images.length > 0 ? (
                             <img
                               src={service.images[0]}
@@ -343,46 +350,50 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <MapPin className="h-6 w-6 text-gray-400" />
+                              <MapPin className="h-5 w-5 text-blue-400" />
                             </div>
                           )}
                         </div>
 
+                        {/* Service Content */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 truncate">
-                            {service.title}
-                          </h3>
-
-                          <div className="flex items-center text-sm text-gray-600 mt-1">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            <span className="truncate">{service.location || 'Location not specified'}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between mt-2">
-                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          {/* Header with Title and Price */}
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="flex-1 min-w-0 mr-3">
+                              <h3 className="text-sm font-medium text-gray-900 leading-tight mb-1">
+                                {service.title}
+                              </h3>
                               {service.service_categories?.name && (
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                                <span className="inline-block bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-medium">
                                   {service.service_categories.name}
                                 </span>
                               )}
-                              {service.vendors?.business_name && (
-                                <span className="text-gray-600">
-                                  by {service.vendors.business_name}
-                                </span>
-                              )}
                             </div>
-
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-lg font-medium text-blue-600">
                                 {formatCurrency(service.price, service.currency)}
                               </div>
                               {service.duration_hours && (
-                                <div className="text-xs text-gray-500">
-                                  {service.duration_hours}h duration
+                                <div className="text-xs text-gray-500 mt-0.5 font-light">
+                                  {service.duration_hours}h
                                 </div>
                               )}
                             </div>
                           </div>
+
+                          {/* Location */}
+                          <div className="flex items-center text-xs text-gray-600 mb-1">
+                            <MapPin className="h-3 w-3 mr-1 text-gray-400 flex-shrink-0" />
+                            <span className="font-light truncate">{service.location || 'Location not specified'}</span>
+                          </div>
+
+                          {/* Vendor */}
+                          {service.vendors?.business_name && (
+                            <div className="text-xs text-gray-600 font-light">
+                              <span className="text-gray-500">by </span>
+                              <span className="font-normal text-gray-900">{service.vendors.business_name}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Link>
@@ -396,27 +407,32 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       key={`faq-${index}`}
                       to="/help"
                       onClick={onClose}
-                      className="block p-4 hover:bg-gray-50 transition-colors"
+                      className="block p-3 hover:bg-green-50 transition-all duration-200 border-l-4 border-transparent hover:border-green-500"
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                          <HelpCircle className="h-8 w-8 text-green-600" />
+                        {/* FAQ Icon */}
+                        <div className="flex-shrink-0 w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
+                          <HelpCircle className="h-5 w-5 text-green-600" />
                         </div>
 
+                        {/* FAQ Content */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          {/* Question */}
+                          <h3 className="text-sm font-medium text-gray-900 leading-tight mb-1">
                             {faq.question}
                           </h3>
 
-                          <div className="flex items-center text-sm text-gray-600 mt-1">
-                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                          {/* Category Badge */}
+                          <div className="mb-1">
+                            <span className="inline-block bg-green-100 text-green-800 px-1.5 py-0.5 rounded text-xs font-medium">
                               FAQ - {faq.categoryName}
                             </span>
                           </div>
 
-                          <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+                          {/* Answer Preview */}
+                          <p className="text-gray-600 text-xs leading-relaxed line-clamp-2 font-light">
                             {faq.answer}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </Link>
@@ -430,27 +446,32 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       key={`safety-${index}`}
                       to="/safety"
                       onClick={onClose}
-                      className="block p-4 hover:bg-gray-50 transition-colors"
+                      className="block p-3 hover:bg-red-50 transition-all duration-200 border-l-4 border-transparent hover:border-red-500"
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
-                          <Shield className="h-8 w-8 text-red-600" />
+                        {/* Safety Icon */}
+                        <div className="flex-shrink-0 w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
+                          <Shield className="h-5 w-5 text-red-600" />
                         </div>
 
+                        {/* Safety Content */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          {/* Title */}
+                          <h3 className="text-sm font-medium text-gray-900 leading-tight mb-1">
                             {safety.title}
                           </h3>
 
-                          <div className="flex items-center text-sm text-gray-600 mt-1">
-                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
+                          {/* Category Badge */}
+                          <div className="mb-1">
+                            <span className="inline-block bg-red-100 text-red-800 px-1.5 py-0.5 rounded text-xs font-medium">
                               Safety Tip
                             </span>
                           </div>
 
-                          <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+                          {/* Description */}
+                          <p className="text-gray-600 text-xs leading-relaxed line-clamp-2 font-light">
                             {safety.description}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </Link>
@@ -464,27 +485,32 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       key={`terms-${index}`}
                       to="/terms"
                       onClick={onClose}
-                      className="block p-4 hover:bg-gray-50 transition-colors"
+                      className="block p-3 hover:bg-purple-50 transition-all duration-200 border-l-4 border-transparent hover:border-purple-500"
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0 w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <FileText className="h-8 w-8 text-purple-600" />
+                        {/* Terms Icon */}
+                        <div className="flex-shrink-0 w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
+                          <FileText className="h-5 w-5 text-purple-600" />
                         </div>
 
+                        {/* Terms Content */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          {/* Title */}
+                          <h3 className="text-sm font-medium text-gray-900 leading-tight mb-1">
                             {terms.title}
                           </h3>
 
-                          <div className="flex items-center text-sm text-gray-600 mt-1">
-                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                          {/* Category Badge */}
+                          <div className="mb-1">
+                            <span className="inline-block bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-xs font-medium">
                               Terms & Conditions
                             </span>
                           </div>
 
-                          <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+                          {/* Description */}
+                          <p className="text-gray-600 text-xs leading-relaxed line-clamp-2 font-light">
                             {terms.description}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </Link>
@@ -495,13 +521,16 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
               })}
 
               {results.length >= 15 && (
-                <div className="p-4 text-center border-t border-gray-100">
+                <div className="p-6 text-center border-t border-gray-200 bg-gray-50">
                   <Link
                     to={`/services?q=${encodeURIComponent(query)}`}
                     onClick={onClose}
-                    className="text-blue-600 hover:text-blue-800 font-medium"
+                    className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200"
                   >
                     View all results for "{query}"
+                    <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </Link>
                 </div>
               )}
