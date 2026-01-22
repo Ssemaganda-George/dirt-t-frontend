@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { Upload, Image, Video, Trash2, Eye, Settings, CheckCircle, XCircle, Plus, ChevronUp, ChevronDown } from 'lucide-react'
 
@@ -10,6 +10,9 @@ export default function AdminHeroVideoManager() {
   const [success, setSuccess] = useState('')
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image')
   const [gallery, setGallery] = useState<Array<{ url: string; type: 'image' | 'video'; name: string; active?: boolean; order?: number }>>([])
+  
+  // Debounce ref for order updates
+  const orderUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     // Fetch all hero media from the DB (not just storage)
@@ -35,19 +38,55 @@ export default function AdminHeroVideoManager() {
     fetchGallery()
   }, [success])
 
-  // Update order for a media item
-  const handleOrderChange = async (id: string, newOrder: number) => {
-    // Update in DB
-    const { error } = await supabase
-      .from('hero_videos')
-      .update({ order: newOrder })
-      .eq('id', id)
-    if (error) {
-      setError('Failed to update order: ' + error.message)
-    } else {
-      setSuccess('Order updated!')
-      setError('')
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (orderUpdateTimeoutRef.current) {
+        clearTimeout(orderUpdateTimeoutRef.current)
+      }
     }
+  }, [])
+
+  // Debounced order update function
+  const debouncedOrderUpdate = useCallback((id: string, newOrder: number) => {
+    if (orderUpdateTimeoutRef.current) {
+      clearTimeout(orderUpdateTimeoutRef.current)
+    }
+    
+    orderUpdateTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('hero_videos')
+          .update({ order: newOrder })
+          .eq('id', id)
+        
+        if (error) {
+          console.error('Failed to update order:', error)
+          // Revert optimistic update on error
+          setGallery(prev => prev.map(item => 
+            item.name === id ? { ...item, order: item.order } : item
+          ))
+          setError('Failed to update order')
+        }
+      } catch (err) {
+        console.error('Order update error:', err)
+        setError('Failed to update order')
+      }
+    }, 500) // 500ms debounce
+  }, [])
+
+  // Update order for a media item (optimistic update)
+  const handleOrderChange = (id: string, newOrder: number) => {
+    // Optimistic update - update UI immediately
+    setGallery(prev => prev.map(item => 
+      item.name === id ? { ...item, order: newOrder } : item
+    ))
+    
+    // Debounced database update
+    debouncedOrderUpdate(id, newOrder)
+    
+    setSuccess('Order updated!')
+    setError('')
   };
 
   // Toggle active state for a media item (persisted, allow multiple active)
