@@ -10,7 +10,7 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const slideInterval = useRef<NodeJS.Timeout | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false)
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true) // Start with autoplay enabled
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -31,22 +31,38 @@ export default function Home() {
     fetchCategories()
     fetchHeroMediaList()
     
-    // Enable auto-play on first user interaction
-    const enableAutoPlay = () => {
+    // Try to enable autoplay and handle any browser restrictions
+    const ensureAutoPlay = () => {
       setAutoPlayEnabled(true)
-      document.removeEventListener('click', enableAutoPlay)
-      document.removeEventListener('touchstart', enableAutoPlay)
-      document.removeEventListener('keydown', enableAutoPlay)
+      // Try to play any current video after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        if (videoRef.current) {
+          const playPromise = videoRef.current.play()
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {
+              // Autoplay failed, will retry on slide change
+            })
+          }
+        }
+      }, 100)
     }
     
-    document.addEventListener('click', enableAutoPlay)
-    document.addEventListener('touchstart', enableAutoPlay)
-    document.addEventListener('keydown', enableAutoPlay)
+    // Try autoplay after a brief delay to ensure component is mounted
+    setTimeout(ensureAutoPlay, 500)
+    
+    // Also listen for user interactions as fallback
+    const handleUserInteraction = () => {
+      ensureAutoPlay()
+    }
+    
+    document.addEventListener('click', handleUserInteraction)
+    document.addEventListener('touchstart', handleUserInteraction)
+    document.addEventListener('keydown', handleUserInteraction)
     
     return () => {
-      document.removeEventListener('click', enableAutoPlay)
-      document.removeEventListener('touchstart', enableAutoPlay)
-      document.removeEventListener('keydown', enableAutoPlay)
+      document.removeEventListener('click', handleUserInteraction)
+      document.removeEventListener('touchstart', handleUserInteraction)
+      document.removeEventListener('keydown', handleUserInteraction)
     }
   }, [])
 
@@ -79,35 +95,44 @@ export default function Home() {
     }
   }, [heroMediaList, currentSlide])
 
-  // Handle video end to move to next slide
+  // Periodic retry for autoplay if it failed initially
   useEffect(() => {
-    const currentMedia = heroMediaList[currentSlide]
-    if (currentMedia?.type === 'video' && videoRef.current) {
-      const video = videoRef.current
-      const onEnded = () => {
-        setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
+    if (!autoPlayEnabled) return
+    
+    const retryInterval = setInterval(() => {
+      const currentMedia = heroMediaList[currentSlide]
+      if (currentMedia?.type === 'video' && videoRef.current && videoRef.current.paused) {
+        const playPromise = videoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Still failing, will keep retrying
+          })
+        }
       }
-      video.addEventListener('ended', onEnded)
-      return () => {
-        video.removeEventListener('ended', onEnded)
-      }
-    }
-  }, [currentSlide, heroMediaList])
+    }, 2000) // Retry every 2 seconds
+    
+    return () => clearInterval(retryInterval)
+  }, [currentSlide, heroMediaList, autoPlayEnabled])
 
   // Ensure video plays when slide changes to video
   useEffect(() => {
     const currentMedia = heroMediaList[currentSlide]
-    if (currentMedia?.type === 'video' && videoRef.current && autoPlayEnabled) {
+    if (currentMedia?.type === 'video' && videoRef.current) {
       const video = videoRef.current
       video.currentTime = 0
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.log('Video play failed on slide change:', error)
-        })
-      }
+      
+      // Try to play with a small delay to ensure video is ready
+      setTimeout(() => {
+        const playPromise = video.play()
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log('Video autoplay failed on slide change, will retry on user interaction:', error)
+            // Will be retried when user interacts with page
+          })
+        }
+      }, 100)
     }
-  }, [currentSlide, heroMediaList, autoPlayEnabled])
+  }, [currentSlide, heroMediaList])
 
   const fetchCategories = async () => {
     try {

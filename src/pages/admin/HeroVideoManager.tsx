@@ -14,29 +14,30 @@ export default function AdminHeroVideoManager() {
   // Debounce ref for order updates
   const orderUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  const fetchGallery = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('hero_videos')
+      .select('*')
+      .order('order', { ascending: true })
+    if (error) {
+      setError('Failed to fetch hero media: ' + error.message)
+      return
+    }
+    setGallery(
+      (data || []).map(item => ({
+        url: item.url,
+        type: item.type,
+        name: item.id, // use DB id as unique key
+        active: item.is_active,
+        order: item.order
+      }))
+    )
+  }, [])
+
   useEffect(() => {
     // Fetch all hero media from the DB (not just storage)
-    const fetchGallery = async () => {
-      const { data, error } = await supabase
-        .from('hero_videos')
-        .select('*')
-        .order('order', { ascending: true })
-      if (error) {
-        setError('Failed to fetch hero media: ' + error.message)
-        return
-      }
-      setGallery(
-        (data || []).map(item => ({
-          url: item.url,
-          type: item.type,
-          name: item.id, // use DB id as unique key
-          active: item.is_active,
-          order: item.order
-        }))
-      )
-    }
     fetchGallery()
-  }, [success])
+  }, [fetchGallery])
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -142,7 +143,7 @@ export default function AdminHeroVideoManager() {
 
     setSuccess('Deleted successfully!');
     setError('');
-    setGallery(gallery.filter(item => item.name !== id));
+    await fetchGallery(); // Refetch gallery to get updated data
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,6 +184,7 @@ export default function AdminHeroVideoManager() {
     setMediaUrl(url)
     setSuccess('Media uploaded successfully!')
     setUploading(false)
+    await fetchGallery(); // Refetch gallery to include the new item
   }
 
   return (
