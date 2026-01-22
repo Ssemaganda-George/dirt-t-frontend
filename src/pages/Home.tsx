@@ -79,21 +79,48 @@ export default function Home() {
   // Carousel effect for hero media
   useEffect(() => {
     if (heroMediaList.length < 2) return
-    if (slideInterval.current) clearInterval(slideInterval.current)
+
+    // Clear any existing interval
+    if (slideInterval.current) {
+      clearInterval(slideInterval.current)
+      slideInterval.current = null
+    }
+
     const currentMedia = heroMediaList[currentSlide]
     if (currentMedia?.type === 'video') {
       // For videos, don't set interval - wait for video to end
+      // The video end handler will advance to next slide
       return
     } else {
-      // For images, use timer
+      // For images, use timer that creates continuous video-like flow
       slideInterval.current = setInterval(() => {
         setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
-      }, 5000)
-      return () => {
-        if (slideInterval.current) clearInterval(slideInterval.current)
+      }, 1500) // Faster transitions for more continuous feel
+    }
+
+    // Cleanup function
+    return () => {
+      if (slideInterval.current) {
+        clearInterval(slideInterval.current)
+        slideInterval.current = null
       }
     }
   }, [heroMediaList, currentSlide])
+
+  // Handle video end to move to next slide
+  useEffect(() => {
+    const currentMedia = heroMediaList[currentSlide]
+    if (currentMedia?.type === 'video' && videoRef.current) {
+      const video = videoRef.current
+      const onEnded = () => {
+        setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
+      }
+      video.addEventListener('ended', onEnded)
+      return () => {
+        video.removeEventListener('ended', onEnded)
+      }
+    }
+  }, [currentSlide, heroMediaList])
 
   // Periodic retry for autoplay if it failed initially
   useEffect(() => {
