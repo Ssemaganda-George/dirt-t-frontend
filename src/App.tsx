@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { Suspense, lazy, useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
 import { CartProvider } from './contexts/CartContext'
@@ -7,8 +7,8 @@ import PublicLayout from './components/PublicLayout'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import VendorLayout from './components/VendorLayout'
-import { LoadingSpinner } from './components/LoadingSpinner'
 import { PageTransition } from './components/PageTransition'
+import { SmoothLoader } from './components/SmoothLoader'
 
 // Lazy load all page components for better UX with loading states
 const Home = lazy(() => import('./pages/Home'))
@@ -45,6 +45,15 @@ const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 
+// Preload critical routes
+const preloadCriticalRoutes = () => {
+  // Preload login and common pages that users might visit
+  import('./pages/Login')
+  import('./pages/Profile')
+  import('./pages/ServiceDetail')
+  import('./pages/CategoryPage')
+}
+
 // Support pages
 const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const ContactUs = lazy(() => import('./pages/ContactUs'))
@@ -62,20 +71,30 @@ const Saved = lazy(() => import('./pages/Saved'))
 const UserSettings = lazy(() => import('./pages/Settings'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
 
+// Scroll to top component
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 function App() {
+  // Preload critical routes on app initialization
+  useEffect(() => {
+    preloadCriticalRoutes()
+  }, [])
+
   return (
     <AuthProvider>
       <CartProvider>
         <BookingProvider>
           <Router>
-            <Suspense fallback={
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-                <div className="text-center">
-                  <LoadingSpinner size="lg" className="mb-4" />
-                  <p className="text-gray-600 animate-pulse">Loading page...</p>
-                </div>
-              </div>
-            }>
+            <ScrollToTop />
+            <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
               <Routes>
           {/* Public Routes */}
           <Route path="/connection-test" element={<ConnectionTest />} />
@@ -86,7 +105,7 @@ function App() {
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="category/:category" element={<PageTransition delay={1200}><CategoryPage /></PageTransition>} />
+            <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />

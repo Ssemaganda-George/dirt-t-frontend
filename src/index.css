@@ -46,60 +46,142 @@
     letter-spacing: -0.025em;
   }
 
-  /* Page transition animations */
-  .page-enter {
+  /* Enhanced smooth transitions */
+  .smooth-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .smooth-fade-in {
+    animation: smoothFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .smooth-slide-up {
+    animation: smoothSlideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .smooth-scale-in {
+    animation: smoothScaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* Loading skeleton animations */
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s infinite;
+  }
+
+  /* Route transition animations */
+  .route-enter {
     opacity: 0;
-    transform: translateY(20px);
-    animation: pageEnter 0.6s ease-out forwards;
+    transform: translateY(8px) scale(0.98);
+    animation: routeEnter 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  .page-exit {
+  .route-exit {
     opacity: 1;
-    transform: translateY(0);
-    animation: pageExit 0.3s ease-in forwards;
+    transform: translateY(0) scale(1);
+    animation: routeExit 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  @keyframes pageEnter {
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  /* Enhanced loading states */
+  .loading-dots::after {
+    content: '';
+    animation: loadingDots 1.4s infinite;
   }
 
-  @keyframes pageExit {
-    to {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
+  /* Hover and interaction animations */
+  .hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Loading spinner animation */
-  .loading-pulse {
-    animation: loadingPulse 1.5s ease-in-out infinite;
+  .hover-lift:hover {
+    transform: translateY(-2px);
   }
 
-  @keyframes loadingPulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+  .smooth-hover {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Smooth fade in */
-  .fade-in-slow {
-    animation: fadeInSlow 0.8s ease-out forwards;
+  .smooth-hover:hover {
+    transform: scale(1.02);
   }
 
-  @keyframes fadeInSlow {
+  @keyframes smoothFadeIn {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes smoothSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes smoothScaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes skeletonShimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes routeEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes routeExit {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+
+  @keyframes loadingDots {
+    0%, 20% {
+      content: '';
+    }
+    40% {
+      content: '.';
+    }
+    60% {
+      content: '..';
+    }
+    80%, 100% {
+      content: '...';
     }
   }
 }

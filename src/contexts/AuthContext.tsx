@@ -61,6 +61,7 @@ interface AuthContextType {
   profile: Profile | null
   vendor: Vendor | null
   loading: boolean
+  loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
   signOut: () => Promise<void>
@@ -82,12 +83,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
+  // Lazy load profile and vendor data
+  const loadProfileData = async (): Promise<Profile | null> => {
+    if (!user?.id || profileLoaded) return profile // Already loaded or no user
+
+    try {
+      const p = await fetchProfile(user.id)
+      setProfileLoaded(true)
+      return p
+    } catch (error) {
+      console.error('Error loading profile data:', error)
+      setProfileLoaded(true) // Mark as loaded even on error to avoid retry loops
+      return null
+    }
+  }
 
   useEffect(() => {
     const init = async () => {
       const { data, error } = await supabase.auth.getSession()
       if (error) {
         console.error(error)
+        setLoading(false)
         return
       }
 
@@ -100,11 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        await fetchProfile(u.id)
+        // Don't load profile data immediately - do it lazily
       }
+      setLoading(false)
     }
 
-    init().finally(() => setLoading(false))
+    init()
 
     const {
       data: { subscription },
@@ -117,12 +136,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
+        setProfileLoaded(false) // Reset profile loaded state on auth change
 
-        // fetch profile and vendor info; if this is a vendor who just verified their email,
-        // trigger the 'post-verify' email (account under review). We guard with localStorage
-        // to avoid sending multiple times from repeated auth events.
-        const p = await fetchProfile(u.id)
+        // Only load profile data for vendor email verification logic
         try {
+          const p = await fetchProfile(u.id)
           if (p?.role === 'vendor') {
             // fetch vendor record to inspect status
             const { data: vendorData, error: vErr } = await supabase
@@ -153,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
         setProfile(null)
         setVendor(null)
+        setProfileLoaded(false)
       }
     })
 
@@ -227,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(normalizedUser)
+    setProfileLoaded(true) // Mark as loaded since we fetched it
     // Ensure profile (and role) is loaded before route guards run
     const userProfile = await fetchProfile(u.id)
 
@@ -237,6 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setProfile(null)
       setVendor(null)
+      setProfileLoaded(false)
       throw new Error('Your account has been suspended. Please contact support for assistance.')
     }
 
@@ -337,6 +358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     vendor,
     loading,
+    loadProfileData,
     signIn,
     signUp,
     signOut,

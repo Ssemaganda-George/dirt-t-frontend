@@ -23,22 +23,6 @@ export default function Home() {
   // Use the reactive useServices hook
   const { services: allServices, loading: servicesLoading } = useServices()
 
-  // Debug: Log services when they load
-  useEffect(() => {
-    if (allServices.length > 0) {
-      console.log('Services loaded:', allServices.length, 'services');
-      console.log('First service sample:', {
-        title: allServices[0].title,
-        description: allServices[0].description?.substring(0, 100),
-        location: allServices[0].location,
-        vendor: allServices[0].vendors?.business_name,
-        category: allServices[0].service_categories?.name,
-        amenities: allServices[0].amenities,
-        status: allServices[0].status
-      });
-    }
-  }, [allServices]);
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
