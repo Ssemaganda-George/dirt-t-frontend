@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, Briefcase, HelpCircle, Search } from 'lucide-react'
+import { Home, HelpCircle, Search } from 'lucide-react'
 
 interface MobileBottomNavProps {
   onSupportClick?: () => void
@@ -9,7 +9,6 @@ interface MobileBottomNavProps {
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Find', href: '/', icon: Search, isSearch: true },
-  { name: 'Services', href: '/category/services', icon: Briefcase },
   { name: 'Support', href: '/support', icon: HelpCircle, isModal: true },
 ]
 
