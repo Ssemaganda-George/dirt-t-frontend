@@ -6,8 +6,6 @@ import {
   Users, 
   Clock, 
   Calendar,
-  Phone,
-  Mail,
   ArrowLeft,
   Heart,
   Share2,
@@ -1113,6 +1111,8 @@ export default function ServiceDetail() {
                     <p className="text-gray-600 text-sm mb-3 text-elegant">
                       {service.vendors.business_description || 'No description available'}
                     </p>
+                    {/* Contact information hidden until payment confirmed */}
+                    {/* 
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       {service.vendors.business_phone && (
                         <div className="flex items-center">
@@ -1127,6 +1127,7 @@ export default function ServiceDetail() {
                         </div>
                       )}
                     </div>
+                    */}
                   </div>
                 </div>
               ) : (
