@@ -408,10 +408,10 @@ export default function Home() {
         
         <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
-            Explore Uganda
+            Xplore Uganda
           </h1>
           <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
-            Discover the Pearl of Africa with authentic experiences
+            One way to all Your Travel Needs ....
           </p>
           
           {/* Sticky Search Bar within Hero */}
@@ -509,7 +509,7 @@ export default function Home() {
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategory === 'all'
-                  ? 'Explore Uganda'
+                  ? 'eXplore Uganda'
                   : categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
             </h2>
             <p className="text-gray-600">
