@@ -272,19 +272,19 @@ export default function VendorLogin() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black text-white py-5 px-10 rounded-xl font-black text-xl hover:bg-gray-800 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
                 >
                   {loading ? 'Signing in...' : 'Sign In to Business Portal'}
                 </button>
 
-                <div className="text-center">
+                <div className="text-center mt-6">
                   <button
                     type="button"
                     onClick={() => {
                       setIsSignUp(true)
                       resetForm()
                     }}
-                    className="text-black hover:text-gray-700 font-medium transition-colors"
+                    className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     Don't have an account? Create one
                   </button>
@@ -293,36 +293,6 @@ export default function VendorLogin() {
             ) : (
               // Sign Up Form - Multi-step Process
               <div className="space-y-6">
-                {/* Step Indicators */}
-                <div className="flex items-center justify-center mb-8">
-                  <div className="flex items-center space-x-4">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                      currentStep >= 1 ? 'bg-black border-black text-white' : 'border-gray-300 text-gray-300'
-                    }`}>
-                      <span className="text-sm font-bold">1</span>
-                    </div>
-                    <span className={`text-sm font-medium ${currentStep >= 1 ? 'text-black' : 'text-gray-400'}`}>Personal</span>
-                  </div>
-                  <div className="w-8 h-0.5 bg-gray-300 mx-4"></div>
-                  <div className="flex items-center space-x-4">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                      currentStep >= 2 ? 'bg-black border-black text-white' : 'border-gray-300 text-gray-300'
-                    }`}>
-                      <span className="text-sm font-bold">2</span>
-                    </div>
-                    <span className={`text-sm font-medium ${currentStep >= 2 ? 'text-black' : 'text-gray-400'}`}>Business</span>
-                  </div>
-                  <div className="w-8 h-0.5 bg-gray-300 mx-4"></div>
-                  <div className="flex items-center space-x-4">
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                      currentStep >= 3 ? 'bg-black border-black text-white' : 'border-gray-300 text-gray-300'
-                    }`}>
-                      <span className="text-sm font-bold">3</span>
-                    </div>
-                    <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-black' : 'text-gray-400'}`}>Account</span>
-                  </div>
-                </div>
-
                 <form onSubmit={handleSignUpSubmit} className="space-y-6">
 
                   {error && (
@@ -335,7 +305,7 @@ export default function VendorLogin() {
                   {currentStep === 1 && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Full Name</label>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Your Full Names</label>
                         <input
                           type="text"
                           value={fullName}
@@ -347,7 +317,7 @@ export default function VendorLogin() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Your Personal Email</label>
                         <input
                           type="email"
                           value={email}
@@ -558,12 +528,12 @@ export default function VendorLogin() {
                   )}
 
                   {/* Navigation Buttons */}
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-4 mt-8">
                     {currentStep > 1 && (
                       <button
                         type="button"
                         onClick={handlePrevStep}
-                        className="flex-1 bg-gray-200 text-gray-700 py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-300 transition-colors"
+                        className="flex-1 bg-gray-300 text-gray-800 py-5 px-8 rounded-xl font-bold text-lg hover:bg-gray-400 hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
                       >
                         Previous
                       </button>
@@ -573,7 +543,7 @@ export default function VendorLogin() {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="flex-1 bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors"
+                        className="flex-1 bg-black text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-gray-800 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                       >
                         Next
                       </button>
@@ -581,21 +551,21 @@ export default function VendorLogin() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 bg-black text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-green-600 text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-green-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
                       </button>
                     )}
                   </div>
 
-                  <div className="text-center">
+                  <div className="text-center mt-6">
                     <button
                       type="button"
                       onClick={() => {
                         setIsSignUp(false)
                         resetForm()
                       }}
-                      className="text-black hover:text-gray-700 font-medium transition-colors"
+                      className="bg-gray-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-gray-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
                       Already have an account? Sign in
                     </button>
