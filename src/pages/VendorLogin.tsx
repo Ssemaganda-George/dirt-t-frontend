@@ -123,11 +123,12 @@ export default function VendorLogin() {
           console.error('Profile creation error:', profileCheckError)
         }
 
-        // Update the vendor record with business details
+        // Update or create the vendor record with business details
         const serviceClient = getServiceClient()
         const { error: vendorError } = await serviceClient
           .from('vendors')
-          .update({
+          .upsert({
+            user_id: user.user.id,
             business_name: businessName,
             business_description: businessDescription,
             business_email: businessEmail || email,
@@ -145,9 +146,9 @@ export default function VendorLogin() {
                 case '20+': return 25;
                 default: return null;
               }
-            })() : null
-          })
-          .eq('user_id', user.user.id)
+            })() : null,
+            status: 'pending'
+          }, { onConflict: 'user_id' })
 
         if (vendorError) {
           console.error('Error updating business profile:', vendorError)
