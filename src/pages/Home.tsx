@@ -579,56 +579,64 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           icon: Hotel,
           label: 'Accommodation',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
-          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
+          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null,
+          priceUnit: 'per day'
         }
       case 'cat_tour_packages':
         return {
           icon: Map,
           label: 'Tour Package',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
-          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
+          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null,
+          priceUnit: 'per person'
         }
       case 'cat_transport':
         return {
           icon: Car,
           label: 'Transport',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
-          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
+          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null,
+          priceUnit: 'per day'
         }
       case 'cat_restaurants':
         return {
           icon: Utensils,
           label: 'Restaurant',
           primaryInfo: 'Dining experience',
-          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
+          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null,
+          priceUnit: 'per meal'
         }
       case 'cat_activities':
         return {
           icon: Target,
           label: 'Activity',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
-          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
+          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null,
+          priceUnit: 'per ticket'
         }
       case 'cat_flights':
         return {
           icon: Plane,
           label: 'Flight',
           primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
-          secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null
+          secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null,
+          priceUnit: 'per person'
         }
       case 'cat_shops':
         return {
           icon: ShoppingBag,
           label: 'Shop',
           primaryInfo: 'Retail shopping',
-          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null
+          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null,
+          priceUnit: 'per item'
         }
       default:
         return {
           icon: Package,
           label: 'Service',
           primaryInfo: 'Experience',
-          secondaryInfo: null
+          secondaryInfo: null,
+          priceUnit: 'per person'
         }
     }
   }
@@ -732,7 +740,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
             <span className="text-xl font-bold text-gray-900">
               {formatCurrency(service.price, service.currency)}
             </span>
-            <span className="text-xs text-gray-500">per person</span>
+            <span className="text-xs text-gray-500">{categoryInfo.priceUnit}</span>
           </div>
         </div>
       </div>
