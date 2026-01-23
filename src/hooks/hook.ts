@@ -456,10 +456,13 @@ export function useServiceCategories() {
 
       const data = await getServiceCategories();
 
+      // Filter out flights category
+      const filteredData = data.filter(category => category.id !== 'cat_flights');
+
       // Add artificial delay for better UX (showing loading states)
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      setCategories(data);
+      setCategories(filteredData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

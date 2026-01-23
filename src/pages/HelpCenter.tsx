@@ -131,6 +131,16 @@ export default function HelpCenter() {
                 className="w-full pl-12 pr-4 py-4 border border-gray-300 bg-white text-black placeholder-gray-500 focus:ring-2 focus:ring-black focus:border-black transition-colors text-lg"
               />
             </div>
+            
+            {/* Contact Us Link */}
+            <div className="mt-6">
+              <Link
+                to="/contact"
+                className="px-6 py-3 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
+              >
+                Contact Support
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -183,9 +193,9 @@ export default function HelpCenter() {
                 </div>
                 <Link
                   to="/contact"
-                  className="mt-3 inline-flex items-center text-gray-700 hover:text-black font-semibold text-sm tracking-tight antialiased"
+                  className="mt-3 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
                 >
-                  Contact Support →
+                  Contact Support
                 </Link>
               </div>
             </div>
@@ -268,6 +278,20 @@ export default function HelpCenter() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Bottom Contact Section */}
+            <div className="bg-white shadow-sm border border-gray-200 p-8 mt-8 text-center">
+              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Still Need Help?</h3>
+              <p className="text-gray-700 mb-6 text-sm leading-snug antialiased">
+                Can't find what you're looking for? Our support team is here to help.
+              </p>
+              <Link
+                to="/contact"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
+              >
+                Contact Support
+              </Link>
             </div>
           </div>
         </div>

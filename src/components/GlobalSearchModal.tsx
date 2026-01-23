@@ -280,7 +280,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-start justify-center pt-4 sm:pt-16 px-4">
+    <div className="fixed inset-0 z-[70] bg-black bg-opacity-50 flex items-start justify-center pt-4 sm:pt-16 px-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden border border-gray-200">
         {/* Search Header */}
         <div className="flex items-center border-b border-gray-200 p-4 sm:p-6 bg-gray-50">

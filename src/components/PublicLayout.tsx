@@ -1,17 +1,16 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Menu, X, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Share, GraduationCap } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
 import GlobalSearchModal from './GlobalSearchModal'
 import SupportModal from './SupportModal'
 import LoginModal from './LoginModal'
-import { useServiceCategories } from '../hooks/hook'
+// import { useServiceCategories } from '../hooks/hook' // Temporarily commented out
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function PublicLayout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState('UG')
   const [selectedCurrency, setSelectedCurrency] = useState('UGX')
@@ -19,11 +18,13 @@ export default function PublicLayout() {
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const userDropdownRef = useRef<HTMLDivElement>(null)
-  const { categories } = useServiceCategories()
+  const guestDropdownRef = useRef<HTMLDivElement>(null)
+  // const { categories } = useServiceCategories() // Temporarily commented out
   const { getCartCount } = useCart()
   const { user, profile, signOut } = useAuth()
 
@@ -33,39 +34,42 @@ export default function PublicLayout() {
       { name: 'Home', href: '/' }
     ]
 
-    // Map database categories to navigation items
-    const categoryNavigation = categories
-      .map(cat => {
-        // Map category IDs to URL-friendly names
-        const urlMapping: { [key: string]: string } = {
-          'cat_hotels': 'hotels',
-          'cat_tour_packages': 'tours',
-          'cat_restaurants': 'restaurants',
-          'cat_transport': 'transport',
-          'cat_flights': 'flights',
-          'cat_activities': 'activities'
-        }
+    // Temporarily hide categories - only show Home
+    // const categoryNavigation = categories
+    //   .map(cat => {
+    //     // Map category IDs to URL-friendly names
+    //     const urlMapping: { [key: string]: string } = {
+    //       'cat_hotels': 'hotels',
+    //       'cat_tour_packages': 'tours',
+    //       'cat_restaurants': 'restaurants',
+    //       'cat_transport': 'transport',
+    //       'cat_flights': 'flights',
+    //       'cat_activities': 'activities'
+    //     }
 
-        const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
-        return {
-          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
-          href: `/category/${urlSlug}`
-        }
-      })
-      .sort((a, b) => {
-        // Custom sorting: flights first, events last, others alphabetical
-        const order = { 'flights': 0, 'events': 2 }
-        const aPriority = order[a.href.split('/').pop() as keyof typeof order] ?? 1
-        const bPriority = order[b.href.split('/').pop() as keyof typeof order] ?? 1
+    //     const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
+    //     return {
+    //       name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
+    //       href: `/category/${urlSlug}`
+    //     }
+    //   })
+    //   .sort((a, b) => {
+    //     // Custom sorting: Accommodation, Transport, Tours, Restaurants, Shops, Events
+    //     const order: { [key: string]: number } = {
+    //       'hotels': 0,      // Accommodation
+    //       'transport': 1,   // Transport
+    //       'tours': 2,       // Tours
+    //       'restaurants': 3, // Restaurants
+    //       'shops': 4,       // Shops
+    //       'activities': 5   // Events
+    //     }
+    //     const aPriority = order[a.href.split('/').pop() || ''] ?? 6
+    //     const bPriority = order[b.href.split('/').pop() || ''] ?? 6
         
-        if (aPriority !== bPriority) {
-          return aPriority - bPriority
-        }
-        // If same priority, sort alphabetically
-        return a.name.localeCompare(b.name)
-      })
+    //     return aPriority - bPriority
+    //   })
 
-    return [...baseNavigation, ...categoryNavigation]
+    return baseNavigation
   }
 
   const navigation = getNavigationItems()
@@ -78,6 +82,9 @@ export default function PublicLayout() {
       }
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false)
+      }
+      if (guestDropdownRef.current && !guestDropdownRef.current.contains(event.target as Node)) {
+        setShowGuestDropdown(false)
       }
     }
 
@@ -139,9 +146,8 @@ export default function PublicLayout() {
 
               {user && profile?.role === 'tourist' && (
                 <>
-                  <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600 relative">
-                    <ShoppingBag className="h-4 w-4 mr-1.5" />
-                    <span className="text-sm">Cart</span>
+                  <button className="flex items-center text-gray-700 hover:text-blue-600 relative">
+                    <ShoppingBag className="h-5 w-5" />
                     {getCartCount() > 0 && (
                       <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {getCartCount()}
@@ -168,52 +174,93 @@ export default function PublicLayout() {
 
                   {/* User Dropdown Menu */}
                   {showUserDropdown && (
-                    <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                    <div className="fixed right-4 top-28 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200]">
                       <div className="py-1">
                         <div className="px-4 py-2 border-b border-gray-200">
                           <p className="text-sm font-medium text-gray-900">My Account</p>
                           <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
                         </div>
                         <Link
+                          to="/"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <Home className="h-3.5 w-3.5 mr-2" />
+                          Home
+                        </Link>
+                        <Link
                           to="/profile"
                           onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
-                          <User className="h-4 w-4 mr-3" />
+                          <User className="h-3.5 w-3.5 mr-2" />
                           Profile
                         </Link>
                         <Link
                           to="/bookings"
                           onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
-                          <ShoppingBag className="h-4 w-4 mr-3" />
+                          <ShoppingBag className="h-3.5 w-3.5 mr-2" />
                           My Bookings
                         </Link>
                         <Link
                           to="/saved"
                           onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
-                          <Heart className="h-4 w-4 mr-3" />
+                          <Heart className="h-3.5 w-3.5 mr-2" />
                           Saved Items
                         </Link>
                         <Link
                           to="/settings"
                           onClick={() => setShowUserDropdown(false)}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
-                          <Settings className="h-4 w-4 mr-3" />
+                          <Settings className="h-3.5 w-3.5 mr-2" />
                           Settings
                         </Link>
+                        <Link
+                          to="/help"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                          Help Center
+                        </Link>
+
+                        {/* Divider */}
+                        <div className="border-t border-gray-100 my-1"></div>
+
+                        {/* Business Section */}
+                        <div className="px-3 py-1.5">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
+                        </div>
+                        <a
+                          href="http://localhost:5173/vendor-login"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                          List Your Business
+                        </a>
+                        <Link
+                          to="/partner"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                          Partner with Us
+                        </Link>
+
                         <button
                           onClick={() => {
                             setShowUserDropdown(false)
                             handleSignOut()
                           }}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          className="flex items-center w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                         >
-                          <LogOut className="h-4 w-4 mr-3" />
+                          <LogOut className="h-3.5 w-3.5 mr-2" />
                           Sign Out
                         </button>
                       </div>
@@ -221,184 +268,93 @@ export default function PublicLayout() {
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowLoginModal(true)}
-                  className="flex items-center px-3 py-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-colors"
-                >
-                  <User className="h-4 w-4" />
-                </button>
+                <div className="relative" ref={guestDropdownRef}>
+                  <button
+                    onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                    className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <User className="h-5 w-5 text-gray-700" />
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Guest Dropdown Menu */}
+                  {showGuestDropdown && (
+                    <div className="fixed right-4 top-28 min-w-56 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200] max-h-96 overflow-y-auto">
+                      <div className="py-2">
+                        {/* Account Section */}
+                        <div className="px-3 py-1.5">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</h4>
+                        </div>
+                        <Link
+                          to="/"
+                          onClick={() => setShowGuestDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <Home className="h-3.5 w-3.5 mr-2" />
+                          Home
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowGuestDropdown(false)
+                            setShowLoginModal(true)
+                          }}
+                          className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <User className="h-3.5 w-3.5 mr-2" />
+                          Log In
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowGuestDropdown(false)
+                            setShowPreferences(true)
+                          }}
+                          className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <Globe className="h-3.5 w-3.5 mr-2" />
+                          Currency & Region
+                        </button>
+                        <Link
+                          to="/help"
+                          onClick={() => setShowGuestDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                          Help Center
+                        </Link>
+
+                        {/* Divider */}
+                        <div className="border-t border-gray-100 my-2"></div>
+
+                        {/* Business Section */}
+                        <div className="px-3 py-1.5">
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
+                        </div>
+                        <a
+                          href="http://localhost:5173/vendor-login"
+                          onClick={() => setShowGuestDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                          List Your Business
+                        </a>
+                        <Link
+                          to="/partner"
+                          onClick={() => setShowGuestDropdown(false)}
+                          className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                          Partner with Us
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
-              {/* Mobile menu button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden text-gray-700 hover:text-blue-600"
-              >
-                {mobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </button>
             </div>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
-            <div className="max-h-[calc(100vh-4rem)] overflow-y-auto">
-              {/* Navigation Section */}
-              <div className="px-4 py-6">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Explore</h3>
-                <nav className="space-y-1">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                        location.pathname === item.href
-                          ? 'text-blue-600 bg-blue-50 border border-blue-100'
-                          : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                      }`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-
-              {/* User Actions Section */}
-              <div className="px-4 py-4 border-t border-gray-100 bg-gray-50/50">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Account</h3>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => {
-                      setShowPreferences(true)
-                      setMobileMenuOpen(false)
-                    }}
-                    className="w-full flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
-                  >
-                    <Globe className="h-4 w-4 mr-3 text-gray-500" />
-                    <span className="flex-1 text-left">Currency & Region</span>
-                    <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">{selectedCurrency}</span>
-                  </button>
-
-                  <Link
-                    to="/saved"
-                    className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Heart className="h-4 w-4 mr-3 text-gray-500" />
-                    Saved Items
-                  </Link>
-
-                  <Link
-                    to="/bookings"
-                    className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
-                    My Bookings
-                  </Link>
-                </div>
-              </div>
-
-              {/* Business Section */}
-              <div className="px-4 py-4 border-t border-gray-100">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">For Businesses</h3>
-                <a
-                  href="http://localhost:5173/vendor-login"
-                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
-                  List Your Business
-                </a>
-                <Link
-                  to="/refer-business"
-                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Share className="h-4 w-4 mr-3 text-gray-500" />
-                  Refer a Business
-                </Link>
-                <Link
-                  to="/hospitality-class"
-                  className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <GraduationCap className="h-4 w-4 mr-3 text-gray-500" />
-                  Join a Hospitality Class
-                </Link>
-              </div>
-
-              {/* Authentication Section */}
-              <div className="px-4 py-4 border-t border-gray-100 bg-gray-50/30">
-                {user && profile?.role === 'tourist' ? (
-                  <>
-                    <div className="px-3 py-3 mb-3 bg-white rounded-lg border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center shadow-sm">
-                          <span className="text-sm font-bold text-white">
-                            {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-                          </span>
-                        </div>
-                        <div className="ml-3 flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">My Account</p>
-                          <p className="text-xs text-gray-500 truncate">{profile?.email}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Link
-                        to="/profile"
-                        className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <User className="h-4 w-4 mr-3 text-gray-500" />
-                        Profile
-                      </Link>
-
-                      <Link
-                        to="/settings"
-                        className="flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white rounded-lg transition-all duration-200"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Settings className="h-4 w-4 mr-3 text-gray-500" />
-                        Settings
-                      </Link>
-
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false)
-                          handleSignOut()
-                        }}
-                        className="w-full flex items-center px-3 py-3 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
-                      >
-                        <LogOut className="h-4 w-4 mr-3" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      setShowLoginModal(true)
-                    }}
-                    className="w-full flex items-center px-3 py-3 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border-2 border-dashed border-gray-300"
-                  >
-                    <User className="h-4 w-4 mr-3 text-gray-500" />
-                    Sign In
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* Preferences Modal */}

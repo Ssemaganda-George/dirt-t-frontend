@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
+import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, Check, Filter } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import type { Service } from '../types'
@@ -14,8 +14,9 @@ export default function Home() {
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true) // Start with autoplay enabled
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   const navigate = useNavigate()
 
@@ -38,12 +39,63 @@ export default function Home() {
     }
   }, [allServices]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isDropdownOpen && !(event.target as Element).closest('.category-dropdown')) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isDropdownOpen])
+
   // Combined loading state
   const isLoading = servicesLoading
 
   const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId)
+    if (categoryId === 'all') {
+      setSelectedCategories(['all'])
+    } else {
+      setSelectedCategories(prev => {
+        if (prev.includes('all')) {
+          // If 'all' was selected, replace it with the specific category
+          return [categoryId]
+        } else if (prev.includes(categoryId)) {
+          // Remove the category if it's already selected
+          const newSelection = prev.filter(id => id !== categoryId)
+          // If no categories selected, default to 'all'
+          return newSelection.length === 0 ? ['all'] : newSelection
+        } else {
+          // Add the category
+          return [...prev, categoryId]
+        }
+      })
+    }
   }
+
+  // Function to count services per category
+  const getCategoryCounts = () => {
+    const counts: { [key: string]: number } = {}
+    
+    // Initialize counts for all categories
+    categories.forEach(cat => {
+      counts[cat.id] = 0
+    })
+    
+    // Count services for each category
+    allServices.forEach(service => {
+      const categoryId = service.category_id || service.service_categories?.id
+      if (categoryId && counts.hasOwnProperty(categoryId)) {
+        counts[categoryId]++
+      }
+    })
+    
+    return counts
+  }
+
+  const categoryCounts = getCategoryCounts()
 
 
   useEffect(() => {
@@ -183,11 +235,21 @@ export default function Home() {
   const fetchCategories = async () => {
     try {
       const dbCategories = await getServiceCategories()
-      // Sort categories so Events comes last
-      const sortedCategories = dbCategories.sort((a, b) => {
-        if (a.id === 'cat_activities') return 1
-        if (b.id === 'cat_activities') return -1
-        return a.name.localeCompare(b.name)
+      // Filter out flights category
+      const filteredCategories = dbCategories.filter(cat => cat.id !== 'cat_flights')
+      // Sort categories in custom order: Accommodation, Transport, Tours, Restaurants, Shops, Events
+      const sortedCategories = filteredCategories.sort((a, b) => {
+        const order: { [key: string]: number } = {
+          'cat_hotels': 0,        // Accommodation
+          'cat_transport': 1,     // Transport
+          'cat_tour_packages': 2, // Tours
+          'cat_restaurants': 3,   // Restaurants
+          'cat_shops': 4,         // Shops
+          'cat_activities': 5     // Events
+        }
+        const aPriority = order[a.id] ?? 6
+        const bPriority = order[b.id] ?? 6
+        return aPriority - bPriority
       })
       
       // Add "All" category at the beginning
@@ -202,7 +264,7 @@ export default function Home() {
       setCategories(allCategories)
     } catch (error) {
       console.error('Error fetching categories:', error)
-      // Fallback to basic categories if database fetch fails
+      // Fallback to basic categories if database fetch fails (also filter out flights)
       setCategories([
         { id: 'all', name: 'All', icon: Map },
         { id: 'cat_hotels', name: 'Accommodation', icon: Hotel },
@@ -210,7 +272,6 @@ export default function Home() {
         { id: 'cat_transport', name: 'Transport', icon: Car },
         { id: 'cat_restaurants', name: 'Food', icon: Utensils },
         { id: 'cat_activities', name: 'Events', icon: Target },
-        { id: 'cat_flights', name: 'Flights', icon: Plane },
         { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])
     }
@@ -236,18 +297,6 @@ export default function Home() {
         minimumFractionDigits: 0
       }).format(amount);
     }
-  }
-
-  // Helper function to render icons (handles both string and component icons)
-  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
-    if (typeof icon === 'string') {
-      return <span className={className}>{icon}</span>
-    }
-    if (typeof icon === 'function') {
-      const IconComponent = icon
-      return <IconComponent className={className} />
-    }
-    return null
   }
 
   const filteredServices = allServices.filter((service: Service) => {
@@ -338,8 +387,8 @@ export default function Home() {
       return result;
     })()
 
-    const matchesCategory = selectedCategory === 'all' ||
-                           service.category_id === selectedCategory
+    const matchesCategory = selectedCategories.includes('all') ||
+                           selectedCategories.includes(service.category_id || '')
 
     // If there's a search query, ignore category filter; otherwise apply category filter
     const shouldInclude = isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
@@ -370,7 +419,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative min-h-[450px] md:min-h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
+      <div className="relative min-h-[300px] md:min-h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         <div className="absolute inset-0 bg-black/30"></div>
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -413,94 +462,136 @@ export default function Home() {
           <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
             One way to all Your Travel Needs ....
           </p>
-          
-          {/* Sticky Search Bar within Hero */}
-          <div className="sticky top-16 z-30 w-full">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-2xl p-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 flex items-center px-4">
-                    <Search className="h-5 w-5 text-gray-400 mr-3" />
-                    <input
-                      type="text"
-                      placeholder="I want ..."
-                      className="w-full py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-lg"
-                      value={searchQuery}
-                      onChange={(e) => {
-                        const newValue = e.target.value;
-                        console.log('Search input changed:', newValue);
-                        setSearchQuery(newValue);
-                      }}
-                    />
-                  </div>
-                  <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-full font-semibold transition-colors whitespace-nowrap">
-                    Search
-                  </button>
-                </div>
-              </div>
+        </div>
+      </div>
 
-              {/* Quick Categories */}
-              <div className="mt-4 hidden flex-wrap justify-center gap-4">
-                {categories.slice(1, 7).map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategorySelect(cat.id)}
-                    className="bg-white/90 hover:bg-white px-5 py-2 rounded-full text-gray-800 font-medium shadow-lg hover:shadow-xl transition-all"
-                  >
-                    {renderIcon(cat.icon, "h-4 w-4 mr-2")}
-                    {cat.name}
-                  </button>
-                ))}
+      {/* Fixed Search Bar - Always Visible */}
+      <div className="fixed top-16 left-0 right-0 z-[60] w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-4">
+          <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-2xl p-2 relative">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center px-4">
+                <Search className="h-5 w-5 text-gray-400 mr-3" />
+                <input
+                  type="text"
+                  placeholder="I want ..."
+                  className="w-full py-2 md:py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-base md:text-lg"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    console.log('Search input changed:', newValue);
+                    setSearchQuery(newValue);
+                  }}
+                />
+              </div>
+              {/* Filter Dropdown Trigger */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="category-dropdown flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-4 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs md:text-sm"
+                  title="Filter services by category - click to select multiple categories"
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="text-sm">
+                    {selectedCategories.includes('all')
+                      ? 'All Listings'
+                      : selectedCategories.length === 1
+                        ? categories.find(cat => cat.id === selectedCategories[0])?.name || 'Filter'
+                        : `${selectedCategories.length} Selected`}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                    {/* Header */}
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                      <h3 className="font-medium text-gray-900 text-xs">Choose Your Travel Needs</h3>
+                      <p className="text-xs text-gray-500">Select one or more of choice</p>
+                    </div>
+
+                    {/* Categories List */}
+                    <div className="max-h-60 overflow-y-auto">
+                      {/* All Categories Option */}
+                      <button
+                        onClick={() => {
+                          setSelectedCategories(['all'])
+                          setIsDropdownOpen(false)
+                        }}
+                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                          selectedCategories.includes('all') ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                            selectedCategories.includes('all')
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedCategories.includes('all') && (
+                              <Check className="w-2.5 h-2.5 text-white" />
+                            )}
+                          </div>
+                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                            Show All Travel Needs ({allServices.length})
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Individual Categories */}
+                      {categories.slice(1).map((category) => (
+                        <button
+                          key={category.id}
+                          onClick={() => handleCategorySelect(category.id)}
+                          className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors ${
+                            selectedCategories.includes(category.id) ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                              selectedCategories.includes(category.id)
+                                ? 'bg-blue-500 border-blue-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedCategories.includes(category.id) && (
+                                <Check className="w-2.5 h-2.5 text-white" />
+                              )}
+                            </div>
+                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                              {category.name} ({categoryCounts[category.id] || 0})
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {selectedCategories.includes('all') ? 'All Listings' : `${selectedCategories.length} selected`}
+                        </span>
+                        <button
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="text-xs text-blue-600 font-medium hover:text-blue-700"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sticky Filter Tabs below Hero */}
-      <div className="hidden md:block sticky top-24 z-20 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-1 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category.id)}
-                className={`flex items-center gap-0.5 md:gap-2 px-1 py-0.5 md:px-3 md:py-2 rounded-full text-[10px] md:text-sm font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
-                  selectedCategory === category.id
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <span>{category.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Filter - positioned above bottom nav */}
-      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg">
-        <div className="px-4 py-3">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category.id)}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border flex-shrink-0 min-w-0 ${
-                  selectedCategory === category.id
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <span>{category.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+      {/* Spacer to prevent content from being hidden behind fixed search bar */}
+      <div className="h-4"></div>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-32 md:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 md:pb-12">
 
         {/* Results Header */}
         <div className="flex items-center justify-between mb-6">
@@ -508,12 +599,14 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-gray-900 mb-1">
               {searchQuery
                 ? `Search results for "${searchQuery}"`
-                : selectedCategory === 'all'
-                  ? 'eXplore Uganda'
-                  : categories.find(cat => cat.id === selectedCategory)?.name || selectedCategory}
+                : selectedCategories.includes('all')
+                  ? 'Eveything Safari'
+                  : selectedCategories.length === 1
+                    ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
+                    : `${selectedCategories.length} categories selected`}
             </h2>
             <p className="text-gray-600">
-              {currentItemCount} {searchQuery ? 'result' : 'place'}{currentItemCount === 1 ? '' : 's'}
+              {currentItemCount} {searchQuery ? 'result' : 'Listing'}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>
