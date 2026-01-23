@@ -236,14 +236,14 @@ export default function PublicLayout() {
                         <div className="px-3 py-1.5">
                           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
                         </div>
-                        <a
-                          href="http://localhost:5173/vendor-login"
+                        <Link
+                          to="/vendor-login"
                           onClick={() => setShowUserDropdown(false)}
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
                           List Your Business
-                        </a>
+                        </Link>
                         <Link
                           to="/partner"
                           onClick={() => setShowUserDropdown(false)}
@@ -330,14 +330,14 @@ export default function PublicLayout() {
                         <div className="px-3 py-1.5">
                           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
                         </div>
-                        <a
-                          href="http://localhost:5173/vendor-login"
+                        <Link
+                          to="/vendor-login"
                           onClick={() => setShowGuestDropdown(false)}
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
                           List Your Business
-                        </a>
+                        </Link>
                         <Link
                           to="/partner"
                           onClick={() => setShowGuestDropdown(false)}
