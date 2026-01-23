@@ -14,7 +14,7 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
-import { getServiceBySlug } from '../lib/database'
+import { getServiceBySlug, getServiceById } from '../lib/database'
 
 interface ServiceDetail {
   id: string
@@ -166,18 +166,27 @@ export default function ServiceDetail() {
   const fetchService = async () => {
     try {
       if (!slug) {
-        console.error('No service slug provided')
+        console.error('No service slug/ID provided')
         setService(null)
         setLoading(false)
         return
       }
       
-      console.log('Fetching service with slug:', slug)
-      const serviceData = await getServiceBySlug(slug)
+      console.log('Fetching service with slug/ID:', slug)
+      
+      // Try to fetch by slug first
+      let serviceData = await getServiceBySlug(slug)
+      
+      // If not found by slug, try to fetch by ID
+      if (!serviceData) {
+        console.log('Service not found by slug, trying by ID:', slug)
+        serviceData = await getServiceById(slug)
+      }
+      
       console.log('Service data received:', serviceData)
       
       if (!serviceData) {
-        console.log('No service found with slug:', slug)
+        console.log('No service found with slug/ID:', slug)
         setService(null)
       } else {
         setService(serviceData)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
@@ -15,6 +16,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+
+  const navigate = useNavigate()
 
   // Use the reactive useServices hook
   const { services: allServices, loading: servicesLoading } = useServices()
@@ -527,7 +530,7 @@ export default function Home() {
                 key={service.id} 
                 service={service}
                 formatCurrency={formatCurrency}
-                onClick={() => setSelectedService(service)}
+                onClick={() => navigate(`/service/${service.slug || service.id}`)}
               />
             ))}
           </div>
