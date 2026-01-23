@@ -40,10 +40,6 @@ const supportServices = [
 const businessServices = [
   {
     name: 'List Your Business',
-    href: '/vendor-signup'
-  },
-  {
-    name: 'Vendor Portal',
     href: '/vendor-login'
   },
   {

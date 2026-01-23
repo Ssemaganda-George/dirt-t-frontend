@@ -272,7 +272,7 @@ export default function VendorLogin() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-5 px-10 rounded-xl font-black text-xl hover:bg-gray-800 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+                  className="w-full bg-black text-white py-5 px-10 rounded-xl font-black text-xl hover:bg-gray-800 active:bg-gray-900 focus:bg-gray-800 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   {loading ? 'Signing in...' : 'Sign In to Business Portal'}
                 </button>
@@ -284,7 +284,7 @@ export default function VendorLogin() {
                       setIsSignUp(true)
                       resetForm()
                     }}
-                    className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     Don't have an account? Create one
                   </button>
@@ -533,7 +533,7 @@ export default function VendorLogin() {
                       <button
                         type="button"
                         onClick={handlePrevStep}
-                        className="flex-1 bg-gray-300 text-gray-800 py-5 px-8 rounded-xl font-bold text-lg hover:bg-gray-400 hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="flex-1 bg-gray-300 text-gray-800 py-5 px-8 rounded-xl font-bold text-lg hover:bg-gray-400 active:bg-gray-500 focus:bg-gray-400 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                       >
                         Previous
                       </button>
@@ -543,7 +543,7 @@ export default function VendorLogin() {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="flex-1 bg-black text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-gray-800 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        className="flex-1 bg-black text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-gray-800 active:bg-gray-900 focus:bg-gray-800 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500"
                       >
                         Next
                       </button>
@@ -551,7 +551,7 @@ export default function VendorLogin() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 bg-green-600 text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-green-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg hover:shadow-xl"
+                        className="flex-1 bg-green-600 text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-green-700 active:bg-green-800 focus:bg-green-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
                       </button>
@@ -565,7 +565,7 @@ export default function VendorLogin() {
                         setIsSignUp(false)
                         resetForm()
                       }}
-                      className="bg-gray-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-gray-700 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       Already have an account? Sign in
                     </button>
