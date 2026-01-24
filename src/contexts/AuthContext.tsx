@@ -88,32 +88,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
 
-  /** -------------------- Fetch Profile & Vendor -------------------- */
+  /** -------------------- Fetch Vendor -------------------- */
   const fetchVendor = async (userId: string) => {
     try {
       const { data, error } = await supabase.from('vendors').select('*').eq('user_id', userId).single()
-      if (error) {
-        setVendor(null)
-        return null
-      }
-      setVendor(data as Vendor)
-      return data as Vendor
+      if (!error && data) setVendor(data as Vendor)
     } catch (err) {
       console.error('Error fetching vendor:', err)
       setVendor(null)
-      return null
     }
   }
 
+  /** -------------------- Fetch Profile -------------------- */
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
-      if (error) throw error
-
+      if (error || !data) throw error || new Error('Profile not found')
       setProfile(data as Profile)
 
+      // If vendor, fetch vendor asynchronously
       if (data.role === 'vendor') {
-        await fetchVendor(userId)
+        fetchVendor(userId).catch(console.error)
       } else {
         setVendor(null)
       }
@@ -130,18 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** -------------------- Lazy Load Profile -------------------- */
   const loadProfileData = async (): Promise<Profile | null> => {
     if (!user?.id || profileLoaded) return profile
-    try {
-      const p = await fetchProfile(user.id)
-      setProfileLoaded(true)
-      return p
-    } catch (err) {
-      console.error('Error loading profile data:', err)
-      setProfileLoaded(true)
-      return null
-    }
+    const p = await fetchProfile(user.id)
+    setProfileLoaded(true)
+    return p
   }
 
-  /** -------------------- Vendor Post Verify Email -------------------- */
+  /** -------------------- Vendor Post Verify Email (async) -------------------- */
   const handleVendorPostVerify = async (u: any, p: Profile) => {
     if (p.role !== 'vendor') return
     try {
@@ -149,13 +138,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!vErr && vendorData?.status === 'pending') {
         const confirmedAt = u.email_confirmed_at || u.confirmed_at
         const flagKey = `vendorPostVerifySent:${u.id}`
-        try {
-          if (confirmedAt && !localStorage.getItem(flagKey)) {
-            sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch(console.error)
-            localStorage.setItem(flagKey, '1')
-          }
-        } catch (e) {
-          console.error('LocalStorage error for vendor post verify:', e)
+        if (confirmedAt && !localStorage.getItem(flagKey)) {
+          sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch(console.error)
+          try { localStorage.setItem(flagKey, '1') } catch {}
         }
       }
     } catch (e) {
@@ -166,24 +151,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** -------------------- Auth State Change -------------------- */
   useEffect(() => {
     const init = async () => {
-      const { data, error } = await supabase.auth.getSession()
-      if (error) {
-        console.error(error)
-        setLoading(false)
-        return
-      }
-
-      const session = data.session
-      if (session?.user) {
-        const u = session.user
-        const normalizedUser: User = {
-          id: u.id,
-          email: u.email ?? '',
-          created_at: u.created_at ?? new Date().toISOString(),
+      try {
+        const { data } = await supabase.auth.getSession()
+        const session = data.session
+        if (session?.user) {
+          const u = session.user
+          setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
         }
-        setUser(normalizedUser)
+      } catch (err) {
+        console.error('Error initializing auth:', err)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     init()
@@ -193,16 +172,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const u = session.user
-        const normalizedUser: User = {
-          id: u.id,
-          email: u.email ?? '',
-          created_at: u.created_at ?? new Date().toISOString(),
-        }
-        setUser(normalizedUser)
+        setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
         setProfileLoaded(false)
 
         const userProfile = await fetchProfile(u.id)
-        if (userProfile) await handleVendorPostVerify(u, userProfile)
+        if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)
       } else {
         setUser(null)
         setProfile(null)
@@ -222,18 +196,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.user
     if (!u) return null
 
-    const normalizedUser: User = {
-      id: u.id,
-      email: u.email ?? '',
-      created_at: u.created_at ?? new Date().toISOString(),
-    }
+    const normalizedUser: User = { id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() }
     setUser(normalizedUser)
-    setProfileLoaded(true)
 
+    // Load profile immediately
     const userProfile = await fetchProfile(u.id)
 
+    // Vendor post verify runs async (does not block dashboard)
+    if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)
+
+    // Check for suspension
     if (userProfile?.status === 'suspended') {
-      await confirmSignOut()
+      await supabase.auth.signOut()
+      setUser(null)
+      setProfile(null)
+      setVendor(null)
       throw new Error('Your account has been suspended. Please contact support.')
     }
 
@@ -248,45 +225,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.user
     if (!u) return
 
-    const normalizedUser: User = {
-      id: u.id,
-      email: u.email ?? '',
-      created_at: u.created_at ?? new Date().toISOString(),
-    }
-
-    await delay(100)
+    setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
+    await delay(100) // ensure user is created
 
     const serviceClient = getServiceClient()
-    const { error: profileError } = await serviceClient
+    serviceClient
       .from('profiles')
       .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
-    if (profileError) console.error('Profile creation error:', profileError)
+      .catch(console.error)
 
     if (role === 'vendor') {
-      const { error: vendorError } = await serviceClient
+      serviceClient
         .from('vendors')
         .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
-      if (vendorError) console.error('Vendor creation error:', vendorError)
-
+        .catch(console.error)
       sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
     }
 
-    setUser(normalizedUser)
-    await fetchProfile(u.id)
+    // Fetch profile in background (non-blocking)
+    fetchProfile(u.id).catch(console.error)
   }
 
   /** -------------------- Sign Out -------------------- */
   const signOut = async () => {
-    await confirmSignOut()
-  }
-
-  /** -------------------- Confirm Sign Out -------------------- */
-  const confirmSignOut = async () => {
     try {
-      // Kill Supabase session
+      // Kill session
       await supabase.auth.signOut()
 
-      // Hard clear local storage auth token
+      // Hard remove leftover token
       localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL + '-auth-token')
 
       // Reset state
@@ -297,8 +263,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Force reload
       window.location.href = '/'
-    } catch (error) {
-      console.error('Error signing out:', error)
+    } catch (err) {
+      console.error('Error signing out:', err)
       window.location.reload()
     }
   }
@@ -306,14 +272,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** -------------------- Update Profile -------------------- */
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
-
     const { data, error } = await supabase
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select()
       .single()
-
     if (error) throw error
     setProfile(data as Profile)
   }
@@ -328,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     updateProfile,
-    confirmSignOut,
+    confirmSignOut: signOut, // alias for convenience
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
