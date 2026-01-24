@@ -2,32 +2,11 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getServiceClient } from '../lib/serviceClient'
 
+/** -------------------- Types -------------------- */
 interface VendorSignupEmailPayload {
   userId: string
   email: string
   fullName: string
-}
-
-/**
- * Trigger a server-side email for vendor signup onboarding.
- */
-async function sendVendorSignupEmail(payload: VendorSignupEmailPayload) {
-  const url = (import.meta.env && (import.meta.env.VITE_VENDOR_EMAIL_ENDPOINT as string)) || '/api/send-vendor-email'
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Vendor email request failed: ${res.status} ${text}`)
-  }
-
-  return res.json()
 }
 
 interface User {
@@ -66,18 +45,42 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
+  confirmSignOut: () => Promise<void>
 }
 
+/** -------------------- Context -------------------- */
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }
 
+/** -------------------- Utility Functions -------------------- */
+async function sendVendorSignupEmail(payload: VendorSignupEmailPayload) {
+  const url =
+    (import.meta.env && (import.meta.env.VITE_VENDOR_EMAIL_ENDPOINT as string)) || '/api/send-vendor-email'
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Vendor email request failed: ${res.status} ${text}`)
+  }
+
+  return res.json()
+}
+
+async function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/** -------------------- Auth Provider -------------------- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -85,21 +88,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
 
-  // Lazy load profile and vendor data
-  const loadProfileData = async (): Promise<Profile | null> => {
-    if (!user?.id || profileLoaded) return profile // Already loaded or no user
-
+  /** -------------------- Fetch Profile & Vendor -------------------- */
+  const fetchVendor = async (userId: string) => {
     try {
-      const p = await fetchProfile(user.id)
-      setProfileLoaded(true)
-      return p
-    } catch (error) {
-      console.error('Error loading profile data:', error)
-      setProfileLoaded(true) // Mark as loaded even on error to avoid retry loops
+      const { data, error } = await supabase.from('vendors').select('*').eq('user_id', userId).single()
+      if (error) {
+        setVendor(null)
+        return null
+      }
+      setVendor(data as Vendor)
+      return data as Vendor
+    } catch (err) {
+      console.error('Error fetching vendor:', err)
+      setVendor(null)
       return null
     }
   }
 
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      if (error) throw error
+
+      setProfile(data as Profile)
+
+      if (data.role === 'vendor') {
+        await fetchVendor(userId)
+      } else {
+        setVendor(null)
+      }
+
+      return data as Profile
+    } catch (err) {
+      console.error('Error fetching profile:', err)
+      setProfile(null)
+      setVendor(null)
+      return null
+    }
+  }
+
+  /** -------------------- Lazy Load Profile -------------------- */
+  const loadProfileData = async (): Promise<Profile | null> => {
+    if (!user?.id || profileLoaded) return profile
+    try {
+      const p = await fetchProfile(user.id)
+      setProfileLoaded(true)
+      return p
+    } catch (err) {
+      console.error('Error loading profile data:', err)
+      setProfileLoaded(true)
+      return null
+    }
+  }
+
+  /** -------------------- Vendor Post Verify Email -------------------- */
+  const handleVendorPostVerify = async (u: any, p: Profile) => {
+    if (p.role !== 'vendor') return
+    try {
+      const { data: vendorData, error: vErr } = await supabase.from('vendors').select('*').eq('user_id', u.id).single()
+      if (!vErr && vendorData?.status === 'pending') {
+        const confirmedAt = u.email_confirmed_at || u.confirmed_at
+        const flagKey = `vendorPostVerifySent:${u.id}`
+        try {
+          if (confirmedAt && !localStorage.getItem(flagKey)) {
+            sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch(console.error)
+            localStorage.setItem(flagKey, '1')
+          }
+        } catch (e) {
+          console.error('LocalStorage error for vendor post verify:', e)
+        }
+      }
+    } catch (e) {
+      console.error('Error checking vendor post-verify criteria:', e)
+    }
+  }
+
+  /** -------------------- Auth State Change -------------------- */
   useEffect(() => {
     const init = async () => {
       const { data, error } = await supabase.auth.getSession()
@@ -115,10 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const normalizedUser: User = {
           id: u.id,
           email: u.email ?? '',
-          created_at: (u as any).created_at ?? new Date().toISOString(),
+          created_at: u.created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        // Don't load profile data immediately - do it lazily
       }
       setLoading(false)
     }
@@ -133,40 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const normalizedUser: User = {
           id: u.id,
           email: u.email ?? '',
-          created_at: (u as any).created_at ?? new Date().toISOString(),
+          created_at: u.created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        setProfileLoaded(false) // Reset profile loaded state on auth change
+        setProfileLoaded(false)
 
-        // Only load profile data for vendor email verification logic
-        try {
-          const p = await fetchProfile(u.id)
-          if (p?.role === 'vendor') {
-            // fetch vendor record to inspect status
-            const { data: vendorData, error: vErr } = await supabase
-              .from('vendors')
-              .select('*')
-              .eq('user_id', u.id)
-              .single()
-
-            if (!vErr && vendorData && vendorData.status === 'pending') {
-              // Check if user's email is confirmed. Supabase user object may have 'email_confirmed_at' or 'confirmed_at'
-              const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
-              const flagKey = `vendorPostVerifySent:${u.id}`
-              if (confirmedAt && !localStorage.getItem(flagKey)) {
-                // request server to send post-verify email (account under review)
-                sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch((e: unknown) =>
-                  console.error('Failed to request post-verify vendor email:', e)
-                )
-                try {
-                  localStorage.setItem(flagKey, '1')
-                } catch (e) {}
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Error checking vendor post-verify criteria:', e)
-        }
+        const userProfile = await fetchProfile(u.id)
+        if (userProfile) await handleVendorPostVerify(u, userProfile)
       } else {
         setUser(null)
         setProfile(null)
@@ -175,65 +211,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-      setProfile(data as Profile)
-
-      // If user is a vendor, fetch vendor data
-      if (data.role === 'vendor') {
-        await fetchVendor(userId)
-      } else {
-        setVendor(null)
-      }
-
-      return data as Profile
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      setProfile(null)
-      setVendor(null)
-      return null
-    }
-  }
-
-  const fetchVendor = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('vendors')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) {
-        // If vendor record doesn't exist, set vendor to null
-        setVendor(null)
-      } else {
-        // Use the actual vendor status from the vendor record
-        setVendor(data as Vendor)
-      }
-    } catch (error) {
-      console.error('Error fetching vendor:', error)
-      setVendor(null)
-    }
-  }
-
+  /** -------------------- Sign In -------------------- */
   const signIn = async (email: string, password: string): Promise<Profile | null> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
 
     const u = data.user
@@ -242,39 +225,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedUser: User = {
       id: u.id,
       email: u.email ?? '',
-      created_at: (u as any).created_at ?? new Date().toISOString(),
+      created_at: u.created_at ?? new Date().toISOString(),
     }
-
     setUser(normalizedUser)
-    setProfileLoaded(true) // Mark as loaded since we fetched it
-    // Ensure profile (and role) is loaded before route guards run
+    setProfileLoaded(true)
+
     const userProfile = await fetchProfile(u.id)
 
-    // Check if user is suspended and prevent login
     if (userProfile?.status === 'suspended') {
-      // Sign out the user immediately
-      await supabase.auth.signOut()
-      setUser(null)
-      setProfile(null)
-      setVendor(null)
-      setProfileLoaded(false)
-      throw new Error('Your account has been suspended. Please contact support for assistance.')
+      await confirmSignOut()
+      throw new Error('Your account has been suspended. Please contact support.')
     }
 
     return userProfile
   }
 
-  const signUp = async (
-    email: string,
-    password: string,
-    fullName: string,
-    role: string = 'tourist'
-  ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-    console.log(data, error)
+  /** -------------------- Sign Up -------------------- */
+  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist') => {
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
 
     const u = data.user
@@ -283,68 +251,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedUser: User = {
       id: u.id,
       email: u.email ?? '',
-      created_at: (u as any).created_at ?? new Date().toISOString(),
+      created_at: u.created_at ?? new Date().toISOString(),
     }
 
-    // create profile row matching your user_role enum
-    // Add a small delay to ensure user is fully created
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await delay(100)
+
     const serviceClient = getServiceClient()
-    const { error: profileError } = await serviceClient.from('profiles').upsert({
-      id: u.id,
-      email,
-      full_name: fullName,
-      role,
-    }, { onConflict: 'id' })
-    if (profileError) {
-      console.error('Profile creation error:', profileError)
-      // Don't throw here - let the component handle profile creation
-    }
+    const { error: profileError } = await serviceClient
+      .from('profiles')
+      .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
+    if (profileError) console.error('Profile creation error:', profileError)
 
-    // If vendor, create vendor record
     if (role === 'vendor') {
-      const { error: vendorError } = await serviceClient.from('vendors').upsert({
-        user_id: u.id,
-        business_name: '',
-        status: 'pending',
-      }, { onConflict: 'user_id' })
-      if (vendorError) {
-        console.error('Vendor creation error:', vendorError)
-        // Don't throw here - let the component handle vendor creation
-      }
-    }
+      const { error: vendorError } = await serviceClient
+        .from('vendors')
+        .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
+      if (vendorError) console.error('Vendor creation error:', vendorError)
 
-    // If this is a vendor signup, notify the backend to send custom vendor onboarding email
-    // (this will typically send a verification / next-steps email specific to vendors)
-    if (role === 'vendor') {
-      // fire-and-forget; don't block signup if email service is not available
-      sendVendorSignupEmail({ userId: u.id, email, fullName }).catch((e: unknown) =>
-        console.error('Failed to request vendor signup email:', e)
-      )
+      sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
     }
 
     setUser(normalizedUser)
-    // Ensure profile (and role) is loaded before route guards run
     await fetchProfile(u.id)
   }
 
+  /** -------------------- Sign Out -------------------- */
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    setUser(null)
-    setProfile(null)
+    await confirmSignOut()
   }
 
+  /** -------------------- Confirm Sign Out -------------------- */
+  const confirmSignOut = async () => {
+    try {
+      // Kill Supabase session
+      await supabase.auth.signOut()
+
+      // Hard clear local storage auth token
+      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL + '-auth-token')
+
+      // Reset state
+      setUser(null)
+      setProfile(null)
+      setVendor(null)
+      setProfileLoaded(false)
+
+      // Force reload
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Error signing out:', error)
+      window.location.reload()
+    }
+  }
+
+  /** -------------------- Update Profile -------------------- */
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
 
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select()
       .single()
@@ -353,7 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(data as Profile)
   }
 
-  const value = {
+  const value: AuthContextType = {
     user,
     profile,
     vendor,
@@ -363,6 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     updateProfile,
+    confirmSignOut,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
