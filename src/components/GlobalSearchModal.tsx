@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, X, MapPin, HelpCircle, Shield, FileText } from 'lucide-react'
+import { Search, X, MapPin, HelpCircle, Shield, FileText, Globe } from 'lucide-react'
 import { useServices } from '../hooks/hook'
 import { Link } from 'react-router-dom'
 import type { Service } from '../types'
@@ -136,7 +136,7 @@ const termsSections = [
 
 // Combined search result type
 type SearchResult = {
-  type: 'service' | 'faq' | 'safety' | 'terms'
+  type: 'service' | 'faq' | 'safety' | 'terms' | 'web'
   service?: Service
   faq?: {
     question: string
@@ -154,6 +154,11 @@ type SearchResult = {
     description: string
     details: string[]
   }
+  web?: {
+    title: string
+    url: string
+    snippet: string
+  }
 }
 
 interface GlobalSearchModalProps {
@@ -167,6 +172,60 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { services: allServices } = useServices()
+  // Web search function
+  const searchWeb = async (query: string): Promise<SearchResult[]> => {
+    try {
+      const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`)
+      const data = await response.json()
+
+      const webResults: SearchResult[] = []
+
+      // Add instant answer if available
+      if (data.Answer) {
+        webResults.push({
+          type: 'web',
+          web: {
+            title: 'Instant Answer',
+            url: data.AnswerURL || '#',
+            snippet: data.Answer
+          }
+        })
+      }
+
+      // Add abstract if available
+      if (data.Abstract) {
+        webResults.push({
+          type: 'web',
+          web: {
+            title: data.Heading || 'Web Result',
+            url: data.AbstractURL,
+            snippet: data.Abstract
+          }
+        })
+      }
+
+      // Add related topics
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        data.RelatedTopics.slice(0, 3).forEach((topic: any) => {
+          if (topic.Text && topic.FirstURL) {
+            webResults.push({
+              type: 'web',
+              web: {
+                title: topic.Text.split(' - ')[0] || 'Related Topic',
+                url: topic.FirstURL,
+                snippet: topic.Text
+              }
+            })
+          }
+        })
+      }
+
+      return webResults
+    } catch (error) {
+      console.error('Web search error:', error)
+      return []
+    }
+  }
 
   // Focus input when modal opens
   useEffect(() => {
@@ -184,74 +243,83 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
     setIsLoading(true)
 
-    const searchTerm = query.toLowerCase().trim()
-    const combinedResults: SearchResult[] = []
+    const performSearch = async () => {
+      const searchTerm = query.toLowerCase().trim()
+      const combinedResults: SearchResult[] = []
 
-    // Search services
-    const serviceResults = allServices.filter((service) => {
-      // Search in title
-      if (service.title?.toLowerCase().includes(searchTerm)) return true
+      // Search services
+      const serviceResults = allServices.filter((service) => {
+        // Search in title
+        if (service.title?.toLowerCase().includes(searchTerm)) return true
 
-      // Search in description
-      if (service.description?.toLowerCase().includes(searchTerm)) return true
+        // Search in description
+        if (service.description?.toLowerCase().includes(searchTerm)) return true
 
-      // Search in location
-      if (service.location?.toLowerCase().includes(searchTerm)) return true
+        // Search in location
+        if (service.location?.toLowerCase().includes(searchTerm)) return true
 
-      // Search in vendor name
-      if (service.vendors?.business_name?.toLowerCase().includes(searchTerm)) return true
+        // Search in vendor name
+        if (service.vendors?.business_name?.toLowerCase().includes(searchTerm)) return true
 
-      // Search in category name
-      if (service.service_categories?.name?.toLowerCase().includes(searchTerm)) return true
+        // Search in category name
+        if (service.service_categories?.name?.toLowerCase().includes(searchTerm)) return true
 
-      // Search in amenities
-      if (service.amenities?.some(amenity => amenity.toLowerCase().includes(searchTerm))) return true
+        // Search in amenities
+        if (service.amenities?.some((amenity: string) => amenity.toLowerCase().includes(searchTerm))) return true
 
-      // Search in tags/keywords (if any)
-      if (service.tags?.some(tag => tag.toLowerCase().includes(searchTerm))) return true
+        // Search in tags/keywords (if any)
+        if (service.tags?.some((tag: string) => tag.toLowerCase().includes(searchTerm))) return true
 
-      return false
-    }).map(service => ({ type: 'service' as const, service }))
+        return false
+      }).map((service: Service) => ({ type: 'service' as const, service }))
 
-    combinedResults.push(...serviceResults)
+      combinedResults.push(...serviceResults)
 
-    // Search FAQs
-    const faqResults = faqCategories.flatMap(cat =>
-      cat.faqs.filter(faq =>
-        faq.question.toLowerCase().includes(searchTerm) ||
-        faq.answer.toLowerCase().includes(searchTerm)
-      ).map(faq => ({
-        type: 'faq' as const,
-        faq: { ...faq, category: cat.id, categoryName: cat.name }
-      }))
-    )
+      // Search FAQs
+      const faqResults = faqCategories.flatMap(cat =>
+        cat.faqs.filter(faq =>
+          faq.question.toLowerCase().includes(searchTerm) ||
+          faq.answer.toLowerCase().includes(searchTerm)
+        ).map(faq => ({
+          type: 'faq' as const,
+          faq: { ...faq, category: cat.id, categoryName: cat.name }
+        }))
+      )
 
-    combinedResults.push(...faqResults)
+      combinedResults.push(...faqResults)
 
-    // Search safety tips
-    const safetyResults = safetyTips.filter(tip =>
-      tip.title.toLowerCase().includes(searchTerm) ||
-      tip.description.toLowerCase().includes(searchTerm) ||
-      tip.details.some(detail => detail.toLowerCase().includes(searchTerm))
-    ).map(tip => ({ type: 'safety' as const, safety: tip }))
+      // Search safety tips
+      const safetyResults = safetyTips.filter(tip =>
+        tip.title.toLowerCase().includes(searchTerm) ||
+        tip.description.toLowerCase().includes(searchTerm) ||
+        tip.details.some(detail => detail.toLowerCase().includes(searchTerm))
+      ).map(tip => ({ type: 'safety' as const, safety: tip }))
 
-    combinedResults.push(...safetyResults)
+      combinedResults.push(...safetyResults)
 
-    // Search terms sections
-    const termsResults = termsSections.filter(section =>
-      section.title.toLowerCase().includes(searchTerm) ||
-      section.description.toLowerCase().includes(searchTerm) ||
-      section.details.some(detail => detail.toLowerCase().includes(searchTerm))
-    ).map(section => ({ type: 'terms' as const, terms: section }))
+      // Search terms sections
+      const termsResults = termsSections.filter(section =>
+        section.title.toLowerCase().includes(searchTerm) ||
+        section.description.toLowerCase().includes(searchTerm) ||
+        section.details.some(detail => detail.toLowerCase().includes(searchTerm))
+      ).map(section => ({ type: 'terms' as const, terms: section }))
 
-    combinedResults.push(...termsResults)
+      combinedResults.push(...termsResults)
 
-    setTimeout(() => {
-      // Limit to 15 results total
-      setResults(combinedResults.slice(0, 15))
-      setIsLoading(false)
-    }, 200) // Small delay for better UX
+      // Search web (only if query is longer than 3 characters to avoid too many API calls)
+      if (searchTerm.length > 3) {
+        const webResults = await searchWeb(query)
+        combinedResults.push(...webResults)
+      }
 
+      setTimeout(() => {
+        // Limit to 15 results total
+        setResults(combinedResults.slice(0, 15))
+        setIsLoading(false)
+      }, 200) // Small delay for better UX
+    }
+
+    performSearch()
   }, [query, allServices])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -289,7 +357,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips..."
+              placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips, or search the web..."
               className="flex-1 text-base sm:text-base outline-none placeholder-gray-500 text-gray-900 bg-transparent min-w-0"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -312,7 +380,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 <Search className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Search DirtTrails</h3>
-              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find hotels, tours, restaurants, transport services, FAQs, safety tips, and more</p>
+              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find hotels, tours, restaurants, transport services, FAQs, safety tips, and search the web</p>
             </div>
           ) : isLoading ? (
             <div className="p-8 sm:p-12 text-center">
@@ -515,6 +583,55 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
 
                 return null
               })}
+
+              {/* Web Results Section */}
+              {results.some(result => result.type === 'web') && (
+                <>
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Web Results</h3>
+                  </div>
+                  {results.filter(result => result.type === 'web').map((result, index) => {
+                    if (result.type === 'web' && result.web) {
+                      const web = result.web
+                      return (
+                        <a
+                          key={`web-${index}`}
+                          href={web.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={onClose}
+                          className="block p-4 sm:p-3 hover:bg-gray-50 transition-all duration-200 border-l-4 border-transparent hover:border-orange-400 touch-manipulation"
+                        >
+                          <div className="flex items-start space-x-3">
+                            {/* Web Icon */}
+                            <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
+                              <Globe className="h-5 w-5 text-orange-600" />
+                            </div>
+
+                            {/* Web Content */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm sm:text-sm font-medium text-gray-900 leading-tight mb-2">
+                                {web.title}
+                              </h3>
+
+                              {/* URL */}
+                              <div className="text-xs text-gray-500 mb-2 truncate">
+                                {web.url}
+                              </div>
+
+                              {/* Snippet */}
+                              <p className="text-gray-600 text-xs leading-relaxed line-clamp-2 font-light">
+                                {web.snippet}
+                              </p>
+                            </div>
+                          </div>
+                        </a>
+                      )
+                    }
+                    return null
+                  })}
+                </>
+              )}
 
               {results.length >= 15 && (
                 <div className="p-4 sm:p-6 text-center border-t border-gray-200 bg-gray-50">

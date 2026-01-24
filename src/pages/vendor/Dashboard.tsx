@@ -164,40 +164,100 @@ export default function VendorDashboard() {
 
     console.log('Dashboard: Setting up real-time subscriptions for vendor:', vendorId)
 
+    const subscriptions: any[] = []
+
     // Subscribe to wallets changes for this vendor (affects balance stat)
-    const walletsSubscription = supabase
-      .channel('dashboard_wallets_realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'wallets',
-        filter: `vendor_id=eq.${vendorId}`
-      }, (payload: any) => {
-        console.log('Dashboard: Real-time wallet change:', payload)
-        // Refresh stats when wallet changes
-        refresh()
-      })
-      .subscribe()
+    try {
+      const walletsSubscription = supabase
+        .channel('dashboard_wallets_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `vendor_id=eq.${vendorId}`
+        }, (payload: any) => {
+          console.log('Dashboard: Real-time wallet change:', payload)
+          // Refresh stats when wallet changes
+          refresh()
+        })
+        .subscribe()
+      
+      subscriptions.push(walletsSubscription)
+    } catch (error) {
+      console.warn('Could not set up wallets real-time subscription:', error)
+    }
 
     // Subscribe to transactions changes for this vendor (affects balance stat)
-    const transactionsSubscription = supabase
-      .channel('dashboard_transactions_realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'transactions',
-        filter: `vendor_id=eq.${vendorId}`
-      }, (payload: any) => {
-        console.log('Dashboard: Real-time transaction change:', payload)
-        // Refresh stats when transactions change
-        refresh()
-      })
-      .subscribe()
+    // Only if transactions table exists
+    try {
+      const transactionsSubscription = supabase
+        .channel('dashboard_transactions_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `vendor_id=eq.${vendorId}`
+        }, (payload: any) => {
+          console.log('Dashboard: Real-time transaction change:', payload)
+          // Refresh stats when transactions change
+          refresh()
+        })
+        .subscribe()
+      
+      subscriptions.push(transactionsSubscription)
+    } catch (error) {
+      console.warn('Could not set up transactions real-time subscription (table may not exist):', error)
+    }
+
+    // Subscribe to services changes
+    try {
+      const servicesSubscription = supabase
+        .channel('dashboard_services_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'services',
+          filter: `vendor_id=eq.${vendorId}`
+        }, (payload: any) => {
+          console.log('Dashboard: Real-time service change:', payload)
+          refresh()
+        })
+        .subscribe()
+      
+      subscriptions.push(servicesSubscription)
+    } catch (error) {
+      console.warn('Could not set up services real-time subscription:', error)
+    }
+
+    // Subscribe to bookings changes
+    try {
+      const bookingsSubscription = supabase
+        .channel('dashboard_bookings_realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `vendor_id=eq.${vendorId}`
+        }, (payload: any) => {
+          console.log('Dashboard: Real-time booking change:', payload)
+          refresh()
+        })
+        .subscribe()
+      
+      subscriptions.push(bookingsSubscription)
+    } catch (error) {
+      console.warn('Could not set up bookings real-time subscription:', error)
+    }
 
     // Cleanup subscriptions
     return () => {
-      walletsSubscription.unsubscribe()
-      transactionsSubscription.unsubscribe()
+      subscriptions.forEach(sub => {
+        try {
+          sub.unsubscribe()
+        } catch (error) {
+          console.warn('Error unsubscribing:', error)
+        }
+      })
     }
   }, [authLoading, vendorId, vendorLoading])
 

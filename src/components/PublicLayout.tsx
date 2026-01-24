@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -136,6 +136,15 @@ export default function PublicLayout() {
 
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
+              {/* Search Button */}
+              <button
+                onClick={() => setShowGlobalSearch(true)}
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                title="Search"
+              >
+                <Search className="h-5 w-5 text-gray-600" />
+              </button>
+
               <button
                 onClick={() => setShowPreferences(true)}
                 className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"

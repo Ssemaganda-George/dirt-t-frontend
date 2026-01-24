@@ -1145,7 +1145,7 @@ export async function getServiceDeleteRequests(vendorId?: string): Promise<Servi
       .from('service_delete_requests')
       .select(`
         *,
-        service:services(id, title, description, category_id, service_categories(name, emoji)),
+        service:services(id, title, description, category_id, service_categories(name, icon)),
         vendor:vendors(id, business_name, user_id)
       `)
       .order('requested_at', { ascending: false })
@@ -1217,8 +1217,7 @@ export async function updateServiceDeleteRequestStatus(
     .select(`
       *,
       service:services(*, service_categories(*)),
-      vendor:vendors(*),
-      reviewer:profiles(id, full_name, email)
+      vendor:vendors(*)
     `)
     .single()
 
@@ -1373,6 +1372,8 @@ export async function deleteUser(userId: string): Promise<void> {
 
 // Admin dashboard functions
 export async function getAllVendors(): Promise<Vendor[]> {
+  console.log('getAllVendors: Function called - using simple query without profiles join')
+
   // First try a simple query without joins to test RLS
   const { data: simpleData, error: simpleError } = await supabase
     .from('vendors')
@@ -1387,48 +1388,28 @@ export async function getAllVendors(): Promise<Vendor[]> {
 
   console.log('getAllVendors: Found', simpleData?.length || 0, 'vendors')
 
-  // If simple query works, try with profiles join
-  if (simpleData && simpleData.length > 0) {
-    const { data, error } = await supabase
-      .from('vendors')
-      .select(`
-        *,
-        profiles (
-          id,
-          full_name,
-          email,
-          phone
-        )
-      `)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching vendors with profiles:', error)
-      // Return simple data if join fails, but ensure it matches Vendor interface
-      return simpleData.map(vendor => ({
-        ...vendor,
-        business_description: undefined,
-        business_address: undefined,
-        business_phone: undefined,
-        business_website: undefined,
-        business_type: undefined,
-        operating_hours: undefined,
-        years_in_business: undefined,
-        business_license: undefined,
-        tax_id: undefined,
-        approved_at: undefined,
-        approved_by: undefined,
-        profiles: {
-          id: vendor.user_id,
-          full_name: vendor.business_name,
-          email: vendor.business_email,
-          phone: undefined
-        }
-      })) as Vendor[]
+  // Return simple data with mock profiles object to match Vendor interface
+  // Note: The profiles join is not working due to schema constraints
+  return simpleData.map(vendor => ({
+    ...vendor,
+    business_description: undefined,
+    business_address: undefined,
+    business_phone: undefined,
+    business_website: undefined,
+    business_type: undefined,
+    operating_hours: undefined,
+    years_in_business: undefined,
+    business_license: undefined,
+    tax_id: undefined,
+    approved_at: undefined,
+    approved_by: undefined,
+    profiles: {
+      id: vendor.user_id,
+      full_name: vendor.business_name,
+      email: vendor.business_email,
+      phone: undefined
     }
-
-    return data || []
-  }
+  })) as Vendor[]
 
   // If no data from simple query, return empty array
   return []
@@ -1982,13 +1963,7 @@ export async function getDashboardStats() {
     // Get recent vendors
     const { data: recentVendors, error: recentVendorsError } = await supabase
       .from('vendors')
-      .select(`
-        *,
-        profiles (
-          full_name,
-          email
-        )
-      `)
+      .select('id, user_id, business_name, business_email, status, created_at')
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -2303,48 +2278,73 @@ export async function getVendorStats(vendorId: string) {
       }
     }
 
-    // Get services count - try with vendorId first, then check if it's a user_id
-    let servicesQuery = supabase
-      .from('services')
-      .select('id, vendor_id, status')
-      .eq('vendor_id', vendorId)
+    console.log('getVendorStats: Fetching stats for vendor:', vendorId)
 
-    let { data: services, error: servicesError } = await servicesQuery
+    // Use Promise.allSettled to allow some queries to fail without blocking others
+    const results = await Promise.allSettled([
+      // Services count
+      supabase
+        .from('services')
+        .select('id, vendor_id, status', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId),
 
-    // If no services found and vendorId might be a user_id, also check for vendor record
-    if ((!services || services.length === 0) && !servicesError) {
-      // Check if there's a vendor record for this user_id
-      const { data: vendorRecord, error: vendorError } = await supabase
-        .from('vendors')
-        .select('id')
-        .eq('user_id', vendorId)
-        .single()
+      // Bookings stats with count
+      supabase
+        .from('bookings')
+        .select('status', { count: 'exact', head: true })
+        .eq('vendor_id', vendorId),
 
-      if (!vendorError && vendorRecord) {
-        const { data: vendorServices, error: vendorServicesError } = await supabase
-          .from('services')
-          .select('id, vendor_id, status')
-          .eq('vendor_id', vendorRecord.id)
+      // Recent bookings
+      supabase
+        .from('bookings')
+        .select(`
+          *,
+          services (
+            title
+          ),
+          profiles (
+            full_name
+          )
+        `)
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+    ])
 
-        if (!vendorServicesError && vendorServices) {
-          services = vendorServices
-          servicesError = vendorServicesError
-        }
+    // Extract results
+    const servicesResult = results[0]
+    const bookingsResult = results[1]
+    const recentBookingsResult = results[2]
+
+    // Process services count
+    let servicesCount = 0
+    if (servicesResult.status === 'fulfilled') {
+      servicesCount = servicesResult.value.count || 0
+    }
+
+    // Process bookings stats
+    let pendingBookings = 0
+    let completedBookings = 0
+    if (bookingsResult.status === 'fulfilled') {
+      // We can't get individual counts with the current query, so we'll get them separately
+      const { data: allBookings } = await supabase
+        .from('bookings')
+        .select('status')
+        .eq('vendor_id', vendorId)
+      
+      if (allBookings) {
+        pendingBookings = allBookings.filter(b => b.status === 'pending').length
+        completedBookings = allBookings.filter(b => b.status === 'completed').length
       }
     }
 
-    if (servicesError) throw servicesError
+    // Process recent bookings
+    let recentBookings: any[] = []
+    if (recentBookingsResult.status === 'fulfilled') {
+      recentBookings = recentBookingsResult.value.data || []
+    }
 
-    // Get bookings stats
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('status')
-      .eq('vendor_id', vendorId)
-
-    if (bookingsError) throw bookingsError
-
-    const pendingBookings = bookings?.filter(b => b.status === 'pending').length || 0
-    const completedBookings = bookings?.filter(b => b.status === 'completed').length || 0
+    console.log('getVendorStats: Basic stats fetched - services:', servicesCount, 'pending bookings:', pendingBookings, 'completed bookings:', completedBookings)
 
     // Get wallet - try multiple possibilities due to data inconsistency
     let wallet = null
@@ -2423,24 +2423,6 @@ export async function getVendorStats(vendorId: string) {
       inquiriesCount = 0
     }
 
-    // Get recent bookings
-    const { data: recentBookings, error: recentBookingsError } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        services (
-          title
-        ),
-        profiles (
-          full_name
-        )
-      `)
-      .eq('vendor_id', vendorId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    if (recentBookingsError) throw recentBookingsError
-
     // Get recent transactions
     let recentTx: any[] = []
     try {
@@ -2452,13 +2434,20 @@ export async function getVendorStats(vendorId: string) {
         .limit(5)
 
       if (recentTxError) {
-        console.warn('Could not fetch recent transactions:', recentTxError)
-        recentTx = []
+        // Check if it's a permission or table not found error
+        if (recentTxError.message?.includes('permission denied') || 
+            recentTxError.message?.includes('does not exist') ||
+            recentTxError.code === 'PGRST116') {
+          console.warn('Transactions table not accessible or does not exist:', recentTxError.message)
+          recentTx = []
+        } else {
+          throw recentTxError
+        }
       } else {
         recentTx = data || []
       }
     } catch (error) {
-      console.warn('Exception fetching recent transactions:', error)
+      console.warn('Exception fetching recent transactions (table may not exist):', error)
       recentTx = []
     }
 
@@ -2470,14 +2459,16 @@ export async function getVendorStats(vendorId: string) {
 
       const { data: monthlyTransactions, error: trendError } = await supabase
         .from('transactions')
-        .select('amount, type, created_at')
+        .select('amount, transaction_type, created_at')
         .eq('vendor_id', vendorId)
         .gte('created_at', thirtyDaysAgo.toISOString())
         .eq('status', 'completed')
 
       if (!trendError && monthlyTransactions && monthlyTransactions.length > 0) {
         const totalChange = monthlyTransactions.reduce((sum, tx) => {
-          return tx.type === 'credit' ? sum + tx.amount : sum - tx.amount
+          // For balance trend, payments increase balance, withdrawals decrease it
+          return tx.transaction_type === 'payment' ? sum + tx.amount : 
+                 tx.transaction_type === 'withdrawal' ? sum - tx.amount : sum
         }, 0)
 
         // Calculate percentage change from current balance
@@ -2491,7 +2482,7 @@ export async function getVendorStats(vendorId: string) {
         }
       }
     } catch (error) {
-      console.warn('Could not calculate balance trend:', error)
+      console.warn('Could not calculate balance trend (transactions table may not exist):', error)
       balanceTrend = '+0%'
     }
 
@@ -2512,7 +2503,7 @@ export async function getVendorStats(vendorId: string) {
         .select('amount')
         .eq('vendor_id', vendorId)
         .eq('status', 'pending')
-        .eq('type', 'credit')
+        .eq('transaction_type', 'credit')
 
       if (!pendingError && pendingTransactions) {
         pendingBalance = pendingTransactions.reduce((sum, tx) => sum + tx.amount, 0)
@@ -2523,7 +2514,7 @@ export async function getVendorStats(vendorId: string) {
     }
 
     return {
-      servicesCount: services?.length || 0,
+      servicesCount,
       pendingBookings,
       completedBookings,
       balance: wallet?.balance || 0,
