@@ -472,7 +472,7 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-4 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs md:text-sm"
+                  className="category-dropdown flex items-center gap-2 bg-gray-700 hover:bg-gray-900 text-white px-4 md:px-6 py-2 md:py-4 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs md:text-sm"
                   title="Filter services by category - click to select multiple categories"
                 >
                   <Filter className="w-4 h-4" />
