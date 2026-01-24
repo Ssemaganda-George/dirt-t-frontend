@@ -132,34 +132,42 @@ function App() {
             path="/bookings"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <TouristBookings />
+                <PublicLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<TouristBookings />} />
+          </Route>
           <Route
             path="/saved"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <Saved />
+                <PublicLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<Saved />} />
+          </Route>
           <Route
             path="/settings"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <UserSettings />
+                <PublicLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<UserSettings />} />
+          </Route>
           <Route
             path="/edit-profile"
             element={
               <ProtectedRoute requiredRole="tourist">
-                <EditProfile />
+                <PublicLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<EditProfile />} />
+          </Route>
           
           {/* Vendor Routes */}
           <Route
