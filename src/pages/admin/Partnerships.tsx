@@ -20,7 +20,7 @@ const emptyPartner = {
 };
 
 const Partnerships: React.FC = () => {
-  const [filter, setFilter] = useState<'requests' | 'all'>('requests');
+  const [filter, setFilter] = useState<'requests' | 'referrals' | 'all'>('requests');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [partnerRequests, setPartnerRequests] = useState<PartnerRequest[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -33,6 +33,11 @@ const Partnerships: React.FC = () => {
   const [form, setForm] = useState<any>(emptyPartner);
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+
+  // Helper function to check if a request is a referral
+  const isReferral = (request: PartnerRequest): boolean => {
+    return request.message?.includes('Business Referral Submitted') || false;
+  };
 
   useEffect(() => {
     fetchData();
@@ -130,6 +135,12 @@ const Partnerships: React.FC = () => {
           onClick={() => setFilter('requests')}
         >
           Partner Requests
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${filter === 'referrals' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setFilter('referrals')}
+        >
+          Business Referrals
         </button>
         <button
           className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
@@ -291,6 +302,174 @@ const Partnerships: React.FC = () => {
             </div>
           )}
         </div>
+      ) : filter === 'referrals' ? (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Business Referrals</h2>
+          
+          {/* Status Filter Buttons */}
+          <div className="mb-4 flex gap-2 flex-wrap">
+            <button
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              All ({partnerRequests.filter(req => filter === 'referrals' ? isReferral(req) : !isReferral(req)).length})
+            </button>
+            <button
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-800'}`}
+              onClick={() => setStatusFilter('pending')}
+            >
+              Pending ({partnerRequests.filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && req.status === 'pending').length})
+            </button>
+            <button
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'approved' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'}`}
+              onClick={() => setStatusFilter('approved')}
+            >
+              Approved ({partnerRequests.filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && req.status === 'approved').length})
+            </button>
+            <button
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'rejected' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-800'}`}
+              onClick={() => setStatusFilter('rejected')}
+            >
+              Rejected ({partnerRequests.filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && req.status === 'rejected').length})
+            </button>
+          </div>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : partnerRequests.filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && (statusFilter === 'all' || req.status === statusFilter)).length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {statusFilter === 'all' 
+                ? 'No business referrals yet.' 
+                : `No ${statusFilter} business referrals.`
+              }
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {partnerRequests
+                .filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && (statusFilter === 'all' || req.status === statusFilter))
+                .map((req) => {
+                  return (
+                <div
+                  key={req.id}
+                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
+                  onClick={() => openRequestModal(req)}
+                >
+                  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                    {/* Referral Summary */}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">{req.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Referral</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
+                          </span>
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                        {req.business_location && <span><strong>Location:</strong> {req.business_location}</span>}
+                        <span><strong>Contact:</strong> {req.email}</span>
+                        {req.phone && <span><strong>Phone:</strong> {req.phone}</span>}
+                      </div>
+
+                      {req.contact_person && (
+                        <div className="text-sm text-gray-600">
+                          <strong>Contact Person:</strong> {req.contact_person}
+                        </div>
+                      )}
+
+                      {req.referrer_name && (
+                        <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                          <strong>Referred by:</strong> {req.referrer_name} 
+                          {req.referrer_email && <span> ({req.referrer_email})</span>}
+                        </div>
+                      )}
+
+                      {req.message && (
+                        <p className="text-gray-700 text-sm line-clamp-2 bg-gray-50 p-2 rounded">
+                          {req.message.length > 150 ? `${req.message.substring(0, 150)}...` : req.message}
+                        </p>
+                      )}
+
+                      <div className="text-xs text-gray-500">
+                        {new Date(req.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex flex-col gap-2 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+                      {req.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <button
+                            className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestStatus(req.id, 'approved');
+                            }}
+                            disabled={updatingRequests.has(req.id)}
+                          >
+                            {updatingRequests.has(req.id) ? '...' : 'Approve'}
+                          </button>
+                          <button
+                            className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestStatus(req.id, 'rejected');
+                            }}
+                            disabled={updatingRequests.has(req.id)}
+                          >
+                            {updatingRequests.has(req.id) ? '...' : 'Reject'}
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <button
+                          className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`mailto:${req.email}?subject=Business Referral - ${req.name}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          className="bg-purple-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-purple-700 transition-colors flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=Meeting with ${req.name} - Business Referral&details=Business referral discussion&add=${req.email}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+          </div>
+        )}
+        </div>
       ) : (
         <div>
           <h2 className="text-xl font-semibold mb-2">All Partners</h2>
@@ -348,7 +527,9 @@ const Partnerships: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Partnership Inquiry Details</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {selectedRequest.type === 'business_referral' ? 'Business Referral Details' : 'Partnership Inquiry Details'}
+                </h2>
                 <button
                   onClick={closeRequestModal}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -364,13 +545,18 @@ const Partnerships: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900">{selectedRequest.name}</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${
-                      selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      selectedRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
-                    </span>
+                    <div className="flex items-center gap-2 mt-2">
+                      {selectedRequest.type === 'business_referral' && (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Business Referral</span>
+                      )}
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                        selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-sm text-gray-500">
                     {new Date(selectedRequest.created_at).toLocaleDateString('en-US', {
@@ -383,11 +569,41 @@ const Partnerships: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Referrer Information (for referrals only) */}
+                {selectedRequest.type === 'business_referral' && selectedRequest.referrer_name && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">Referred By</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-800">Name:</span> {selectedRequest.referrer_name}
+                      </div>
+                      {selectedRequest.referrer_email && (
+                        <div>
+                          <span className="font-medium text-blue-800">Email:</span> 
+                          <a href={`mailto:${selectedRequest.referrer_email}`} className="text-blue-600 hover:underline ml-1">
+                            {selectedRequest.referrer_email}
+                          </a>
+                        </div>
+                      )}
+                      {selectedRequest.referrer_phone && (
+                        <div>
+                          <span className="font-medium text-blue-800">Phone:</span> 
+                          <a href={`tel:${selectedRequest.referrer_phone}`} className="text-blue-600 hover:underline ml-1">
+                            {selectedRequest.referrer_phone}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Contact Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {selectedRequest.type === 'business_referral' ? 'Business Email' : 'Email'}
+                      </label>
                       <a
                         href={`mailto:${selectedRequest.email}`}
                         className="text-blue-600 hover:underline break-all"
@@ -398,7 +614,9 @@ const Partnerships: React.FC = () => {
 
                     {selectedRequest.phone && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {selectedRequest.type === 'business_referral' ? 'Business Phone' : 'Phone'}
+                        </label>
                         <a
                           href={`tel:${selectedRequest.phone}`}
                           className="text-blue-600 hover:underline"
@@ -407,13 +625,29 @@ const Partnerships: React.FC = () => {
                         </a>
                       </div>
                     )}
+
+                    {selectedRequest.type === 'business_referral' && selectedRequest.contact_person && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                        <span className="text-gray-900">{selectedRequest.contact_person}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
                     {selectedRequest.company && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {selectedRequest.type === 'business_referral' ? 'Business Name' : 'Company'}
+                        </label>
                         <span className="text-gray-900">{selectedRequest.company}</span>
+                      </div>
+                    )}
+
+                    {selectedRequest.type === 'business_referral' && selectedRequest.business_location && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Business Location</label>
+                        <span className="text-gray-900">{selectedRequest.business_location}</span>
                       </div>
                     )}
 
@@ -474,7 +708,7 @@ const Partnerships: React.FC = () => {
 
                   <button
                     className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    onClick={() => window.open(`mailto:${selectedRequest.email}?subject=Partnership Inquiry - ${selectedRequest.company || selectedRequest.name}&body=Dear ${selectedRequest.name},%0A%0AThank you for your interest in partnering with Dirt Trails...`, '_blank')}
+                    onClick={() => window.open(`mailto:${selectedRequest.email}?subject=${selectedRequest.type === 'business_referral' ? 'Business Referral - ' + selectedRequest.company : 'Partnership Inquiry - ' + (selectedRequest.company || selectedRequest.name)}&body=Dear ${selectedRequest.contact_person || selectedRequest.name},%0A%0A${selectedRequest.type === 'business_referral' ? 'Thank you for being referred to Dirt Trails...' : 'Thank you for your interest in partnering with Dirt Trails...'}`, '_blank')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -484,7 +718,7 @@ const Partnerships: React.FC = () => {
 
                   <button
                     className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
-                    onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=Meeting with ${selectedRequest.name} - Partnership&details=Partnership discussion with ${selectedRequest.company || selectedRequest.name}. Contact: ${selectedRequest.email}${selectedRequest.phone ? ' | ' + selectedRequest.phone : ''}&add=${selectedRequest.email}`, '_blank')}
+                    onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=${selectedRequest.type === 'business_referral' ? 'Meeting with ' + selectedRequest.name + ' - Business Referral' : 'Meeting with ' + selectedRequest.name + ' - Partnership'}&details=${selectedRequest.type === 'business_referral' ? 'Business referral discussion' : 'Partnership discussion'} with ${selectedRequest.company || selectedRequest.name}. Contact: ${selectedRequest.email}${selectedRequest.phone ? ' | ' + selectedRequest.phone : ''}${selectedRequest.referrer_name ? ' | Referred by: ' + selectedRequest.referrer_name : ''}&add=${selectedRequest.email}`, '_blank')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />

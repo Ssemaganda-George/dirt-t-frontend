@@ -63,6 +63,7 @@ const TravelInsurance = lazy(() => import('./pages/TravelInsurance'))
 const VisaProcessing = lazy(() => import('./pages/VisaProcessing'))
 const InternetConnectivity = lazy(() => import('./pages/InternetConnectivity'))
 const ReferBusiness = lazy(() => import('./pages/ReferBusiness'))
+const ReferralForm = lazy(() => import('./pages/ReferralForm'))
 const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
 
 // Tourist pages
@@ -115,6 +116,7 @@ function App() {
             <Route path="visa-processing" element={<VisaProcessing />} />
             <Route path="internet-connectivity" element={<InternetConnectivity />} />
             <Route path="refer-business" element={<ReferBusiness />} />
+            <Route path="referral-form" element={<ReferralForm />} />
             <Route path="hospitality-class" element={<HospitalityClass />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />

@@ -9,6 +9,12 @@ export interface PartnerRequest {
   message?: string;
   status: string;
   created_at: string;
+  type?: 'partner_request' | 'business_referral';
+  referrer_name?: string;
+  referrer_email?: string;
+  referrer_phone?: string;
+  contact_person?: string;
+  business_location?: string;
 }
 
 export interface Partner {
@@ -40,6 +46,59 @@ export async function updatePartnerRequestStatus(id: string, status: string): Pr
     .update({ status })
     .eq('id', id);
   if (error) throw error;
+}
+
+export async function createBusinessReferral(referralData: {
+  referrer_name: string;
+  referrer_email: string;
+  referrer_phone?: string;
+  name: string; // business name
+  email: string; // contact email
+  phone?: string; // contact phone
+  company?: string; // business name again
+  contact_person?: string;
+  business_location?: string;
+  message?: string; // business description
+}): Promise<PartnerRequest> {
+  // For now, map the referral data to the existing table structure
+  // The referrer information will be included in the message field
+  const messageWithReferral = `
+Business Referral Submitted
+
+Referrer Information:
+- Name: ${referralData.referrer_name}
+- Email: ${referralData.referrer_email}
+${referralData.referrer_phone ? `- Phone: ${referralData.referrer_phone}` : ''}
+
+Business Information:
+- Business Name: ${referralData.name}
+- Location: ${referralData.business_location || 'Not specified'}
+- Contact Person: ${referralData.contact_person || 'Not specified'}
+- Contact Email: ${referralData.email}
+${referralData.phone ? `- Contact Phone: ${referralData.phone}` : ''}
+
+Business Description:
+${referralData.message || 'No description provided'}
+
+Submitted via DirtTrails referral form.
+  `.trim();
+
+  const { data, error } = await supabase
+    .from('partner_requests')
+    .insert([{
+      name: referralData.name,
+      email: referralData.email,
+      phone: referralData.phone,
+      company: referralData.company,
+      message: messageWithReferral,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    }])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as PartnerRequest;
 }
 
 // Partners API
