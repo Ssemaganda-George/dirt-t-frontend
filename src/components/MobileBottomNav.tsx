@@ -1,19 +1,32 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, HelpCircle, Search } from 'lucide-react'
+import { Home, HelpCircle, Search, Calendar } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 interface MobileBottomNavProps {
   onSupportClick?: () => void
   onSearchClick?: () => void
 }
 
-const navigation = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Find', href: '/', icon: Search, isSearch: true },
-  { name: 'Support', href: '/support', icon: HelpCircle, isModal: true },
-]
-
 export default function MobileBottomNav({ onSupportClick, onSearchClick }: MobileBottomNavProps) {
   const location = useLocation()
+  const { user, profile } = useAuth()
+
+  const getNavigation = () => {
+    const baseNavigation = [
+      { name: 'Home', href: '/', icon: Home },
+      { name: 'Find', href: '/', icon: Search, isSearch: true },
+      { name: 'Support', href: '/support', icon: HelpCircle, isModal: true },
+    ]
+
+    // Add bookings for logged-in tourists
+    if (user && profile?.role === 'tourist') {
+      baseNavigation.splice(2, 0, { name: 'Bookings', href: '/bookings', icon: Calendar })
+    }
+
+    return baseNavigation
+  }
+
+  const navigation = getNavigation()
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
