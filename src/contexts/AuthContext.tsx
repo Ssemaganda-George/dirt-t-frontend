@@ -118,7 +118,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        // Don't load profile data immediately - do it lazily
+        // Load profile data on initialization to avoid stuck loader on refresh
+        try {
+          await fetchProfile(u.id)
+          setProfileLoaded(true)
+        } catch (e) {
+          console.error('Error loading profile on init:', e)
+          setProfileLoaded(true) // Mark as loaded even on error to prevent infinite loading
+        }
       }
       setLoading(false)
     }
@@ -136,37 +143,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: (u as any).created_at ?? new Date().toISOString(),
         }
         setUser(normalizedUser)
-        setProfileLoaded(false) // Reset profile loaded state on auth change
-
-        // Only load profile data for vendor email verification logic
-        try {
-          const p = await fetchProfile(u.id)
-          if (p?.role === 'vendor') {
-            // fetch vendor record to inspect status
-            const { data: vendorData, error: vErr } = await supabase
-              .from('vendors')
-              .select('*')
-              .eq('user_id', u.id)
-              .single()
-
-            if (!vErr && vendorData && vendorData.status === 'pending') {
-              // Check if user's email is confirmed. Supabase user object may have 'email_confirmed_at' or 'confirmed_at'
-              const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
-              const flagKey = `vendorPostVerifySent:${u.id}`
-              if (confirmedAt && !localStorage.getItem(flagKey)) {
-                // request server to send post-verify email (account under review)
-                sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch((e: unknown) =>
-                  console.error('Failed to request post-verify vendor email:', e)
-                )
-                try {
-                  localStorage.setItem(flagKey, '1')
-                } catch (e) {}
-              }
-            }
+        
+        // Only reload profile if it's not already loaded for this user
+        // This prevents unnecessary reloads on page refresh when init() already loaded it
+        setProfile((currentProfile) => {
+          if (!currentProfile || currentProfile.id !== u.id) {
+            setProfileLoaded(false) // Reset profile loaded state
+            // Load profile data and mark as loaded
+            fetchProfile(u.id)
+              .then(() => {
+                setProfileLoaded(true) // Mark as loaded after fetching
+              })
+              .catch((e) => {
+                console.error('Error loading profile:', e)
+                setProfileLoaded(true) // Mark as loaded even on error
+              })
           }
-        } catch (e) {
-          console.error('Error checking vendor post-verify criteria:', e)
-        }
+          return currentProfile // Return current, will be updated by fetchProfile
+        })
       } else {
         setUser(null)
         setProfile(null)
@@ -246,9 +240,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(normalizedUser)
-    setProfileLoaded(true) // Mark as loaded since we fetched it
     // Ensure profile (and role) is loaded before route guards run
     const userProfile = await fetchProfile(u.id)
+    setProfileLoaded(true) // Mark as loaded after fetching
 
     // Check if user is suspended and prevent login
     if (userProfile?.status === 'suspended') {
