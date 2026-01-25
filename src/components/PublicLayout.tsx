@@ -258,7 +258,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          List Your Business
+                          List My Business
                         </Link>
                         <Link
                           to="/partner"
@@ -266,7 +266,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          Partner with Us
+                          Partner with DirtTrails
                         </Link>
 
                         <button
@@ -352,7 +352,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          List Your Business
+                          List My Business
                         </Link>
                         <Link
                           to="/partner"
@@ -360,7 +360,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          Partner with Us
+                          Partner with DirtTrails
                         </Link>
                       </div>
                     </div>
@@ -454,10 +454,10 @@ export default function PublicLayout() {
             <div>
               <h3 className="font-semibold mb-4">For Businesses</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/vendor-login" className="hover:text-white">List Your Business</Link></li>
+                <li><Link to="/vendor-login" className="hover:text-white">List My Business</Link></li>
                 <li><Link to="/refer-business" className="hover:text-white">Refer a Business</Link></li>
                 <li><Link to="/hospitality-class" className="hover:text-white">Join a Hospitality Class</Link></li>
-                <li><Link to="/partner" className="hover:text-white">Partner with Us</Link></li>
+                <li><Link to="/partner" className="hover:text-white">Partner with DirtTrails</Link></li>
               </ul>
             </div>
           </div>
