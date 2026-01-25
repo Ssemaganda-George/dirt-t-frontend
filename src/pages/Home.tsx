@@ -444,7 +444,7 @@ export default function Home() {
             Xplore Uganda
           </h1>
           <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
-            One way to all Your Travel Needs ....
+            Holiday Your Way ...
           </p>
         </div>
       </div>
