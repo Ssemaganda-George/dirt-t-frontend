@@ -254,16 +254,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await delay(100) // ensure user is created
 
     const serviceClient = getServiceClient()
-    serviceClient
-      .from('profiles')
-      .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
-      .catch(console.error)
+    try {
+      const { error: profileError } = await serviceClient
+        .from('profiles')
+        .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
+      if (profileError) {
+        console.error('Error creating profile during sign up:', profileError)
+      }
+    } catch (err) {
+      console.error('Unexpected error creating profile during sign up:', err)
+    }
 
     if (role === 'vendor') {
-      serviceClient
-        .from('vendors')
-        .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
-        .catch(console.error)
+      try {
+        const { error: vendorError } = await serviceClient
+          .from('vendors')
+          .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
+        if (vendorError) {
+          console.error('Error creating vendor during sign up:', vendorError)
+        }
+      } catch (err) {
+        console.error('Unexpected error creating vendor during sign up:', err)
+      }
       sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
     }
 
