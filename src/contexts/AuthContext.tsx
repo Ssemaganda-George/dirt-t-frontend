@@ -306,15 +306,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected error creating profile during sign up:', err)
     }
 
-    // Send email verification via Edge Function (Resend)
-    try {
-      await supabase.functions.invoke('send-verification-email', {
-        body: { userId: u.id, email, fullName },
-      })
-    } catch (err) {
-      console.error('Error sending verification email during sign up:', err)
-    }
-
     if (role === 'vendor') {
       try {
         const { error: vendorError } = await serviceClient

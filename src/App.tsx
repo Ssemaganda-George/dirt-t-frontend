@@ -44,7 +44,6 @@ const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessage
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
-const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -122,7 +121,6 @@ function App() {
                   {/* Partner and Vendor Login Pages */}
                   <Route path="partner" element={<PartnerWithUs />} />
                   <Route path="vendor-login" element={<VendorLogin />} />
-                  <Route path="verify-email" element={<VerifyEmail />} />
                 </Route>
 
                 {/* Auth Routes */}
