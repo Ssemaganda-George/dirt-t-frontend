@@ -44,6 +44,8 @@ const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessage
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
+const ScanEvent = lazy(() => import('./pages/ScanEvent'))
+const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -101,6 +103,8 @@ function App() {
           <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/" element={<PublicLayout />}>
             <Route index element={<Home />} />
+            <Route path="scan/:id" element={<ScanEvent />} />
+            <Route path="tickets/:orderId" element={<TicketReceipt />} />
             <Route path="service/:slug" element={<ServiceDetail />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />

@@ -290,6 +290,9 @@ export function Services() {
                     Availability
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Event Link
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -330,6 +333,18 @@ export function Services() {
                         variant="small" 
                       />
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {/* Show event scan link status for activities */}
+                      {service.category_id === 'cat_activities' ? (
+                        service.scan_enabled ? (
+                          <a href={`${window.location.origin}/scan/${service.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View scan link</a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Scan link inactive</span>
+                        )
+                      ) : (
+                        <span className="text-sm text-gray-500">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => handleEditService(service)}
@@ -338,6 +353,26 @@ export function Services() {
                       >
                         Edit
                       </button>
+                      {/* Admin toggle for enabling scan link for events */}
+                      {service.category_id === 'cat_activities' && (
+                        <button
+                          onClick={async () => {
+                            setUpdatingStatus(service.id);
+                            try {
+                              await updateService(service.id, { scan_enabled: !service.scan_enabled } as any);
+                            } catch (err) {
+                              console.error('Failed to toggle scan_enabled:', err);
+                              alert('Failed to update event link activation.');
+                            } finally {
+                              setUpdatingStatus(null);
+                            }
+                          }}
+                          disabled={updatingStatus === service.id}
+                          className="ml-3 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+                        >
+                          {service.scan_enabled ? 'Disable Link' : 'Enable Link'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteService(service.id, service.title)}
                         disabled={updatingStatus === service.id}

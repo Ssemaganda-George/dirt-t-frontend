@@ -7,6 +7,7 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
+import { createActivationRequest } from '../../lib/database'
 
 export default function VendorServices() {
   const { user } = useAuth()
@@ -454,6 +455,30 @@ export default function VendorServices() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                         {s.service_categories?.name || s.category_id}
                       </span>
+                      {s.category_id === 'cat_activities' && (
+                        <div className="mt-1 text-sm">
+                          {s.scan_enabled ? (
+                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Event scan link</a>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-500">Event link inactive</span>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    // Send activation request to admin
+                                    await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                    alert('Activation request submitted. An admin will review it.')
+                                  } catch (err) {
+                                    console.error('Failed to create activation request:', err)
+                                    alert('Failed to submit activation request. Please try again later.')
+                                  }
+                                }}
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
+                              >Request activation</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(s.price, s.currency)}</td>
                     <td className="px-6 py-4"><StatusBadge status={s.status} variant="small" /></td>
@@ -2756,7 +2781,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               <option value="">Select a category</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
-                  {category.name}
+                  {category.id === 'cat_activities' ? 'Events' : category.name}
                 </option>
               ))}
             </select>

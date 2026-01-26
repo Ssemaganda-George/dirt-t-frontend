@@ -12,7 +12,8 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
-import { getServiceBySlug, getServiceById } from '../lib/database'
+import { getServiceBySlug, getServiceById, getTicketTypes, createOrder } from '../lib/database'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ServiceDetail {
   id: string
@@ -32,7 +33,11 @@ interface ServiceDetail {
     business_phone: string
     business_email: string
     business_address: string
+    id?: string
+    user_id?: string
   } | null
+  vendor_id?: string
+  scan_enabled?: boolean
   service_categories: {
     name: string
   }
@@ -127,12 +132,36 @@ export default function ServiceDetail() {
   const [guests, setGuests] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
+  const { user } = useAuth()
+
+  // Ticketing state (for activities/events)
+  const [ticketTypes, setTicketTypes] = useState<any[]>([])
+  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
+  const ticketsTotal = ticketTypes.reduce((sum, t) => sum + (t.price * (ticketQuantities[t.id] || 0)), 0)
 
   useEffect(() => {
     if (slug) {
       fetchService()
     }
   }, [slug])
+
+  useEffect(() => {
+    const loadTickets = async () => {
+      if (!service) return
+      try {
+        if (service.service_categories?.name?.toLowerCase() === 'activities') {
+          const types = await getTicketTypes(service.id)
+          setTicketTypes(types || [])
+          const initial: { [key: string]: number } = {}
+          ;(types || []).forEach((t: any) => { initial[t.id] = 0 })
+          setTicketQuantities(initial)
+        }
+      } catch (err) {
+        console.error('Failed to load ticket types:', err)
+      }
+    }
+    loadTickets()
+  }, [service])
 
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
@@ -982,8 +1011,43 @@ export default function ServiceDetail() {
                 <img
                   src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                   alt={service.title}
-                  className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                  className="w-full h-[560px] md:h-[640px] object-cover rounded-lg shadow-lg"
                 />
+
+                {/* Event hero overlay for Activities to mimic Quicket-style layout */}
+                {service.service_categories?.name?.toLowerCase() === 'activities' && (
+                  <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
+                    <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
+                    <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
+                      {service.duration_hours && (
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{service.duration_hours} hours</span>
+                        </div>
+                      )}
+                      {service.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>{service.location}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-300">From</div>
+                        <div className="text-2xl font-semibold">{formatCurrency(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                      </div>
+                      <div>
+                        <button onClick={() => {
+                          // scroll to tickets sidebar
+                          const el = document.querySelector('[data-tickets-section]')
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Buy Tickets</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {service.images && service.images.length > 1 && (
                   <>
                     {/* Navigation Arrows */}
@@ -1141,146 +1205,136 @@ export default function ServiceDetail() {
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-              <div className="text-center mb-6">
-                <div className="text-3xl font-bold text-gray-900">
-                  {formatCurrency(service.price, service.currency)}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pick-up date & time
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <input
-                            type="date"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <input
-                          type="time"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Drop-off date & time
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <input
-                            type="date"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            min={startDate || new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <input
-                          type="time"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select date
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <input
-                        type="date"
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Number of guests
-                    </label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <select
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        value={guests}
-                        onChange={(e) => setGuests(Number(e.target.value))}
-                      >
-                        {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                          <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-4 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">
-                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                      `${formatCurrency(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
-                    ) : (
-                      `${formatCurrency(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`
+              {service.service_categories?.name?.toLowerCase() === 'activities' ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
+                  <div className="space-y-3 mb-4">
+                    {ticketTypes.length === 0 && (
+                      <div className="text-sm text-gray-500">No ticket types configured for this event.</div>
                     )}
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(totalPrice, service.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total</span>
-                  <span>{formatCurrency(totalPrice, service.currency)}</span>
-                </div>
-              </div>
+                    {ticketTypes.map((t) => {
+                      const remaining = (t.quantity || 0) - (t.sold || 0)
+                      const soldOut = remaining <= 0
+                      return (
+                        <div key={t.id} className={`border p-3 rounded-lg ${soldOut ? 'opacity-60' : ''}`}>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium text-gray-900">{t.title}</div>
+                              {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
+                              <div className="text-sm text-gray-600 mt-1">{formatCurrency(t.price, service.currency)} · {remaining} left</div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button disabled={soldOut} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.max(0, (q[t.id] || 0) - 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">-</button>
+                              <input type="number" min={0} max={t.quantity} value={ticketQuantities[t.id] || 0} onChange={(e) => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, Math.max(0, Number(e.target.value || 0))) }))} className="w-16 text-center border rounded px-2 py-1" />
+                              <button disabled={soldOut} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, (q[t.id] || 0) + 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">+</button>
+                            </div>
+                          </div>
+                          {soldOut && <div className="text-xs text-red-600 mt-2">Sold out</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
 
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleBooking}
-                  disabled={
-                    service?.service_categories?.name?.toLowerCase() === 'transport'
-                      ? !startDate || !endDate
-                      : !selectedDate
-                  }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
-                >
-                  {service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}
-                </button>
-                <button
-                  onClick={handleInquiry}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300"
-                >
-                  {service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Vendor'}
-                </button>
-              </div>
+                  <div className="border-t pt-4 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">Total</span>
+                      <span className="font-medium">{formatCurrency(ticketsTotal, service.currency)}</span>
+                    </div>
+                  </div>
 
-              <p className="text-xs text-gray-500 text-center mt-3">
-                You won't be charged yet
-              </p>
+                  <div className="flex space-x-3">
+                    <button onClick={async () => {
+                      try {
+                        const items = Object.entries(ticketQuantities).filter(([, qty]) => qty > 0).map(([ticket_type_id, qty]) => ({ ticket_type_id, quantity: qty as number, unit_price: ticketTypes.find(tt => tt.id === ticket_type_id)?.price || 0 }))
+                        if (items.length === 0) return alert('Select at least one ticket')
+                        const vendorId = service.vendor_id || service.vendors?.id || null
+                          const order = await createOrder(user?.id || null, vendorId, items, service.currency)
+                          // Navigate to checkout to collect buyer info and complete payment
+                          navigate(`/checkout/${order.id}`)
+                      } catch (err) {
+                        console.error('Failed to create order:', err)
+                        alert('Failed to create order. Try again later.')
+                      }
+                    }} disabled={ticketsTotal <= 0} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">Buy Tickets</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">Contact Vendor</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-6">
+                    <div className="text-3xl font-bold text-gray-900">{formatCurrency(service.price, service.currency)}</div>
+                    <div className="text-sm text-gray-500">{service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}</div>
+                  </div>
+                  <div className="space-y-4 mb-6">
+                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up date & time</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                              <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                            </div>
+                            <input type="time" className="w-full px-4 py-3 border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Drop-off date & time</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                              <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                            </div>
+                            <input type="time" className="w-full px-4 py-3 border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Select date</label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                          <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                        </div>
+                      </div>
+                    )}
+
+                    {service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Number of guests</label>
+                        <div className="relative">
+                          <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                          <select className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
+                            {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (<option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t pt-4 mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">{service.service_categories?.name?.toLowerCase() === 'transport' ? `${formatCurrency(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}` : `${formatCurrency(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}</span>
+                      <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-bold"><span>Total</span><span>{formatCurrency(totalPrice, service.currency)}</span></div>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button onClick={handleBooking} disabled={service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate : !selectedDate} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">{service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Vendor'}</button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 text-center mt-3">You won't be charged yet</p>
+                </div>
+              )}
+
+              {/* show scan link to vendor/admin when enabled */}
+              {service.scan_enabled && (user?.id === service.vendors?.user_id) && (
+                <div className="mt-4 text-sm text-center">
+                  <a href={`/scan/${service.id}`} className="text-blue-600 underline">Open Event Scan Portal</a>
+                </div>
+              )}
             </div>
           </div>
         </div>

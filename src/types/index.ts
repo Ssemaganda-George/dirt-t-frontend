@@ -202,6 +202,8 @@ export interface Service {
   group_discounts?: boolean
   event_description?: string
   event_cancellation_policy?: string
+  // Whether the event scan/link is enabled by an admin. When false the scan link is inactive.
+  scan_enabled?: boolean
 
   // Agency-specific fields
   services_offered?: string[]

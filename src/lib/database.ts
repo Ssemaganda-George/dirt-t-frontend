@@ -800,9 +800,11 @@ export async function updateService(serviceId: string, vendorId: string | undefi
     'event_type', 'event_date', 'event_duration_hours', 'max_participants', 'materials_included',
     'prerequisites', 'learning_outcomes', 'instructor_credentials', 'certificates_provided',
     'refreshments_included', 'take_home_materials', 'photography_allowed', 'recording_allowed',
-    'group_discounts', 'event_status', 'event_datetime', 'registration_deadline', 'ticket_price',
+  'group_discounts', 'event_status', 'event_datetime', 'registration_deadline', 'ticket_price',
     'early_bird_price', 'ticket_purchase_link', 'event_location', 'event_highlights',
     'event_inclusions', 'event_prerequisites', 'event_description', 'event_cancellation_policy',
+  // Admin-controlled scan/link activation for events
+  'scan_enabled',
     // Travel agency fields
     'services_offered', 'destinations_covered', 'booking_fee', 'customization_available',
     'emergency_support', 'website_url', 'social_media', 'emergency_phone', 'booking_deadline_hours',
@@ -1134,6 +1136,254 @@ export async function createServiceDeleteRequest(serviceId: string, vendorId: st
     // Otherwise, provide a generic error
     console.error('Error creating service delete request:', err)
     throw new Error('Failed to create delete request. The database table may not exist yet.')
+  }
+}
+
+// Activation request functions
+export async function createActivationRequest(serviceId: string, vendorId: string, requesterId?: string) {
+  try {
+    const { data, error } = await supabase
+      .from('activation_requests')
+      .insert([{ service_id: serviceId, vendor_id: vendorId, requester_id: requesterId }])
+      .select(`*, service:services(*), vendor:vendors(*)`)
+      .single()
+
+    if (error) {
+      if (error.message?.includes('relation "activation_requests" does not exist')) {
+        throw new Error('Activation request functionality is not available yet. Please run the database migration first.')
+      }
+      console.error('Error creating activation request:', error)
+      throw error
+    }
+
+    // Notify admin about the activation request using messages
+    const adminId = await getAdminProfileId()
+    if (adminId) {
+      // Try to find vendor user/profile id
+      let vendorProfileId: string | null = null
+      try {
+        const { data: vendorRecord } = await supabase.from('vendors').select('user_id').eq('id', vendorId).single()
+        vendorProfileId = vendorRecord?.user_id || null
+      } catch (e) {
+        console.warn('Could not fetch vendor record for activation notification', e)
+      }
+
+      const subject = `Activation request for service ${data?.service?.title || serviceId}`
+      const message = `Vendor ${data?.vendor?.business_name || vendorId} has requested activation for service ${data?.service?.title || serviceId}. Service ID: ${serviceId}`
+
+      if (vendorProfileId) {
+        // sendMessage expects sender_id, recipient_id to be profile ids. Use vendor as sender to admin.
+        await sendMessage({ sender_id: vendorProfileId, sender_role: 'vendor', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      } else {
+        // fallback: send system message
+        await sendMessage({ sender_id: adminId, sender_role: 'admin', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      }
+    }
+
+    return data
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('Activation request functionality is not available yet')) throw err
+    console.error('Error creating activation request:', err)
+    throw new Error('Failed to create activation request')
+  }
+}
+
+export async function getActivationRequests(vendorId?: string) {
+  try {
+    let query = supabase.from('activation_requests').select(`*, service:services(*), vendor:vendors(*)`).order('requested_at', { ascending: false })
+    if (vendorId) query = query.eq('vendor_id', vendorId)
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  } catch (err) {
+    console.error('Error fetching activation requests:', err)
+    throw err
+  }
+}
+
+export async function updateActivationRequestStatus(requestId: string, status: 'pending' | 'approved' | 'rejected', adminId?: string, adminNotes?: string) {
+  try {
+    const updates: any = { status }
+    if (adminId) updates.admin_id = adminId
+    if (adminNotes) updates.admin_notes = adminNotes
+    updates.updated_at = new Date().toISOString()
+
+    const { data, error } = await supabase.from('activation_requests').update(updates).eq('id', requestId).select(`*, service:services(*), vendor:vendors(*)`).single()
+    if (error) throw error
+
+    // If approved, enable scan_enabled on the service
+    if (status === 'approved' && data?.service?.id) {
+      await updateService(data.service.id, undefined, { scan_enabled: true } as any)
+    }
+
+    return data
+  } catch (err) {
+    console.error('Error updating activation request status:', err)
+    throw err
+  }
+}
+
+// Event OTP functions
+export async function createEventOTP(serviceId: string, ttlMinutes = 10) {
+  try {
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString()
+
+    const { data, error } = await supabase.from('event_otps').insert([{ service_id: serviceId, otp, expires_at: expiresAt }]).select().single()
+    if (error) throw error
+
+    // Notify admin and event organizer
+    const service = await getServiceById(serviceId)
+    const adminId = await getAdminProfileId()
+    let vendorProfileId: string | null = null
+    try {
+      const { data: vendorRecord } = await supabase.from('vendors').select('user_id').eq('id', service?.vendor_id).single()
+      vendorProfileId = vendorRecord?.user_id || null
+    } catch (e) {
+      console.warn('Could not fetch vendor profile for OTP notification', e)
+    }
+
+    const subject = `OTP for event access: ${service?.title || serviceId}`
+    const message = `An OTP was issued for access to event ${service?.title || serviceId}: ${otp}. It expires at ${expiresAt}.`
+
+    if (adminId) {
+      // Send to admin from vendor if vendorProfileId else from admin
+      if (vendorProfileId) await sendMessage({ sender_id: vendorProfileId, sender_role: 'vendor', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      else await sendMessage({ sender_id: adminId, sender_role: 'admin', recipient_id: adminId, recipient_role: 'admin', subject, message })
+    }
+
+    if (vendorProfileId) {
+      await sendMessage({ sender_id: adminId || vendorProfileId, sender_role: adminId ? 'admin' : 'vendor', recipient_id: vendorProfileId, recipient_role: 'vendor', subject, message })
+    }
+
+    return data
+  } catch (err) {
+    console.error('Error creating event OTP:', err)
+    throw err
+  }
+}
+
+export async function verifyEventOTP(serviceId: string, otp: string) {
+  try {
+    const { data: rows, error } = await supabase.from('event_otps').select('*').eq('service_id', serviceId).eq('otp', otp).eq('used', false)
+    if (error) throw error
+    const found = (rows || []).find((r: any) => new Date(r.expires_at) > new Date())
+    if (!found) return { valid: false }
+
+    // mark used
+    await supabase.from('event_otps').update({ used: true }).eq('id', found.id)
+    return { valid: true }
+  } catch (err) {
+    console.error('Error verifying event OTP:', err)
+    throw err
+  }
+}
+
+// Ticketing helpers for event management
+export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any }) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').insert([{ service_id: serviceId, title: payload.title, description: payload.description, price: payload.price, quantity: payload.quantity, metadata: payload.metadata }]).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error creating ticket type:', err)
+    throw err
+  }
+}
+
+export async function getTicketTypes(serviceId: string) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').select('*').eq('service_id', serviceId)
+    if (error) throw error
+    return data || []
+  } catch (err) {
+    console.error('Error fetching ticket types:', err)
+    throw err
+  }
+}
+
+export async function createOrder(userId: string | null, vendorId: string | null, items: { ticket_type_id: string; quantity: number; unit_price: number }[], currency = 'UGX') {
+  try {
+    const total = items.reduce((s, it) => s + (it.unit_price * it.quantity), 0)
+
+    const { data: order, error: orderError } = await supabase.from('orders').insert([{ user_id: userId, vendor_id: vendorId, total_amount: total, currency, status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]).select().single()
+    if (orderError) throw orderError
+
+    const orderItems = items.map(it => ({ order_id: order.id, ticket_type_id: it.ticket_type_id, quantity: it.quantity, unit_price: it.unit_price, total_price: it.unit_price * it.quantity }))
+    const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+    if (itemsError) throw itemsError
+
+    return order
+  } catch (err) {
+    console.error('Error creating order:', err)
+    throw err
+  }
+}
+
+export async function confirmOrderAndIssueTickets(orderId: string, payment: { vendor_id: string; tourist_id?: string; amount: number; currency: string; payment_method: string; reference?: string }) {
+  try {
+    // Mark order as paid
+    const { data: order, error: orderError } = await supabase.from('orders').update({ status: 'paid', reference: payment.reference, updated_at: new Date().toISOString() }).eq('id', orderId).select().single()
+    if (orderError) throw orderError
+
+    // Create transaction record
+    try {
+      await addTransaction({ booking_id: undefined as any, vendor_id: payment.vendor_id, tourist_id: payment.tourist_id, amount: payment.amount, currency: payment.currency, transaction_type: 'payment', status: 'completed', payment_method: payment.payment_method as any, reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` })
+    } catch (txErr) {
+      console.warn('Failed to add transaction for ticket order:', txErr)
+    }
+
+    // Load order items
+    const { data: items, error: itemsError } = await supabase.from('order_items').select('*').eq('order_id', orderId)
+    if (itemsError) throw itemsError
+
+    const createdTickets: any[] = []
+    for (const it of items || []) {
+      for (let i = 0; i < it.quantity; i++) {
+        const code = `TKT-${Math.random().toString(36).slice(2,10).toUpperCase()}`
+        const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{ order_id: orderId, ticket_type_id: it.ticket_type_id, service_id: order.vendor_id ? order.vendor_id : it.service_id, owner_id: order.user_id || null, code, qr_data: code }]).select().single()
+        if (ticketError) {
+          console.error('Failed to create ticket:', ticketError)
+          continue
+        }
+        createdTickets.push(ticket)
+      }
+
+      // increment sold count on ticket_type
+      try {
+        await supabase.from('ticket_types').update({ sold: (it.quantity) }).eq('id', it.ticket_type_id)
+      } catch (incErr) {
+        // ignore
+      }
+    }
+
+    return { order, tickets: createdTickets }
+  } catch (err) {
+    console.error('Error confirming order and issuing tickets:', err)
+    throw err
+  }
+}
+
+export async function getUserTickets(userId: string) {
+  try {
+    const { data, error } = await supabase.from('tickets').select('*, ticket_types(*), orders(*)').eq('owner_id', userId)
+    if (error) throw error
+    return data || []
+  } catch (err) {
+    console.error('Error fetching user tickets:', err)
+    throw err
+  }
+}
+
+export async function markTicketUsed(ticketId: string, usedAt?: string) {
+  try {
+    const { data, error } = await supabase.from('tickets').update({ status: 'used', used_at: usedAt || new Date().toISOString() }).eq('id', ticketId).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error marking ticket used:', err)
+    throw err
   }
 }
 
