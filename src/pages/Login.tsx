@@ -14,7 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -48,7 +48,8 @@ export default function Login() {
 
     try {
       await signUp(email, password, fullName, 'tourist')
-      navigate('/', { replace: true })
+      // After creating the account, sign the user out so they must verify email before logging in
+      await signOut()
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {

@@ -156,14 +156,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session = data.session
         if (session?.user) {
           const u = session.user
-          setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
-          // Load profile data on initialization to avoid stuck loader on refresh
-          try {
-            await fetchProfile(u.id)
-            setProfileLoaded(true)
-          } catch (e) {
-            console.error('Error loading profile on init:', e)
-            setProfileLoaded(true) // Mark as loaded even on error to prevent infinite loading
+          const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
+
+          // If email is not verified, immediately sign out and treat as logged out
+          if (!confirmedAt) {
+            try {
+              await supabase.auth.signOut()
+            } catch (e) {
+              console.error('Error signing out unverified session on init:', e)
+            }
+            setUser(null)
+            setProfile(null)
+            setVendor(null)
+            setProfileLoaded(false)
+          } else {
+            setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
+            // Load profile data on initialization to avoid stuck loader on refresh
+            try {
+              await fetchProfile(u.id)
+              setProfileLoaded(true)
+            } catch (e) {
+              console.error('Error loading profile on init:', e)
+              setProfileLoaded(true) // Mark as loaded even on error to prevent infinite loading
+            }
           }
         }
       } catch (err) {
@@ -180,21 +195,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const u = session.user
+        const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
+
+        // Block unverified users from ever being treated as logged in via session events
+        if (!confirmedAt) {
+          try {
+            await supabase.auth.signOut()
+          } catch (e) {
+            console.error('Error signing out unverified session on change:', e)
+          }
+          setUser(null)
+          setProfile(null)
+          setVendor(null)
+          setProfileLoaded(false)
+          return
+        }
+
         setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
-        
+
         // Only reload profile if it's not already loaded for this user
         // This prevents unnecessary reloads on page refresh when init() already loaded it
-        setProfile((currentProfile) => {
+        setProfile(currentProfile => {
           if (!currentProfile || currentProfile.id !== u.id) {
             setProfileLoaded(false) // Reset profile loaded state
             // Load profile data and mark as loaded
             fetchProfile(u.id)
-              .then((userProfile) => {
+              .then(userProfile => {
                 setProfileLoaded(true) // Mark as loaded after fetching
                 // Handle vendor post verify if profile loaded successfully
                 if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)
               })
-              .catch((e) => {
+              .catch(e => {
                 console.error('Error loading profile:', e)
                 setProfileLoaded(true) // Mark as loaded even on error
               })
@@ -219,6 +250,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const u = data.user
     if (!u) return null
+
+    // Require email verification before allowing login
+    const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
+    if (!confirmedAt) {
+      await supabase.auth.signOut()
+      setUser(null)
+      setProfile(null)
+      setVendor(null)
+      throw new Error('Please verify your email before logging in. Check your inbox for a verification link.')
+    }
 
     const normalizedUser: User = { id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() }
     setUser(normalizedUser)
@@ -250,8 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.user
     if (!u) return
 
-    setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
-    await delay(100) // ensure user is created
+    // Do not treat the user as logged in yet; they must verify their email first.
+    await delay(100) // ensure user is created before service operations
 
     const serviceClient = getServiceClient()
     try {
@@ -263,6 +304,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Unexpected error creating profile during sign up:', err)
+    }
+
+    // Send email verification via Edge Function (Resend)
+    try {
+      await supabase.functions.invoke('send-verification-email', {
+        body: { userId: u.id, email, fullName },
+      })
+    } catch (err) {
+      console.error('Error sending verification email during sign up:', err)
     }
 
     if (role === 'vendor') {
@@ -279,8 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
     }
 
-    // Fetch profile in background (non-blocking)
-    fetchProfile(u.id).catch(console.error)
+    // Do not fetch profile into context yet; user will load it after verified sign-in.
   }
 
   /** -------------------- Sign Out -------------------- */
