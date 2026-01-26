@@ -1487,7 +1487,42 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
   }
 
   console.log('Booking created successfully:', data)
+
+  // Send booking confirmation emails asynchronously (don't block on errors)
+  sendBookingEmails(data.id).catch(error => {
+    console.error('Failed to send booking emails:', error)
+    // Don't throw - email failure shouldn't break the booking creation
+  })
+
   return data
+}
+
+/**
+ * Calls the Supabase edge function to send booking confirmation emails
+ * to tourist, vendor, and admin
+ */
+async function sendBookingEmails(bookingId: string): Promise<void> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    if (!supabaseUrl) {
+      console.warn('VITE_SUPABASE_URL not set, skipping email notification')
+      return
+    }
+
+    // Call the edge function using Supabase's function invocation
+    const { data, error } = await supabase.functions.invoke('send-booking-emails', {
+      body: { booking_id: bookingId },
+    })
+
+    if (error) {
+      throw new Error(`Failed to send booking emails: ${error.message}`)
+    }
+
+    console.log('Booking emails sent successfully:', data)
+  } catch (error) {
+    console.error('Error calling send-booking-emails edge function:', error)
+    // Don't throw - email failure shouldn't break the booking creation
+  }
 }
 
 export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>>): Promise<Booking> {
