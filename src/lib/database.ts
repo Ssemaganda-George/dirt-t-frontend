@@ -1504,23 +1504,41 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
 async function sendBookingEmails(bookingId: string): Promise<void> {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    if (!supabaseUrl) {
-      console.warn('VITE_SUPABASE_URL not set, skipping email notification')
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn('⚠️ Supabase env vars not set, skipping email notification')
       return
     }
 
-    // Call the edge function using Supabase's function invocation
-    const { data, error } = await supabase.functions.invoke('send-booking-emails', {
-      body: { booking_id: bookingId },
+    console.log('📧 Calling send-booking-emails edge function for booking:', bookingId)
+
+    // Get current session token for authentication
+    const { data: { session } } = await supabase.auth.getSession()
+    const authToken = session?.access_token
+
+    // Call the edge function directly with fetch (more reliable than invoke)
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authToken ? `Bearer ${authToken}` : `Bearer ${supabaseAnonKey}`,
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({ booking_id: bookingId }),
     })
 
-    if (error) {
-      throw new Error(`Failed to send booking emails: ${error.message}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Edge function returned error:', response.status, errorText)
+      throw new Error(`Failed to send booking emails: ${response.status} ${errorText}`)
     }
 
-    console.log('Booking emails sent successfully:', data)
-  } catch (error) {
-    console.error('Error calling send-booking-emails edge function:', error)
+    const data = await response.json()
+    console.log('✅ Booking emails sent successfully:', data)
+  } catch (error: any) {
+    console.error('❌ Error calling send-booking-emails edge function:', error)
+    console.error('Error details:', error?.message, error?.stack)
     // Don't throw - email failure shouldn't break the booking creation
   }
 }

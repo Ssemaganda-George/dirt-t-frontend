@@ -48,11 +48,33 @@ serve(async (req) => {
   try {
     // Validate environment variables
     if (!RESEND_API_KEY || !FROM_EMAIL || !FRONTEND_URL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing environment variables:', {
+        RESEND_API_KEY: !!RESEND_API_KEY,
+        FROM_EMAIL: !!FROM_EMAIL,
+        FRONTEND_URL: !!FRONTEND_URL,
+        SUPABASE_URL: !!SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY: !!SUPABASE_SERVICE_ROLE_KEY,
+      })
       throw new Error('Missing required environment variables')
     }
 
+    // Get authorization header (optional - function can work without user auth)
+    const authHeader = req.headers.get('authorization')
+    console.log('Request received, auth header present:', !!authHeader)
+
     // Parse request body
-    const { booking_id } = await req.json()
+    let requestBody
+    try {
+      requestBody = await req.json()
+    } catch (e) {
+      console.error('Failed to parse request body:', e)
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      )
+    }
+
+    const { booking_id } = requestBody
 
     if (!booking_id) {
       return new Response(
@@ -115,26 +137,35 @@ serve(async (req) => {
       }
     }
 
-    // Fetch vendor profile
-    const { data: vendorProfile, error: vendorError } = await supabase
-      .from('profiles')
-      .select('email, full_name')
+    // Fetch vendor business details first (vendor_id references vendors table)
+    const { data: vendorBusiness, error: vendorBusinessError } = await supabase
+      .from('vendors')
+      .select('business_name, business_email, user_id')
       .eq('id', bookingData.vendor_id)
       .single()
 
-    if (vendorError || !vendorProfile) {
-      throw new Error(`Failed to fetch vendor profile: ${vendorError?.message}`)
+    if (vendorBusinessError || !vendorBusiness) {
+      throw new Error(`Failed to fetch vendor business: ${vendorBusinessError?.message}`)
     }
 
-    // Fetch vendor business details
-    const { data: vendorBusiness } = await supabase
-      .from('vendors')
-      .select('business_name, business_email')
-      .eq('user_id', bookingData.vendor_id)
-      .single()
+    // Fetch vendor profile using user_id from vendor record (if user_id exists)
+    let vendorProfile: { email: string; full_name: string } | null = null
+    if (vendorBusiness.user_id) {
+      const { data: profile, error: vendorError } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', vendorBusiness.user_id)
+        .single()
 
-    const vendorEmail = vendorBusiness?.business_email || vendorProfile.email
-    const vendorName = vendorBusiness?.business_name || vendorProfile.full_name
+      if (vendorError) {
+        console.warn(`Failed to fetch vendor profile: ${vendorError?.message}, using vendor business email`)
+      } else {
+        vendorProfile = profile
+      }
+    }
+
+    const vendorEmail = vendorBusiness.business_email || vendorProfile?.email || 'vendor@example.com'
+    const vendorName = vendorBusiness.business_name || vendorProfile?.full_name || 'Vendor'
 
     // Fetch all admin emails
     const { data: adminProfiles } = await supabase
@@ -182,6 +213,7 @@ serve(async (req) => {
 
     // Send email to tourist
     if (touristEmail) {
+      console.log(`Sending booking confirmation email to tourist: ${touristEmail}`)
       const touristEmailBody = `
         <!DOCTYPE html>
         <html>
@@ -221,9 +253,13 @@ serve(async (req) => {
         subject: `Booking Confirmation - ${serviceName}`,
         html: touristEmailBody,
       })
+      console.log(`✅ Tourist email sent to ${touristEmail}`)
+    } else {
+      console.warn('No tourist email found, skipping tourist email')
     }
 
     // Send email to vendor
+    console.log(`Sending booking notification email to vendor: ${vendorEmail}`)
     const vendorEmailBody = `
       <!DOCTYPE html>
       <html>
@@ -268,9 +304,12 @@ serve(async (req) => {
       subject: `New Booking - ${serviceName}`,
       html: vendorEmailBody,
     })
+    console.log(`✅ Vendor email sent to ${vendorEmail}`)
 
     // Send email to all admins
+    console.log(`Sending booking notification emails to ${adminEmails.length} admin(s)`)
     for (const adminEmail of adminEmails) {
+      console.log(`Sending admin email to: ${adminEmail}`)
       const adminEmailBody = `
         <!DOCTYPE html>
         <html>
@@ -318,8 +357,10 @@ serve(async (req) => {
         subject: `New Booking Alert - ${serviceName}`,
         html: adminEmailBody,
       })
+      console.log(`✅ Admin email sent to ${adminEmail}`)
     }
 
+    console.log('✅ All booking emails sent successfully')
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -339,12 +380,15 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
-    console.error('Error sending booking emails:', error)
+  } catch (error: any) {
+    console.error('❌ Error sending booking emails:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to send booking emails',
-        details: error.toString()
+        error: error?.message || 'Failed to send booking emails',
+        details: error?.toString() || String(error),
+        stack: error?.stack
       }),
       { 
         status: 500, 
@@ -358,6 +402,9 @@ serve(async (req) => {
 })
 
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  // Format FROM_EMAIL as "DirtTrails <email>" if it's just an email
+  const fromEmail = FROM_EMAIL.includes('<') ? FROM_EMAIL : `DirtTrails <${FROM_EMAIL}>`
+  
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -365,7 +412,7 @@ async function sendEmail({ to, subject, html }: { to: string; subject: string; h
       'Authorization': `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to: [to],
       subject,
       html,
@@ -373,10 +420,13 @@ async function sendEmail({ to, subject, html }: { to: string; subject: string; h
   })
 
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Resend API error: ${error}`)
+    const errorText = await response.text()
+    console.error(`Resend API error for ${to}:`, errorText)
+    throw new Error(`Resend API error: ${response.status} ${errorText}`)
   }
 
-  return await response.json()
+  const result = await response.json()
+  console.log(`Email sent successfully to ${to}:`, result.id)
+  return result
 }
 
