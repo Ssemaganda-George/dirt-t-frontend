@@ -52,7 +52,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     contactName: '',
     contactEmail: '',
     contactPhone: '',
-    paymentMethod: 'card'
+    paymentMethod: 'card',
+    mobileProvider: ''
   })
 
   // Auto-populate contact information for logged-in users
@@ -120,6 +121,19 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
   const handleInputChange = (field: string, value: string | number) => {
     setBookingData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Intercept payment method changes so "card" shows a notice and isn't selectable yet
+  const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
+  const handlePaymentMethodChange = (value: string) => {
+    // Always set selected payment method. The mobile provider dropdown appears only when paymentMethod === 'mobile'.
+    setBookingData(prev => ({ ...prev, paymentMethod: value }))
+    if (value === 'card') {
+      setCardNoticeVisible(true)
+      setTimeout(() => setCardNoticeVisible(false), 5000)
+    } else {
+      setCardNoticeVisible(false)
+    }
   }
 
   const totalPrice = service.price * bookingData.guests
@@ -299,7 +313,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     name="paymentMethod"
                     value="card"
                     checked={bookingData.paymentMethod === 'card'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    onChange={() => handlePaymentMethodChange('card')}
                     className="mr-2"
                   />
                   Credit/Debit Card
@@ -310,13 +324,32 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     name="paymentMethod"
                     value="mobile"
                     checked={bookingData.paymentMethod === 'mobile'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    onChange={() => handlePaymentMethodChange('mobile')}
                     className="mr-2"
                   />
                   Mobile Money
                 </label>
+                {cardNoticeVisible && (
+                  <p className="text-sm text-red-600 mt-2">
+                    Credit/Debit Card payments are not active yet. Please select other Methods.
+                  </p>
+                )}
               </div>
             </div>
+            {bookingData.paymentMethod === 'mobile' && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  value={bookingData.mobileProvider}
+                  onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
+                >
+                  <option value="" disabled>Select Provider</option>
+                  <option value="MTN">MTN Mobile Money</option>
+                  <option value="Airtel">Airtel Money</option>
+                </select>
+              </div>
+            )}
             {bookingData.paymentMethod === 'card' && (
               <div className="space-y-4">
                 <div>
@@ -596,6 +629,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   isSubmitting ||
                   (currentStep === 1 && !bookingData.date) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
+                  || (currentStep === 3 && bookingData.paymentMethod === 'card')
                 }
                 className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors order-1 sm:order-2"
               >

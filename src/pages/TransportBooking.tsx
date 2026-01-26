@@ -68,13 +68,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     contactName: '',
     contactEmail: '',
     contactPhone: '',
-    paymentMethod: 'card',
+  paymentMethod: 'mobile',
+    mobileProvider: '',
     startDate: '',
     endDate: '',
     startTime: '09:00',
     endTime: '17:00',
     driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
+
+  // UI state for card-not-active notice
+  const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
 
   // Pre-fill dates from navigation state if available
   useEffect(() => {
@@ -294,6 +298,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
     setBookingData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Intercept payment method changes so "card" shows a notice and isn't selectable yet
+  const handlePaymentMethodChange = (value: string) => {
+    // Always set the selected method. The provider dropdown is shown only when paymentMethod === 'mobile'.
+    setBookingData(prev => ({ ...prev, paymentMethod: value }))
+    if (value === 'card') {
+      // Show notice that card payments are not active yet
+      setCardNoticeVisible(true)
+      setTimeout(() => setCardNoticeVisible(false), 5000)
+    } else {
+      setCardNoticeVisible(false)
+    }
   }
 
   // Calculate number of days for transport services based on actual time difference
@@ -620,7 +637,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     name="paymentMethod"
                     value="card"
                     checked={bookingData.paymentMethod === 'card'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    onChange={() => handlePaymentMethodChange('card')}
                     className="mr-2"
                   />
                   Credit/Debit Card
@@ -631,13 +648,32 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     name="paymentMethod"
                     value="mobile"
                     checked={bookingData.paymentMethod === 'mobile'}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                    onChange={() => handlePaymentMethodChange('mobile')}
                     className="mr-2"
                   />
                   Mobile Money
                 </label>
+                {cardNoticeVisible && (
+                  <p className="text-sm text-red-600 mt-2">
+                    Credit/Debit Card payments are not active yet. Please select other Methods.
+                  </p>
+                )}
               </div>
             </div>
+            {bookingData.paymentMethod === 'mobile' && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={bookingData.mobileProvider}
+                  onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
+                >
+                  <option value="" disabled>Select Provider</option>
+                  <option value="MTN">MTN Mobile Money</option>
+                  <option value="Airtel">Airtel Money</option>
+                </select>
+              </div>
+            )}
             {bookingData.paymentMethod === 'card' && (
               <div className="space-y-4">
                 <div>
@@ -1002,6 +1038,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
                   )) ||
                   (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
+                  || (currentStep === 3 && bookingData.paymentMethod === 'card')
                 }
                 className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
               >
@@ -1033,6 +1070,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
                     )) ||
                     (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || !bookingData.contactPhone))
+                    || (currentStep === 3 && bookingData.paymentMethod === 'card')
                   }
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
