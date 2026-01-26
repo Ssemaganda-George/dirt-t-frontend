@@ -306,6 +306,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected error creating profile during sign up:', err)
     }
 
+    if (role === 'tourist') {
+      try {
+        const { error: touristError } = await serviceClient
+          .from('tourists')
+          .upsert({ user_id: u.id, first_name: fullName }, { onConflict: 'user_id' })
+        if (touristError) {
+          console.error('Error creating tourist during sign up:', touristError)
+        }
+      } catch (err) {
+        console.error('Unexpected error creating tourist during sign up:', err)
+      }
+    }
+
     if (role === 'vendor') {
       try {
         const { error: vendorError } = await serviceClient
