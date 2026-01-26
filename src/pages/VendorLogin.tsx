@@ -133,20 +133,9 @@ export default function VendorLogin() {
             business_description: businessDescription,
             business_email: businessEmail || email,
             business_address: businessAddress,
-            business_city: businessCity,
-            business_country: businessCountry,
             business_phone: businessPhone,
             business_website: businessWebsite,
-            years_in_business: yearsInBusiness ? (() => {
-              switch (yearsInBusiness) {
-                case '0-1': return 0;
-                case '2-5': return 3;
-                case '6-10': return 8;
-                case '11-20': return 15;
-                case '20+': return 25;
-                default: return null;
-              }
-            })() : null,
+            years_in_business: yearsInBusiness || null,
             status: 'pending'
           }, { onConflict: 'user_id' })
 
