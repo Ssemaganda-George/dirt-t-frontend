@@ -1303,6 +1303,34 @@ export async function getTicketTypes(serviceId: string) {
   }
 }
 
+export async function updateTicketType(ticketTypeId: string, payload: { title?: string; description?: string; price?: number; quantity?: number; metadata?: any }) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').update({
+      title: payload.title,
+      description: payload.description,
+      price: payload.price,
+      quantity: payload.quantity,
+      metadata: payload.metadata
+    }).eq('id', ticketTypeId).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error updating ticket type:', err)
+    throw err
+  }
+}
+
+export async function deleteTicketType(ticketTypeId: string) {
+  try {
+    const { error } = await supabase.from('ticket_types').delete().eq('id', ticketTypeId)
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    console.error('Error deleting ticket type:', err)
+    throw err
+  }
+}
+
 export async function createOrder(userId: string | null, vendorId: string | null, items: { ticket_type_id: string; quantity: number; unit_price: number }[], currency = 'UGX') {
   try {
     const total = items.reduce((s, it) => s + (it.unit_price * it.quantity), 0)

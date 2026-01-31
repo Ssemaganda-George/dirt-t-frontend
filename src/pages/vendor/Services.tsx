@@ -7,7 +7,7 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
-import { createActivationRequest } from '../../lib/database'
+import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
 
 export default function VendorServices() {
   const { user } = useAuth()
@@ -124,7 +124,7 @@ export default function VendorServices() {
     }
 
     try {
-      await createService({
+      const created = await createService({
         vendor_id: vendorId!,
         category_id: data.category_id || 'cat_activities',
         title: data.title || '',
@@ -191,6 +191,21 @@ export default function VendorServices() {
         booking_requirements: data.booking_requirements || '',
         cancellation_policy: data.cancellation_policy || ''
       } as any)
+
+      // Persist ticket types if provided (internal ticketing)
+      try {
+        const ticketTypes: any[] = (data as any).ticket_types || []
+        for (const tt of ticketTypes) {
+          // Ensure numeric values and include sale window in metadata
+          const metadata = { ...(tt.metadata || {}) }
+          if (tt.sale_start) metadata.sale_start = tt.sale_start
+          if (tt.sale_end) metadata.sale_end = tt.sale_end
+          await createTicketType(created.id, { title: tt.title, description: tt.description || '', price: Number(tt.price || 0), quantity: Number(tt.quantity || 0), metadata })
+        }
+      } catch (ticketErr) {
+        console.warn('Failed to persist ticket types:', ticketErr)
+      }
+
       setShowForm(false)
     } catch (err) {
       console.error('Failed to create service:', err)
@@ -285,6 +300,50 @@ export default function VendorServices() {
       }
 
       await updateService(id, validUpdates)
+
+      // Sync ticket types (create/update/delete) if provided
+      try {
+        const incoming = (updates as any).ticket_types || []
+        if (Array.isArray(incoming)) {
+          const existing = await getTicketTypes(id)
+          const existingById: Record<string, any> = {}
+          for (const ex of existing) existingById[ex.id] = ex
+
+          // Create or update incoming
+          for (const tt of incoming) {
+              const metadata = { ...(tt.metadata || {}) }
+              if (tt.sale_start) metadata.sale_start = tt.sale_start
+              if (tt.sale_end) metadata.sale_end = tt.sale_end
+              const payload = { title: tt.title, description: tt.description || '', price: Number(tt.price || 0), quantity: Number(tt.quantity || 0), metadata }
+            if (!tt.id || String(tt.id).startsWith('temp-')) {
+              try {
+                await createTicketType(id, payload)
+              } catch (err) {
+                console.warn('Failed to create ticket type during sync:', err)
+              }
+            } else if (existingById[tt.id]) {
+              try {
+                await updateTicketType(tt.id, payload)
+              } catch (err) {
+                console.warn('Failed to update ticket type during sync:', err)
+              }
+              delete existingById[tt.id]
+            }
+          }
+
+          // Anything left in existingById was removed from incoming -> delete
+          for (const exId of Object.keys(existingById)) {
+            try {
+              await deleteTicketType(exId)
+            } catch (err) {
+              console.warn('Failed to delete ticket type during sync:', err)
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.warn('Ticket types sync failed:', syncErr)
+      }
+
       setEditing(null)
     } catch (err) {
       console.error('Failed to update service:', err)
@@ -682,6 +741,12 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     photography_allowed: initial?.photography_allowed || false,
     recording_allowed: initial?.recording_allowed || false,
     group_discounts: initial?.group_discounts || false,
+    // Ticketing defaults (internal ticketing enabled by default)
+    internal_ticketing: (initial as any)?.internal_ticketing ?? true,
+    ticket_types: (initial as any)?.ticket_types || [
+      { id: 'temp-ga', title: 'General Admission', description: '', price: initial?.ticket_price || 0, quantity: initial?.max_participants || 100 },
+      { id: 'temp-vip', title: 'VIP', description: '', price: (initial?.ticket_price ? (initial.ticket_price * 2) : (initial?.ticket_price || 0)), quantity: 5 }
+    ],
 
     // Travel agency fields
     customization_available: initial?.customization_available || false,
@@ -708,6 +773,53 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
+
+  // Ticket types form helpers
+  const [ticketPreset, setTicketPreset] = useState<'general' | 'vip' | 'early_general' | 'early_vip' | 'free' | 'custom'>('general')
+
+  const addTicketTypeToForm = () => {
+    const current = (form.ticket_types || []) as any[]
+    const tempId = `temp-${Date.now()}`
+    const basePrice = Number(form.ticket_price || 0)
+    const earlyPrice = Number(form.early_bird_price || basePrice)
+    const maxParticipants = Number(form.max_participants || 100)
+
+    let newTT: any = { id: tempId, title: 'New Ticket', description: '', price: 0, quantity: 1 }
+
+    switch (ticketPreset) {
+      case 'general':
+        newTT = { id: tempId, title: 'General Admission', description: '', price: basePrice, quantity: Math.max(1, maxParticipants), sale_start: form.event_datetime || '', sale_end: form.registration_deadline || '' }
+        break
+      case 'vip':
+        newTT = { id: tempId, title: 'VIP', description: '', price: Math.max(1, Math.round(basePrice * 2)), quantity: Math.min(Math.max(1, Math.round(maxParticipants * 0.1)), 50), sale_start: form.event_datetime || '', sale_end: form.registration_deadline || '' }
+        break
+      case 'early_general':
+        newTT = { id: tempId, title: 'Early Bird - General', description: 'Early bird price', price: Math.max(0, earlyPrice), quantity: Math.min(Math.max(1, Math.round(maxParticipants * 0.2)), 100), metadata: { early_bird: true, early_bird_deadline: form.registration_deadline }, sale_start: form.event_datetime || '', sale_end: form.registration_deadline || '' }
+        break
+      case 'early_vip':
+        newTT = { id: tempId, title: 'Early Bird - VIP', description: 'Early bird VIP', price: Math.max(0, Math.round((earlyPrice || basePrice) * 1.8)), quantity: Math.min(Math.max(1, Math.round(maxParticipants * 0.05)), 20), metadata: { early_bird: true, early_bird_deadline: form.registration_deadline }, sale_start: form.event_datetime || '', sale_end: form.registration_deadline || '' }
+        break
+      case 'free':
+        newTT = { id: tempId, title: 'Free', description: 'Free admission', price: 0, quantity: Math.max(1, maxParticipants), metadata: { free: true }, sale_start: form.event_datetime || '', sale_end: form.registration_deadline || '' }
+        break
+      default:
+        newTT = { id: tempId, title: 'New Ticket', description: '', price: basePrice || 0, quantity: 1, sale_start: '', sale_end: '' }
+    }
+
+    update('ticket_types', [...current, newTT])
+  }
+
+  const updateTicketTypeInForm = (index: number, key: string, value: any) => {
+    const current = JSON.parse(JSON.stringify(form.ticket_types || [])) as any[]
+    if (!current[index]) return
+    current[index][key] = value
+    update('ticket_types', current)
+  }
+
+  const removeTicketTypeFromForm = (index: number) => {
+    const current = (form.ticket_types || []) as any[]
+    update('ticket_types', current.filter((_, i) => i !== index))
+  }
 
   const handleImageUpload = async (file: File) => {
     if (!vendorId) {
@@ -1506,26 +1618,70 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Ticket Price (UGX)</label>
-                <input type="number" value={form.ticket_price || ''} onChange={(e) => update('ticket_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="Price per ticket" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Early Bird Price (UGX)</label>
-                <input type="number" value={form.early_bird_price || ''} onChange={(e) => update('early_bird_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="Discounted price if applicable" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
+            {/* Ticket price fields removed — use internal ticket-types editor below for all ticket pricing and availability */}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Ticket Purchase Link</label>
-              <input value={form.ticket_purchase_link || ''} onChange={(e) => update('ticket_purchase_link', e.target.value)} placeholder="https://example.com/buy-tickets" className="mt-1 w-full border rounded-md px-3 py-2" />
-              <p className="text-sm text-gray-500 mt-1">Link to external ticketing platform or payment page</p>
-            </div>
+            {/* External ticket purchase links removed — payments are handled internally after event creation */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Event Location</label>
               <input value={form.event_location || ''} onChange={(e) => update('event_location', e.target.value)} placeholder="Specific venue or meeting point" className="mt-1 w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div className="mt-4 border-t pt-4">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={(form as any).internal_ticketing || false} onChange={(e) => update('internal_ticketing', e.target.checked)} className="mr-2" />
+                <span className="text-sm font-medium text-gray-700">Enable internal ticketing</span>
+              </label>
+
+              {(form as any).internal_ticketing && (
+                <div className="mt-3 space-y-3">
+                  {/* Ticket types list */}
+                  {((form as any).ticket_types || []).map((tt: any, idx: number) => (
+                    <div key={tt.id || idx} className="p-3 border rounded-md bg-white">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">Title</div>
+                          <input className="border rounded px-2 py-1" value={tt.title || ''} onChange={(e) => updateTicketTypeInForm(idx, 'title', e.target.value)} placeholder="e.g., General Admission" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">Price (UGX)</div>
+                          <input className="border rounded px-2 py-1" type="number" value={tt.price ?? ''} onChange={(e) => updateTicketTypeInForm(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Price" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600 mb-1">Available Tickets</div>
+                          <input className="border rounded px-2 py-1" type="number" value={tt.quantity ?? ''} onChange={(e) => updateTicketTypeInForm(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Ticket count" />
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <input className="w-full border rounded px-2 py-1" value={tt.description || ''} onChange={(e) => updateTicketTypeInForm(idx, 'description', e.target.value)} placeholder="Description (optional)" />
+                      </div>
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label className="text-xs text-gray-600">Sale starts</label>
+                        <label className="text-xs text-gray-600">Sale ends (deadline)</label>
+                        <input className="border rounded px-2 py-1" type="datetime-local" value={tt.sale_start || ''} onChange={(e) => updateTicketTypeInForm(idx, 'sale_start', e.target.value)} />
+                        <input className="border rounded px-2 py-1" type="datetime-local" value={tt.sale_end || ''} onChange={(e) => updateTicketTypeInForm(idx, 'sale_end', e.target.value)} />
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <button type="button" onClick={() => removeTicketTypeFromForm(idx)} className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded">Remove</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="flex items-center gap-2">
+                    <select value={ticketPreset} onChange={(e) => setTicketPreset(e.target.value as any)} className="border rounded px-2 py-1">
+                      <option value="general">General</option>
+                      <option value="vip">VIP</option>
+                      <option value="free">Free</option>
+                      <option value="early_general">Early Bird - General</option>
+                      <option value="early_vip">Early Bird - VIP</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                    <button type="button" onClick={addTicketTypeToForm} className="px-3 py-2 bg-gray-900 text-white rounded-md inline-flex items-center gap-2">
+                      <Plus size={16} /> Add Ticket Type
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -1624,10 +1780,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Event Description</label>
-              <textarea value={form.event_description || ''} onChange={(e) => update('event_description', e.target.value)} placeholder="Detailed description of the event, what participants can expect, and any special features" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
-            </div>
+            {/* Event Description moved to top-level Description when category is Events */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
@@ -2788,65 +2941,51 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title</label>
+            <label className="block text-sm font-medium text-gray-700">{form.category_id === 'cat_activities' ? 'Event title' : 'Title'}</label>
             <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea value={form.description as any} onChange={(e) => update('description', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" rows={3} required />
+            <label className="block text-sm font-medium text-gray-700">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
+            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" rows={3} required />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Currency</label>
-              <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Price</label>
-              <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="mt-1 w-full border rounded-md px-3 py-2" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Location</label>
-              <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
-            </div>
-          </div>
+          {/* Hide generic pricing/location/capacity fields when creating an Event (category_id === 'cat_activities')
+              Event-specific fields (event_datetime, registration_deadline, event_location, ticket_types, etc.) are shown below. */}
+          {form.category_id !== 'cat_activities' && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Currency</label>
+                  <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Price</label>
+                  <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="mt-1 w-full border rounded-md px-3 py-2" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
-              <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Max Capacity</label>
-              <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
+                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Max Capacity</label>
+                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                </div>
+              </div>
+            </>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Amenities</label>
-            <div className="flex gap-2">
-              <input
-                value={arrayInputs.amenities || ''}
-                onChange={(e) => setArrayInputs(prev => ({ ...prev, amenities: e.target.value }))}
-                placeholder="e.g., WiFi, Breakfast"
-                className="flex-1 border rounded-md px-3 py-2"
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('amenities', arrayInputs.amenities || ''))}
-              />
-              <button type="button" onClick={() => addToArray('amenities', arrayInputs.amenities || '')} className="px-3 py-2 bg-gray-900 text-white rounded-md">Add</button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(form.amenities as string[]).map((amenity, idx) => (
-                <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
-                  {amenity}
-                  <button type="button" onClick={() => removeFromArray('amenities', idx)} className="ml-1 text-gray-600 hover:text-gray-800">×</button>
-                </span>
-              ))}
-            </div>
-          </div>
+          
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Images</label>
+            <label className="block text-sm font-medium text-gray-700">Images (stickers, banners, previous events)</label>
             <div className="space-y-2">
               <input
                 type="file"

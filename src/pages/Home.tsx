@@ -584,7 +584,7 @@ export default function Home() {
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategories.includes('all')
-                  ? 'Eveything Safari'
+                  ? 'Everything Safari'
                   : selectedCategories.length === 1
                     ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
                     : `${selectedCategories.length} categories selected`}

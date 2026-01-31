@@ -159,6 +159,9 @@ export interface Service {
   event_status?: string
   ticket_price?: number
   early_bird_price?: number
+  // Internal ticketing flag and ticket types stored for events
+  internal_ticketing?: boolean
+  ticket_types?: any[]
   ticket_purchase_link?: string
   event_location?: string
   event_highlights?: string[]

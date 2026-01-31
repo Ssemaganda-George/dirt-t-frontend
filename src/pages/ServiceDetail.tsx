@@ -1215,18 +1215,31 @@ export default function ServiceDetail() {
                     {ticketTypes.map((t) => {
                       const remaining = (t.quantity || 0) - (t.sold || 0)
                       const soldOut = remaining <= 0
+                      const saleStart = t.sale_start || (t.metadata && t.metadata.sale_start)
+                      const saleEnd = t.sale_end || (t.metadata && t.metadata.sale_end)
+                      const now = new Date()
+                      const startOk = !saleStart || new Date(saleStart) <= now
+                      const endOk = !saleEnd || new Date(saleEnd) >= now
+                      const saleOpen = startOk && endOk
+
                       return (
-                        <div key={t.id} className={`border p-3 rounded-lg ${soldOut ? 'opacity-60' : ''}`}>
+                        <div key={t.id} className={`border p-3 rounded-lg ${(soldOut || !saleOpen) ? 'opacity-60' : ''}`}>
                           <div className="flex items-start justify-between">
                             <div>
                               <div className="font-medium text-gray-900">{t.title}</div>
                               {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
                               <div className="text-sm text-gray-600 mt-1">{formatCurrency(t.price, service.currency)} · {remaining} left</div>
+                              {!saleOpen && (
+                                <div className="text-xs text-yellow-700 mt-1">
+                                  {saleStart && new Date(saleStart) > now && `Sales open from ${new Date(saleStart).toLocaleString()}`}
+                                  {saleEnd && new Date(saleEnd) < now && `Sales closed (deadline ${new Date(saleEnd).toLocaleString()})`}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center space-x-2">
-                              <button disabled={soldOut} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.max(0, (q[t.id] || 0) - 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">-</button>
-                              <input type="number" min={0} max={t.quantity} value={ticketQuantities[t.id] || 0} onChange={(e) => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, Math.max(0, Number(e.target.value || 0))) }))} className="w-16 text-center border rounded px-2 py-1" />
-                              <button disabled={soldOut} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, (q[t.id] || 0) + 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">+</button>
+                              <button disabled={soldOut || !saleOpen} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.max(0, (q[t.id] || 0) - 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">-</button>
+                              <input type="number" min={0} max={t.quantity} value={ticketQuantities[t.id] || 0} onChange={(e) => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, Math.max(0, Number(e.target.value || 0))) }))} className="w-16 text-center border rounded px-2 py-1" disabled={!saleOpen} />
+                              <button disabled={soldOut || !saleOpen} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, (q[t.id] || 0) + 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">+</button>
                             </div>
                           </div>
                           {soldOut && <div className="text-xs text-red-600 mt-2">Sold out</div>}
