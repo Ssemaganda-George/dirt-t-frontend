@@ -46,6 +46,9 @@ const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
 const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
+const Checkout = lazy(() => import('./pages/Checkout'))
+const Payment = lazy(() => import('./pages/Payment'))
+const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -105,6 +108,8 @@ function App() {
             <Route index element={<Home />} />
             <Route path="scan/:id" element={<ScanEvent />} />
             <Route path="tickets/:orderId" element={<TicketReceipt />} />
+            <Route path="checkout/:orderId" element={<Checkout />} />
+            <Route path="checkout/:orderId/payment" element={<Payment />} />
             <Route path="service/:slug" element={<ServiceDetail />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
@@ -187,6 +192,7 @@ function App() {
             <Route path="settings" element={<VendorSettings />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
+            <Route path="tickets" element={<VendorBookings />} />
             <Route path="messages" element={<VendorMessages />} />
             <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
@@ -209,6 +215,7 @@ function App() {
             <Route path="services" element={<AdminServices />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="finance" element={<Finance />} />

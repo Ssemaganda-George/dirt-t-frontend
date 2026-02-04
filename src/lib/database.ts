@@ -1362,15 +1362,52 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
       console.warn('Failed to add transaction for ticket order:', txErr)
     }
 
-    // Load order items
-    const { data: items, error: itemsError } = await supabase.from('order_items').select('*').eq('order_id', orderId)
+    // Load order items with ticket type information
+    const { data: items, error: itemsError } = await supabase.from('order_items').select('*, ticket_types(*)').eq('order_id', orderId)
     if (itemsError) throw itemsError
 
     const createdTickets: any[] = []
+    // If we have a logged-in tourist, create bookings per service for this order so a booking id exists
+    const bookingMap: Record<string, string> = {}
+    try {
+      if (payment.tourist_id) {
+        // Group items by service_id
+        const groups: Record<string, { qty: number; total: number }> = {}
+        for (const it of items || []) {
+          const sid = it.ticket_types?.service_id
+          if (!sid) continue
+          groups[sid] = groups[sid] || { qty: 0, total: 0 }
+          groups[sid].qty += it.quantity
+          groups[sid].total += (it.unit_price || 0) * it.quantity
+        }
+
+        for (const sid of Object.keys(groups)) {
+          try {
+            const booking = await createBooking({
+              service_id: sid,
+              booking_date: new Date().toISOString(),
+              service_date: new Date().toISOString(),
+              guests: groups[sid].qty,
+              total_amount: groups[sid].total,
+              currency: order.currency,
+              status: 'confirmed',
+              payment_status: 'paid',
+              tourist_id: payment.tourist_id
+            })
+            if (booking && booking.id) bookingMap[sid] = booking.id
+          } catch (bkErr) {
+            // don't fail ticket issuance if booking creation fails; just log
+            console.warn('Failed to create booking for ticket order service', sid, bkErr)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error creating bookings for ticket order:', err)
+    }
     for (const it of items || []) {
       for (let i = 0; i < it.quantity; i++) {
         const code = `TKT-${Math.random().toString(36).slice(2,10).toUpperCase()}`
-        const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{ order_id: orderId, ticket_type_id: it.ticket_type_id, service_id: order.vendor_id ? order.vendor_id : it.service_id, owner_id: order.user_id || null, code, qr_data: code }]).select().single()
+        const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{ order_id: orderId, ticket_type_id: it.ticket_type_id, service_id: it.ticket_types.service_id, owner_id: order.user_id || null, code, qr_data: code }]).select().single()
         if (ticketError) {
           console.error('Failed to create ticket:', ticketError)
           continue

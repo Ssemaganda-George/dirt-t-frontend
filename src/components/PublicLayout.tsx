@@ -432,7 +432,7 @@ export default function PublicLayout() {
                 <li><Link to="/category/flights" className="hover:text-white">Flights</Link></li>
                 <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
                 <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
-                <li><Link to="/category/activities" className="hover:text-white">Events</Link></li>
+                <li><Link to="/category/events" className="hover:text-white">Events</Link></li>
                 <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
                 <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
               </ul>

@@ -13,6 +13,7 @@ import {
   User,
   Settings,
   ChevronDown,
+  Ticket,
   DollarSign
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Services', href: '/admin/services', icon: ShoppingBag },
   { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
+  { name: 'Tickets', href: '/admin/tickets', icon: Ticket },
   { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { name: 'Partnerships', href: '/admin/partnerships', icon: Users },
   { name: 'Wallets', href: '/admin/wallets', icon: CreditCard },

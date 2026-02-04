@@ -23,6 +23,8 @@ export default function CategoryPage() {
     'restaurants': 'cat_restaurants',
     'transport': 'cat_transport',
     'activities': 'cat_activities',
+    // also accept the public-facing "events" slug and map it to the same DB category
+    'events': 'cat_activities',
     'flights': 'cat_flights',
     'shops': 'cat_shops'
   }
@@ -33,6 +35,7 @@ export default function CategoryPage() {
     'restaurants': 'Restaurants',
     'transport': 'Transport',
     'activities': 'Events',
+    'events': 'Events',
     'flights': 'Flights',
     'shops': 'Shops',
     'services': 'Services'
@@ -49,7 +52,7 @@ export default function CategoryPage() {
         { key: 'tours', label: 'Tours' },
         { key: 'restaurants', label: 'Restaurants' },
         { key: 'transport', label: 'Transport' },
-        { key: 'activities', label: 'Events' },
+        { key: 'events', label: 'Events' },
         { key: 'shops', label: 'Shops' }
       ]
     } else if (category && categoryMapping[category]) {

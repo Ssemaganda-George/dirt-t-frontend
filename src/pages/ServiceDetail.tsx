@@ -149,7 +149,7 @@ export default function ServiceDetail() {
     const loadTickets = async () => {
       if (!service) return
       try {
-        if (service.service_categories?.name?.toLowerCase() === 'activities') {
+  if ((service.service_categories?.name?.toLowerCase() === 'activities') || (service.service_categories?.name?.toLowerCase() === 'events')) {
           const types = await getTicketTypes(service.id)
           setTicketTypes(types || [])
           const initial: { [key: string]: number } = {}
@@ -241,9 +241,12 @@ export default function ServiceDetail() {
       'restaurants': 'restaurants',
       'restaurant': 'restaurants',
       'dining': 'restaurants',
-      'activities': 'activities',
-      'activity': 'activities',
-      'experience': 'activities',
+  'activities': 'activities',
+  'activity': 'activities',
+  'experience': 'activities',
+  // Accept public-facing 'events' and 'event' names and normalize to internal 'activities'
+  'events': 'activities',
+  'event': 'activities',
       'flights': 'flights',
       'flight': 'flights',
       'air travel': 'flights'
@@ -1015,7 +1018,7 @@ export default function ServiceDetail() {
                 />
 
                 {/* Event hero overlay for Activities to mimic Quicket-style layout */}
-                {service.service_categories?.name?.toLowerCase() === 'activities' && (
+                {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
                   <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
                     <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
                     <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
@@ -1205,7 +1208,7 @@ export default function ServiceDetail() {
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-              {service.service_categories?.name?.toLowerCase() === 'activities' ? (
+              {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
                   <div className="space-y-3 mb-4">

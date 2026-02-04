@@ -1,21 +1,46 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
 import { getServices } from '../../store/vendorStore'
 import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
 import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Ticket, Calendar, Download } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
 
+interface TicketData {
+  id: string
+  code: string
+  status: 'issued' | 'used' | 'cancelled'
+  issued_at: string
+  used_at?: string
+  qr_data?: string
+  ticket_types: {
+    title: string
+    price: number
+  }
+  services: {
+    title: string
+    event_location?: string
+    location?: string
+  }
+  orders: {
+    currency: string
+    created_at: string
+  }
+}
+
 export default function VendorBookings() {
   const { profile, vendor } = useAuth()
+  const location = useLocation()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
   const { state: cartState } = useCart()
 
-
+  const [activeTab, setActiveTab] = useState<'bookings' | 'tickets'>('bookings')
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [tickets, setTickets] = useState<TicketData[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -24,16 +49,44 @@ export default function VendorBookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
 
-  // Fetch bookings from Supabase for this vendor
+  // Fetch bookings and tickets from Supabase for this vendor
   const load = async () => {
     // Get all bookings, then filter by vendor_id
     const allBookings = await getAllBookings()
     const filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
     setBookings(filteredBookings)
+
+    // Load tickets for this vendor's services
+    try {
+      const { data: ticketsData, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(title, price),
+          services!inner(title, event_location, location, vendor_id),
+          orders(currency, created_at)
+        `)
+        .eq('services.vendor_id', vendorId)
+        .order('issued_at', { ascending: false })
+
+      if (!error && ticketsData) {
+        setTickets(ticketsData)
+      }
+    } catch (err) {
+      console.error('Error loading tickets:', err)
+    }
+
     setServices(getServices(vendorId))
   }
 
-  // Set up real-time subscription for bookings
+  // Set up real-time subscriptions for bookings and tickets
+  useEffect(() => {
+    // If the route is /vendor/tickets, default to the tickets tab
+    if (location.pathname && location.pathname.endsWith('/tickets')) {
+      setActiveTab('tickets')
+    }
+  }, [location.pathname])
+
   useEffect(() => {
     if (!vendorId) return
 
@@ -41,7 +94,7 @@ export default function VendorBookings() {
     load()
 
     // Subscribe to real-time changes for this vendor's bookings
-    const subscription = supabase
+    const bookingsSubscription = supabase
       .channel('vendor_bookings')
       .on('postgres_changes', {
         event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
@@ -50,13 +103,13 @@ export default function VendorBookings() {
         filter: `vendor_id=eq.${vendorId}` // Only listen to bookings for this vendor
       }, (payload) => {
         console.log('Real-time booking change:', payload)
-        
+
         if (payload.eventType === 'INSERT') {
           // New booking for this vendor
           setBookings(prev => [...prev, payload.new as Booking])
         } else if (payload.eventType === 'UPDATE') {
           // Booking updated
-          setBookings(prev => prev.map(booking => 
+          setBookings(prev => prev.map(booking =>
             booking.id === payload.new.id ? payload.new as Booking : booking
           ))
         } else if (payload.eventType === 'DELETE') {
@@ -66,9 +119,42 @@ export default function VendorBookings() {
       })
       .subscribe()
 
-    // Cleanup subscription on unmount or vendorId change
+    // Subscribe to real-time changes for tickets on this vendor's services
+    const ticketsSubscription = supabase
+      .channel('vendor_tickets')
+      .on('postgres_changes', {
+        event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'tickets'
+      }, async (payload) => {
+        console.log('Real-time ticket change:', payload)
+
+        // Reload tickets when there's any change (since we need to filter by vendor)
+        try {
+          const { data: ticketsData, error } = await supabase
+            .from('tickets')
+            .select(`
+              *,
+              ticket_types(title, price),
+              services!inner(title, event_location, location, vendor_id),
+              orders(currency, created_at)
+            `)
+            .eq('services.vendor_id', vendorId)
+            .order('issued_at', { ascending: false })
+
+          if (!error && ticketsData) {
+            setTickets(ticketsData)
+          }
+        } catch (err) {
+          console.error('Error reloading tickets:', err)
+        }
+      })
+      .subscribe()
+
+    // Cleanup subscriptions on unmount or vendorId change
     return () => {
-      subscription.unsubscribe()
+      bookingsSubscription.unsubscribe()
+      ticketsSubscription.unsubscribe()
     }
   }, [vendorId])
 
@@ -83,6 +169,84 @@ export default function VendorBookings() {
     }
   }
 
+  const downloadTicket = (ticket: TicketData) => {
+    // Create a simple HTML page for the ticket
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const ticketHtml = `
+      <div style="border: 2px solid #61B82C; border-radius: 8px; margin: 20px; overflow: hidden; max-width: 600px;">
+        <!-- Ticket Header -->
+        <div style="background: linear-gradient(to right, #61B82C, #4a8f23); color: white; padding: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
+              <div>
+                <h3 style="font-weight: bold; font-size: 16px; margin: 0;">${ticket.services?.title || 'Event'}</h3>
+                <p style="color: rgba(255,255,255,0.9); margin: 2px 0 0 0; font-size: 12px;">${ticket.ticket_types?.title || 'Ticket'}</p>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 10px; color: rgba(255,255,255,0.8);">Ticket Code</div>
+              <div style="font-family: monospace; font-weight: bold; font-size: 14px;">${ticket.code}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Details -->
+        <div style="padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 12px; margin-bottom: 2px;">
+                <span style="color: #6b7280;">Price: </span>
+                <span style="font-weight: 600;">${formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</span>
+              </div>
+              <div style="font-size: 12px; margin-bottom: 8px;">
+                <span style="color: #6b7280;">Status: </span>
+                <span style="font-weight: 600; color: ${ticket.status === 'issued' ? '#059669' : ticket.status === 'used' ? '#2563eb' : '#6b7280'};">${ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 10px; color: #6b7280;">Issued: ${new Date(ticket.issued_at).toLocaleDateString()}</div>
+              ${ticket.used_at ? `<div style="font-size: 10px; color: #6b7280;">Used: ${new Date(ticket.used_at).toLocaleDateString()}</div>` : ''}
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+            📍 ${ticket.services?.event_location || ticket.services?.location || 'Venue TBA'}
+          </div>
+
+          <div style="font-size: 10px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+            Valid for entry • Present at venue
+          </div>
+        </div>
+      </div>
+    `
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Ticket - ${ticket.code}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f9fafb; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          ${ticketHtml}
+        </body>
+      </html>
+    `)
+
+    printWindow.document.close()
+    printWindow.focus()
+
+    setTimeout(() => {
+      printWindow.print()
+    }, 500)
+  }
+
   // Filtered bookings
   const filteredBookings = bookings.filter(b => {
     const statusMatch = statusFilter === 'all' || b.status === statusFilter
@@ -94,7 +258,46 @@ export default function VendorBookings() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Bookings & Tickets</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+            Live updates
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('bookings')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'bookings'
+                ? 'border-[#61B82C] text-[#61B82C]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Calendar className="inline-block w-4 h-4 mr-2" />
+            Bookings ({bookings.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('tickets')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'tickets'
+                ? 'border-[#61B82C] text-[#61B82C]'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Ticket className="inline-block w-4 h-4 mr-2" />
+            Tickets ({tickets.length})
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === 'bookings' && (
+        <>
           <div className="mt-2 flex flex-wrap gap-2">
             <select
               value={statusFilter}
@@ -118,15 +321,6 @@ export default function VendorBookings() {
               ))}
             </select>
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live updates
-          </div>
-          <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Add Booking</button>
-        </div>
-      </div>
 
   <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
         {/* Mobile Card View */}
@@ -334,6 +528,8 @@ export default function VendorBookings() {
           </table>
         </div>
       </div>
+        </>
+      )}
 
       {showForm && (
         <BookingForm
@@ -346,6 +542,79 @@ export default function VendorBookings() {
             setShowForm(false)
           }}
         />
+      )}
+
+      {activeTab === 'tickets' && (
+        <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Event Tickets</h3>
+            <p className="text-sm text-gray-500 mt-1">Tickets issued for your events</p>
+          </div>
+
+          {tickets.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-gray-500">
+              <Ticket className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              No tickets issued yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tickets.map((ticket) => (
+                    <tr key={ticket.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900">
+                        {ticket.code}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {ticket.services?.title || 'Unknown Event'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {ticket.services?.event_location || ticket.services?.location || 'Venue TBA'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {ticket.ticket_types?.title || 'Ticket'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDateTime(ticket.issued_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge
+                          status={ticket.status === 'issued' ? 'confirmed' : ticket.status === 'used' ? 'completed' : ticket.status}
+                          variant="small"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => downloadTicket(ticket)}
+                          className="text-[#61B82C] hover:text-[#4a8f23] flex items-center gap-1"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Booking Details Modal */}

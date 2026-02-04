@@ -1636,7 +1636,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               {(form as any).internal_ticketing && (
                 <div className="mt-3 space-y-3">
                   {/* Ticket types list */}
-                  {((form as any).ticket_types || []).map((tt: any, idx: number) => (
+                  {(form as any).ticket_types?.map((tt: any, idx: number) => (
                     <div key={tt.id || idx} className="p-3 border rounded-md bg-white">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
@@ -1645,7 +1645,20 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                         </div>
                         <div>
                           <div className="text-xs text-gray-600 mb-1">Price (UGX)</div>
-                          <input className="border rounded px-2 py-1" type="number" value={tt.price ?? ''} onChange={(e) => updateTicketTypeInForm(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Price" />
+                          <div className="flex items-center gap-2">
+                            <input
+                              className="border rounded px-2 py-1"
+                              type="number"
+                              value={(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) ? 0 : (tt.price ?? '')}
+                              onChange={(e) => {
+                                if (Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) return
+                                updateTicketTypeInForm(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))
+                              }}
+                              placeholder="Price"
+                              disabled={Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))}
+                            />
+                            {(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) && <div className="text-xs text-green-700">Free — price locked</div>}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-600 mb-1">Available Tickets</div>

@@ -51,7 +51,7 @@ const categories = [
   },
   {
     name: 'Events',
-    href: '/category/activities',
+    href: '/category/events',
     icon: Target,
     description: 'Book exciting activities and adventures',
     color: 'bg-red-500'
