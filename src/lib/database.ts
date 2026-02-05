@@ -1281,9 +1281,18 @@ export async function verifyEventOTP(serviceId: string, otp: string) {
 }
 
 // Ticketing helpers for event management
-export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any }) {
+export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any; sale_start?: string; sale_end?: string }) {
   try {
-    const { data, error } = await supabase.from('ticket_types').insert([{ service_id: serviceId, title: payload.title, description: payload.description, price: payload.price, quantity: payload.quantity, metadata: payload.metadata }]).select().single()
+    const { data, error } = await supabase.from('ticket_types').insert([{
+      service_id: serviceId,
+      title: payload.title,
+      description: payload.description,
+      price: payload.price,
+      quantity: payload.quantity,
+      metadata: payload.metadata,
+      sale_start: payload.sale_start,
+      sale_end: payload.sale_end
+    }]).select().single()
     if (error) throw error
     return data
   } catch (err) {
@@ -1303,14 +1312,16 @@ export async function getTicketTypes(serviceId: string) {
   }
 }
 
-export async function updateTicketType(ticketTypeId: string, payload: { title?: string; description?: string; price?: number; quantity?: number; metadata?: any }) {
+export async function updateTicketType(ticketTypeId: string, payload: { title?: string; description?: string; price?: number; quantity?: number; metadata?: any; sale_start?: string; sale_end?: string }) {
   try {
     const { data, error } = await supabase.from('ticket_types').update({
       title: payload.title,
       description: payload.description,
       price: payload.price,
       quantity: payload.quantity,
-      metadata: payload.metadata
+      metadata: payload.metadata,
+      sale_start: payload.sale_start,
+      sale_end: payload.sale_end
     }).eq('id', ticketTypeId).select().single()
     if (error) throw error
     return data

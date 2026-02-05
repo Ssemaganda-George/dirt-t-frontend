@@ -686,7 +686,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
       case 'cat_activities':
         return {
           icon: Target,
-          label: 'Activity',
+          label: 'Event',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
           secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null,
           priceUnit: 'per ticket'
@@ -815,7 +815,12 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-500">From</span>
             <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(service.price, service.currency)}
+              {formatCurrency(
+                service.ticket_types && service.ticket_types.length > 0 
+                  ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0))) 
+                  : service.price, 
+                service.currency
+              )}
             </span>
             <span className="text-xs text-gray-500">{categoryInfo.priceUnit}</span>
           </div>

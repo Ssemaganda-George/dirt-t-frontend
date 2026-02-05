@@ -117,6 +117,16 @@ interface ServiceDetail {
   certifications?: string[]
   years_experience?: number
   service_area?: string
+
+  // Event-specific fields
+  event_datetime?: string
+  event_location?: string
+  event_status?: string
+  registration_deadline?: string
+  max_participants?: number
+  event_highlights?: string[]
+  event_inclusions?: string[]
+  event_prerequisites?: string[]
 }
 
 export default function ServiceDetail() {
@@ -855,6 +865,47 @@ export default function ServiceDetail() {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.event_datetime && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Date & Time:</span>{' '}
+                  {new Date(service.event_datetime).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+              {service.event_location && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Location:</span> {service.event_location}
+                </div>
+              )}
+              {service.registration_deadline && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Registration Deadline:</span>{' '}
+                  {new Date(service.registration_deadline).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+              {service.max_participants && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Maximum Participants:</span> {service.max_participants}
+                </div>
+              )}
+              {service.minimum_age && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
+                </div>
+              )}
               {service.activity_type && (
                 <div className="text-sm text-gray-600">
                   <span className="font-medium">Activity Type:</span> {service.activity_type}

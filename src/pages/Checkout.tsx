@@ -478,7 +478,19 @@ export default function CheckoutPage() {
                     <div className="flex-1">
                       <div className="font-semibold text-lg">{order._service?.title || 'Event'}</div>
                       <div className="text-sm text-gray-600 mt-1">Order #{order.reference || `#${(order.id || '').toString().slice(0,8)}`}</div>
-                      <div className="text-sm text-gray-600">{order._service?.event_location || order._service?.location || 'Venue'}</div>
+                      {order._service?.event_datetime && (
+                        <div className="text-sm text-gray-600">
+                          📅 {new Date(order._service.event_datetime).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      )}
+                      <div className="text-sm text-gray-600">📍 {order._service?.event_location || order._service?.location || 'Venue'}</div>
                     </div>
                   </div>
 

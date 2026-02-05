@@ -25,6 +25,7 @@ export default function TicketReceiptPage() {
             description,
             location,
             event_location,
+            event_datetime,
             images,
             vendors(business_name, business_phone, business_email)
           ),
@@ -87,6 +88,19 @@ export default function TicketReceiptPage() {
                 ${qrMap[t.id] ? `<img src="${qrMap[t.id]}" style="width: 80px; height: 80px; border: 1px solid #d1d5db; border-radius: 4px;" />` : '<div style="width: 80px; height: 80px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;">No QR</div>'}
               </div>
               <div style="flex: 1;">
+                ${t.services?.event_datetime ? `
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px;">
+                    <span style="color: #6b7280;">📅</span>
+                    <span style="color: #4b5563;">${new Date(t.services.event_datetime).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}</span>
+                  </div>
+                ` : ''}
                 <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px;">
                   <span style="color: #6b7280;">📍</span>
                   <span style="color: #4b5563;">${t.services?.event_location || t.services?.location || 'Venue TBA'}</span>
@@ -213,6 +227,21 @@ export default function TicketReceiptPage() {
                     )}
                   </div>
                   <div className="flex-1 space-y-2">
+                    {t.services?.event_datetime && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-400">📅</span>
+                        <span className="text-gray-600">
+                          {new Date(t.services.event_datetime).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       <span className="text-gray-600">{t.services?.event_location || t.services?.location || 'Venue TBA'}</span>

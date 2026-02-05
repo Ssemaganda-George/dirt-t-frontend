@@ -196,11 +196,17 @@ export default function VendorServices() {
       try {
         const ticketTypes: any[] = (data as any).ticket_types || []
         for (const tt of ticketTypes) {
-          // Ensure numeric values and include sale window in metadata
+          // Ensure numeric values
           const metadata = { ...(tt.metadata || {}) }
-          if (tt.sale_start) metadata.sale_start = tt.sale_start
-          if (tt.sale_end) metadata.sale_end = tt.sale_end
-          await createTicketType(created.id, { title: tt.title, description: tt.description || '', price: Number(tt.price || 0), quantity: Number(tt.quantity || 0), metadata })
+          await createTicketType(created.id, {
+            title: tt.title,
+            description: tt.description || '',
+            price: Number(tt.price || 0),
+            quantity: Number(tt.quantity || 0),
+            metadata,
+            sale_start: tt.sale_start || null,
+            sale_end: tt.sale_end || null
+          })
         }
       } catch (ticketErr) {
         console.warn('Failed to persist ticket types:', ticketErr)
@@ -291,6 +297,22 @@ export default function VendorServices() {
       if (updates.booking_requirements !== undefined) validUpdates.booking_requirements = updates.booking_requirements
       if (updates.cancellation_policy !== undefined) validUpdates.cancellation_policy = updates.cancellation_policy
 
+      // Event fields
+      if (updates.event_type !== undefined) validUpdates.event_type = updates.event_type
+      if (updates.event_datetime !== undefined) validUpdates.event_datetime = updates.event_datetime
+      if (updates.registration_deadline !== undefined) validUpdates.registration_deadline = updates.registration_deadline
+      if (updates.event_location !== undefined) validUpdates.event_location = updates.event_location
+      if (updates.event_status !== undefined) validUpdates.event_status = updates.event_status
+      if (updates.event_highlights !== undefined) validUpdates.event_highlights = updates.event_highlights
+      if (updates.event_prerequisites !== undefined) validUpdates.event_prerequisites = updates.event_prerequisites
+      if (updates.certificates_provided !== undefined) validUpdates.certificates_provided = updates.certificates_provided
+      if (updates.refreshments_included !== undefined) validUpdates.refreshments_included = updates.refreshments_included
+      if (updates.take_home_materials !== undefined) validUpdates.take_home_materials = updates.take_home_materials
+      if (updates.photography_allowed !== undefined) validUpdates.photography_allowed = updates.photography_allowed
+      if (updates.recording_allowed !== undefined) validUpdates.recording_allowed = updates.recording_allowed
+      if (updates.group_discounts !== undefined) validUpdates.group_discounts = updates.group_discounts
+      if (updates.internal_ticketing !== undefined) validUpdates.internal_ticketing = updates.internal_ticketing
+
       console.log('Valid updates:', validUpdates)
 
       if (Object.keys(validUpdates).length === 0) {
@@ -312,9 +334,15 @@ export default function VendorServices() {
           // Create or update incoming
           for (const tt of incoming) {
               const metadata = { ...(tt.metadata || {}) }
-              if (tt.sale_start) metadata.sale_start = tt.sale_start
-              if (tt.sale_end) metadata.sale_end = tt.sale_end
-              const payload = { title: tt.title, description: tt.description || '', price: Number(tt.price || 0), quantity: Number(tt.quantity || 0), metadata }
+              const payload = {
+                title: tt.title,
+                description: tt.description || '',
+                price: Number(tt.price || 0),
+                quantity: Number(tt.quantity || 0),
+                metadata,
+                sale_start: tt.sale_start || null,
+                sale_end: tt.sale_end || null
+              }
             if (!tt.id || String(tt.id).startsWith('temp-')) {
               try {
                 await createTicketType(id, payload)
@@ -735,6 +763,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     repair_service: initial?.repair_service || false,
 
     // Event fields
+    event_datetime: initial?.event_datetime || '',
+    registration_deadline: initial?.registration_deadline || '',
+    event_location: initial?.event_location || '',
+    event_status: initial?.event_status || 'upcoming',
+    event_type: initial?.event_type || '',
+    event_highlights: initial?.event_highlights || [],
+    event_prerequisites: initial?.event_prerequisites || [],
     certificates_provided: initial?.certificates_provided || false,
     refreshments_included: initial?.refreshments_included || false,
     take_home_materials: initial?.take_home_materials || false,
@@ -743,10 +778,14 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     group_discounts: initial?.group_discounts || false,
     // Ticketing defaults (internal ticketing enabled by default)
     internal_ticketing: (initial as any)?.internal_ticketing ?? true,
-    ticket_types: (initial as any)?.ticket_types || [
+    ticket_types: ((initial as any)?.ticket_types || [
       { id: 'temp-ga', title: 'General Admission', description: '', price: initial?.ticket_price || 0, quantity: initial?.max_participants || 100 },
       { id: 'temp-vip', title: 'VIP', description: '', price: (initial?.ticket_price ? (initial.ticket_price * 2) : (initial?.ticket_price || 0)), quantity: 5 }
-    ],
+    ]).map((tt: any) => ({
+      ...tt,
+      sale_start: tt.sale_start || initial?.event_datetime || '',
+      sale_end: tt.sale_end || initial?.registration_deadline || ''
+    })),
 
     // Travel agency fields
     customization_available: initial?.customization_available || false,
@@ -1598,8 +1637,16 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Event Date & Time</label>
-                <input type="datetime-local" value={form.event_datetime || ''} onChange={(e) => update('event_datetime', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                <label className="block text-sm font-medium text-gray-700">
+                  Event Date & Time <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="datetime-local" 
+                  value={form.event_datetime || ''} 
+                  onChange={(e) => update('event_datetime', e.target.value)} 
+                  className="mt-1 w-full border rounded-md px-3 py-2" 
+                  required 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Registration Deadline</label>
@@ -1623,8 +1670,16 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             {/* External ticket purchase links removed — payments are handled internally after event creation */}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Event Location</label>
-              <input value={form.event_location || ''} onChange={(e) => update('event_location', e.target.value)} placeholder="Specific venue or meeting point" className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700">
+                Event Location <span className="text-red-500">*</span>
+              </label>
+              <input 
+                value={form.event_location || ''} 
+                onChange={(e) => update('event_location', e.target.value)} 
+                placeholder="Specific venue or meeting point" 
+                className="mt-1 w-full border rounded-md px-3 py-2" 
+                required 
+              />
             </div>
 
             <div className="mt-4 border-t pt-4">
@@ -1783,7 +1838,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                   Transportation Included
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" checked={form.meals_provided || false} onChange={(e) => update('meals_provided', e.target.checked)} className="mr-2" />
+                  <input type="checkbox" checked={(form.meals_included && form.meals_included.length > 0)} onChange={(e) => {
+                    if (e.target.checked && (!form.meals_included || form.meals_included.length === 0)) {
+                      update('meals_included', ['Meals included']);
+                    } else if (!e.target.checked) {
+                      update('meals_included', []);
+                    }
+                  }} className="mr-2" />
                   Meals Included
                 </label>
                 <label className="flex items-center">
@@ -2939,7 +3000,23 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
         </div>
         <form
           className="px-6 py-4 space-y-4"
-          onSubmit={(e) => { e.preventDefault(); onSubmit(form) }}
+          onSubmit={(e) => { 
+            e.preventDefault(); 
+            
+            // Validation for event fields
+            if (form.category_id === 'cat_activities') {
+              if (!form.event_datetime?.trim()) {
+                alert('Event Date & Time is required for events');
+                return;
+              }
+              if (!form.event_location?.trim()) {
+                alert('Event Location is required for events');
+                return;
+              }
+            }
+            
+            onSubmit(form) 
+          }}
         >
           <div>
             <label className="block text-sm font-medium text-gray-700">Category</label>
