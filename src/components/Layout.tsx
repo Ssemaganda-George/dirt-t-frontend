@@ -14,9 +14,11 @@ import {
   Settings,
   ChevronDown,
   Ticket,
-  DollarSign
+  DollarSign,
+  Search
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import PanelSearchModal from './PanelSearchModal'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: BarChart3 },
@@ -37,6 +39,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown when clicking outside
@@ -49,6 +52,19 @@ export default function Layout() {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Global search keyboard shortcut (Cmd/Ctrl + K)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault()
+        setShowGlobalSearch(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   const handleSignOut = async () => {
@@ -163,6 +179,15 @@ export default function Layout() {
             <div className="flex-1"></div>
 
             <div className="flex items-center space-x-4 ml-auto">
+              {/* Global Search Button */}
+              <button
+                onClick={() => setShowGlobalSearch(true)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600"
+                title="Global Search (⌘K)"
+              >
+                <Search className="h-5 w-5 text-gray-600" />
+              </button>
+
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -229,6 +254,12 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Global Search Modal */}
+      <PanelSearchModal
+        isOpen={showGlobalSearch}
+        onClose={() => setShowGlobalSearch(false)}
+      />
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

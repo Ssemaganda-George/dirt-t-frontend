@@ -3,6 +3,7 @@ import { useServices, useServiceCategories, useServiceDeleteRequests } from '../
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EditServiceModal } from '../../components/EditServiceModal';
+import SearchBar from '../../components/SearchBar';
 import { formatCurrency } from '../../lib/utils';
 import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
@@ -19,6 +20,7 @@ export function Services() {
   const [selectedVendor, setSelectedVendor] = useState<string>('all');
   const [vendors, setVendors] = useState<any[]>([]);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -70,22 +72,42 @@ export function Services() {
   const approvedServices = services.filter(service => service.status === 'approved');
   const rejectedServices = services.filter(service => service.status === 'rejected');
 
-  // Filter services based on selected category and vendor
+  // Filter services based on selected category, vendor, and search query
   const categoryFilteredServices = selectedCategory === 'all' 
     ? services 
     : services.filter(service => service.category_id === selectedCategory);
 
-  const filteredServices = selectedVendor === 'all'
+  const vendorFilteredServices = selectedVendor === 'all'
     ? categoryFilteredServices
     : categoryFilteredServices.filter(service => service.vendor_id === selectedVendor);
+
+  const filteredServices = searchQuery.trim() === ''
+    ? vendorFilteredServices
+    : vendorFilteredServices.filter(service =>
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   const categoryFilteredPendingServices = selectedCategory === 'all'
     ? pendingServices
     : pendingServices.filter(service => service.category_id === selectedCategory);
 
-  const filteredPendingServices = selectedVendor === 'all'
+  const vendorFilteredPendingServices = selectedVendor === 'all'
     ? categoryFilteredPendingServices
     : categoryFilteredPendingServices.filter(service => service.vendor_id === selectedVendor);
+
+  const filteredPendingServices = searchQuery.trim() === ''
+    ? vendorFilteredPendingServices
+    : vendorFilteredPendingServices.filter(service =>
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   const approveService = async (serviceId: string) => {
     setUpdatingStatus(serviceId);
@@ -207,6 +229,16 @@ export function Services() {
           <span className="text-red-600">Rejected: {selectedCategory === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
           <span className="text-orange-600">Delete Requests: {deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length}</span>
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <SearchBar
+          placeholder="Search services by title, description, category, or vendor..."
+          onSearch={setSearchQuery}
+          initialValue={searchQuery}
+          className="max-w-md"
+        />
       </div>
 
       {/* Vendor Filter */}

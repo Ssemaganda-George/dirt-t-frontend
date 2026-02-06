@@ -9,6 +9,7 @@ import { useCart } from '../../contexts/CartContext';
 import type { Booking } from '../../types';
 import { getServiceCategories } from '../../lib/database'
 import { supabase } from '../../lib/supabaseClient'
+import SearchBar from '../../components/SearchBar';
 
 export function Bookings() {
   const { bookings, loading, error, updateBookingStatus, updatePaymentStatus } = useBookings();
@@ -18,6 +19,7 @@ export function Bookings() {
   const [categories, setCategories] = useState<any[]>([])
   const [selectedVendor, setSelectedVendor] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [filteredBookings, setFilteredBookings] = useState<Booking[] | null>(null)
   const [isFiltering, setIsFiltering] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -29,6 +31,41 @@ export function Bookings() {
   const [showTicketImage, setShowTicketImage] = useState(false)
   const [ticketImageUrl, setTicketImageUrl] = useState<string | null>(null)
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null)
+
+  // Helper function to filter bookings based on search query
+  const filterBookingsBySearch = (bookingsToFilter: Booking[]): Booking[] => {
+    if (!searchQuery.trim()) return bookingsToFilter
+
+    const query = searchQuery.toLowerCase()
+    return bookingsToFilter.filter(booking => {
+      // Search in service title
+      if (booking.service?.title?.toLowerCase().includes(query)) return true
+      if (booking.services?.title?.toLowerCase().includes(query)) return true
+
+      // Search in service description
+      if (booking.service?.description?.toLowerCase().includes(query)) return true
+
+      // Search in customer name (tourist profile or guest name)
+      if (booking.tourist_profile?.full_name?.toLowerCase().includes(query)) return true
+      if (booking.profiles?.full_name?.toLowerCase().includes(query)) return true
+      if (booking.guest_name?.toLowerCase().includes(query)) return true
+
+      // Search in customer email
+      if (booking.guest_email?.toLowerCase().includes(query)) return true
+
+      // Search in vendor name (if available in service.vendors)
+      if (booking.service?.vendors?.business_name?.toLowerCase().includes(query)) return true
+
+      // Search in booking status
+      if (booking.status?.toLowerCase().includes(query)) return true
+      if (booking.payment_status?.toLowerCase().includes(query)) return true
+
+      // Search in booking ID
+      if (booking.id?.toLowerCase().includes(query)) return true
+
+      return false
+    })
+  }
 
   useEffect(() => {
     // Load vendors and categories for filters
@@ -197,6 +234,23 @@ export function Bookings() {
     return () => { mounted = false }
   }, [selectedCategory])
 
+  // Apply search filter whenever searchQuery changes
+  useEffect(() => {
+    if (!bookings.length) return
+
+    if (!searchQuery.trim()) {
+      // If no search query and no other filters, show all bookings
+      if (selectedVendor === 'all' && selectedCategory === 'all') {
+        setFilteredBookings(null)
+      }
+      return
+    }
+
+    // Apply search filter to current bookings
+    const searchFiltered = filterBookingsBySearch(bookings)
+    setFilteredBookings(searchFiltered)
+  }, [searchQuery, bookings])
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -229,7 +283,8 @@ export function Bookings() {
       setSelectedVendor('all')
 
       if (categoryId === 'all') {
-        setFilteredBookings(null)
+        const searchFiltered = filterBookingsBySearch(bookings)
+        setFilteredBookings(searchFiltered.length === bookings.length ? null : searchFiltered)
         return
       }
 
@@ -265,7 +320,7 @@ export function Bookings() {
         return
       }
 
-      setFilteredBookings(bookingsData || [])
+      setFilteredBookings(filterBookingsBySearch(bookingsData || []))
 
       // Additionally, load tickets for services in this category only for Events (cat_activities)
       if (categoryId === 'cat_activities') {
@@ -316,7 +371,12 @@ export function Bookings() {
         </div>
       </div>
 
-      {/* Category cards - click to filter bookings for services in that category */}
+      {/* Search Bar */}
+      <SearchBar
+        placeholder="Search bookings by service, customer, vendor, status, or booking ID..."
+        onSearch={setSearchQuery}
+        initialValue={searchQuery}
+      />
 
       {/* Category cards - click to filter bookings for services in that category */}
       <div className="pt-2">
@@ -374,9 +434,10 @@ export function Bookings() {
           <button
             disabled={isFiltering}
             onClick={async () => {
-              // If no filters, clear
+              // If no filters, apply search to all bookings
               if (selectedVendor === 'all' && selectedCategory === 'all') {
-                setFilteredBookings(null)
+                const filtered = filterBookingsBySearch(bookings)
+                setFilteredBookings(filtered.length === bookings.length ? null : filtered)
                 return
               }
 
@@ -384,8 +445,9 @@ export function Bookings() {
               try {
                 // If only vendor filter is set, filter client-side using bookings.vendor_id
                 if (selectedCategory === 'all' && selectedVendor !== 'all') {
-                  const filtered = bookings.filter(b => b.vendor_id === selectedVendor)
-                  setFilteredBookings(filtered)
+                  const vendorFiltered = bookings.filter(b => b.vendor_id === selectedVendor)
+                  const searchFiltered = filterBookingsBySearch(vendorFiltered)
+                  setFilteredBookings(searchFiltered)
                   return
                 }
 
@@ -428,7 +490,8 @@ export function Bookings() {
                     return
                   }
 
-                  setFilteredBookings(bookingsData || [])
+                  const searchFiltered = filterBookingsBySearch(bookingsData || [])
+                  setFilteredBookings(searchFiltered)
                   return
                 }
 

@@ -273,22 +273,24 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Dashboard</h1>
-            <p className="text-gray-600 mt-1">Welcome back, {profile?.full_name || 'Vendor'}!</p>
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Dashboard</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Welcome back, {profile?.full_name || 'Vendor'}!</p>
           </div>
-          <button
-            onClick={refresh}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
+          <div className="flex-shrink-0">
+            <button
+              onClick={refresh}
+              className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <StatCard
             title="Total Services"
             value={stats.servicesCount}
@@ -363,9 +365,9 @@ export default function VendorDashboard() {
         </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-        {/* Recent Bookings - Takes 2 columns */}
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+        {/* Recent Bookings - Takes 2 columns on large screens */}
+        <div className="lg:col-span-2">
           <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
@@ -410,7 +412,7 @@ export default function VendorDashboard() {
         </div>
         
         {/* Recent Transactions - Takes 1 column */}
-        <div className="xl:col-span-1">
+        <div className="lg:col-span-1">
           <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-800">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">

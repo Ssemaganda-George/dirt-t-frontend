@@ -9,6 +9,7 @@ import { StatusBadge } from '../../components/StatusBadge'
 import { Trash2, Ticket, Calendar, Download } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
+import SearchBar from '../../components/SearchBar'
 
 interface TicketData {
   id: string
@@ -48,6 +49,7 @@ export default function VendorBookings() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Fetch bookings and tickets from Supabase for this vendor
   const load = async () => {
@@ -251,7 +253,50 @@ export default function VendorBookings() {
   const filteredBookings = bookings.filter(b => {
     const statusMatch = statusFilter === 'all' || b.status === statusFilter
     const serviceMatch = serviceFilter === 'all' || b.service_id === serviceFilter
-    return statusMatch && serviceMatch
+
+    // Search filter
+    const searchMatch = !searchQuery.trim() || (() => {
+      const query = searchQuery.toLowerCase()
+      return (
+        // Search in service title
+        b.service?.title?.toLowerCase().includes(query) ||
+        b.services?.title?.toLowerCase().includes(query) ||
+        // Search in service description
+        b.service?.description?.toLowerCase().includes(query) ||
+        // Search in customer name
+        b.tourist_profile?.full_name?.toLowerCase().includes(query) ||
+        b.profiles?.full_name?.toLowerCase().includes(query) ||
+        b.guest_name?.toLowerCase().includes(query) ||
+        // Search in customer email
+        b.guest_email?.toLowerCase().includes(query) ||
+        // Search in booking status
+        b.status?.toLowerCase().includes(query) ||
+        b.payment_status?.toLowerCase().includes(query) ||
+        // Search in booking ID
+        b.id?.toLowerCase().includes(query)
+      )
+    })()
+
+    return statusMatch && serviceMatch && searchMatch
+  })
+
+  // Filtered tickets
+  const filteredTickets = tickets.filter(ticket => {
+    if (!searchQuery.trim()) return true
+
+    const query = searchQuery.toLowerCase()
+    return (
+      // Search in ticket ID
+      ticket.id?.toLowerCase().includes(query) ||
+      // Search in ticket code
+      ticket.code?.toLowerCase().includes(query) ||
+      // Search in ticket type title
+      ticket.ticket_types?.title?.toLowerCase().includes(query) ||
+      // Search in service title
+      ticket.services?.title?.toLowerCase().includes(query) ||
+      // Search in ticket status
+      ticket.status?.toLowerCase().includes(query)
+    )
   })
 
   return (
@@ -280,7 +325,7 @@ export default function VendorBookings() {
             }`}
           >
             <Calendar className="inline-block w-4 h-4 mr-2" />
-            Bookings ({bookings.length})
+            Bookings ({searchQuery.trim() ? filteredBookings.length : bookings.length})
           </button>
           <button
             onClick={() => setActiveTab('tickets')}
@@ -291,35 +336,46 @@ export default function VendorBookings() {
             }`}
           >
             <Ticket className="inline-block w-4 h-4 mr-2" />
-            Tickets ({tickets.length})
+            Tickets ({searchQuery.trim() ? filteredTickets.length : tickets.length})
           </button>
         </nav>
       </div>
 
       {activeTab === 'bookings' && (
         <>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="completed">Completed</option>
-            </select>
-            <select
-              value={serviceFilter}
-              onChange={e => setServiceFilter(e.target.value)}
-              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="all">All Services</option>
-              {services.map(s => (
-                <option key={s.id} value={s.id}>{s.title}</option>
-              ))}
-            </select>
+          {/* Search Bar */}
+          <SearchBar
+            placeholder="Search bookings and tickets by service, customer, status, booking ID, or ticket ID/code..."
+            onSearch={setSearchQuery}
+            initialValue={searchQuery}
+          />
+
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-2">
+            <div className="flex-1 min-w-0">
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-0">
+              <select
+                value={serviceFilter}
+                onChange={e => setServiceFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="all">All Services</option>
+                {services.map(s => (
+                  <option key={s.id} value={s.id}>{s.title}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
   <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
@@ -547,14 +603,14 @@ export default function VendorBookings() {
       {activeTab === 'tickets' && (
         <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Event Tickets</h3>
+            <h3 className="text-lg font-medium text-gray-900">Event Tickets ({filteredTickets.length})</h3>
             <p className="text-sm text-gray-500 mt-1">Tickets issued for your events</p>
           </div>
 
-          {tickets.length === 0 ? (
+          {filteredTickets.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-gray-500">
               <Ticket className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              No tickets issued yet.
+              {tickets.length === 0 ? 'No tickets issued yet.' : 'No tickets match your search.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -571,7 +627,7 @@ export default function VendorBookings() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {tickets.map((ticket) => (
+                  {filteredTickets.map((ticket) => (
                     <tr key={ticket.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900">
                         {ticket.code}

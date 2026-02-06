@@ -4,6 +4,7 @@ import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
 import { formatCurrency } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
+import SearchBar from '../../components/SearchBar'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
@@ -20,6 +21,7 @@ export default function VendorServices() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
+  const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Check if user is a vendor and set vendorId accordingly
   useEffect(() => {
@@ -437,10 +439,18 @@ export default function VendorServices() {
     )
   }
 
-  // Filter services based on selected category
-  const filteredServices = selectedCategory === 'all' 
+  // Filter services based on selected category and search query
+  const categoryFilteredServices = selectedCategory === 'all' 
     ? services 
     : services.filter(service => service.category_id === selectedCategory)
+
+  const filteredServices = searchQuery.trim() === ''
+    ? categoryFilteredServices
+    : categoryFilteredServices.filter(service =>
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
 
   const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending')
 
@@ -458,6 +468,16 @@ export default function VendorServices() {
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
           <Plus className="h-4 w-4 mr-2" /> Add Service
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <SearchBar
+          placeholder="Search services by title, description, or category..."
+          onSearch={setSearchQuery}
+          initialValue={searchQuery}
+          className="max-w-md"
+        />
       </div>
 
       {/* Category Tabs */}
@@ -497,7 +517,117 @@ export default function VendorServices() {
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden">
+          {loading ? (
+            <div className="px-6 py-10 text-center text-gray-500">
+              Loading services...
+            </div>
+          ) : error ? (
+            <div className="px-6 py-10 text-center text-red-500">
+              Error: {error}
+            </div>
+          ) : filteredServices.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-gray-500">
+              {selectedCategory === 'all' 
+                ? 'No services yet. Click Add Service to create one.' 
+                : `No services in this category. Click Add Service to create one.`
+              }
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {filteredServices.map(s => (
+                <div key={s.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">{s.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{s.description}</p>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <StatusBadge status={s.status} variant="small" />
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {s.status === 'approved' ? 'Available' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                        {s.service_categories?.name || s.category_id}
+                      </span>
+                      <span className="text-lg font-bold text-gray-900">{formatCurrency(s.price, s.currency)}</span>
+                    </div>
+                  </div>
+
+                  {s.category_id === 'cat_activities' && (
+                    <div className="mb-3 text-sm">
+                      {s.scan_enabled ? (
+                        <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Event scan link</a>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Event link inactive</span>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                alert('Activation request submitted. An admin will review it.')
+                              } catch (err) {
+                                console.error('Failed to create activation request:', err)
+                                alert('Failed to submit activation request. Please try again later.')
+                              }
+                            }}
+                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Request activation
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
+                    <button 
+                      onClick={() => { setEditing(s); setShowForm(true) }} 
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(s)}
+                      className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        s.status === 'approved' 
+                          ? "text-orange-600 hover:text-orange-800 hover:bg-orange-50" 
+                          : "text-red-600 hover:text-red-800 hover:bg-red-50"
+                      }`}
+                      title={s.status === 'approved' ? "Request deletion (requires admin approval)" : "Delete service"}
+                    >
+                      {s.status === 'approved' ? (
+                        <>
+                          <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Request Delete
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
