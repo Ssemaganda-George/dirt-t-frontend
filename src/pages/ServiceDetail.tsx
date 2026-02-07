@@ -139,6 +139,8 @@ export default function ServiceDetail() {
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [checkInDate, setCheckInDate] = useState('')
+  const [checkOutDate, setCheckOutDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
@@ -332,6 +334,8 @@ export default function ServiceDetail() {
     // For transport services, check for date range
     if (service.service_categories?.name?.toLowerCase() === 'transport') {
       if (!startDate || !endDate) return
+    } else if (['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')) {
+      if (!checkInDate || !checkOutDate) return
     } else {
       if (!selectedDate) return
     }
@@ -341,10 +345,12 @@ export default function ServiceDetail() {
     // Navigate to clean booking URL without query parameters
     const bookingUrl = `/service/${service.slug}/book/${bookingCategory}`
     
-    // Pass selected dates via navigation state
+    // Pass selected dates and guests via navigation state
     const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
-      ? { startDate, endDate }
-      : { selectedDate }
+      ? { startDate, endDate, guests }
+      : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+      ? { checkInDate, checkOutDate, guests, rooms: 1 }
+      : { selectedDate, guests }
     
     // Use React Router navigation with state
     navigate(bookingUrl, { state: navigationState })
@@ -358,28 +364,35 @@ export default function ServiceDetail() {
 
   const handleSaveToCart = () => {
     if (!service) return
+    
+    // Determine booking data based on service category
+    const isAccommodation = ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+    const isTransport = service.service_categories?.name?.toLowerCase() === 'transport'
+    
+    const bookingData = {
+      date: isTransport ? startDate : isAccommodation ? checkInDate : selectedDate,
+      checkInDate: isAccommodation ? checkInDate : '',
+      checkOutDate: isAccommodation ? checkOutDate : '',
+      guests: guests,
+      rooms: 1,
+      roomType: '',
+      pickupLocation: '',
+      dropoffLocation: '',
+      returnTrip: false,
+      specialRequests: '',
+      contactName: '',
+      contactEmail: '',
+      contactPhone: '',
+      paymentMethod: 'mobile'
+    }
+    
     // Add to cart with basic service info
     addToCart({
       serviceId: service.id,
       service,
-      bookingData: {
-        date: '',
-        checkInDate: '',
-        checkOutDate: '',
-        guests: 1,
-        rooms: 1,
-        roomType: '',
-        pickupLocation: '',
-        dropoffLocation: '',
-        returnTrip: false,
-        specialRequests: '',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
-        paymentMethod: 'mobile'
-      },
+      bookingData,
       category: service.service_categories.name.toLowerCase(),
-      totalPrice: service.price,
+      totalPrice: totalPrice,
       currency: service.currency
     })
     // Could add a toast notification here
@@ -1116,8 +1129,23 @@ export default function ServiceDetail() {
     return Math.ceil(diffHours / 24) || 1
   }
 
+  // Calculate number of nights for accommodation services
+  const calculateNights = (checkInDate: string, checkOutDate: string): number => {
+    if (!checkInDate || !checkOutDate) return 1
+    
+    const checkIn = new Date(checkInDate)
+    const checkOut = new Date(checkOutDate)
+    
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return diffDays || 1
+  }
+
   const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
     ? service.price * calculateDays(startDate, startTime, endDate, endTime)
+    : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+    ? service.price * calculateNights(checkInDate, checkOutDate)
     : service.price * guests
 
   return (
@@ -1458,6 +1486,23 @@ export default function ServiceDetail() {
                           </div>
                         </div>
                       </div>
+                    ) : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Check-in date</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                            <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Check-out date</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                            <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Select date</label>
@@ -1483,14 +1528,24 @@ export default function ServiceDetail() {
 
                   <div className="border-t pt-4 mb-6">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-gray-600">{service.service_categories?.name?.toLowerCase() === 'transport' ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}` : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}</span>
+                      <span className="text-gray-600">
+                        {service.service_categories?.name?.toLowerCase() === 'transport' 
+                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                          : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                          : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                      </span>
                       <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
                     <div className="flex justify-between items-center text-lg font-bold"><span>Total</span><span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span></div>
                   </div>
 
                   <div className="flex space-x-3">
-                    <button onClick={handleBooking} disabled={service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate : !selectedDate} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
+                    <button onClick={handleBooking} disabled={
+                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
+                      ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
+                      !selectedDate
+                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">{service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Provider'}</button>
                   </div>
 

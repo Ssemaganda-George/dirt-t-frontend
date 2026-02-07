@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle, Bed, Wifi, Car } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
 import { useAuth } from '../contexts/AuthContext'
@@ -45,6 +45,7 @@ interface HotelBookingProps {
 
 export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
   const [currentStep, setCurrentStep] = useState(1)
@@ -336,6 +337,22 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
+
+  // Pre-fill form data from navigation state
+  useEffect(() => {
+    if (location.state) {
+      const { checkInDate, checkOutDate, guests, rooms } = location.state as any
+      if (checkInDate || checkOutDate || guests || rooms) {
+        setBookingData(prev => ({
+          ...prev,
+          checkInDate: checkInDate || prev.checkInDate,
+          checkOutDate: checkOutDate || prev.checkOutDate,
+          guests: guests || prev.guests,
+          rooms: rooms || prev.rooms
+        }))
+      }
+    }
+  }, [location.state])
 
   useEffect(() => {
     let mounted = true
