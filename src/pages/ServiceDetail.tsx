@@ -1427,7 +1427,12 @@ export default function ServiceDetail() {
                 <div>
                   <div className="text-center mb-6">
                     <div className="text-3xl font-bold text-gray-900">{formatCurrencyWithConversion(service.price, service.currency)}</div>
-                    <div className="text-sm text-gray-500">{service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}</div>
+                    <div className="text-sm text-gray-500">
+                      {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
+                       ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
+                       service.service_categories?.name?.toLowerCase() === 'shops' ? 'per item' :
+                       service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
+                    </div>
                   </div>
                   <div className="space-y-4 mb-6">
                     {service.service_categories?.name?.toLowerCase() === 'transport' ? (
