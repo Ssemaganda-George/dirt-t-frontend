@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import * as QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
 import { formatCurrency, formatDateTime } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
@@ -22,6 +23,7 @@ interface TicketData {
     title: string
     event_location?: string
     location?: string
+    primary_image_url?: string
     vendors: {
       business_name: string
     }
@@ -31,6 +33,10 @@ interface TicketData {
     created_at: string
     user_id: string
   }
+  buyer_profile?: {
+    full_name: string
+    email: string
+  } | null
 }
 
 export default function AdminTickets() {
@@ -59,7 +65,7 @@ export default function AdminTickets() {
         .select(`
           *,
           ticket_types(title, price),
-          services(title, event_location, location, vendors(business_name)),
+          services(title, event_location, location, primary_image_url, vendors(business_name)),
           orders(currency, created_at, user_id)
         `)
         .order('issued_at', { ascending: false })
@@ -81,7 +87,32 @@ export default function AdminTickets() {
         // Continue without bookings data
       }
 
-      setTickets(ticketsData || [])
+      // Fetch profiles for ticket buyers
+      let profilesMap: Record<string, { full_name: string; email: string }> = {}
+      if (ticketsData && ticketsData.length > 0) {
+        const userIds = [...new Set(ticketsData.map(t => t.orders?.user_id).filter(Boolean))]
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds)
+
+          if (!profilesError && profilesData) {
+            profilesMap = profilesData.reduce((acc, profile) => {
+              acc[profile.id] = { full_name: profile.full_name, email: profile.email }
+              return acc
+            }, {} as Record<string, { full_name: string; email: string }>)
+          }
+        }
+      }
+
+      // Attach profile information to tickets
+      const ticketsWithProfiles = (ticketsData || []).map(ticket => ({
+        ...ticket,
+        buyer_profile: ticket.orders?.user_id ? profilesMap[ticket.orders.user_id] : null
+      }))
+
+      setTickets(ticketsWithProfiles)
       setBookings(bookingsData || [])
     } catch (err) {
       console.error('Error loading tickets:', err)
@@ -110,58 +141,90 @@ export default function AdminTickets() {
     totalEvents: new Set(tickets.map(t => t.services?.title).filter(Boolean)).size,
   }
 
-  const downloadTicket = (ticket: TicketData) => {
+  const downloadTicket = async (ticket: TicketData) => {
+    // Generate QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(ticket.code)
+
     // Create a simple HTML page for the ticket
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
     const ticketHtml = `
-      <div style="border: 2px solid #61B82C; border-radius: 8px; margin: 20px; overflow: hidden; max-width: 600px;">
+      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 2px solid #61B82C;">
         <!-- Ticket Header -->
-        <div style="background: linear-gradient(to right, #61B82C, #4a8f23); color: white; padding: 12px;">
+        <div style="background: linear-gradient(135deg, #61B82C 0%, #4a8f23 100%); color: white; padding: 16px 20px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
+              ${(() => {
+                const eventImage = ticket.services?.primary_image_url;
+                return eventImage ? `
+                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <img src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
+                  </div>
+                ` : `
+                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
+                `;
+              })()}
               <div>
-                <h3 style="font-weight: bold; font-size: 16px; margin: 0;">${ticket.services?.title || 'Event'}</h3>
-                <p style="color: rgba(255,255,255,0.9); margin: 2px 0 0 0; font-size: 12px;">${ticket.ticket_types?.title || 'Ticket'}</p>
+                <h2 style="font-weight: 700; font-size: 16px; margin: 0; line-height: 1.2;">${ticket.services?.title || 'Event'}</h2>
+                <p style="margin: 2px 0 0 0; font-size: 12px; opacity: 0.9;">${ticket.ticket_types?.title || 'Ticket'}</p>
               </div>
             </div>
-            <div style="text-align: right;">
-              <div style="font-size: 10px; color: rgba(255,255,255,0.8);">Ticket Code</div>
-              <div style="font-family: monospace; font-weight: bold; font-size: 14px;">${ticket.code}</div>
+            <div style="text-align: right; font-family: 'Courier New', monospace;">
+              <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">CODE</div>
+              <div style="font-weight: 700; font-size: 14px; letter-spacing: 1px;">${ticket.code}</div>
             </div>
           </div>
         </div>
 
-        <!-- Ticket Details -->
+        <!-- Ticket Body -->
         <div style="padding: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div>
-              <div style="font-size: 12px; margin-bottom: 2px;">
-                <span style="color: #6b7280;">Price: </span>
-                <span style="font-weight: 600;">${formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</span>
-              </div>
-              <div style="font-size: 12px; margin-bottom: 8px;">
-                <span style="color: #6b7280;">Status: </span>
-                <span style="font-weight: 600; color: ${ticket.status === 'issued' ? '#059669' : ticket.status === 'used' ? '#2563eb' : '#6b7280'};">${ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}</span>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <!-- Left Section - Event Details -->
+            <div style="flex: 1;">
+              <h3 style="font-size: 11px; font-weight: 600; color: #374151; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Event</h3>
+              <div style="font-size: 11px; color: #6b7280; line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><strong>${ticket.services?.title || 'Event'}</strong></div>
+                <div style="display: flex; align-items: center; gap: 3px; margin-bottom: 1px;">
+                  <span>📅</span>
+                  <span>${new Date(ticket.issued_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 3px;">
+                  <span>📍</span>
+                  <span>${ticket.services?.event_location || ticket.services?.location || 'Venue TBA'}</span>
+                </div>
               </div>
             </div>
-            <div style="text-align: right;">
-              <div style="font-size: 10px; color: #6b7280;">Issued: ${new Date(ticket.issued_at).toLocaleDateString()}</div>
-              ${ticket.used_at ? `<div style="font-size: 10px; color: #6b7280;">Used: ${new Date(ticket.used_at).toLocaleDateString()}</div>` : ''}
+
+            <!-- Center Section - Buyer Information -->
+            <div style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; padding: 0 12px;">
+              <h3 style="font-size: 11px; font-weight: 600; color: #374151; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Buyer</h3>
+              <div style="font-size: 11px; color: #6b7280; line-height: 1.3;">
+                <div style="margin-bottom: 2px;"><strong>${ticket.buyer_profile?.full_name || 'N/A'}</strong></div>
+                <div>${ticket.buyer_profile?.email || 'N/A'}</div>
+              </div>
+              <div style="margin-top: 6px;">
+                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; background: ${ticket.status === 'issued' ? '#dcfce7' : ticket.status === 'used' ? '#dbeafe' : '#fef3c7'}; color: ${ticket.status === 'issued' ? '#166534' : ticket.status === 'used' ? '#1e40af' : '#92400e'};">
+                  <span>${ticket.status?.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Section - QR Code & Price -->
+            <div style="flex: 1; text-align: center;">
+              <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; margin-bottom: 4px; display: inline-block;">
+                <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
+              </div>
+              <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
+              <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</div>
             </div>
           </div>
 
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
-            📍 ${ticket.services?.event_location || ticket.services?.location || 'Venue TBA'}
-          </div>
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px;">
-            👥 ${ticket.services?.vendors?.business_name || 'Service Provider'}
-          </div>
-
-          <div style="font-size: 10px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-            Valid for entry • Present at venue
+          <!-- Footer -->
+          <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed #d1d5db; text-align: center;">
+            <div style="font-size: 9px; color: #9ca3af;">
+              Valid for entry • One-time use only • ${ticket.services?.vendors?.business_name || 'Service Provider'}
+            </div>
           </div>
         </div>
       </div>
@@ -173,12 +236,30 @@ export default function AdminTickets() {
         <head>
           <title>Ticket - ${ticket.code}</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f9fafb; }
-            @media print { body { padding: 0; } }
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              margin: 0;
+              padding: 20px;
+              background: #f9fafb;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            @media print {
+              body { padding: 0; background: white; }
+              .no-print { display: none; }
+            }
+            @page {
+              size: A4;
+              margin: 0.5in;
+            }
           </style>
         </head>
         <body>
           ${ticketHtml}
+          
+          <div class="no-print" style="text-align: center; margin-top: 20px;">
+            <button onclick="window.print()" style="background: #61B82C; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Print Ticket</button>
+          </div>
         </body>
       </html>
     `)
