@@ -18,6 +18,8 @@ export default function ScanEventPage() {
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<any>(null)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const qrScannerRef = useRef<QrScanner | null>(null)
 
@@ -82,6 +84,8 @@ export default function ScanEventPage() {
     setIsScanning(true)
     setScanError(null)
     setScanResult(null)
+    setLastScannedCode(null)
+    setIsProcessing(false)
 
     // Wait for the video element to be available
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -150,13 +154,28 @@ export default function ScanEventPage() {
       qrScannerRef.current = null
     }
     setIsScanning(false)
+    setIsProcessing(false)
+    setLastScannedCode(null)
   }
 
   const handleScanResult = async (qrData: string) => {
-    if (!id) return
+    if (!id || isProcessing) return
+
+    // Prevent scanning the same code multiple times in quick succession
+    if (lastScannedCode === qrData) {
+      console.log('Same QR code detected again, ignoring')
+      return
+    }
+
+    console.log('Processing QR code:', qrData)
+    setIsProcessing(true)
+    setLastScannedCode(qrData)
+    setScanError(null)
+
+    // Clear previous result and show processing state
+    setScanResult(null)
 
     try {
-      setScanError(null)
       const result = await verifyTicketByCode(qrData, id)
       
       if (result.valid) {
@@ -167,11 +186,13 @@ export default function ScanEventPage() {
           message: 'Ticket verified and marked as used!',
           ticket: result.ticket
         })
+        console.log('Ticket verified successfully')
       } else {
         setScanResult({
           success: false,
           message: result.message
         })
+        console.log('Ticket verification failed:', result.message)
       }
     } catch (err: any) {
       console.error('Error verifying ticket:', err)
@@ -179,6 +200,12 @@ export default function ScanEventPage() {
         success: false,
         message: err.message || 'Error verifying ticket'
       })
+    } finally {
+      setIsProcessing(false)
+      // Reset last scanned code after a delay to allow re-scanning if needed
+      setTimeout(() => {
+        setLastScannedCode(null)
+      }, 3000)
     }
   }
 
@@ -229,8 +256,13 @@ export default function ScanEventPage() {
               />
             </div>
             <p className="mt-2 text-sm text-gray-600 text-center">
-              Point your camera at a ticket QR code
+              {isProcessing ? 'Verifying ticket...' : 'Point your camera at a ticket QR code'}
             </p>
+            {isProcessing && (
+              <div className="mt-2 flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            )}
           </div>
         )}
 
