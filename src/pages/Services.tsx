@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
-import { formatCurrency } from '../lib/utils'
+import { usePreferences } from '../contexts/PreferencesContext'
+import { formatCurrencyWithConversion } from '../lib/utils'
 import type { Service } from '../types'
 
 const categories = [
@@ -66,6 +67,7 @@ export default function Services() {
 
   // Use the reactive useServices hook instead of local state
   const { services: allServices, loading: servicesLoading } = useServices()
+  // Use centralized formatting helper from lib/utils
 
   // Helper function to render icons (handles both string and component icons)
   const renderIcon = (icon: any, className: string = "h-4 w-4") => {
@@ -160,7 +162,6 @@ export default function Services() {
       <ServiceDetail 
         service={selectedService} 
         onBack={() => setSelectedService(null)}
-        formatCurrency={formatCurrency}
       />
     )
   }
@@ -231,7 +232,6 @@ export default function Services() {
                 <ServiceCard 
                   key={service.id} 
                   service={service}
-                  formatCurrency={formatCurrency}
                   onClick={() => setSelectedService(service)}
                 />
               ))}
@@ -283,12 +283,11 @@ export default function Services() {
 
 interface ServiceCardProps {
   service: Service
-  formatCurrency: (amount: number, currency: string) => string
   onClick: () => void
 }
-
-function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
+function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   
   // Provide fallback image if no images exist
   const displayImage = service.images && service.images.length > 0 
@@ -364,8 +363,8 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           {/* Price */}
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-500">From</span>
-            <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(service.price, service.currency)}
+              <span className="text-xl font-bold text-gray-900">
+              {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
             </span>
             <span className="text-xs text-gray-500">
               {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
@@ -380,11 +379,10 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 interface ServiceDetailProps {
   service: Service
   onBack: () => void
-  formatCurrency: (amount: number, currency: string) => string
 }
-
-function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) {
+function ServiceDetail({ service, onBack }: ServiceDetailProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const { selectedCurrency, selectedLanguage } = usePreferences()
 
   // Provide fallback image if no images exist
   const displayImage = service.images && service.images.length > 0 
@@ -518,7 +516,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-sm text-gray-600">From</span>
                   <span className="text-3xl font-bold text-gray-900">
-                    {formatCurrency(service.price, service.currency)}
+                    {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">

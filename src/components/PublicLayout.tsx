@@ -6,14 +6,38 @@ import MobileBottomNav from './MobileBottomNav'
 import GlobalSearchModal from './GlobalSearchModal'
 import SupportModal from './SupportModal'
 import LoginModal from './LoginModal'
-// import { useServiceCategories } from '../hooks/hook' // Temporarily commented out
+import { usePreferences } from '../contexts/PreferencesContext'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 
+const getRegionName = (code: string) => {
+  const regionMap: { [key: string]: string } = {
+    'UG': 'UGA',
+    'US': 'USA',
+    'GB': 'GBR',
+    'KE': 'KEN',
+    'TZ': 'TZA',
+    'RW': 'RWA',
+    'ZA': 'ZAF',
+    'NG': 'NGA',
+    'GH': 'GHA',
+    'CA-EN': 'CAN',
+    'CA-FR': 'CAN',
+    'AU': 'AUS',
+    'FR': 'FRA',
+    'DE': 'DEU',
+    'ES': 'ESP',
+    'IT': 'ITA',
+    'IN': 'IND',
+    'SG': 'SGP',
+    'MY': 'MYS',
+    'ID': 'IDN'
+  }
+  return regionMap[code] || code
+}
+
 export default function PublicLayout() {
   const [showPreferences, setShowPreferences] = useState(false)
-  const [selectedRegion, setSelectedRegion] = useState('UG')
-  const [selectedCurrency, setSelectedCurrency] = useState('UGX')
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
@@ -28,6 +52,7 @@ export default function PublicLayout() {
   // const { categories } = useServiceCategories() // Temporarily commented out
   const { getCartCount } = useCart()
   const { user, profile, signOut } = useAuth()
+  const { selectedRegion, selectedCurrency, t } = usePreferences()
 
   // Map category IDs to navigation items
   const getNavigationItems = () => {
@@ -136,7 +161,7 @@ export default function PublicLayout() {
                       : 'text-gray-700 hover:text-blue-600'
                   }`}
                 >
-                  {item.name}
+                  {t('home')}
                 </Link>
               ))}
             </nav>
@@ -147,7 +172,7 @@ export default function PublicLayout() {
               <button
                 onClick={() => setShowGlobalSearch(true)}
                 className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
-                title="Search"
+                title={t('search')}
               >
                 <Search className="h-5 w-5 text-gray-600" />
               </button>
@@ -155,9 +180,10 @@ export default function PublicLayout() {
               <button
                 onClick={() => setShowPreferences(true)}
                 className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                title={t('preferences')}
               >
                 <Globe className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium text-gray-700">{selectedCurrency}</span>
+                <span className="text-sm font-medium text-gray-700">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
               </button>
 
               {user && profile?.role === 'tourist' && (
@@ -193,7 +219,7 @@ export default function PublicLayout() {
                     <div className="fixed right-4 top-28 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200]">
                       <div className="py-1">
                         <div className="px-4 py-2 border-b border-gray-200">
-                          <p className="text-sm font-medium text-gray-900">My Account</p>
+                          <p className="text-sm font-medium text-gray-900">{t('my_account')}</p>
                           <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
                         </div>
                         <Link
@@ -202,7 +228,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <Home className="h-3.5 w-3.5 mr-2" />
-                          Home
+                          {t('home')}
                         </Link>
                         <Link
                           to="/profile"
@@ -210,7 +236,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <User className="h-3.5 w-3.5 mr-2" />
-                          Profile
+                          {t('profile')}
                         </Link>
                         <Link
                           to="/bookings"
@@ -218,7 +244,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          My Bookings
+                          {t('bookings')}
                         </Link>
                         <Link
                           to="/saved"
@@ -226,7 +252,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <Heart className="h-3.5 w-3.5 mr-2" />
-                          Saved Items
+                          {t('saved_items') || 'Saved Items'}
                         </Link>
                         <Link
                           to="/settings"
@@ -234,7 +260,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <Settings className="h-3.5 w-3.5 mr-2" />
-                          Settings
+                          {t('settings')}
                         </Link>
                         <Link
                           to="/help"
@@ -242,7 +268,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <HelpCircle className="h-3.5 w-3.5 mr-2" />
-                          Help Center
+                          {t('help_center')}
                         </Link>
 
                         {/* Divider */}
@@ -250,7 +276,7 @@ export default function PublicLayout() {
 
                         {/* Business Section */}
                         <div className="px-3 py-1.5">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('for_businesses') || 'For Businesses'}</h4>
                         </div>
                         <Link
                           to="/vendor-login"
@@ -258,7 +284,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          List My Business
+                          {t('list_my_business')}
                         </Link>
                         <Link
                           to="/partner"
@@ -266,7 +292,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          Partner with DirtTrails
+                          {t('partner_with')}
                         </Link>
 
                         <button
@@ -277,7 +303,7 @@ export default function PublicLayout() {
                           className="flex items-center w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <LogOut className="h-3.5 w-3.5 mr-2" />
-                          Sign Out
+                          {t('sign_out')}
                         </button>
                       </div>
                     </div>
@@ -299,7 +325,7 @@ export default function PublicLayout() {
                       <div className="py-2">
                         {/* Account Section */}
                         <div className="px-3 py-1.5">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Account</h4>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('my_account')}</h4>
                         </div>
                         <Link
                           to="/"
@@ -307,7 +333,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <Home className="h-3.5 w-3.5 mr-2" />
-                          Home
+                          {t('home')}
                         </Link>
                         <button
                           type="button"
@@ -318,7 +344,7 @@ export default function PublicLayout() {
                           className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <User className="h-3.5 w-3.5 mr-2" />
-                          Log In
+                          {t('log_in')}
                         </button>
                         <button
                           onClick={() => {
@@ -328,7 +354,7 @@ export default function PublicLayout() {
                           className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <Globe className="h-3.5 w-3.5 mr-2" />
-                          Currency & Region
+                          {t('currency_region')}
                         </button>
                         <Link
                           to="/help"
@@ -336,7 +362,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <HelpCircle className="h-3.5 w-3.5 mr-2" />
-                          Help Center
+                          {t('help_center')}
                         </Link>
 
                         {/* Divider */}
@@ -344,7 +370,7 @@ export default function PublicLayout() {
 
                         {/* Business Section */}
                         <div className="px-3 py-1.5">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">For Businesses</h4>
+                          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('for_businesses')}</h4>
                         </div>
                         <Link
                           to="/vendor-login"
@@ -352,7 +378,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          List My Business
+                          {t('list_my_business')}
                         </Link>
                         <Link
                           to="/partner"
@@ -360,7 +386,7 @@ export default function PublicLayout() {
                           className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                         >
                           <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                          Partner with DirtTrails
+                          {t('partner_with')}
                         </Link>
                       </div>
                     </div>
@@ -377,10 +403,6 @@ export default function PublicLayout() {
       <PreferencesModal
         isOpen={showPreferences}
         onClose={() => setShowPreferences(false)}
-        selectedRegion={selectedRegion}
-        selectedCurrency={selectedCurrency}
-        onRegionChange={setSelectedRegion}
-        onCurrencyChange={setSelectedCurrency}
       />
 
       {/* Support Modal */}

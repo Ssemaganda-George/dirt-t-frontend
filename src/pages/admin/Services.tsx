@@ -4,12 +4,14 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EditServiceModal } from '../../components/EditServiceModal';
 import SearchBar from '../../components/SearchBar';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrencyWithConversion } from '../../lib/utils';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
 import type { Service } from '../../types';
 
 export function Services() {
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
   const { categories } = useServiceCategories();
   const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
@@ -354,7 +356,7 @@ export function Services() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(service.price, service.currency)}
+                      {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={service.status} variant="small" />
@@ -463,7 +465,7 @@ export function Services() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(service.price, service.currency)}
+                        {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button

@@ -1,12 +1,14 @@
 import { format } from 'date-fns';
 import { useAdminTransactions } from '../../hooks/hook';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrencyWithConversion } from '../../lib/utils';
 import { useState } from 'react';
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { supabase } from '../../lib/supabaseClient';
 
 export function Finance() {
   const { transactions, loading, error, refetch } = useAdminTransactions();
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [activeTab, setActiveTab] = useState<'withdrawals' | 'payments' | 'refunds' | 'rejected'>('withdrawals');
   const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
   const [paymentNotes, setPaymentNotes] = useState<{[key: string]: string}>({});
@@ -488,7 +490,7 @@ export function Finance() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {formatCurrency(stats.totalRevenue, 'UGX')}
+                    {formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </dd>
                   <dd className="text-xs text-green-600 mt-1">
                     +{stats.monthlyData[stats.monthlyData.length - 1]?.revenue ?
@@ -513,7 +515,7 @@ export function Finance() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Net Revenue</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {formatCurrency(stats.netRevenue, 'UGX')}
+                    {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </dd>
                   <dd className="text-xs text-gray-600 mt-1">
                     Revenue - Withdrawals - Refunds
@@ -537,7 +539,7 @@ export function Finance() {
                   <dt className="text-sm font-medium text-gray-500 truncate">Pending Withdrawals</dt>
                   <dd className="text-lg font-medium text-gray-900">{stats.pendingWithdrawals}</dd>
                   <dd className="text-xs text-gray-600 mt-1">
-                    {formatCurrency(stats.pendingAmount, 'UGX')}
+                    {formatCurrencyWithConversion(stats.pendingAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </dd>
                 </dl>
               </div>
@@ -582,7 +584,7 @@ export function Finance() {
                   <dt className="text-sm font-medium text-gray-500 truncate">Ready for Payment</dt>
                   <dd className="text-lg font-medium text-gray-900">{stats.approvedWithdrawals}</dd>
                   <dd className="text-xs text-gray-600 mt-1">
-                    {formatCurrency(stats.approvedAmount, 'UGX')}
+                    {formatCurrencyWithConversion(stats.approvedAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </dd>
                 </dl>
               </div>
@@ -646,7 +648,7 @@ export function Finance() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-gray-900">{month.month}</span>
                     <span className="text-sm text-gray-500">
-                      Net: {formatCurrency(month.net, 'UGX')}
+                      Net: {formatCurrencyWithConversion(month.net, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -658,8 +660,8 @@ export function Finance() {
                     ></div>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Revenue: {formatCurrency(month.revenue, 'UGX')}</span>
-                    <span>Withdrawals: {formatCurrency(month.withdrawals, 'UGX')}</span>
+                    <span>Revenue: {formatCurrencyWithConversion(month.revenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
+                    <span>Withdrawals: {formatCurrencyWithConversion(month.withdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
                   </div>
                 </div>
               </div>
@@ -692,10 +694,10 @@ export function Finance() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium text-gray-900">
-                    {formatCurrency(vendor.totalRevenue, 'UGX')}
+                    {formatCurrencyWithConversion(vendor.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {formatCurrency(vendor.pendingWithdrawals, 'UGX')} pending
+                    {formatCurrencyWithConversion(vendor.pendingWithdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')} pending
                   </div>
                 </div>
               </div>
@@ -862,7 +864,7 @@ export function Finance() {
                       {transaction.vendors?.business_name || 'Unknown Vendor'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(transaction.amount, transaction.currency)}
+                      {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                       {transaction.payment_method.replace('_', ' ')}

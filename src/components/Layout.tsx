@@ -15,28 +15,33 @@ import {
   ChevronDown,
   Ticket,
   DollarSign,
-  Search
+  Search,
+  Globe
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
+import PreferencesModal from './PreferencesModal'
+import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: BarChart3 },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Services', href: '/admin/services', icon: ShoppingBag },
-  { name: 'Bookings', href: '/admin/bookings', icon: MapPin },
-  { name: 'Tickets', href: '/admin/tickets', icon: Ticket },
-  { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
-  { name: 'Partnerships', href: '/admin/partnerships', icon: Users },
-  { name: 'Wallets', href: '/admin/wallets', icon: CreditCard },
-  { name: 'Finance', href: '/admin/finance', icon: DollarSign },
-  { name: 'Hero Video', href: '/admin/hero-video', icon: BarChart3 },
+  { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
+  { labelKey: 'users', href: '/admin/users', icon: Users },
+  { labelKey: 'services', href: '/admin/services', icon: ShoppingBag },
+  { labelKey: 'bookings', href: '/admin/bookings', icon: MapPin },
+  { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket },
+  { labelKey: 'messages', href: '/admin/messages', icon: MessageSquare },
+  { labelKey: 'partnerships', href: '/admin/partnerships', icon: Users },
+  { labelKey: 'wallets', href: '/admin/wallets', icon: CreditCard },
+  { labelKey: 'finance', href: '/admin/finance', icon: DollarSign },
+  { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 },
 ]
 
 export default function Layout() {
   const { profile, signOut } = useAuth()
+  const { selectedRegion, selectedCurrency, t } = usePreferences()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showPreferences, setShowPreferences] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
@@ -53,6 +58,32 @@ export default function Layout() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const getRegionShort = (code: string) => {
+    const map: { [key: string]: string } = {
+      'UG': 'UGA',
+      'US': 'USA',
+      'GB': 'GBR',
+      'KE': 'KEN',
+      'TZ': 'TZA',
+      'RW': 'RWA',
+      'ZA': 'ZAF',
+      'NG': 'NGA',
+      'GH': 'GHA',
+      'CA-EN': 'CAN',
+      'CA-FR': 'CAN',
+      'AU': 'AUS',
+      'FR': 'FRA',
+      'DE': 'DEU',
+      'ES': 'ESP',
+      'IT': 'ITA',
+      'IN': 'IND',
+      'SG': 'SGP',
+      'MY': 'MYS',
+      'ID': 'IDN'
+    }
+    return map[code] || code
+  }
 
   // Global search keyboard shortcut (Cmd/Ctrl + K)
   useEffect(() => {
@@ -108,7 +139,7 @@ export default function Layout() {
               const isActive = location.pathname === item.href
               return (
                 <Link
-                  key={item.name}
+                  key={item.labelKey}
                   to={item.href}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
                     isActive
@@ -122,7 +153,7 @@ export default function Layout() {
                       isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
                     }`}
                   />
-                  {item.name}
+                  {t(item.labelKey)}
                 </Link>
               )
             })}
@@ -142,7 +173,7 @@ export default function Layout() {
               const isActive = location.pathname === item.href
               return (
                 <Link
-                  key={item.name}
+                  key={item.labelKey}
                   to={item.href}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
                     isActive
@@ -155,7 +186,7 @@ export default function Layout() {
                       isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
                     }`}
                   />
-                  {item.name}
+                  {t(item.labelKey)}
                 </Link>
               )
             })}
@@ -183,9 +214,18 @@ export default function Layout() {
               <button
                 onClick={() => setShowGlobalSearch(true)}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600"
-                title="Global Search (⌘K)"
+                title={t('global_search_tooltip')}
               >
                 <Search className="h-5 w-5 text-gray-600" />
+              </button>
+
+              <button
+                onClick={() => setShowPreferences(true)}
+                className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                title={t('preferences')}
+              >
+                <Globe className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">{getRegionShort(selectedRegion)} • {selectedCurrency}</span>
               </button>
 
               <div className="relative">
@@ -210,7 +250,7 @@ export default function Layout() {
                   <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                     <div className="py-1">
                       <div className="px-4 py-2 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">My Account</p>
+                        <p className="text-sm font-medium text-gray-900">{t('my_account')}</p>
                         <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
                       </div>
                       <Link
@@ -219,7 +259,7 @@ export default function Layout() {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <User className="h-4 w-4 mr-3" />
-                        Profile
+                        {t('profile')}
                       </Link>
                       <Link
                         to="/admin/settings"
@@ -227,7 +267,7 @@ export default function Layout() {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Settings className="h-4 w-4 mr-3" />
-                        Settings
+                        {t('settings')}
                       </Link>
                       <button
                         onClick={() => {
@@ -237,7 +277,7 @@ export default function Layout() {
                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
-                        Logout
+                        {t('logout')}
                       </button>
                     </div>
                   </div>
@@ -261,23 +301,26 @@ export default function Layout() {
         onClose={() => setShowGlobalSearch(false)}
       />
 
+      {/* Preferences Modal */}
+      <PreferencesModal isOpen={showPreferences} onClose={() => setShowPreferences(false)} />
+
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Are you sure you want to log out?</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logout_confirm')}</h3>
             <div className="flex space-x-3">
               <button
                 onClick={cancelSignOut}
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={confirmSignOut}
                 className="flex-1 px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
               >
-                Log Out
+                {t('log_out')}
               </button>
             </div>
           </div>

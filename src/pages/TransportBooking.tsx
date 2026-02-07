@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Users, CreditCard, CheckCircle, Car, XCircle } from 'lucide-react'
-import { formatCurrency } from '../lib/utils'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
@@ -52,6 +52,60 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   
   const { addToCart } = useCart()
   const { user, profile } = useAuth()
+  const { selectedCurrency } = usePreferences()
+
+  // Currency conversion rates (simplified)
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
+    const rates: { [key: string]: { [key: string]: number } } = {
+      'UGX': { 'USD': 0.00027, 'EUR': 0.00025, 'GBP': 0.00021, 'ZAR': 0.005, 'KES': 0.027, 'TZS': 0.62, 'BRL': 0.0013, 'MXN': 0.0054, 'EGP': 0.0084, 'MAD': 0.0025, 'TRY': 0.0089, 'THB': 0.0095, 'KRW': 0.35, 'RUB': 0.025 },
+      'USD': { 'UGX': 3700, 'EUR': 0.92, 'GBP': 0.79, 'ZAR': 18.5, 'KES': 100, 'TZS': 2300, 'BRL': 4.8, 'MXN': 20, 'EGP': 31, 'MAD': 9.2, 'TRY': 33, 'THB': 35, 'KRW': 1300, 'RUB': 92 },
+      'EUR': { 'UGX': 4000, 'USD': 1.09, 'GBP': 0.86, 'ZAR': 20.1, 'KES': 109, 'TZS': 2500, 'BRL': 5.2, 'MXN': 21.8, 'EGP': 33.8, 'MAD': 10, 'TRY': 36, 'THB': 38, 'KRW': 1410, 'RUB': 100 },
+      'GBP': { 'UGX': 4700, 'USD': 1.27, 'EUR': 1.16, 'ZAR': 23.4, 'KES': 127, 'TZS': 2900, 'BRL': 6.1, 'MXN': 25.5, 'EGP': 39.5, 'MAD': 11.7, 'TRY': 42, 'THB': 44.5, 'KRW': 1650, 'RUB': 117 },
+      'ZAR': { 'UGX': 200, 'USD': 0.054, 'EUR': 0.050, 'GBP': 0.043, 'KES': 5.4, 'TZS': 124, 'BRL': 0.26, 'MXN': 1.08, 'EGP': 1.68, 'MAD': 0.50, 'TRY': 1.79, 'THB': 1.89, 'KRW': 70, 'RUB': 5.0 },
+      'KES': { 'UGX': 37, 'USD': 0.01, 'EUR': 0.0092, 'GBP': 0.0079, 'ZAR': 0.185, 'TZS': 23, 'BRL': 0.048, 'MXN': 0.20, 'EGP': 0.31, 'MAD': 0.092, 'TRY': 0.33, 'THB': 0.35, 'KRW': 13, 'RUB': 0.92 },
+      'TZS': { 'UGX': 1.61, 'USD': 0.00043, 'EUR': 0.0004, 'GBP': 0.00034, 'ZAR': 0.008, 'KES': 0.043, 'BRL': 0.0021, 'MXN': 0.0087, 'EGP': 0.0135, 'MAD': 0.004, 'TRY': 0.0143, 'THB': 0.0152, 'KRW': 0.565, 'RUB': 0.04 },
+      'BRL': { 'UGX': 770, 'USD': 0.208, 'EUR': 0.192, 'GBP': 0.164, 'ZAR': 3.85, 'KES': 20.8, 'TZS': 476, 'MXN': 4.17, 'EGP': 6.46, 'MAD': 1.92, 'TRY': 6.88, 'THB': 7.29, 'KRW': 271, 'RUB': 19.2 },
+      'MXN': { 'UGX': 185, 'USD': 0.05, 'EUR': 0.046, 'GBP': 0.039, 'ZAR': 0.926, 'KES': 5.0, 'TZS': 115, 'BRL': 0.24, 'EGP': 1.55, 'MAD': 0.46, 'TRY': 1.65, 'THB': 1.75, 'KRW': 65, 'RUB': 4.6 },
+      'EGP': { 'UGX': 119, 'USD': 0.032, 'EUR': 0.030, 'GBP': 0.025, 'ZAR': 0.595, 'KES': 3.22, 'TZS': 74, 'BRL': 0.155, 'MXN': 0.645, 'MAD': 0.296, 'TRY': 1.06, 'THB': 1.13, 'KRW': 42, 'RUB': 2.96 },
+      'MAD': { 'UGX': 400, 'USD': 0.109, 'EUR': 0.10, 'GBP': 0.085, 'ZAR': 2.0, 'KES': 10.9, 'TZS': 250, 'BRL': 0.52, 'MXN': 2.17, 'EGP': 3.38, 'TRY': 3.59, 'THB': 3.81, 'KRW': 142, 'RUB': 10.0 },
+      'TRY': { 'UGX': 112, 'USD': 0.030, 'EUR': 0.028, 'GBP': 0.024, 'ZAR': 0.559, 'KES': 3.03, 'TZS': 70, 'BRL': 0.145, 'MXN': 0.606, 'EGP': 0.94, 'MAD': 0.279, 'THB': 0.296, 'KRW': 11, 'RUB': 0.78 },
+      'THB': { 'UGX': 105, 'USD': 0.028, 'EUR': 0.026, 'GBP': 0.022, 'ZAR': 0.529, 'KES': 2.86, 'TZS': 66, 'BRL': 0.137, 'MXN': 0.571, 'EGP': 0.885, 'MAD': 0.262, 'TRY': 3.38, 'KRW': 10.5, 'RUB': 0.74 },
+      'KRW': { 'UGX': 2.85, 'USD': 0.00077, 'EUR': 0.00071, 'GBP': 0.00061, 'ZAR': 0.0143, 'KES': 0.077, 'TZS': 1.77, 'BRL': 0.0037, 'MXN': 0.0154, 'EGP': 0.0238, 'MAD': 0.007, 'TRY': 0.090, 'THB': 0.095, 'RUB': 0.0067 },
+      'RUB': { 'UGX': 40, 'USD': 0.011, 'EUR': 0.01, 'GBP': 0.0085, 'ZAR': 0.20, 'KES': 1.09, 'TZS': 25, 'BRL': 0.052, 'MXN': 0.217, 'EGP': 0.337, 'MAD': 0.10, 'TRY': 1.28, 'THB': 1.35, 'KRW': 50 }
+    };
+
+    if (rates[fromCurrency] && rates[fromCurrency][toCurrency]) {
+      return amount * rates[fromCurrency][toCurrency];
+    }
+    return amount;
+  }
+
+  const formatAmount = (amount: number, currency: string): string => {
+    const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'ZAR', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK', 'DKK', 'JPY', 'CNY', 'INR', 'BRL', 'MXN', 'ARS', 'CLP', 'PEN', 'COP', 'EGP', 'MAD', 'TRY', 'THB', 'KRW', 'RUB'];
+    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: safeCurrency,
+      minimumFractionDigits: 0
+    }).format(amount);
+  }
+
+  // Create a formatCurrency function that uses user preferences
+  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
+    try {
+      const userCurrency = selectedCurrency || 'UGX';
+      if (userCurrency === serviceCurrency) {
+        return formatAmount(amount, userCurrency);
+      }
+      const convertedAmount = convertCurrency(amount, serviceCurrency, userCurrency);
+      return formatAmount(convertedAmount, userCurrency);
+    } catch (error) {
+      console.warn('Currency conversion failed, using original currency:', error);
+      return formatAmount(amount, serviceCurrency);
+    }
+  }
+
   const [currentStep, setCurrentStep] = useState(1)
   // Removed unused cartSaved state
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
@@ -502,7 +556,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   checked={bookingData.returnTrip}
                   onChange={(e) => handleInputChange('returnTrip', e.target.checked)}
                 />
-                <span className="text-sm font-medium text-gray-700">Return trip (+{formatCurrency(service.price, service.currency)})</span>
+                <span className="text-sm font-medium text-gray-700">Return trip (+{formatCurrencyWithConversion(service.price, service.currency)})</span>
               </label>
             </div>
 
@@ -582,17 +636,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-gray-600">Transportation: {service.title} ({calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days)</span>
-                <span className="font-medium">{formatCurrency(basePrice, service.currency)}</span>
+                <span className="font-medium">{formatCurrencyWithConversion(basePrice, service.currency)}</span>
               </div>
               {driverCost > 0 && (
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">Driver service (30% extra)</span>
-                  <span className="font-medium">{formatCurrency(driverCost, service.currency)}</span>
+                  <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
                 <span>Total Amount</span>
-                <span>{formatCurrency(totalPrice, service.currency)}</span>
+                <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
             
@@ -754,7 +808,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Paid:</span>
-                  <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
+                  <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                 </div>
               </div>
             </div>
@@ -829,7 +883,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Paid:</span>
-                <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
+                <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
           </div>
@@ -988,7 +1042,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
             <div className="text-right w-full md:w-auto md:text-right">
               <div className="text-xl md:text-lg font-bold text-gray-900 mb-1">
-                {formatCurrency(totalPrice, service.currency)}
+                {formatCurrencyWithConversion(totalPrice, service.currency)}
               </div>
               <div className="text-sm text-gray-500">
                 {bookingData.returnTrip ? 'Return trip' : 'One way'}

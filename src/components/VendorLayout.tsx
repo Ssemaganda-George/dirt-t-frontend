@@ -1,8 +1,10 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search } from 'lucide-react'
+import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, MapPin, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
+import PreferencesModal from './PreferencesModal'
+import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
   { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
@@ -16,7 +18,9 @@ const navigation = [
 
 export default function VendorLayout() {
   const { profile, signOut } = useAuth()
+  const { selectedRegion, selectedCurrency } = usePreferences()
   const location = useLocation()
+  const [showPreferences, setShowPreferences] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -48,6 +52,32 @@ export default function VendorLayout() {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  const getRegionShort = (code: string) => {
+    const map: { [key: string]: string } = {
+      'UG': 'UGA',
+      'US': 'USA',
+      'GB': 'GBR',
+      'KE': 'KEN',
+      'TZ': 'TZA',
+      'RW': 'RWA',
+      'ZA': 'ZAF',
+      'NG': 'NGA',
+      'GH': 'GHA',
+      'CA-EN': 'CAN',
+      'CA-FR': 'CAN',
+      'AU': 'AUS',
+      'FR': 'FRA',
+      'DE': 'DEU',
+      'ES': 'ESP',
+      'IT': 'ITA',
+      'IN': 'IND',
+      'SG': 'SGP',
+      'MY': 'MYS',
+      'ID': 'IDN'
+    }
+    return map[code] || code
+  }
 
   const handleSignOut = async () => {
     setShowLogoutConfirm(true)
@@ -171,6 +201,15 @@ export default function VendorLayout() {
                 <Search className="h-5 w-5 text-gray-600" />
               </button>
 
+              <button
+                onClick={() => setShowPreferences(true)}
+                className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                title="Preferences"
+              >
+                <Globe className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">{getRegionShort(selectedRegion)} • {selectedCurrency}</span>
+              </button>
+
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -241,6 +280,9 @@ export default function VendorLayout() {
         isOpen={showGlobalSearch}
         onClose={() => setShowGlobalSearch(false)}
       />
+
+      {/* Preferences Modal */}
+      <PreferencesModal isOpen={showPreferences} onClose={() => setShowPreferences(false)} />
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (

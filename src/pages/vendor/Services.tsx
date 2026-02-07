@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyWithConversion } from '../../lib/utils'
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { StatusBadge } from '../../components/StatusBadge'
 import SearchBar from '../../components/SearchBar'
 import { Plus, Pencil, Trash2, X } from 'lucide-react'
@@ -11,6 +12,7 @@ import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../.
 import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
 
 export default function VendorServices() {
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { user } = useAuth()
   const [vendorId, setVendorId] = useState<string | null>(null)
   const [vendorLoading, setVendorLoading] = useState(true)
@@ -558,7 +560,7 @@ export default function VendorServices() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                         {s.service_categories?.name || s.category_id}
                       </span>
-                      <span className="text-lg font-bold text-gray-900">{formatCurrency(s.price, s.currency)}</span>
+                      <span className="text-lg font-bold text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
                     </div>
                   </div>
 
@@ -697,7 +699,7 @@ export default function VendorServices() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(s.price, s.currency)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</td>
                     <td className="px-6 py-4"><StatusBadge status={s.status} variant="small" /></td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

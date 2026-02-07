@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
 import { getServices } from '../../store/vendorStore'
 import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
-import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
+import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { StatusBadge } from '../../components/StatusBadge'
 import { Trash2, Ticket, Calendar, Download } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
@@ -37,6 +38,7 @@ export default function VendorBookings() {
   const { profile, vendor } = useAuth()
   const location = useLocation()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { state: cartState } = useCart()
 
   const [activeTab, setActiveTab] = useState<'bookings' | 'tickets'>('bookings')
@@ -201,7 +203,8 @@ export default function VendorBookings() {
             <div>
               <div style="font-size: 12px; margin-bottom: 2px;">
                 <span style="color: #6b7280;">Price: </span>
-                <span style="font-weight: 600;">${formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</span>
+                <span style="font-weight: 600;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
+                <span style="font-weight: 600;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
               </div>
               <div style="font-size: 12px; margin-bottom: 8px;">
                 <span style="color: #6b7280;">Status: </span>
@@ -398,7 +401,7 @@ export default function VendorBookings() {
                     </div>
                     <div className="text-right flex flex-col items-end">
                       <div className="text-lg font-bold text-primary-900">
-                        {formatCurrency(b.total_amount, b.currency)}
+                        {formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
                       </div>
                       <div className="mt-1">
                         <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
@@ -480,7 +483,7 @@ export default function VendorBookings() {
                     <td className="px-6 py-4 text-sm text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
                     <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex items-center space-x-3">
@@ -566,7 +569,7 @@ export default function VendorBookings() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 capitalize">{item.category}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(item.totalPrice, item.currency)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{formatDateTime(item.savedAt)}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
@@ -647,7 +650,7 @@ export default function VendorBookings() {
                         {formatDateTime(ticket.issued_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}
+                        {formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge
@@ -696,7 +699,7 @@ export default function VendorBookings() {
                     <p><span className="font-medium">Booked Date:</span> {formatDateTime(selectedBooking.booking_date)}</p>
                     <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
                     <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
-                    <p><span className="font-medium">Total Amount:</span> {formatCurrency(selectedBooking.total_amount, selectedBooking.currency)}</p>
+                    <p><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBooking.total_amount, selectedBooking.currency, selectedCurrency, selectedLanguage)}</p>
                     <p><span className="font-medium">Status:</span> <StatusBadge status={getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)} variant="small" /></p>
                     <p><span className="font-medium">Payment Status:</span> <StatusBadge status={selectedBooking.payment_status} variant="small" /></p>
                   </div>

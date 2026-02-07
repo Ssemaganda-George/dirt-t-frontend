@@ -4,7 +4,8 @@ import * as QRCode from 'qrcode'
 import { useBookings } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrencyWithConversion } from '../../lib/utils';
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { useCart } from '../../contexts/CartContext';
 import type { Booking } from '../../types';
 import { getServiceCategories } from '../../lib/database'
@@ -14,6 +15,7 @@ import SearchBar from '../../components/SearchBar';
 export function Bookings() {
   const { bookings, loading, error, updateBookingStatus, updatePaymentStatus } = useBookings();
   const { state: cartState } = useCart();
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [vendors, setVendors] = useState<any[]>([])
   const [allVendors, setAllVendors] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
@@ -661,7 +663,7 @@ export function Bookings() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(booking.total_amount, booking.currency)}
+                      {formatCurrencyWithConversion(booking.total_amount, booking.currency, selectedCurrency, selectedLanguage)}
                     </div>
                     <div className="flex gap-1 mt-1">
                       <StatusBadge status={booking.status} variant="small" />
@@ -797,7 +799,7 @@ export function Bookings() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(booking.total_amount, booking.currency)}
+                      {formatCurrencyWithConversion(booking.total_amount, booking.currency, selectedCurrency, selectedLanguage)}
                       <div className="text-xs text-gray-500">
                         {booking.guests} guest{booking.guests !== 1 ? 's' : ''}
                       </div>
@@ -905,7 +907,7 @@ export function Bookings() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <StatusBadge status={t.status} variant="small" />
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(t.ticket_types?.price || 0, t.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {(() => {
                                 const match = (filteredBookings || []).find((b: any) =>
@@ -993,7 +995,7 @@ export function Bookings() {
                       {item.category}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(item.totalPrice, item.currency)}
+                      {formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(item.savedAt), 'MMM dd, yyyy')}
@@ -1041,7 +1043,7 @@ export function Bookings() {
                     <p><span className="font-medium">Booked Date:</span> {format(selectedBooking.created_at, 'MMM dd, yyyy HH:mm')}</p>
                     <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? format(new Date(selectedBooking.service_date), 'MMM dd, yyyy') : 'Not specified'}</p>
                     <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
-                    <p><span className="font-medium">Total Amount:</span> {formatCurrency(selectedBooking.total_amount, selectedBooking.currency)}</p>
+                    <p><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBooking.total_amount, selectedBooking.currency, selectedCurrency, selectedLanguage)}</p>
                     <p><span className="font-medium">Status:</span> <StatusBadge status={selectedBooking.status} variant="small" /></p>
                     <p><span className="font-medium">Payment Status:</span> <StatusBadge status={selectedBooking.payment_status} variant="small" /></p>
                   </div>

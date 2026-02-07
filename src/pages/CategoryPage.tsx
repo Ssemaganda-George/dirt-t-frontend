@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { Link } from 'react-router-dom'
 import { useServices } from '../hooks/hook'
 import type { Service } from '../types'
@@ -149,6 +150,8 @@ export default function CategoryPage() {
     setSelectedCategoryFilter('all')
   }, [category])
 
+  const { t } = usePreferences()
+
   const searchFilteredServices = filteredServices.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
@@ -196,7 +199,7 @@ export default function CategoryPage() {
               <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="I want ..."
+                placeholder={t('search_placeholder')}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

@@ -11,9 +11,9 @@ import {
   Share2,
   CheckCircle
 } from 'lucide-react'
-import { formatCurrency } from '../lib/utils'
 import { getServiceBySlug, getServiceById, getTicketTypes, createOrder } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 
 interface ServiceDetail {
   id: string
@@ -143,8 +143,66 @@ export default function ServiceDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const { user } = useAuth()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
 
-  // Ticketing state (for activities/events)
+  // Currency conversion functions
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) => {
+    const exchangeRates: { [key: string]: number } = {
+      'UGX': 1,
+      'USD': 0.00027,
+      'EUR': 0.00025,
+      'GBP': 0.00021,
+      'KES': 0.0023,
+      'TZS': 0.00064,
+      'BRL': 0.0014,
+      'MXN': 0.0054,
+      'EGP': 0.0084,
+      'MAD': 0.0025,
+      'TRY': 0.0089,
+      'THB': 0.0077,
+      'KRW': 0.33,
+      'RUB': 0.019,
+      'INR': 0.022,
+      'CNY': 0.0019,
+      'JPY': 0.039,
+      'CAD': 0.00036,
+      'AUD': 0.00037,
+      'CHF': 0.00024,
+      'SEK': 0.0024,
+      'NOK': 0.0024,
+      'DKK': 0.0017,
+      'PLN': 0.0011,
+      'CZK': 0.0064,
+      'HUF': 0.088,
+      'ZAR': 0.0048,
+      'NGN': 0.11,
+      'GHS': 0.0037,
+      'XAF': 0.16,
+      'XOF': 0.16
+    }
+
+    if (fromCurrency === toCurrency) return amount
+    const amountInUGX = fromCurrency === 'UGX' ? amount : amount / exchangeRates[fromCurrency]
+    return amountInUGX * (exchangeRates[toCurrency] || 1)
+  }
+
+  const formatAmount = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(selectedLanguage || 'en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(amount)
+    } catch (error) {
+      return `${currency} ${amount.toLocaleString()}`
+    }
+  }
+
+  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
+    const convertedAmount = convertCurrency(amount, serviceCurrency, selectedCurrency || 'UGX')
+    return formatAmount(convertedAmount, selectedCurrency || 'UGX')
+  }
   const [ticketTypes, setTicketTypes] = useState<any[]>([])
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
   const ticketsTotal = ticketTypes.reduce((sum, t) => sum + (t.price * (ticketQuantities[t.id] || 0)), 0)
@@ -778,7 +836,7 @@ export default function ServiceDetail() {
               )}
               {service.average_cost_per_person && (
                 <div className="text-sm text-gray-600">
-                  <span className="font-medium">Average Cost:</span> {formatCurrency(service.average_cost_per_person, service.currency)} per person
+                  <span className="font-medium">Average Cost:</span> {formatCurrencyWithConversion(service.average_cost_per_person, service.currency)} per person
                 </div>
               )}
               {service.outdoor_seating && (
@@ -1090,7 +1148,7 @@ export default function ServiceDetail() {
                     <div className="mt-4 flex items-center justify-between">
                       <div>
                         <div className="text-sm text-gray-300">From</div>
-                        <div className="text-2xl font-semibold">{formatCurrency(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                        <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
                       </div>
                       <div>
                         <button onClick={() => {
@@ -1282,7 +1340,7 @@ export default function ServiceDetail() {
                             <div>
                               <div className="font-medium text-gray-900">{t.title}</div>
                               {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
-                              <div className="text-sm text-gray-600 mt-1">{formatCurrency(t.price, service.currency)} · {remaining} left</div>
+                              <div className="text-sm text-gray-600 mt-1">{formatCurrencyWithConversion(t.price, service.currency)} · {remaining} left</div>
                               {!saleOpen && (
                                 <div className="text-xs text-yellow-700 mt-1">
                                   {saleStart && new Date(saleStart) > now && `Sales open from ${new Date(saleStart).toLocaleString()}`}
@@ -1305,7 +1363,7 @@ export default function ServiceDetail() {
                   <div className="border-t pt-4 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-gray-600">Total</span>
-                      <span className="font-medium">{formatCurrency(ticketsTotal, service.currency)}</span>
+                      <span className="font-medium">{formatCurrencyWithConversion(ticketsTotal, service.currency)}</span>
                     </div>
                   </div>
 
@@ -1329,7 +1387,7 @@ export default function ServiceDetail() {
               ) : (
                 <div>
                   <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-gray-900">{formatCurrency(service.price, service.currency)}</div>
+                    <div className="text-3xl font-bold text-gray-900">{formatCurrencyWithConversion(service.price, service.currency)}</div>
                     <div className="text-sm text-gray-500">{service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}</div>
                   </div>
                   <div className="space-y-4 mb-6">
@@ -1381,10 +1439,10 @@ export default function ServiceDetail() {
 
                   <div className="border-t pt-4 mb-6">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-gray-600">{service.service_categories?.name?.toLowerCase() === 'transport' ? `${formatCurrency(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}` : `${formatCurrency(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}</span>
-                      <span className="font-medium">{formatCurrency(totalPrice, service.currency)}</span>
+                      <span className="text-gray-600">{service.service_categories?.name?.toLowerCase() === 'transport' ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}` : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}</span>
+                      <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-lg font-bold"><span>Total</span><span>{formatCurrency(totalPrice, service.currency)}</span></div>
+                    <div className="flex justify-between items-center text-lg font-bold"><span>Total</span><span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span></div>
                   </div>
 
                   <div className="flex space-x-3">

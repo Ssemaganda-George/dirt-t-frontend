@@ -1,7 +1,8 @@
 import { format } from 'date-fns';
 import { useAdminTransactions } from '../../hooks/hook';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrencyWithConversion } from '../../lib/utils';
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { updateTransactionStatus, getAllVendorWallets, getAllTransactions } from '../../lib/database';
 import { useState, useEffect } from 'react';
 
@@ -32,6 +33,7 @@ interface WalletStats {
 
 export function Transactions() {
   const { transactions, loading: txLoading, error: txError, refetch } = useAdminTransactions();
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [vendorWallets, setVendorWallets] = useState<VendorWallet[]>([]);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
@@ -234,7 +236,7 @@ export function Transactions() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Balance</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {formatCurrency(stats.totalBalance, 'UGX')}
+                        {formatCurrencyWithConversion(stats.totalBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                       </dd>
                     </dl>
                   </div>
@@ -275,7 +277,7 @@ export function Transactions() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Earnings</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {formatCurrency(stats.totalEarnings, 'UGX')}
+                        {formatCurrencyWithConversion(stats.totalEarnings, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                       </dd>
                     </dl>
                   </div>
@@ -295,7 +297,7 @@ export function Transactions() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Withdrawn</dt>
                       <dd className="text-lg font-medium text-gray-900">
-                        {formatCurrency(stats.totalWithdrawn, 'UGX')}
+                        {formatCurrencyWithConversion(stats.totalWithdrawn, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                       </dd>
                     </dl>
                   </div>
@@ -363,7 +365,7 @@ export function Transactions() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                            {formatCurrency(wallet.balance, wallet.currency)}
+                            {formatCurrencyWithConversion(wallet.balance, wallet.currency || 'UGX', selectedCurrency || wallet.currency || 'UGX', selectedLanguage || 'en-US')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -433,7 +435,7 @@ export function Transactions() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                          {formatCurrency(wallet.balance, wallet.currency)}
+                          {formatCurrencyWithConversion(wallet.balance, wallet.currency || 'UGX', selectedCurrency || wallet.currency || 'UGX', selectedLanguage || 'en-US')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -507,7 +509,7 @@ export function Transactions() {
                           {transaction.transaction_type}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                          {formatCurrency(transaction.amount, transaction.currency)}
+                          {formatCurrencyWithConversion(transaction.amount, transaction.currency || 'UGX', selectedCurrency || transaction.currency || 'UGX', selectedLanguage || 'en-US')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -566,8 +568,8 @@ export function Transactions() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Pending Amount</dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {formatCurrency(pendingWithdrawals.reduce((sum, t) => sum + t.amount, 0), 'UGX')}
+                        <dd className="text-lg font-medium text-gray-900">
+                        {formatCurrencyWithConversion(pendingWithdrawals.reduce((sum, t) => sum + t.amount, 0), 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                       </dd>
                     </dl>
                   </div>
@@ -644,7 +646,7 @@ export function Transactions() {
                           {transaction.vendors?.business_name || 'Unknown Vendor'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                          {formatCurrency(transaction.amount, transaction.currency)}
+                          {formatCurrencyWithConversion(transaction.amount, transaction.currency || 'UGX', selectedCurrency || transaction.currency || 'UGX', selectedLanguage || 'en-US')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                           {transaction.payment_method.replace('_', ' ')}

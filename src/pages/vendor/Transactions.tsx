@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Transaction } from '../../types'
 import { getTransactions, requestWithdrawal, getWalletStats } from '../../lib/database'
-import { formatCurrency, formatDateTime } from '../../lib/utils'
+import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
+import { usePreferences } from '../../contexts/PreferencesContext'
 import { StatusBadge } from '../../components/StatusBadge'
 import { supabase } from '../../lib/supabaseClient'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, format } from 'date-fns'
@@ -10,6 +11,8 @@ import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, format } fro
 export default function VendorTransactions() {
   const { profile, vendor, loading: authLoading } = useAuth()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
+
+  const { selectedCurrency, selectedLanguage } = usePreferences()
 
   const [txs, setTxs] = useState<Transaction[]>([])
   const [filteredTxs, setFilteredTxs] = useState<Transaction[]>([])
@@ -230,8 +233,8 @@ export default function VendorTransactions() {
     const report = {
       period: dateRange,
       totalTransactions,
-      totalAmount: formatCurrency(totalAmount, currency),
-      averageTransaction: formatCurrency(avgTransaction, currency),
+      totalAmount: formatCurrencyWithConversion(totalAmount, currency, selectedCurrency, selectedLanguage),
+      averageTransaction: formatCurrencyWithConversion(avgTransaction, currency, selectedCurrency, selectedLanguage),
       dateGenerated: format(new Date(), 'PPP'),
       filters: {
         dateRange,
@@ -262,7 +265,7 @@ Status: ${report.filters.status}
 
 TRANSACTION BREAKDOWN
 ---------------------
-${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrency(tx.amount, tx.currency)} - ${tx.status}`).join('\n')}
+${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
 
 ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transactions` : ''}
     `.trim()
@@ -388,7 +391,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Current Balance</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.currentBalance, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.currentBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -409,7 +412,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Completed Earnings</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.completedBalance, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.completedBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -430,7 +433,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Pending Earnings</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.pendingBalance, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.pendingBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -451,7 +454,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Total Earned</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.totalEarned, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.totalEarned, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -472,7 +475,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Pending Withdrawals</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.pendingWithdrawals, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.pendingWithdrawals, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -493,7 +496,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-5 w-0 flex-1">
                             <dl>
                               <dt className="text-sm font-medium text-gray-500 truncate">Total Withdrawn</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrency(walletStats.totalWithdrawn, walletStats.currency)}</dd>
+                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.totalWithdrawn, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
                             </dl>
                           </div>
                         </div>
@@ -532,9 +535,11 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-4">
                             <div className="text-sm font-medium text-green-800">Average Transaction</div>
                             <div className="text-lg font-bold text-green-900">
-                              {formatCurrency(
+                              {formatCurrencyWithConversion(
                                 filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length,
-                                currency
+                                currency,
+                                selectedCurrency,
+                                selectedLanguage
                               )}
                             </div>
                           </div>
@@ -551,9 +556,11 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <div className="ml-3 md:ml-4">
                             <div className="text-sm font-medium text-blue-800">Total Revenue</div>
                             <div className="text-lg font-bold text-blue-900">
-                              {formatCurrency(
+                              {formatCurrencyWithConversion(
                                 filteredTxs.reduce((sum, tx) => sum + tx.amount, 0),
-                                currency
+                                currency,
+                                selectedCurrency,
+                                selectedLanguage
                               )}
                             </div>
                           </div>
@@ -797,7 +804,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                     transaction.transaction_type === 'payment' ? 'text-green-600' : 'text-red-600'
                                   }`}>
                                     {transaction.transaction_type === 'payment' ? '+' : '-'}
-                                    {formatCurrency(transaction.amount, transaction.currency)}
+                                    {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                   </div>
                                 </div>
                               </div>
@@ -856,7 +863,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                   {transaction.reference}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {formatCurrency(transaction.amount, transaction.currency)}
+                                  {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <StatusBadge status={transaction.status} variant="small" />
@@ -907,7 +914,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                             <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
                               <h5 className="font-medium text-gray-900 mb-1">Cash Flow Management</h5>
                               <p className="text-sm text-gray-600">
-                                Maintain at least 3 months of operating expenses in your account. Your current balance of {formatCurrency(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX')} 
+                                Maintain at least 3 months of operating expenses in your account. Your current balance of {formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)} 
                                 {walletStats?.currentBalance < 500000 ? 'is below recommended levels. Consider reducing expenses or increasing prices.' : 'is healthy. Keep up the good work!'}
                               </p>
                             </div>
@@ -945,7 +952,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                             <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
                               <h5 className="font-medium text-gray-900 mb-1">Pricing Strategy</h5>
                               <p className="text-sm text-gray-600">
-                                Your average transaction is {filteredTxs.length > 0 ? formatCurrency(filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length, currency) : 'N/A'}. 
+                                Your average transaction is {filteredTxs.length > 0 ? formatCurrencyWithConversion(filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length, currency, selectedCurrency, selectedLanguage) : 'N/A'}. 
                                 Consider competitive pricing while maintaining profit margins. Regular price reviews can help optimize revenue.
                               </p>
                             </div>
@@ -1085,7 +1092,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <div className="mb-4 p-4 bg-indigo-50 rounded-md">
                           <p className="text-sm text-indigo-800">
                             <span className="font-medium">Available Balance:</span>{' '}
-                            <span className="font-semibold">{formatCurrency(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX')}</span>
+                            <span className="font-semibold">{formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
                           </p>
                         </div>
 

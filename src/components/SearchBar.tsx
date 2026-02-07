@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { Search, X } from 'lucide-react'
 
 interface SearchBarProps {
@@ -10,12 +11,14 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({
-  placeholder = "Search...",
+  placeholder,
   onSearch,
   initialValue = "",
   className = "",
   debounceMs = 300
 }: SearchBarProps) {
+  const { t } = usePreferences()
+  const resolvedPlaceholder = placeholder || t('search_placeholder')
   const [query, setQuery] = useState(initialValue)
   const [debouncedQuery, setDebouncedQuery] = useState(initialValue)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,7 +53,7 @@ export default function SearchBar({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
         />
         {query && (

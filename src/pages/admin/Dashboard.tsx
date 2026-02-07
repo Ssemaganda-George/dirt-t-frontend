@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatCurrency } from '../../lib/utils'
+import { formatCurrencyWithConversion } from '../../lib/utils'
 import { getDashboardStats } from '../../lib/database'
+import { usePreferences } from '../../contexts/PreferencesContext'
 import StatCard from '../../components/StatCard'
 import {
   Users,
@@ -32,6 +33,7 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [stats, setStats] = useState<DashboardStats>({
     totalVendors: 0,
     pendingVendors: 0,
@@ -125,7 +127,7 @@ export default function Dashboard() {
 
           <StatCard
             title="Total Revenue"
-            value={formatCurrency(stats.totalRevenue)}
+            value={formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
             icon={DollarSign}
             color="teal"
             trend="+18% this month"
@@ -168,7 +170,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-white">
-                      {formatCurrency(booking.total_amount)}
+                      {formatCurrencyWithConversion(booking.total_amount, booking.currency || 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </p>
                     <div className="flex items-center justify-end mt-1">
                       {booking.status === 'confirmed' ? (

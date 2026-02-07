@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, Check, Filter } from 'lucide-react'
 import { getServiceCategories } from '../lib/database'
 import { useServices } from '../hooks/hook'
+import { usePreferences } from '../contexts/PreferencesContext'
+import { formatCurrencyWithConversion } from '../lib/utils'
 import type { Service } from '../types'
 
 export default function Home() {
@@ -22,6 +24,8 @@ export default function Home() {
 
   // Use the reactive useServices hook
   const { services: allServices, loading: servicesLoading } = useServices()
+
+  const { t } = usePreferences()
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -238,7 +242,7 @@ export default function Home() {
       
       // Add "All" category at the beginning
       const allCategories = [
-        { id: 'all', name: 'All', icon: Map },
+        { id: 'all', name: t('all_listings'), icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
           name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
@@ -250,7 +254,7 @@ export default function Home() {
       console.error('Error fetching categories:', error)
       // Fallback to basic categories if database fetch fails (also filter out flights)
       setCategories([
-        { id: 'all', name: 'All', icon: Map },
+        { id: 'all', name: t('all_listings'), icon: Map },
         { id: 'cat_hotels', name: 'Accommodation', icon: Hotel },
         { id: 'cat_tour_packages', name: 'Tours', icon: Map },
         { id: 'cat_transport', name: 'Transport', icon: Car },
@@ -261,27 +265,7 @@ export default function Home() {
     }
   }
 
-  const formatCurrency = (amount: number, currency: string) => {
-    try {
-      // Validate currency code - only allow known valid codes
-      const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF'];
-      const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
-      
-      return new Intl.NumberFormat('en-UG', {
-        style: 'currency',
-        currency: safeCurrency,
-        minimumFractionDigits: 0
-      }).format(amount);
-    } catch (error) {
-      // Fallback to simple formatting if Intl.NumberFormat fails
-      console.warn('Currency formatting failed for:', currency, 'falling back to UGX');
-      return new Intl.NumberFormat('en-UG', {
-        style: 'currency',
-        currency: 'UGX',
-        minimumFractionDigits: 0
-      }).format(amount);
-    }
-  }
+  // Currency formatting and conversion is handled centrally by formatCurrencyWithConversion
 
   const filteredServices = allServices.filter((service: Service) => {
     // First check if service is approved and vendor is not suspended
@@ -395,7 +379,6 @@ export default function Home() {
       <ServiceDetail 
         service={selectedService} 
         onBack={() => setSelectedService(null)}
-        formatCurrency={formatCurrency}
       />
     )
   }
@@ -441,10 +424,10 @@ export default function Home() {
         
         <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
-            Xplore Uganda
+            {t('hero_title')}
           </h1>
           <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
-            Holiday Your Way ...
+            {t('hero_subtitle')}
           </p>
         </div>
       </div>
@@ -458,7 +441,7 @@ export default function Home() {
                 <Search className="h-5 w-5 text-gray-400 mr-3" />
                 <input
                   type="text"
-                  placeholder="I want ..."
+                  placeholder={t('search_placeholder')}
                   className="w-full py-2 md:py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-base md:text-lg"
                   value={searchQuery}
                   onChange={(e) => {
@@ -491,8 +474,8 @@ export default function Home() {
                   <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
                     {/* Header */}
                     <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                      <h3 className="font-medium text-gray-900 text-xs">Choose Your Travel Needs</h3>
-                      <p className="text-xs text-gray-500">Select one or more of choice</p>
+                        <h3 className="font-medium text-gray-900 text-xs">{t('choose_travel_needs')}</h3>
+                        <p className="text-xs text-gray-500">{t('select_one_or_more')}</p>
                     </div>
 
                     {/* Categories List */}
@@ -518,7 +501,7 @@ export default function Home() {
                             )}
                           </div>
                           <span className={`text-sm ${selectedCategories.includes('all') ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-                            Show All Travel Needs ({allServices.length})
+                            {t('show_all_travel_needs')} ({allServices.length})
                           </span>
                         </div>
                       </button>
@@ -552,15 +535,15 @@ export default function Home() {
 
                     {/* Footer */}
                     <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">
-                          {selectedCategories.includes('all') ? 'All Listings' : `${selectedCategories.length} selected`}
+                          {selectedCategories.includes('all') ? t('all_listings') : `${selectedCategories.length} selected`}
                         </span>
                         <button
                           onClick={() => setIsDropdownOpen(false)}
                           className="text-xs text-blue-600 font-medium hover:text-blue-700"
                         >
-                          Done
+                          {t('done')}
                         </button>
                       </div>
                     </div>
@@ -584,13 +567,13 @@ export default function Home() {
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategories.includes('all')
-                  ? 'Everything Safari'
+                  ? t('all_listings')
                   : selectedCategories.length === 1
                     ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
                     : `${selectedCategories.length} categories selected`}
             </h2>
             <p className="text-gray-600">
-              {currentItemCount} {searchQuery ? 'result' : 'Listing'}{currentItemCount === 1 ? '' : 's'}
+              {currentItemCount} {searchQuery ? 'result' : t('listings').toLowerCase()}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>
         </div>
@@ -606,7 +589,6 @@ export default function Home() {
               <ServiceCard 
                 key={service.id} 
                 service={service}
-                formatCurrency={formatCurrency}
                 onClick={() => navigate(`/service/${service.slug || service.id}`)}
               />
             ))}
@@ -616,8 +598,8 @@ export default function Home() {
         {!isLoading && currentItemCount === 0 && (
           <div className="text-center py-16">
             <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('no_results')}</h3>
+            <p className="text-gray-500">{t('adjust_search')}</p>
           </div>
         )}
       </div>
@@ -627,12 +609,14 @@ export default function Home() {
 
 interface ServiceCardProps {
   service: Service
-  formatCurrency: (amount: number, currency: string) => string
   onClick: () => void
 }
 
-function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
+function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
+
+  // Preferences for currency/language (used for displaying prices on cards)
+  const { selectedCurrency, selectedLanguage, t } = usePreferences()
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
@@ -657,7 +641,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Accommodation',
           primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
           secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null,
-          priceUnit: 'per day'
+          priceUnit: 'per_day'
         }
       case 'cat_tour_packages':
         return {
@@ -665,7 +649,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Tour Package',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
           secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null,
-          priceUnit: 'per person'
+          priceUnit: 'per_person'
         }
       case 'cat_transport':
         return {
@@ -673,7 +657,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Transport',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
           secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null,
-          priceUnit: 'per day'
+          priceUnit: 'per_day'
         }
       case 'cat_restaurants':
         return {
@@ -681,7 +665,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Restaurant',
           primaryInfo: 'Dining experience',
           secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null,
-          priceUnit: 'per meal'
+          priceUnit: 'per_meal'
         }
       case 'cat_activities':
         return {
@@ -689,7 +673,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Event',
           primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
           secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null,
-          priceUnit: 'per ticket'
+          priceUnit: 'per_ticket'
         }
       case 'cat_flights':
         return {
@@ -697,7 +681,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Flight',
           primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
           secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null,
-          priceUnit: 'per person'
+          priceUnit: 'per_person'
         }
       case 'cat_shops':
         return {
@@ -705,7 +689,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Shop',
           primaryInfo: 'Retail shopping',
           secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null,
-          priceUnit: 'per item'
+          priceUnit: 'per_item'
         }
       default:
         return {
@@ -713,7 +697,7 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           label: 'Service',
           primaryInfo: 'Experience',
           secondaryInfo: null,
-          priceUnit: 'per person'
+          priceUnit: 'per_person'
         }
     }
   }
@@ -813,16 +797,18 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 
           {/* Price */}
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
-            <span className="text-xs text-gray-500">From</span>
+                <span className="text-xs text-gray-500">{t('from')}</span>
             <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(
-                service.ticket_types && service.ticket_types.length > 0 
-                  ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0))) 
-                  : service.price, 
-                service.currency
+              {formatCurrencyWithConversion(
+                service.ticket_types && service.ticket_types.length > 0
+                  ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0)))
+                  : service.price,
+                service.currency,
+                selectedCurrency || 'UGX',
+                selectedLanguage || 'en-US'
               )}
             </span>
-            <span className="text-xs text-gray-500">{categoryInfo.priceUnit}</span>
+            <span className="text-xs text-gray-500">{t(categoryInfo.priceUnit)}</span>
           </div>
         </div>
       </div>
@@ -833,11 +819,11 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 interface ServiceDetailProps {
   service: Service
   onBack: () => void
-  formatCurrency: (amount: number, currency: string) => string
 }
-
-function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) {
+function ServiceDetail({ service, onBack }: ServiceDetailProps) {
   const [isSaved, setIsSaved] = useState(false)
+  // Preferences for currency/language
+  const { selectedCurrency, selectedLanguage, t } = usePreferences()
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
@@ -853,7 +839,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to search
+            {t('back_to_search')}
           </button>
         </div>
       </div>
@@ -1029,30 +1015,30 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-sm text-gray-600">From</span>
+                  <span className="text-sm text-gray-600">{t('from')}</span>
                   <span className="text-3xl font-bold text-gray-900">
-                    {formatCurrency(service.price, service.currency)}
+                    {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600">per person</p>
+                <p className="text-sm text-gray-600">{t('per_person')}</p>
               </div>
 
               <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-semibold text-lg transition-colors mb-4">
-                Check availability
+                {t('check_availability')}
               </button>
 
               <button className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold transition-colors mb-6">
-                Contact vendor
+                {t('contact_vendor')}
               </button>
 
               <div className="border-t border-gray-200 pt-6">
-                <h3 className="font-bold text-gray-900 mb-4">What's included</h3>
+                <h3 className="font-bold text-gray-900 mb-4">{t('whats_included')}</h3>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-emerald-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    Professional guide
+                    {t('professional_guide')}
                   </li>
                   <li className="flex items-center">
                     <svg className="w-5 h-5 text-emerald-600 mr-2" fill="currentColor" viewBox="0 0 20 20">

@@ -3,6 +3,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
 import { CartProvider } from './contexts/CartContext'
+import { PreferencesProvider } from './contexts/PreferencesContext'
 import PublicLayout from './components/PublicLayout'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -96,9 +97,10 @@ function App() {
 
   return (
     <AuthProvider>
-      <CartProvider>
-        <BookingProvider>
-          <Router>
+      <PreferencesProvider>
+        <CartProvider>
+          <BookingProvider>
+            <Router>
             <ScrollToTop />
             <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
               <Routes>
@@ -236,9 +238,10 @@ function App() {
           } />
         </Routes>
             </Suspense>
-      </Router>
-    </BookingProvider>
-    </CartProvider>
+          </Router>
+        </BookingProvider>
+      </CartProvider>
+    </PreferencesProvider>
   </AuthProvider>
   );
 }

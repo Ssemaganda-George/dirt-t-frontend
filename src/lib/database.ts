@@ -30,6 +30,92 @@ export interface Partner {
   updated_at: string;
 }
 
+// User Preferences types
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  region: string; // e.g., 'UG', 'US', 'GB'
+  currency: string; // e.g., 'UGX', 'USD', 'EUR'
+  language: string; // e.g., 'en', 'fr', 'de'
+  created_at: string;
+  updated_at: string;
+}
+
+// User Preferences API
+export async function getUserPreferences(userId: string): Promise<UserPreferences | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      // If no preferences found, return null (not an error)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw error;
+    }
+
+    return data as UserPreferences;
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+    throw error;
+  }
+}
+
+export async function saveUserPreferences(userId: string, preferences: {
+  region: string;
+  currency: string;
+  language: string;
+}): Promise<UserPreferences> {
+  try {
+    // First try to update existing preferences
+    const { data: existing, error: fetchError } = await supabase
+      .from('user_preferences')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (existing && !fetchError) {
+      // Update existing preferences
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .update({
+          region: preferences.region,
+          currency: preferences.currency,
+          language: preferences.language,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as UserPreferences;
+    } else {
+      // Create new preferences
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .insert([{
+          user_id: userId,
+          region: preferences.region,
+          currency: preferences.currency,
+          language: preferences.language
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as UserPreferences;
+    }
+  } catch (error) {
+    console.error('Error saving user preferences:', error);
+    throw error;
+  }
+}
+
 // Partner Requests API
 export async function getPartnerRequests(): Promise<PartnerRequest[]> {
   const { data, error } = await supabase
