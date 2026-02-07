@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { getServiceById, createEventOTP, verifyEventOTP } from '../lib/database'
+import QrScanner from 'qr-scanner'
+import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode, markTicketUsed } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function ScanEventPage() {
@@ -12,6 +13,13 @@ export default function ScanEventPage() {
   const [otp, setOtp] = useState('')
   const [verified, setVerified] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // QR scanning state
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanResult, setScanResult] = useState<any>(null)
+  const [scanError, setScanError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const qrScannerRef = useRef<QrScanner | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -62,15 +70,159 @@ export default function ScanEventPage() {
     }
   }
 
+  const startScanning = async () => {
+    if (!videoRef.current) return
+
+    setIsScanning(true)
+    setScanError(null)
+    setScanResult(null)
+
+    try {
+      const qrScanner = new QrScanner(
+        videoRef.current,
+        async (result) => {
+          console.log('QR code detected:', result.data)
+          await handleScanResult(result.data)
+        },
+        {
+          onDecodeError: (err) => {
+            console.error('QR decode error:', err)
+          },
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
+      )
+
+      qrScannerRef.current = qrScanner
+      await qrScanner.start()
+    } catch (err: any) {
+      console.error('Error starting scanner:', err)
+      setScanError('Failed to access camera: ' + err.message)
+      setIsScanning(false)
+    }
+  }
+
+  const stopScanning = () => {
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop()
+      qrScannerRef.current = null
+    }
+    setIsScanning(false)
+  }
+
+  const handleScanResult = async (qrData: string) => {
+    if (!id) return
+
+    try {
+      setScanError(null)
+      const result = await verifyTicketByCode(qrData, id)
+      
+      if (result.valid) {
+        // Mark ticket as used
+        await markTicketUsed(result.ticket.id)
+        setScanResult({
+          success: true,
+          message: 'Ticket verified and marked as used!',
+          ticket: result.ticket
+        })
+      } else {
+        setScanResult({
+          success: false,
+          message: result.message
+        })
+      }
+    } catch (err: any) {
+      console.error('Error verifying ticket:', err)
+      setScanResult({
+        success: false,
+        message: err.message || 'Error verifying ticket'
+      })
+    }
+  }
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop()
+      }
+    }
+  }, [])
+
   if (loading) return <div className="p-6">Loading...</div>
   if (!service) return <div className="p-6">Event not found</div>
 
   if (verified) {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-2xl mx-auto">
         <h2 className="text-xl font-bold">Event Verification Portal</h2>
         <p className="mt-2">Access granted for event: {service.title}</p>
-        {/* Render whatever verification/scan UI you need here */}
+        
+        <div className="mt-6">
+          <button
+            onClick={isScanning ? stopScanning : startScanning}
+            className={`px-6 py-3 rounded-lg font-medium ${
+              isScanning 
+                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {isScanning ? 'Stop Scanning' : 'Scan Ticket'}
+          </button>
+        </div>
+
+        {isScanning && (
+          <div className="mt-6">
+            <div className="relative bg-black rounded-lg overflow-hidden">
+              <video 
+                ref={videoRef} 
+                className="w-full max-w-md mx-auto"
+                playsInline
+                muted
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-600 text-center">
+              Point your camera at a ticket QR code
+            </p>
+          </div>
+        )}
+
+        {scanResult && (
+          <div className={`mt-6 p-4 rounded-lg ${
+            scanResult.success 
+              ? 'bg-green-50 border border-green-200' 
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            <div className="flex items-center">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                scanResult.success ? 'bg-green-500' : 'bg-red-500'
+              }`}>
+                <span className="text-white text-sm">
+                  {scanResult.success ? '✓' : '✗'}
+                </span>
+              </div>
+              <div className="ml-3">
+                <p className={`font-medium ${
+                  scanResult.success ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  {scanResult.message}
+                </p>
+                {scanResult.ticket && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    <p>Ticket: {scanResult.ticket.code}</p>
+                    <p>Type: {scanResult.ticket.ticket_types?.title}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {scanError && (
+          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800">{scanError}</p>
+          </div>
+        )}
       </div>
     )
   }

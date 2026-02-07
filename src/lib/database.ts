@@ -1549,6 +1549,64 @@ export async function markTicketUsed(ticketId: string, usedAt?: string) {
   }
 }
 
+export async function verifyTicketByCode(code: string, serviceId?: string) {
+  try {
+    // Find ticket by code or qr_data
+    const { data: ticket, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        ticket_types(*),
+        orders(*),
+        services(id, title, vendor_id)
+      `)
+      .or(`code.eq.${code},qr_data.eq.${code}`)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows returned
+        throw new Error('Ticket not found')
+      }
+      throw error
+    }
+
+    if (!ticket) {
+      throw new Error('Ticket not found')
+    }
+
+    // Check if ticket is paid/active
+    if (ticket.status !== 'active') {
+      if (ticket.status === 'used') {
+        throw new Error('Ticket has already been used')
+      }
+      throw new Error('Ticket is not valid or paid')
+    }
+
+    // Check if ticket belongs to the specified service (if provided)
+    if (serviceId && ticket.service_id !== serviceId) {
+      throw new Error('Ticket does not belong to this event')
+    }
+
+    // Check if order is paid
+    if (ticket.orders?.status !== 'paid') {
+      throw new Error('Ticket order has not been paid')
+    }
+
+    return {
+      valid: true,
+      ticket: ticket,
+      message: 'Ticket is valid'
+    }
+  } catch (err: any) {
+    console.error('Error verifying ticket:', err)
+    return {
+      valid: false,
+      ticket: null,
+      message: err.message || 'Invalid ticket'
+    }
+  }
+}
+
 export async function getServiceDeleteRequests(vendorId?: string): Promise<ServiceDeleteRequest[]> {
   try {
     console.log('getServiceDeleteRequests: Called with vendorId:', vendorId);
