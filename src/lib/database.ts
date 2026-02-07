@@ -1504,7 +1504,7 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
     for (const it of items || []) {
       for (let i = 0; i < it.quantity; i++) {
         const code = `TKT-${Math.random().toString(36).slice(2,10).toUpperCase()}`
-        const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{ order_id: orderId, ticket_type_id: it.ticket_type_id, service_id: it.ticket_types.service_id, owner_id: order.user_id || null, code, qr_data: code }]).select().single()
+        const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{ order_id: orderId, ticket_type_id: it.ticket_type_id, service_id: it.ticket_types.service_id, owner_id: order.user_id || null, code, qr_data: code, status: 'issued' }]).select().single()
         if (ticketError) {
           console.error('Failed to create ticket:', ticketError)
           continue
@@ -1551,6 +1551,8 @@ export async function markTicketUsed(ticketId: string, usedAt?: string) {
 
 export async function verifyTicketByCode(code: string, serviceId?: string) {
   try {
+    console.log('Verifying ticket with code:', code, 'for service:', serviceId)
+
     // Find ticket by code or qr_data
     const { data: ticket, error } = await supabase
       .from('tickets')
@@ -1564,6 +1566,7 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
       .single()
 
     if (error) {
+      console.error('Database error:', error)
       if (error.code === 'PGRST116') { // No rows returned
         throw new Error('Ticket not found')
       }
@@ -1574,24 +1577,36 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
       throw new Error('Ticket not found')
     }
 
-    // Check if ticket is paid/active
-    if (ticket.status !== 'active') {
-      if (ticket.status === 'used') {
-        throw new Error('Ticket has already been used')
-      }
-      throw new Error('Ticket is not valid or paid')
+    console.log('Found ticket:', {
+      id: ticket.id,
+      code: ticket.code,
+      qr_data: ticket.qr_data,
+      status: ticket.status,
+      service_id: ticket.service_id,
+      order_status: ticket.orders?.status,
+      order_id: ticket.order_id
+    })
+
+    // Check if ticket is paid/active - be more flexible with status
+    // For verification purposes, we allow checking used tickets (verification != usage)
+    if (ticket.status !== 'active' && ticket.status !== 'confirmed' && ticket.status !== 'paid' && ticket.status !== 'issued' && ticket.status !== 'used') {
+      console.log('Ticket status is:', ticket.status, '- rejecting')
+      throw new Error(`Ticket status is ${ticket.status}, not valid`)
     }
 
     // Check if ticket belongs to the specified service (if provided)
     if (serviceId && ticket.service_id !== serviceId) {
+      console.log('Ticket service_id:', ticket.service_id, 'does not match event service_id:', serviceId)
       throw new Error('Ticket does not belong to this event')
     }
 
-    // Check if order is paid
-    if (ticket.orders?.status !== 'paid') {
-      throw new Error('Ticket order has not been paid')
+    // Check if order is paid - be more flexible with order status
+    if (ticket.orders?.status !== 'paid' && ticket.orders?.status !== 'completed' && ticket.orders?.status !== 'confirmed') {
+      console.log('Order status is:', ticket.orders?.status, '- rejecting')
+      throw new Error(`Order status is ${ticket.orders?.status}, not paid`)
     }
 
+    console.log('Ticket verified successfully')
     return {
       valid: true,
       ticket: ticket,

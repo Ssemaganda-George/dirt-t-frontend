@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import QrScanner from 'qr-scanner'
-import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode, markTicketUsed } from '../lib/database'
+import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function ScanEventPage() {
@@ -179,11 +179,11 @@ export default function ScanEventPage() {
       const result = await verifyTicketByCode(qrData, id)
       
       if (result.valid) {
-        // Mark ticket as used
-        await markTicketUsed(result.ticket.id)
+        // Ticket is valid - show appropriate message based on status
+        const isUsed = result.ticket.status === 'used'
         setScanResult({
           success: true,
-          message: 'Ticket verified and marked as used!',
+          message: isUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
           ticket: result.ticket
         })
         console.log('Ticket verified successfully')

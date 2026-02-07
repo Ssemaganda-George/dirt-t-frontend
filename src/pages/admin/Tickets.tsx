@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { formatCurrency, formatDateTime } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { Ticket, Download, Search, Filter } from 'lucide-react'
+import { Ticket, Search, Filter } from 'lucide-react'
 
 interface TicketData {
   id: string
@@ -12,6 +12,8 @@ interface TicketData {
   issued_at: string
   used_at?: string
   qr_data?: string
+  service_id: string
+  owner_id: string
   ticket_types: {
     title: string
     price: number
@@ -27,6 +29,7 @@ interface TicketData {
   orders: {
     currency: string
     created_at: string
+    user_id: string
   }
 }
 
@@ -36,6 +39,11 @@ export default function AdminTickets() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [bookings, setBookings] = useState<any[]>([])
+  const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all')
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
+  const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all')
+  const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
 
   useEffect(() => {
     loadTickets()
@@ -44,18 +52,37 @@ export default function AdminTickets() {
   const loadTickets = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      
+      // Load tickets
+      const { data: ticketsData, error: ticketsError } = await supabase
         .from('tickets')
         .select(`
           *,
           ticket_types(title, price),
           services(title, event_location, location, vendors(business_name)),
-          orders(currency, created_at)
+          orders(currency, created_at, user_id)
         `)
         .order('issued_at', { ascending: false })
 
-      if (error) throw error
-      setTickets(data || [])
+      if (ticketsError) throw ticketsError
+
+      // Load bookings to match with tickets
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id, service_id, tourist_id, status, payment_status, created_at,
+          profiles(full_name),
+          guest_name, guest_email
+        `)
+        .order('created_at', { ascending: false })
+
+      if (bookingsError) {
+        console.error('Error loading bookings:', bookingsError)
+        // Continue without bookings data
+      }
+
+      setTickets(ticketsData || [])
+      setBookings(bookingsData || [])
     } catch (err) {
       console.error('Error loading tickets:', err)
       setError('Failed to load tickets')
@@ -80,6 +107,7 @@ export default function AdminTickets() {
     issued: tickets.filter(t => t.status === 'issued').length,
     used: tickets.filter(t => t.status === 'used').length,
     cancelled: tickets.filter(t => t.status === 'cancelled').length,
+    totalEvents: new Set(tickets.map(t => t.services?.title).filter(Boolean)).size,
   }
 
   const downloadTicket = (ticket: TicketData) => {
@@ -190,7 +218,25 @@ export default function AdminTickets() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">{stats.totalEvents}</span>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
+                  <dd className="text-lg font-medium text-gray-900">{stats.totalEvents}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -310,65 +356,119 @@ export default function AdminTickets() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ticket Code
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <select
+                        value={selectedEventFilter}
+                        onChange={(e) => setSelectedEventFilter(e.target.value)}
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Events</option>
+                        {Array.from(new Set(tickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
+                          <option key={eventName} value={eventName}>{eventName}</option>
+                        ))}
+                      </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Event
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <select
+                        value={selectedTypeFilter}
+                        onChange={(e) => setSelectedTypeFilter(e.target.value)}
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Types</option>
+                        {Array.from(new Set(tickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
+                          <option key={typeName} value={typeName}>{typeName}</option>
+                        ))}
+                      </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Vendor
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <select
+                        value={selectedVendorFilter}
+                        onChange={(e) => setSelectedVendorFilter(e.target.value)}
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Vendors</option>
+                        {Array.from(new Set(tickets.map(t => t.services?.vendors?.business_name || 'Unknown').filter(name => name !== 'Unknown'))).sort().map(vendorName => (
+                          <option key={vendorName} value={vendorName}>{vendorName}</option>
+                        ))}
+                      </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Issued Date
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <select
+                        value={selectedAttendanceFilter}
+                        onChange={(e) => setSelectedAttendanceFilter(e.target.value)}
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Attendance</option>
+                        <option value="attended">Attended</option>
+                        <option value="not-attended">Not Attended</option>
+                      </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredTickets.map((ticket) => (
+                  {tickets
+                    .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
+                    .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
+                    .filter(t => selectedVendorFilter === 'all' || (t.services?.vendors?.business_name || 'Unknown') === selectedVendorFilter)
+                    .filter(t => {
+                      if (selectedAttendanceFilter === 'all') return true;
+                      if (selectedAttendanceFilter === 'attended') return t.status === 'used';
+                      if (selectedAttendanceFilter === 'not-attended') return t.status !== 'used';
+                      return true;
+                    })
+                    .map((ticket) => (
                     <tr key={ticket.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-gray-900">
-                        {ticket.code}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {ticket.services?.title || 'Unknown Event'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {ticket.ticket_types?.title || 'Ticket'}
-                        </div>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ticket.services?.vendors?.business_name || 'Unknown Vendor'}
+                        {(() => {
+                          // Match tickets to bookings based on service and tourist
+                          const match = bookings.find((b: any) =>
+                            b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
+                          )
+                          return match ? `#${match.id.slice(0,8)}` : '—'
+                        })()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDateTime(ticket.issued_at)}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.ticket_types?.title || 'Ticket'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.services?.vendors?.business_name || 'Unknown'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(ticket.issued_at)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <StatusBadge status={ticket.status} variant="small" />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {(() => {
+                          // Match tickets to bookings based on service and tourist
+                          const match = bookings.find((b: any) =>
+                            b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
+                          )
+                          return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
+                        })()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge
-                          status={ticket.status === 'issued' ? 'confirmed' : ticket.status === 'used' ? 'completed' : ticket.status}
-                          variant="small"
-                        />
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {ticket.status === 'used' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Attended
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Not Attended
+                          </span>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         <button
                           onClick={() => downloadTicket(ticket)}
-                          className="text-[#61B82C] hover:text-[#4a8f23] flex items-center gap-1"
+                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                         >
-                          <Download className="h-4 w-4" />
-                          Download
+                          View Ticket
                         </button>
                       </td>
                     </tr>

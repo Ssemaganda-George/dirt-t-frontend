@@ -642,6 +642,7 @@ export default function VendorBookings() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued Date</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendance</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -673,6 +674,24 @@ export default function VendorBookings() {
                           status={ticket.status === 'issued' ? 'confirmed' : ticket.status === 'used' ? 'completed' : ticket.status}
                           variant="small"
                         />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ticket.status === 'used' ? (
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span className="text-sm text-green-700 font-medium">Present</span>
+                            {ticket.used_at && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                {formatDateTime(ticket.used_at)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                            <span className="text-sm text-gray-500">Not checked in</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button

@@ -33,6 +33,10 @@ export function Bookings() {
   const [showTicketImage, setShowTicketImage] = useState(false)
   const [ticketImageUrl, setTicketImageUrl] = useState<string | null>(null)
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null)
+  const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all')
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
+  const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all')
+  const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
 
   // Helper function to filter bookings based on search query
   const filterBookingsBySearch = (bookingsToFilter: Booking[]): Booking[] => {
@@ -878,18 +882,72 @@ export function Bookings() {
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking ID</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Event</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <select
+                              value={selectedEventFilter}
+                              onChange={(e) => setSelectedEventFilter(e.target.value)}
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="all">All Events</option>
+                              {Array.from(new Set(categoryTickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
+                                <option key={eventName} value={eventName}>{eventName}</option>
+                              ))}
+                            </select>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <select
+                              value={selectedTypeFilter}
+                              onChange={(e) => setSelectedTypeFilter(e.target.value)}
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="all">All Types</option>
+                              {Array.from(new Set(categoryTickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
+                                <option key={typeName} value={typeName}>{typeName}</option>
+                              ))}
+                            </select>
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <select
+                              value={selectedVendorFilter}
+                              onChange={(e) => setSelectedVendorFilter(e.target.value)}
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="all">All Vendors</option>
+                              {Array.from(new Set(categoryTickets.map(t => t.services?.vendors?.business_name || 'Unknown').filter(name => name !== 'Unknown'))).sort().map(vendorName => (
+                                <option key={vendorName} value={vendorName}>{vendorName}</option>
+                              ))}
+                            </select>
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            <select
+                              value={selectedAttendanceFilter}
+                              onChange={(e) => setSelectedAttendanceFilter(e.target.value)}
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="all">All Attendance</option>
+                              <option value="attended">Attended</option>
+                              <option value="not-attended">Not Attended</option>
+                            </select>
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {categoryTickets.map(t => (
+                        {categoryTickets
+                          .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
+                          .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
+                          .filter(t => selectedVendorFilter === 'all' || (t.services?.vendors?.business_name || 'Unknown') === selectedVendorFilter)
+                          .filter(t => {
+                            if (selectedAttendanceFilter === 'all') return true;
+                            if (selectedAttendanceFilter === 'attended') return t.status === 'used';
+                            if (selectedAttendanceFilter === 'not-attended') return t.status !== 'used';
+                            return true;
+                          })
+                          .map(t => (
                           <tr key={t.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
@@ -915,6 +973,17 @@ export function Bookings() {
                                 )
                                 return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
                               })()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {t.status === 'used' ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Attended
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  Not Attended
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               <button
