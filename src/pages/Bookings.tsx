@@ -4,10 +4,12 @@ import { Calendar, MapPin, Users, Clock, CheckCircle, XCircle, AlertCircle } fro
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { Booking } from '../lib/database'
-import { formatCurrency } from '../lib/utils'
+import { formatCurrencyWithConversion } from '../lib/utils'
+import { usePreferences } from '../contexts/PreferencesContext'
 
 export default function Bookings() {
   const { user } = useAuth()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -131,38 +133,38 @@ export default function Bookings() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-4 sm:p-6 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
-                    <div className="flex items-start space-x-4">
+                    <div className="flex items-start space-x-3">
                       {booking.services?.images?.[0] && (
                         <img
                           src={booking.services.images[0]}
                           alt={booking.services.title}
-                          className="w-20 h-20 object-cover"
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md"
                         />
                       )}
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-0">
                           {booking.services?.title || 'Service'}
                         </h3>
-                        <p className="text-gray-600 mb-2">
+                        <p className="text-sm text-gray-600 mb-2">
                           {booking.services?.service_categories?.name || 'Service'}
                         </p>
-                        <div className="flex items-center text-sm text-gray-500 space-x-4">
+                        <div className="flex flex-wrap text-sm text-gray-500 gap-3">
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 mr-1" />
-                            {booking.services?.location || 'Location not specified'}
+                            <span className="truncate max-w-[10rem] block">{booking.services?.location || 'Location not specified'}</span>
                           </div>
                           <div className="flex items-center">
                             <Users className="h-4 w-4 mr-1" />
-                            {booking.guests} guest{booking.guests !== 1 ? 's' : ''}
+                            <span>{booking.guests} guest{booking.guests !== 1 ? 's' : ''}</span>
                           </div>
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-1" />
-                            {new Date(booking.booking_date).toLocaleDateString()}
+                            <span>{new Date(booking.booking_date).toLocaleDateString()}</span>
                           </div>
                         </div>
                         {booking.special_requests && (
@@ -174,30 +176,30 @@ export default function Bookings() {
                     </div>
                   </div>
 
-                  <div className="mt-4 lg:mt-0 lg:ml-6 flex flex-col items-start lg:items-end space-y-3">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
+                  <div className="mt-4 sm:mt-0 sm:ml-4 flex flex-col items-start sm:items-end space-y-3 min-w-[10rem]">
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
                       {getStatusIcon(booking.status)}
-                      <span className="ml-1 capitalize">{booking.status}</span>
+                      <span className="ml-1 capitalize text-sm">{booking.status}</span>
                     </div>
 
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {formatCurrency(booking.total_amount, booking.currency)}
+                    <div className="text-left sm:text-right">
+                      <div className="text-lg sm:text-2xl font-bold text-gray-900">
+                        {formatCurrencyWithConversion(booking.total_amount, booking.currency, selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs sm:text-sm text-gray-500">
                         Booked on {new Date(booking.created_at).toLocaleDateString()}
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <Link
                         to={`/booking/${booking.id}`}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm text-center w-full sm:w-auto"
                       >
                         View Details
                       </Link>
                       {booking.status === 'pending' && (
-                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm">
+                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm w-full sm:w-auto">
                           Cancel
                         </button>
                       )}

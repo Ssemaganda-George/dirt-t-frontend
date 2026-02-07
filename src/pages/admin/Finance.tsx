@@ -405,7 +405,7 @@ export function Finance() {
           <button
             onClick={() => {
               // Could implement follow-up logic here
-              alert('Follow-up functionality can be implemented here (e.g., contact vendor, resubmit request)');
+              alert('Follow-up functionality can be implemented here (e.g., contact service provider, resubmit request)');
             }}
             className="w-full bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
           >

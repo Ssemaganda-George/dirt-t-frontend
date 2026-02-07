@@ -792,7 +792,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
           {/* Reviews & Vendor */}
           <div className="text-xs text-gray-500 mb-3">
-            0 reviews • {service.vendors?.business_name || 'Vendor'}
+            0 reviews • {service.vendors?.business_name || 'Service Provider'}
           </div>
 
           {/* Price */}

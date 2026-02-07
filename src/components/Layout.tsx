@@ -39,6 +39,7 @@ const navigation = [
 export default function Layout() {
   const { profile, signOut } = useAuth()
   const { selectedRegion, selectedCurrency, t } = usePreferences()
+  const isTourist = profile?.role === 'tourist'
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
@@ -203,37 +204,37 @@ export default function Layout() {
               onClick={() => setSidebarOpen(true)}
               className="text-gray-500 hover:text-gray-600 lg:hidden"
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
 
             {/* Spacer to push account details to far right */}
             <div className="flex-1"></div>
 
-            <div className="flex items-center space-x-4 ml-auto">
+            <div className={`flex items-center ${isTourist ? 'space-x-2' : 'space-x-4'} ml-auto`}>
               {/* Global Search Button */}
               <button
                 onClick={() => setShowGlobalSearch(true)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600"
+                className={`${isTourist ? 'p-1' : 'p-2'} rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600`}
                 title={t('global_search_tooltip')}
               >
-                <Search className="h-5 w-5 text-gray-600" />
+                <Search className={`${isTourist ? 'h-3 w-3' : 'h-4 w-4'} sm:h-5 sm:w-5 text-gray-600`} />
               </button>
 
               <button
                 onClick={() => setShowPreferences(true)}
-                className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                className={`${isTourist ? 'flex items-center space-x-1 px-2 py-1' : 'flex items-center space-x-2 px-3 py-1.5'} border border-gray-300 rounded-full hover:bg-gray-50 transition-colors`}
                 title={t('preferences')}
               >
-                <Globe className="h-4 w-4 text-gray-600" />
+                <Globe className={`${isTourist ? 'h-2 w-2' : 'h-3 w-3'} sm:h-4 sm:w-4 text-gray-600`} />
                 <span className="text-sm font-medium text-gray-700">{getRegionShort(selectedRegion)} • {selectedCurrency}</span>
               </button>
 
               <div className="relative">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  className={`flex items-center ${isTourist ? 'space-x-1 p-1' : 'space-x-2 p-2'} rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600`}
                 >
-                  <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center shadow-md">
+                  <div className={`${isTourist ? 'h-7 w-7' : 'h-8 w-8'} sm:h-10 sm:w-10 rounded-full bg-primary-600 flex items-center justify-center shadow-md`}>
                     <span className="text-sm font-bold text-white">
                       {profile?.full_name?.charAt(0).toUpperCase() || 'A'}
                     </span>
@@ -242,7 +243,7 @@ export default function Layout() {
                     <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
                     <p className="text-xs text-gray-500 capitalize">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`${isTourist ? 'h-3 w-3' : 'h-3 w-3'} sm:h-4 sm:w-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}

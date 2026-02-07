@@ -263,7 +263,7 @@ export default function Settings() {
           <div className="bg-white shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Globe className="h-6 w-6 text-gray-400 mr-3" />
+                <Globe className="h-4 w-4 md:h-5 md:w-5 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Language & Region</h3>
                   <p className="text-gray-600">Change your language and regional preferences</p>

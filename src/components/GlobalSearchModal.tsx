@@ -52,7 +52,7 @@ const faqCategories = [
       },
       {
         question: "How do I become a service provider?",
-        answer: "Visit our 'Partner With Us' page to learn about becoming a vendor. Complete the registration process and submit required documentation for approval."
+        answer: "Visit our 'Partner With Us' page to learn about becoming a service provider. Complete the registration process and submit required documentation for approval."
       }
     ]
   }
@@ -649,7 +649,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                           <div className="flex items-start space-x-3">
                             {/* Web Icon */}
                             <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
-                              <Globe className="h-5 w-5 text-orange-600" />
+                              <Globe className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                             </div>
 
                             {/* Web Content */}

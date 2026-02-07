@@ -50,6 +50,7 @@ const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const Payment = lazy(() => import('./pages/Payment'))
 const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
+const BookingDetail = lazy(() => import('./pages/BookingDetail'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -107,6 +108,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/" element={<PublicLayout />}>
+            <Route path="booking/:id" element={<BookingDetail />} />
             <Route index element={<Home />} />
             <Route path="scan/:id" element={<ScanEvent />} />
             <Route path="tickets/:orderId" element={<TicketReceipt />} />

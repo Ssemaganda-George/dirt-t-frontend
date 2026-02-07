@@ -529,7 +529,7 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
               </button>
 
               <button className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold transition-colors mb-6">
-                Contact vendor
+                Contact Provider
               </button>
 
               <div className="border-t border-gray-200 pt-6">

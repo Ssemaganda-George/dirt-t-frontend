@@ -182,14 +182,14 @@ export default function PublicLayout() {
                 className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
                 title={t('preferences')}
               >
-                <Globe className="h-4 w-4 text-gray-600" />
+                <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
                 <span className="text-sm font-medium text-gray-700">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
               </button>
 
               {user && profile?.role === 'tourist' && (
                 <>
                   <button className="flex items-center text-gray-700 hover:text-blue-600 relative">
-                    <ShoppingBag className="h-5 w-5" />
+                    <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
                     {getCartCount() > 0 && (
                       <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {getCartCount()}
@@ -211,7 +211,7 @@ export default function PublicLayout() {
                         {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ml-1 ${showUserDropdown ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showUserDropdown ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* User Dropdown Menu */}
@@ -315,8 +315,8 @@ export default function PublicLayout() {
                     onClick={() => setShowGuestDropdown(!showGuestDropdown)}
                     className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
-                    <User className="h-5 w-5 text-gray-700" />
-                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
+                    <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
+                    <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Guest Dropdown Menu */}
