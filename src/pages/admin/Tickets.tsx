@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import * as QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
-import { formatCurrency, formatDateTime } from '../../lib/utils'
+import { formatCurrencyWithConversion, formatDateTime, convertCurrency } from '../../lib/utils'
 import { StatusBadge } from '../../components/StatusBadge'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { Ticket, Search, Filter } from 'lucide-react'
+import { Ticket, Search, Filter, RotateCcw } from 'lucide-react'
+import { usePreferences } from '../../contexts/PreferencesContext'
 
 interface TicketData {
   id: string
@@ -50,6 +51,16 @@ export default function AdminTickets() {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
   const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all')
   const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
+  const { selectedCurrency } = usePreferences()
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setSelectedEventFilter('all')
+    setSelectedTypeFilter('all')
+    setSelectedVendorFilter('all')
+    setSelectedAttendanceFilter('all')
+  }
 
   useEffect(() => {
     loadTickets()
@@ -216,7 +227,7 @@ export default function AdminTickets() {
                 <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
               </div>
               <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
-              <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</div>
+              <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</div>
             </div>
           </div>
 
@@ -418,6 +429,14 @@ export default function AdminTickets() {
               <option value="used">Used</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              title="Clear all filters"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Clear
+            </button>
           </div>
         </div>
       </div>
@@ -494,66 +513,91 @@ export default function AdminTickets() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {tickets
-                    .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
-                    .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
-                    .filter(t => selectedVendorFilter === 'all' || (t.services?.vendors?.business_name || 'Unknown') === selectedVendorFilter)
-                    .filter(t => {
-                      if (selectedAttendanceFilter === 'all') return true;
-                      if (selectedAttendanceFilter === 'attended') return t.status === 'used';
-                      if (selectedAttendanceFilter === 'not-attended') return t.status !== 'used';
-                      return true;
-                    })
-                    .map((ticket) => (
-                    <tr key={ticket.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {(() => {
-                          // Match tickets to bookings based on service and tourist
-                          const match = bookings.find((b: any) =>
-                            b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
-                          )
-                          return match ? `#${match.id.slice(0,8)}` : '—'
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.ticket_types?.title || 'Ticket'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.services?.vendors?.business_name || 'Unknown'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(ticket.issued_at)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <StatusBadge status={ticket.status} variant="small" />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX')}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {(() => {
-                          // Match tickets to bookings based on service and tourist
-                          const match = bookings.find((b: any) =>
-                            b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
-                          )
-                          return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {ticket.status === 'used' ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Attended
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            Not Attended
-                          </span>
+                  {(() => {
+                    const filteredTickets = tickets
+                      .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
+                      .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
+                      .filter(t => selectedVendorFilter === 'all' || (t.services?.vendors?.business_name || 'Unknown') === selectedVendorFilter)
+                      .filter(t => {
+                        if (selectedAttendanceFilter === 'all') return true;
+                        if (selectedAttendanceFilter === 'attended') return t.status === 'used';
+                        if (selectedAttendanceFilter === 'not-attended') return t.status !== 'used';
+                        return true;
+                      });
+
+                    return (
+                      <>
+                        {filteredTickets.map((ticket) => (
+                          <tr key={ticket.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {(() => {
+                                // Match tickets to bookings based on service and tourist
+                                const match = bookings.find((b: any) =>
+                                  b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
+                                )
+                                return match ? `#${match.id.slice(0,8)}` : '—'
+                              })()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.ticket_types?.title || 'Ticket'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.services?.vendors?.business_name || 'Unknown'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(ticket.issued_at)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <StatusBadge status={ticket.status} variant="small" />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {(() => {
+                                // Match tickets to bookings based on service and tourist
+                                const match = bookings.find((b: any) =>
+                                  b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
+                                )
+                                return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
+                              })()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {ticket.status === 'used' ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Attended
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  Not Attended
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              <button
+                                onClick={() => downloadTicket(ticket)}
+                                className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                              >
+                                View Ticket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredTickets.length > 0 && (
+                          <tr className="bg-gray-50 border-t-2 border-gray-200">
+                            <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
+                              Total ({filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}):
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                              {(() => {
+                                const total = filteredTickets.reduce((sum, ticket) => {
+                                  const price = ticket.ticket_types?.price || 0;
+                                  const originalCurrency = ticket.orders?.currency || 'UGX';
+                                  return sum + convertCurrency(price, originalCurrency, selectedCurrency);
+                                }, 0);
+                                return formatCurrencyWithConversion(total, selectedCurrency, selectedCurrency);
+                              })()}
+                            </td>
+                            <td colSpan={3} className="px-6 py-4"></td>
+                          </tr>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <button
-                          onClick={() => downloadTicket(ticket)}
-                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-                        >
-                          View Ticket
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                      </>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
