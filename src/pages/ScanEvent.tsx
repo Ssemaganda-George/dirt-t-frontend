@@ -71,13 +71,39 @@ export default function ScanEventPage() {
   }
 
   const startScanning = async () => {
-    if (!videoRef.current) return
+    console.log('Starting QR scanner...')
+    
+    // Check if we're in a secure context
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      setScanError('Camera access requires HTTPS. Please ensure you\'re accessing this page over a secure connection.')
+      return
+    }
 
     setIsScanning(true)
     setScanError(null)
     setScanResult(null)
 
+    // Wait for the video element to be available
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    if (!videoRef.current) {
+      console.error('Video element not found')
+      setScanError('Video element not available')
+      setIsScanning(false)
+      return
+    }
+
+    console.log('Video element found, initializing QR scanner...')
+
     try {
+      // Check if camera is available
+      const hasCamera = await QrScanner.hasCamera()
+      console.log('Camera available:', hasCamera)
+      
+      if (!hasCamera) {
+        throw new Error('No camera found on this device')
+      }
+
       const qrScanner = new QrScanner(
         videoRef.current,
         async (result) => {
@@ -87,17 +113,33 @@ export default function ScanEventPage() {
         {
           onDecodeError: (err) => {
             console.error('QR decode error:', err)
+            // Don't show decode errors to user, just log them
           },
           highlightScanRegion: true,
           highlightCodeOutline: true,
+          preferredCamera: 'environment', // Use back camera on mobile
         }
       )
 
+      console.log('QR scanner created, starting...')
       qrScannerRef.current = qrScanner
       await qrScanner.start()
+      console.log('QR scanner started successfully')
     } catch (err: any) {
       console.error('Error starting scanner:', err)
-      setScanError('Failed to access camera: ' + err.message)
+      let errorMessage = 'Failed to access camera'
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage = 'Camera access denied. Please allow camera permissions and try again.'
+      } else if (err.name === 'NotFoundError') {
+        errorMessage = 'No camera found on this device.'
+      } else if (err.name === 'NotReadableError') {
+        errorMessage = 'Camera is already in use by another application.'
+      } else if (err.message) {
+        errorMessage += ': ' + err.message
+      }
+      
+      setScanError(errorMessage)
       setIsScanning(false)
     }
   }
@@ -169,6 +211,11 @@ export default function ScanEventPage() {
           >
             {isScanning ? 'Stop Scanning' : 'Scan Ticket'}
           </button>
+          {!isScanning && (
+            <p className="mt-2 text-sm text-gray-600">
+              Note: Camera access requires HTTPS and browser permissions
+            </p>
+          )}
         </div>
 
         {isScanning && (
@@ -186,6 +233,14 @@ export default function ScanEventPage() {
             </p>
           </div>
         )}
+
+        {/* Hidden video element for QR scanner */}
+        <video 
+          ref={videoRef} 
+          className="hidden"
+          playsInline
+          muted
+        />
 
         {scanResult && (
           <div className={`mt-6 p-4 rounded-lg ${
