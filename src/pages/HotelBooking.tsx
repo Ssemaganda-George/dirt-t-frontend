@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle, Bed, Wifi, Car } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
-import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
@@ -46,11 +45,9 @@ interface HotelBookingProps {
 
 export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
-  const { addToCart } = useCart()
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
   const [currentStep, setCurrentStep] = useState(1)
-  const [cartSaved, setCartSaved] = useState(false)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -510,24 +507,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     : 0
 
   const totalPrice = service.price * bookingData.rooms * nights
-
-  const handleSaveToCart = () => {
-    addToCart({
-      serviceId: service.id,
-      service,
-      bookingData: {
-        ...bookingData,
-        date: bookingData.checkInDate, // Use check-in date as main date
-        pickupLocation: '',
-        dropoffLocation: '',
-        returnTrip: false
-      },
-      category: 'hotels',
-      totalPrice,
-      currency: service.currency
-    })
-    setCartSaved(true)
-  }
 
   const handleCompleteBooking = async () => {
     setIsSubmitting(true)
@@ -1006,78 +985,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     }
   }
 
-  // Show cart confirmation screen
-  if (cartSaved) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center space-y-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Saved to Cart!</h3>
-            <p className="text-gray-600">
-              Your hotel booking has been saved to cart. You can complete the booking later.
-            </p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-left">
-            <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Hotel:</span>
-                <span className="font-medium">{service.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Room Type:</span>
-                <span className="font-medium">{bookingData.roomType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Check-in:</span>
-                <span className="font-medium">{bookingData.checkInDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Check-out:</span>
-                <span className="font-medium">{bookingData.checkOutDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Guests:</span>
-                <span className="font-medium">{bookingData.guests}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Rooms:</span>
-                <span className="font-medium">{bookingData.rooms}</span>
-              </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-                </div>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-            >
-              Similar Services
-            </button>
-            <button
-              onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-            >
-              Send Inquiry
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-            >
-              Home
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -1167,26 +1074,18 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             >
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </button>
-            <div className="flex space-x-4">
-              <button
-                onClick={handleSaveToCart}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                Save to Cart
-              </button>
-              <button
-                onClick={currentStep === 4 ? handleCompleteBooking : handleNext}
-                disabled={
-                  isSubmitting ||
-                  (currentStep === 1 && (!bookingData.checkInDate || !bookingData.checkOutDate)) ||
-                  (currentStep === 3 && (!bookingData.contactName || !bookingData.contactEmail)) ||
-                  (currentStep === 4 && bookingData.paymentMethod === 'card')
-                }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                {isSubmitting ? 'Processing...' : (currentStep === 4 ? 'Complete Booking' : 'Next')}
-              </button>
-            </div>
+            <button
+              onClick={currentStep === 4 ? handleCompleteBooking : handleNext}
+              disabled={
+                isSubmitting ||
+                (currentStep === 1 && (!bookingData.checkInDate || !bookingData.checkOutDate)) ||
+                (currentStep === 3 && (!bookingData.contactName || !bookingData.contactEmail)) ||
+                (currentStep === 4 && bookingData.paymentMethod === 'card')
+              }
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            >
+              {isSubmitting ? 'Processing...' : (currentStep === 4 ? 'Complete Booking' : 'Next')}
+            </button>
           </div>
         )}
       </div>

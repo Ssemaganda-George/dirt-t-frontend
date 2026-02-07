@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Users, CreditCard, CheckCircle, Car, XCircle } from 'lucide-react'
-import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
@@ -261,7 +260,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   console.log('TransportBooking - service:', service)
   console.log('TransportBooking - service.vendor_id:', service.vendor_id)
   
-  const { addToCart } = useCart()
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
 
@@ -681,26 +679,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
   const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
-
-  const handleSaveToCart = () => {
-    addToCart({
-      serviceId: service.id,
-      service,
-      bookingData: {
-        ...bookingData,
-        guests: bookingData.passengers, // Map passengers to guests
-        checkInDate: bookingData.startDate,
-        checkOutDate: bookingData.endDate,
-        rooms: 1,
-        roomType: '',
-        date: bookingData.startDate // Keep date for compatibility
-      },
-      category: 'transport',
-      totalPrice,
-      currency: service.currency
-    })
-  // setCartSaved removed (no longer needed)
-  }
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -1429,12 +1407,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 {currentStep === 1 ? 'Cancel' : 'Back'}
               </button>
               <button
-                onClick={handleSaveToCart}
-                className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
-              >
-                Save Cart
-              </button>
-              <button
                 onClick={handleNext}
                 disabled={
                   (currentStep === 1 && (
@@ -1459,29 +1431,21 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               >
                 {currentStep === 1 ? 'Cancel' : 'Back'}
               </button>
-              <div className="flex space-x-4">
-                <button
-                  onClick={handleSaveToCart}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                  Save to Cart
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={
-                    (currentStep === 1 && (
-                      !bookingData.startDate ||
-                      !bookingData.endDate ||
-                      (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
-                    )) ||
-                    (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
-                    || (currentStep === 3 && bookingData.paymentMethod === 'card')
-                  }
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  {currentStep === 3 ? 'Complete Booking' : 'Next'}
-                </button>
-              </div>
+              <button
+                onClick={handleNext}
+                disabled={
+                  (currentStep === 1 && (
+                    !bookingData.startDate ||
+                    !bookingData.endDate ||
+                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
+                  )) ||
+                  (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
+                  || (currentStep === 3 && bookingData.paymentMethod === 'card')
+                }
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              >
+                {currentStep === 3 ? 'Complete Booking' : 'Next'}
+              </button>
             </div>
           </div>
         )}

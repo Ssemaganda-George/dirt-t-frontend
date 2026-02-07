@@ -9,10 +9,12 @@ import {
   ArrowLeft,
   Heart,
   Share2,
+  ShoppingCart,
   CheckCircle
 } from 'lucide-react'
 import { getServiceBySlug, getServiceById, getTicketTypes, createOrder } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
+import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 
 interface ServiceDetail {
@@ -143,6 +145,7 @@ export default function ServiceDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const { user } = useAuth()
+  const { addToCart } = useCart()
   const { selectedCurrency, selectedLanguage } = usePreferences()
 
   // Currency conversion functions
@@ -351,6 +354,35 @@ export default function ServiceDetail() {
     if (!service) return
     // Navigate to inquiry form
     navigate(`/service/${service.slug}/inquiry`)
+  }
+
+  const handleSaveToCart = () => {
+    if (!service) return
+    // Add to cart with basic service info
+    addToCart({
+      serviceId: service.id,
+      service,
+      bookingData: {
+        date: '',
+        checkInDate: '',
+        checkOutDate: '',
+        guests: 1,
+        rooms: 1,
+        roomType: '',
+        pickupLocation: '',
+        dropoffLocation: '',
+        returnTrip: false,
+        specialRequests: '',
+        contactName: '',
+        contactEmail: '',
+        contactPhone: '',
+        paymentMethod: 'mobile'
+      },
+      category: service.service_categories.name.toLowerCase(),
+      totalPrice: service.price,
+      currency: service.currency
+    })
+    // Could add a toast notification here
   }
 
   // Get appropriate button text based on category
@@ -1098,14 +1130,21 @@ export default function ServiceDetail() {
               <ArrowLeft className="h-5 w-5 mr-2" />
               Back to search
             </Link>
-            <div className="flex items-center space-x-4">
-              <button className="flex items-center text-gray-600 hover:text-red-600">
-                <Heart className="h-5 w-5 mr-1" />
-                Save
+            <div className="flex items-center space-x-3 md:space-x-2 ml-auto">
+              <button className="flex items-center text-gray-600 hover:text-red-600 group">
+                <Heart className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Save</span>
               </button>
-              <button className="flex items-center text-gray-600 hover:text-gray-900">
-                <Share2 className="h-5 w-5 mr-1" />
-                Share
+              <button className="flex items-center text-gray-600 hover:text-gray-900 group">
+                <Share2 className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Share</span>
+              </button>
+              <button 
+                onClick={handleSaveToCart}
+                className="flex items-center text-gray-600 hover:text-green-600 group"
+              >
+                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Save to Cart</span>
               </button>
             </div>
           </div>
