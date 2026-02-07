@@ -25,6 +25,7 @@ const VendorPending = lazy(() => import('./pages/VendorPending'))
 const VendorDashboard = lazy(() => import('./pages/vendor/Dashboard'))
 const VendorServices = lazy(() => import('./pages/vendor/Services'))
 const VendorBookings = lazy(() => import('./pages/vendor/Bookings'))
+const VendorAvailability = lazy(() => import('./pages/vendor/Availability'))
 const VendorMessages = lazy(() => import('./pages/vendor/Messages'))
 const VendorInquiries = lazy(() => import('./pages/vendor/Inquiries'))
 const VendorTransactions = lazy(() => import('./pages/vendor/Transactions'))
@@ -196,6 +197,7 @@ function App() {
             <Route path="settings" element={<VendorSettings />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
+            <Route path="availability" element={<VendorAvailability />} />
             <Route path="tickets" element={<VendorBookings />} />
             <Route path="messages" element={<VendorMessages />} />
             <Route path="inquiries" element={<VendorInquiries />} />

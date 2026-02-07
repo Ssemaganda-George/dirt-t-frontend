@@ -137,7 +137,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+  <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
@@ -175,8 +175,8 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+  {/* Content */}
+  <div className="p-6 overflow-y-auto flex-1">
           {activeTab === 'region' ? (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -224,16 +224,16 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t bg-gray-50">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">
+  {/* Footer */}
+  <div className="p-4 sm:p-6 border-t bg-gray-50 sticky bottom-0" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <p className="text-xs sm:text-sm text-gray-600 leading-tight">
               Any changes to the preferences will persist through your user session.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 disabled={saving}
               >
                 Cancel
@@ -241,12 +241,13 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
               <button
                 onClick={handleSave}
                 disabled={saving || loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
+                    <span className="sr-only">Saving</span>
+                    <span className="hidden sm:inline">Saving...</span>
                   </>
                 ) : (
                   'Save Preferences'

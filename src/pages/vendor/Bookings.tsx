@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
-import { getServices } from '../../store/vendorStore'
+import { getServices as getServicesDb } from '../../lib/database'
 import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
@@ -40,6 +40,7 @@ export default function VendorBookings() {
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const { state: cartState } = useCart()
+  const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState<'bookings' | 'tickets'>('bookings')
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -80,7 +81,13 @@ export default function VendorBookings() {
       console.error('Error loading tickets:', err)
     }
 
-    setServices(getServices(vendorId))
+    try {
+      const svc = await getServicesDb(vendorId)
+      setServices(svc)
+    } catch (err) {
+      console.error('Error loading services for vendor:', err)
+      setServices([])
+    }
   }
 
   // Set up real-time subscriptions for bookings and tickets
@@ -306,9 +313,18 @@ export default function VendorBookings() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings & Tickets</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/vendor/availability')}
+            aria-label="Manage availability"
+            className="inline-flex items-center gap-2 px-2 py-2 sm:px-3 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors"
+          >
+            <Calendar className="w-5 h-5 text-gray-700" />
+            <span className="hidden sm:inline">Manage availability</span>
+          </button>
+
           <div className="flex items-center text-sm text-green-600">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
             Live updates

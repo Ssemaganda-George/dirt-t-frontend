@@ -13,6 +13,10 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true)
   const [buyer, setBuyer] = useState({ name: '', surname: '', email: '', phone: '', countryCode: '+256', emailCopy: false })
   const [showAllTickets, setShowAllTickets] = useState(false)
+
+  // Country search state
+  const [countrySearch, setCountrySearch] = useState('')
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
   const { profile } = useAuth()
   const { selectedCurrency } = usePreferences()
 
@@ -74,6 +78,237 @@ export default function CheckoutPage() {
       return formatAmount(amount, serviceCurrency);
     }
   }
+
+  const countries = [
+    { code: '+1', name: 'United States', flag: '🇺🇸' },
+    { code: '+1', name: 'Canada', flag: '🇨🇦' },
+    { code: '+7', name: 'Russia', flag: '🇷🇺' },
+    { code: '+20', name: 'Egypt', flag: '🇪🇬' },
+    { code: '+27', name: 'South Africa', flag: '🇿🇦' },
+    { code: '+30', name: 'Greece', flag: '🇬🇷' },
+    { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
+    { code: '+32', name: 'Belgium', flag: '🇧🇪' },
+    { code: '+33', name: 'France', flag: '🇫🇷' },
+    { code: '+34', name: 'Spain', flag: '🇪🇸' },
+    { code: '+36', name: 'Hungary', flag: '🇭🇺' },
+    { code: '+39', name: 'Italy', flag: '🇮🇹' },
+    { code: '+40', name: 'Romania', flag: '🇷🇴' },
+    { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
+    { code: '+43', name: 'Austria', flag: '🇦🇹' },
+    { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
+    { code: '+45', name: 'Denmark', flag: '🇩🇰' },
+    { code: '+46', name: 'Sweden', flag: '🇸🇪' },
+    { code: '+47', name: 'Norway', flag: '🇳🇴' },
+    { code: '+48', name: 'Poland', flag: '🇵🇱' },
+    { code: '+49', name: 'Germany', flag: '🇩🇪' },
+    { code: '+51', name: 'Peru', flag: '🇵🇪' },
+    { code: '+52', name: 'Mexico', flag: '🇲🇽' },
+    { code: '+53', name: 'Cuba', flag: '🇨🇺' },
+    { code: '+54', name: 'Argentina', flag: '🇦🇷' },
+    { code: '+55', name: 'Brazil', flag: '🇧🇷' },
+    { code: '+56', name: 'Chile', flag: '🇨🇱' },
+    { code: '+57', name: 'Colombia', flag: '🇨🇴' },
+    { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
+    { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
+    { code: '+61', name: 'Australia', flag: '🇦🇺' },
+    { code: '+62', name: 'Indonesia', flag: '🇮🇩' },
+    { code: '+63', name: 'Philippines', flag: '🇵🇭' },
+    { code: '+64', name: 'New Zealand', flag: '🇳🇿' },
+    { code: '+65', name: 'Singapore', flag: '🇸🇬' },
+    { code: '+66', name: 'Thailand', flag: '🇹🇭' },
+    { code: '+81', name: 'Japan', flag: '🇯🇵' },
+    { code: '+82', name: 'South Korea', flag: '🇰🇷' },
+    { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
+    { code: '+86', name: 'China', flag: '🇨🇳' },
+    { code: '+90', name: 'Turkey', flag: '🇹🇷' },
+    { code: '+91', name: 'India', flag: '🇮🇳' },
+    { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
+    { code: '+93', name: 'Afghanistan', flag: '🇦🇫' },
+    { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
+    { code: '+95', name: 'Myanmar', flag: '🇲🇲' },
+    { code: '+98', name: 'Iran', flag: '🇮🇷' },
+    { code: '+211', name: 'South Sudan', flag: '🇸🇸' },
+    { code: '+212', name: 'Morocco', flag: '🇲🇦' },
+    { code: '+213', name: 'Algeria', flag: '🇩🇿' },
+    { code: '+216', name: 'Tunisia', flag: '🇹🇳' },
+    { code: '+218', name: 'Libya', flag: '🇱🇾' },
+    { code: '+220', name: 'Gambia', flag: '🇬🇲' },
+    { code: '+221', name: 'Senegal', flag: '🇸🇳' },
+    { code: '+222', name: 'Mauritania', flag: '🇲🇷' },
+    { code: '+223', name: 'Mali', flag: '🇲🇱' },
+    { code: '+224', name: 'Guinea', flag: '🇬🇳' },
+    { code: '+225', name: 'Ivory Coast', flag: '🇨🇮' },
+    { code: '+226', name: 'Burkina Faso', flag: '🇧🇫' },
+    { code: '+227', name: 'Niger', flag: '🇳🇪' },
+    { code: '+228', name: 'Togo', flag: '🇹🇬' },
+    { code: '+229', name: 'Benin', flag: '🇧🇯' },
+    { code: '+230', name: 'Mauritius', flag: '🇲🇺' },
+    { code: '+231', name: 'Liberia', flag: '🇱🇷' },
+    { code: '+232', name: 'Sierra Leone', flag: '🇸🇱' },
+    { code: '+233', name: 'Ghana', flag: '🇬🇭' },
+    { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
+    { code: '+235', name: 'Chad', flag: '🇹🇩' },
+    { code: '+236', name: 'Central African Republic', flag: '🇨🇫' },
+    { code: '+237', name: 'Cameroon', flag: '🇨🇲' },
+    { code: '+238', name: 'Cape Verde', flag: '🇨🇻' },
+    { code: '+239', name: 'São Tomé and Príncipe', flag: '🇸🇹' },
+    { code: '+240', name: 'Equatorial Guinea', flag: '🇬🇶' },
+    { code: '+241', name: 'Gabon', flag: '🇬🇦' },
+    { code: '+242', name: 'Republic of the Congo', flag: '🇨🇬' },
+    { code: '+243', name: 'Democratic Republic of the Congo', flag: '🇨🇩' },
+    { code: '+244', name: 'Angola', flag: '🇦🇴' },
+    { code: '+245', name: 'Guinea-Bissau', flag: '🇬🇼' },
+    { code: '+246', name: 'British Indian Ocean Territory', flag: '🇮🇴' },
+    { code: '+247', name: 'Ascension Island', flag: '🇦🇨' },
+    { code: '+248', name: 'Seychelles', flag: '🇸🇨' },
+    { code: '+249', name: 'Sudan', flag: '🇸🇩' },
+    { code: '+250', name: 'Rwanda', flag: '🇷🇼' },
+    { code: '+251', name: 'Ethiopia', flag: '🇪🇹' },
+    { code: '+252', name: 'Somalia', flag: '🇸🇴' },
+    { code: '+253', name: 'Djibouti', flag: '🇩🇯' },
+    { code: '+254', name: 'Kenya', flag: '🇰🇪' },
+    { code: '+255', name: 'Tanzania', flag: '🇹🇿' },
+    { code: '+256', name: 'Uganda', flag: '🇺🇬' },
+    { code: '+257', name: 'Burundi', flag: '🇧🇮' },
+    { code: '+258', name: 'Mozambique', flag: '🇲🇿' },
+    { code: '+260', name: 'Zambia', flag: '🇿🇲' },
+    { code: '+261', name: 'Madagascar', flag: '🇲🇬' },
+    { code: '+262', name: 'Réunion', flag: '🇷🇪' },
+    { code: '+263', name: 'Zimbabwe', flag: '🇿🇼' },
+    { code: '+264', name: 'Namibia', flag: '🇳🇦' },
+    { code: '+265', name: 'Malawi', flag: '🇲🇼' },
+    { code: '+266', name: 'Lesotho', flag: '🇱🇸' },
+    { code: '+267', name: 'Botswana', flag: '🇧🇼' },
+    { code: '+268', name: 'Eswatini', flag: '🇸🇿' },
+    { code: '+269', name: 'Comoros', flag: '🇰🇲' },
+    { code: '+290', name: 'Saint Helena', flag: '🇸🇭' },
+    { code: '+291', name: 'Eritrea', flag: '🇪🇷' },
+    { code: '+297', name: 'Aruba', flag: '🇦🇼' },
+    { code: '+298', name: 'Faroe Islands', flag: '🇫🇴' },
+    { code: '+299', name: 'Greenland', flag: '🇬🇱' },
+    { code: '+350', name: 'Gibraltar', flag: '🇬🇮' },
+    { code: '+351', name: 'Portugal', flag: '🇵🇹' },
+    { code: '+352', name: 'Luxembourg', flag: '🇱🇺' },
+    { code: '+353', name: 'Ireland', flag: '🇮🇪' },
+    { code: '+354', name: 'Iceland', flag: '🇮🇸' },
+    { code: '+355', name: 'Albania', flag: '🇦🇱' },
+    { code: '+356', name: 'Malta', flag: '🇲🇹' },
+    { code: '+357', name: 'Cyprus', flag: '🇨🇾' },
+    { code: '+358', name: 'Finland', flag: '🇫🇮' },
+    { code: '+359', name: 'Bulgaria', flag: '🇧🇬' },
+    { code: '+370', name: 'Lithuania', flag: '🇱🇹' },
+    { code: '+371', name: 'Latvia', flag: '🇱🇻' },
+    { code: '+372', name: 'Estonia', flag: '🇪🇪' },
+    { code: '+373', name: 'Moldova', flag: '🇲🇩' },
+    { code: '+374', name: 'Armenia', flag: '🇦🇲' },
+    { code: '+375', name: 'Belarus', flag: '🇧🇾' },
+    { code: '+376', name: 'Andorra', flag: '🇦🇩' },
+    { code: '+377', name: 'Monaco', flag: '🇲🇨' },
+    { code: '+378', name: 'San Marino', flag: '🇸🇲' },
+    { code: '+379', name: 'Vatican City', flag: '🇻🇦' },
+    { code: '+380', name: 'Ukraine', flag: '🇺🇦' },
+    { code: '+381', name: 'Serbia', flag: '🇷🇸' },
+    { code: '+382', name: 'Montenegro', flag: '🇲🇪' },
+    { code: '+383', name: 'Kosovo', flag: '🇽🇰' },
+    { code: '+385', name: 'Croatia', flag: '🇭🇷' },
+    { code: '+386', name: 'Slovenia', flag: '🇸🇮' },
+    { code: '+387', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+    { code: '+389', name: 'North Macedonia', flag: '🇲🇰' },
+    { code: '+420', name: 'Czech Republic', flag: '🇨🇿' },
+    { code: '+421', name: 'Slovakia', flag: '🇸🇰' },
+    { code: '+423', name: 'Liechtenstein', flag: '🇱🇮' },
+    { code: '+500', name: 'Falkland Islands', flag: '🇫🇰' },
+    { code: '+501', name: 'Belize', flag: '🇧🇿' },
+    { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
+    { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
+    { code: '+504', name: 'Honduras', flag: '🇭🇳' },
+    { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+    { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
+    { code: '+507', name: 'Panama', flag: '🇵🇦' },
+    { code: '+508', name: 'Saint Pierre and Miquelon', flag: '🇵🇲' },
+    { code: '+509', name: 'Haiti', flag: '🇭🇹' },
+    { code: '+590', name: 'Guadeloupe', flag: '🇬🇵' },
+    { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
+    { code: '+592', name: 'Guyana', flag: '🇬🇾' },
+    { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
+    { code: '+594', name: 'French Guiana', flag: '🇬🇫' },
+    { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
+    { code: '+596', name: 'Martinique', flag: '🇲🇶' },
+    { code: '+597', name: 'Suriname', flag: '🇸🇷' },
+    { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
+    { code: '+599', name: 'Curaçao', flag: '🇨🇼' },
+    { code: '+670', name: 'East Timor', flag: '🇹🇱' },
+    { code: '+672', name: 'Antarctica', flag: '🇦🇶' },
+    { code: '+673', name: 'Brunei', flag: '🇧🇳' },
+    { code: '+674', name: 'Nauru', flag: '🇳🇷' },
+    { code: '+675', name: 'Papua New Guinea', flag: '🇵🇬' },
+    { code: '+676', name: 'Tonga', flag: '🇹🇴' },
+    { code: '+677', name: 'Solomon Islands', flag: '🇸🇧' },
+    { code: '+678', name: 'Vanuatu', flag: '🇻🇺' },
+    { code: '+679', name: 'Fiji', flag: '🇫🇯' },
+    { code: '+680', name: 'Palau', flag: '🇵🇼' },
+    { code: '+681', name: 'Wallis and Futuna', flag: '🇼🇫' },
+    { code: '+682', name: 'Cook Islands', flag: '🇨🇰' },
+    { code: '+683', name: 'Niue', flag: '🇳🇺' },
+    { code: '+684', name: 'American Samoa', flag: '🇦🇸' },
+    { code: '+685', name: 'Samoa', flag: '🇼🇸' },
+    { code: '+686', name: 'Kiribati', flag: '🇰🇮' },
+    { code: '+687', name: 'New Caledonia', flag: '🇳🇨' },
+    { code: '+688', name: 'Tuvalu', flag: '🇹🇻' },
+    { code: '+689', name: 'French Polynesia', flag: '🇵🇫' },
+    { code: '+690', name: 'Tokelau', flag: '🇹🇰' },
+    { code: '+691', name: 'Micronesia', flag: '🇫🇲' },
+    { code: '+692', name: 'Marshall Islands', flag: '🇲🇭' },
+    { code: '+850', name: 'North Korea', flag: '🇰🇵' },
+    { code: '+852', name: 'Hong Kong', flag: '🇭🇰' },
+    { code: '+853', name: 'Macau', flag: '🇲🇴' },
+    { code: '+855', name: 'Cambodia', flag: '🇰🇭' },
+    { code: '+856', name: 'Laos', flag: '🇱🇦' },
+    { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
+    { code: '+886', name: 'Taiwan', flag: '🇹🇼' },
+    { code: '+960', name: 'Maldives', flag: '🇲🇻' },
+    { code: '+961', name: 'Lebanon', flag: '🇱🇧' },
+    { code: '+962', name: 'Jordan', flag: '🇯🇴' },
+    { code: '+963', name: 'Syria', flag: '🇸🇾' },
+    { code: '+964', name: 'Iraq', flag: '🇮🇶' },
+    { code: '+965', name: 'Kuwait', flag: '🇰🇼' },
+    { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: '+967', name: 'Yemen', flag: '🇾🇪' },
+    { code: '+968', name: 'Oman', flag: '🇴🇲' },
+    { code: '+970', name: 'Palestine', flag: '🇵🇸' },
+    { code: '+971', name: 'United Arab Emirates', flag: '🇦🇪' },
+    { code: '+972', name: 'Israel', flag: '🇮🇱' },
+    { code: '+973', name: 'Bahrain', flag: '🇧🇭' },
+    { code: '+974', name: 'Qatar', flag: '🇶🇦' },
+    { code: '+975', name: 'Bhutan', flag: '🇧🇹' },
+    { code: '+976', name: 'Mongolia', flag: '🇲🇳' },
+    { code: '+977', name: 'Nepal', flag: '🇳🇵' },
+    { code: '+992', name: 'Tajikistan', flag: '🇹🇯' },
+    { code: '+993', name: 'Turkmenistan', flag: '🇹🇲' },
+    { code: '+994', name: 'Azerbaijan', flag: '🇦🇿' },
+    { code: '+995', name: 'Georgia', flag: '🇬🇪' },
+    { code: '+996', name: 'Kyrgyzstan', flag: '🇰🇬' },
+    { code: '+998', name: 'Uzbekistan', flag: '🇺🇿' }
+  ];
+
+  // Filter countries based on search
+  const filteredCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
+    country.code.includes(countrySearch)
+  )
+
+  // Close country dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (countryDropdownOpen && !(event.target as Element).closest('.country-dropdown')) {
+        setCountryDropdownOpen(false)
+        setCountrySearch('')
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [countryDropdownOpen])
 
   useEffect(() => {
     const load = async () => {
@@ -279,223 +514,56 @@ export default function CheckoutPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cellphone</label>
                   <div className="flex gap-2">
-                    <select 
-                      className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent bg-white min-w-[120px]"
-                      value={buyer.countryCode} 
-                      onChange={(e) => setBuyer(s => ({ ...s, countryCode: e.target.value }))}
-                    >
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+7">🇷🇺 +7</option>
-                      <option value="+20">🇪🇬 +20</option>
-                      <option value="+27">🇿🇦 +27</option>
-                      <option value="+30">🇬🇷 +30</option>
-                      <option value="+31">🇳🇱 +31</option>
-                      <option value="+32">🇧🇪 +32</option>
-                      <option value="+33">🇫🇷 +33</option>
-                      <option value="+34">🇪🇸 +34</option>
-                      <option value="+36">🇭🇺 +36</option>
-                      <option value="+39">🇮🇹 +39</option>
-                      <option value="+40">🇷🇴 +40</option>
-                      <option value="+41">🇨🇭 +41</option>
-                      <option value="+43">🇦🇹 +43</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+45">🇩🇰 +45</option>
-                      <option value="+46">🇸🇪 +46</option>
-                      <option value="+47">🇳🇴 +47</option>
-                      <option value="+48">🇵🇱 +48</option>
-                      <option value="+49">🇩🇪 +49</option>
-                      <option value="+51">🇵🇪 +51</option>
-                      <option value="+52">🇲🇽 +52</option>
-                      <option value="+53">🇨🇺 +53</option>
-                      <option value="+54">🇦🇷 +54</option>
-                      <option value="+55">🇧🇷 +55</option>
-                      <option value="+56">🇨🇱 +56</option>
-                      <option value="+57">🇨🇴 +57</option>
-                      <option value="+58">🇻🇪 +58</option>
-                      <option value="+60">🇲🇾 +60</option>
-                      <option value="+61">🇦🇺 +61</option>
-                      <option value="+62">🇮🇩 +62</option>
-                      <option value="+63">🇵🇭 +63</option>
-                      <option value="+64">🇳🇿 +64</option>
-                      <option value="+65">🇸🇬 +65</option>
-                      <option value="+66">🇹🇭 +66</option>
-                      <option value="+81">🇯🇵 +81</option>
-                      <option value="+82">🇰🇷 +82</option>
-                      <option value="+84">🇻🇳 +84</option>
-                      <option value="+86">🇨🇳 +86</option>
-                      <option value="+90">🇹🇷 +90</option>
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+92">🇵🇰 +92</option>
-                      <option value="+93">🇦🇫 +93</option>
-                      <option value="+94">🇱🇰 +94</option>
-                      <option value="+95">🇲🇲 +95</option>
-                      <option value="+98">🇮🇷 +98</option>
-                      <option value="+211">🇸🇸 +211</option>
-                      <option value="+212">🇲🇦 +212</option>
-                      <option value="+213">🇩🇿 +213</option>
-                      <option value="+216">🇹🇳 +216</option>
-                      <option value="+218">🇱🇾 +218</option>
-                      <option value="+220">🇬🇲 +220</option>
-                      <option value="+221">🇸🇳 +221</option>
-                      <option value="+222">🇲🇷 +222</option>
-                      <option value="+223">🇲🇱 +223</option>
-                      <option value="+224">🇬🇳 +224</option>
-                      <option value="+225">🇨🇮 +225</option>
-                      <option value="+226">🇧🇫 +226</option>
-                      <option value="+227">🇳🇪 +227</option>
-                      <option value="+228">🇹🇬 +228</option>
-                      <option value="+229">🇧🇯 +229</option>
-                      <option value="+230">🇲🇺 +230</option>
-                      <option value="+231">🇱🇷 +231</option>
-                      <option value="+232">🇸🇱 +232</option>
-                      <option value="+233">🇬🇭 +233</option>
-                      <option value="+234">🇳🇬 +234</option>
-                      <option value="+235">🇹🇩 +235</option>
-                      <option value="+236">🇨🇫 +236</option>
-                      <option value="+237">🇨🇲 +237</option>
-                      <option value="+238">🇨🇻 +238</option>
-                      <option value="+239">🇸🇹 +239</option>
-                      <option value="+240">🇬🇶 +240</option>
-                      <option value="+241">🇬🇦 +241</option>
-                      <option value="+242">🇨🇬 +242</option>
-                      <option value="+243">🇨🇩 +243</option>
-                      <option value="+244">🇦🇴 +244</option>
-                      <option value="+245">🇬🇼 +245</option>
-                      <option value="+246">🇮🇴 +246</option>
-                      <option value="+247">🇦🇨 +247</option>
-                      <option value="+248">🇸🇨 +248</option>
-                      <option value="+249">🇸🇩 +249</option>
-                      <option value="+250">🇷🇼 +250</option>
-                      <option value="+251">🇪🇹 +251</option>
-                      <option value="+252">🇸🇴 +252</option>
-                      <option value="+253">🇩🇯 +253</option>
-                      <option value="+254">🇰🇪 +254</option>
-                      <option value="+255">🇹🇿 +255</option>
-                      <option value="+256">🇺🇬 +256</option>
-                      <option value="+257">🇧🇮 +257</option>
-                      <option value="+258">🇲🇿 +258</option>
-                      <option value="+260">🇿🇲 +260</option>
-                      <option value="+261">🇲🇬 +261</option>
-                      <option value="+262">🇷🇪 +262</option>
-                      <option value="+263">🇿🇼 +263</option>
-                      <option value="+264">🇳🇦 +264</option>
-                      <option value="+265">🇲🇼 +265</option>
-                      <option value="+266">🇱🇸 +266</option>
-                      <option value="+267">🇧🇼 +267</option>
-                      <option value="+268">🇸🇿 +268</option>
-                      <option value="+269">🇰🇲 +269</option>
-                      <option value="+290">🇸🇭 +290</option>
-                      <option value="+291">🇪🇷 +291</option>
-                      <option value="+297">🇦🇼 +297</option>
-                      <option value="+298">🇫🇴 +298</option>
-                      <option value="+299">🇬🇱 +299</option>
-                      <option value="+350">🇬🇮 +350</option>
-                      <option value="+351">🇵🇹 +351</option>
-                      <option value="+352">🇱🇺 +352</option>
-                      <option value="+353">🇮🇪 +353</option>
-                      <option value="+354">🇮🇸 +354</option>
-                      <option value="+355">🇦🇱 +355</option>
-                      <option value="+356">🇲🇹 +356</option>
-                      <option value="+357">🇨🇾 +357</option>
-                      <option value="+358">🇫🇮 +358</option>
-                      <option value="+359">🇧🇬 +359</option>
-                      <option value="+370">🇱🇹 +370</option>
-                      <option value="+371">🇱🇻 +371</option>
-                      <option value="+372">🇪🇪 +372</option>
-                      <option value="+373">🇲🇩 +373</option>
-                      <option value="+374">🇦🇲 +374</option>
-                      <option value="+375">🇧🇾 +375</option>
-                      <option value="+376">🇦🇩 +376</option>
-                      <option value="+377">🇲🇨 +377</option>
-                      <option value="+378">🇸🇲 +378</option>
-                      <option value="+380">🇺🇦 +380</option>
-                      <option value="+381">🇷🇸 +381</option>
-                      <option value="+382">🇲🇪 +382</option>
-                      <option value="+383">🇽🇰 +383</option>
-                      <option value="+385">🇭🇷 +385</option>
-                      <option value="+386">🇸🇮 +386</option>
-                      <option value="+387">🇧🇦 +387</option>
-                      <option value="+389">🇲🇰 +389</option>
-                      <option value="+420">🇨🇿 +420</option>
-                      <option value="+421">🇸🇰 +421</option>
-                      <option value="+423">🇱🇮 +423</option>
-                      <option value="+500">🇫🇰 +500</option>
-                      <option value="+501">🇧🇿 +501</option>
-                      <option value="+502">🇬🇹 +502</option>
-                      <option value="+503">🇸🇻 +503</option>
-                      <option value="+504">🇭🇳 +504</option>
-                      <option value="+505">🇳🇮 +505</option>
-                      <option value="+506">🇨🇷 +506</option>
-                      <option value="+507">🇵🇦 +507</option>
-                      <option value="+508">🇵🇲 +508</option>
-                      <option value="+509">🇭🇹 +509</option>
-                      <option value="+590">🇬🇵 +590</option>
-                      <option value="+591">🇧🇴 +591</option>
-                      <option value="+592">🇬🇾 +592</option>
-                      <option value="+593">🇪🇨 +593</option>
-                      <option value="+594">🇬🇫 +594</option>
-                      <option value="+595">🇵🇾 +595</option>
-                      <option value="+596">🇲🇶 +596</option>
-                      <option value="+597">🇸🇷 +597</option>
-                      <option value="+598">🇺🇾 +598</option>
-                      <option value="+599">🇨🇼 +599</option>
-                      <option value="+670">🇹🇱 +670</option>
-                      <option value="+672">🇦🇶 +672</option>
-                      <option value="+673">🇧🇳 +673</option>
-                      <option value="+674">🇳🇷 +674</option>
-                      <option value="+675">🇵🇬 +675</option>
-                      <option value="+676">🇹🇴 +676</option>
-                      <option value="+677">🇸🇧 +677</option>
-                      <option value="+678">🇻🇺 +678</option>
-                      <option value="+679">🇫🇯 +679</option>
-                      <option value="+680">🇵🇼 +680</option>
-                      <option value="+681">🇼🇫 +681</option>
-                      <option value="+682">🇨🇰 +682</option>
-                      <option value="+683">🇳🇺 +683</option>
-                      <option value="+684">🇦🇸 +684</option>
-                      <option value="+685">🇼🇸 +685</option>
-                      <option value="+686">🇰🇮 +686</option>
-                      <option value="+687">🇳🇨 +687</option>
-                      <option value="+688">🇹🇻 +688</option>
-                      <option value="+689">🇵🇫 +689</option>
-                      <option value="+690">🇹🇰 +690</option>
-                      <option value="+691">🇫🇲 +691</option>
-                      <option value="+692">🇲🇭 +692</option>
-                      <option value="+850">🇰🇵 +850</option>
-                      <option value="+852">🇭🇰 +852</option>
-                      <option value="+853">🇲🇴 +853</option>
-                      <option value="+855">🇰🇭 +855</option>
-                      <option value="+856">🇱🇦 +856</option>
-                      <option value="+880">🇧🇩 +880</option>
-                      <option value="+886">🇹🇼 +886</option>
-                      <option value="+960">🇲🇻 +960</option>
-                      <option value="+961">🇱🇧 +961</option>
-                      <option value="+962">🇯🇴 +962</option>
-                      <option value="+963">🇸🇾 +963</option>
-                      <option value="+964">🇮🇶 +964</option>
-                      <option value="+965">🇰🇼 +965</option>
-                      <option value="+966">🇸🇦 +966</option>
-                      <option value="+967">🇾🇪 +967</option>
-                      <option value="+968">🇴🇲 +968</option>
-                      <option value="+970">🇵🇸 +970</option>
-                      <option value="+971">🇦🇪 +971</option>
-                      <option value="+972">🇮🇱 +972</option>
-                      <option value="+973">🇧🇭 +973</option>
-                      <option value="+974">🇶🇦 +974</option>
-                      <option value="+975">🇧🇹 +975</option>
-                      <option value="+976">🇲🇳 +976</option>
-                      <option value="+977">🇳🇵 +977</option>
-                      <option value="+992">🇹🇯 +992</option>
-                      <option value="+993">🇹🇲 +993</option>
-                      <option value="+994">🇦🇿 +994</option>
-                      <option value="+995">🇬🇪 +995</option>
-                      <option value="+996">🇰🇬 +996</option>
-                      <option value="+998">🇺🇿 +998</option>
-                    </select>
-                    <input 
-                      className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent" 
-                      value={buyer.phone} 
-                      onChange={(e) => setBuyer(s => ({ ...s, phone: e.target.value }))} 
+                    <div className="relative country-dropdown">
+                      <button
+                        type="button"
+                        className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent bg-white flex items-center justify-between min-w-[120px]"
+                        onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                        style={{ width: '140px' }}
+                      >
+                        <span className="truncate">
+                          {countries.find(c => c.code === buyer.countryCode)?.flag || '🌍'} {buyer.countryCode}
+                        </span>
+                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {countryDropdownOpen && (
+                        <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          <div className="p-2 border-b">
+                            <input
+                              type="text"
+                              placeholder="Search countries..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#61B82C] focus:border-transparent"
+                              value={countrySearch}
+                              onChange={(e) => setCountrySearch(e.target.value)}
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredCountries.map((country) => (
+                              <button
+                                key={country.code}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
+                                onClick={() => {
+                                  setBuyer(s => ({ ...s, countryCode: country.code }))
+                                  setCountrySearch('')
+                                  setCountryDropdownOpen(false)
+                                }}
+                              >
+                                <span>{country.flag}</span>
+                                <span className="text-sm">{country.name}</span>
+                                <span className="text-sm text-gray-500 ml-auto">{country.code}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent"
+                      value={buyer.phone}
+                      onChange={(e) => setBuyer(s => ({ ...s, phone: e.target.value }))}
                       placeholder="759 918649"
                     />
                   </div>
