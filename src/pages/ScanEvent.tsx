@@ -23,6 +23,7 @@ export default function ScanEventPage() {
   const [showScanDialog, setShowScanDialog] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const qrScannerRef = useRef<QrScanner | null>(null)
+  const isProcessingRef = useRef(false)
 
   // Manual verification state
   const [manualCode, setManualCode] = useState('')
@@ -48,9 +49,7 @@ export default function ScanEventPage() {
     setScanResult(null)
     setScanError(null)
     setIsProcessing(false) // Allow new scans after dialog is closed
-    
-    // Restart scanning after dialog is closed
-    startScanning()
+    isProcessingRef.current = false
   }
 
   useEffect(() => {
@@ -185,17 +184,19 @@ export default function ScanEventPage() {
     }
     setIsScanning(false)
     setIsProcessing(false)
+    isProcessingRef.current = false
     setLastScannedCode(null)
   }
 
   const handleScanResult = async (qrData: string) => {
     // Prevent any scanning while processing or if same code recently scanned
-    if (!id || isProcessing || lastScannedCode === qrData) {
-      console.log('Scan blocked - processing:', isProcessing, 'same code:', lastScannedCode === qrData)
+    if (!id || isProcessingRef.current || lastScannedCode === qrData) {
+      console.log('Scan blocked - processing:', isProcessingRef.current, 'same code:', lastScannedCode === qrData)
       return
     }
 
     console.log('Processing QR code:', qrData)
+    isProcessingRef.current = true
     setIsProcessing(true)
     setLastScannedCode(qrData)
     setScanError(null)
@@ -207,6 +208,9 @@ export default function ScanEventPage() {
       const result = await verifyTicketByCode(qrData, id)
       
       if (result.valid) {
+        // Check if ticket was already used BEFORE marking it
+        const wasAlreadyUsed = !!result.ticket.used_at
+        
         // Ticket is valid - mark as used for attendance tracking
         try {
           await markTicketUsed(result.ticket.id)
@@ -219,9 +223,9 @@ export default function ScanEventPage() {
         // Ticket is valid - show dialog for successful scan
         setScanResult({
           success: true,
-          message: 'Ticket verified successfully!',
+          message: wasAlreadyUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
           ticket: result.ticket,
-          ticketStatus: 'new'
+          ticketStatus: wasAlreadyUsed ? 'used' : 'new'
         })
         setShowScanDialog(true)
         
@@ -275,6 +279,9 @@ export default function ScanEventPage() {
       const result = await verifyTicketByCode(manualCode.trim().toUpperCase(), id)
       
       if (result.valid) {
+        // Check if ticket was already used BEFORE marking it
+        const wasAlreadyUsed = !!result.ticket.used_at
+        
         // Ticket is valid - mark as used for attendance tracking
         try {
           await markTicketUsed(result.ticket.id)
@@ -287,7 +294,7 @@ export default function ScanEventPage() {
         // Ticket is valid - show appropriate message based on previous usage
         setManualResult({
           success: true,
-          message: 'Ticket verified successfully!',
+          message: wasAlreadyUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
           ticket: result.ticket
         })
         console.log('Ticket verified successfully')
@@ -436,6 +443,31 @@ export default function ScanEventPage() {
               </div>
             </div>
 
+            {/* Scanning Interface */}
+            {isScanning && (
+              <div className="bg-gray-900 rounded-lg p-3">
+                <div className="relative bg-black rounded-lg overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-48 object-cover rounded-lg"
+                    playsInline
+                    muted
+                  />
+                  <div className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none"></div>
+                </div>
+                <div className="mt-3 text-center">
+                  <p className="text-white text-xs">
+                    {isProcessing ? 'Verifying ticket...' : 'Point camera at QR code'}
+                  </p>
+                  {isProcessing && (
+                    <div className="mt-2 flex justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Manual Verification Card */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
@@ -480,31 +512,6 @@ export default function ScanEventPage() {
               </div>
             </div>
           </div>
-
-          {/* Scanning Interface */}
-          {isScanning && (
-            <div className="mt-4 bg-gray-900 rounded-lg p-3">
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-48 object-cover rounded-lg"
-                  playsInline
-                  muted
-                />
-                <div className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none"></div>
-              </div>
-              <div className="mt-3 text-center">
-                <p className="text-white text-xs">
-                  {isProcessing ? 'Verifying ticket...' : 'Point camera at QR code'}
-                </p>
-                {isProcessing && (
-                  <div className="mt-2 flex justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Hidden video element for QR scanner */}
           <video 
