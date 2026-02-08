@@ -442,7 +442,7 @@ export default function Home() {
                 <input
                   type="text"
                   placeholder={t('search_placeholder')}
-                  className="w-full py-1.5 md:py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-sm md:text-base"
+                  className="w-full py-1.5 md:py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-xs md:text-sm font-thin"
                   value={searchQuery}
                   onChange={(e) => {
                     const newValue = e.target.value;
@@ -455,7 +455,7 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1 bg-gray-700 hover:bg-gray-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs"
+                  className="category-dropdown flex items-center gap-1 bg-gray-700 hover:bg-gray-900 text-white px-2 md:px-4 py-1.5 md:py-2 rounded-full font-thin transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs"
                   title="Filter services by category - click to select multiple categories"
                 >
                   <Filter className="w-3.5 h-3.5" />
