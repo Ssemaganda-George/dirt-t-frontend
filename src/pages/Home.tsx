@@ -558,12 +558,12 @@ export default function Home() {
       {/* Spacer to prevent content from being hidden behind fixed search bar */}
       <div className="h-4"></div>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 md:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-12 md:pb-12">
 
         {/* Results Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+            <h2 className="text-2xl font-light text-black mb-1">
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategories.includes('all')
@@ -572,7 +572,7 @@ export default function Home() {
                     ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
                     : `${selectedCategories.length} categories selected`}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 font-light text-sm">
               {currentItemCount} {searchQuery ? 'result' : t('listings').toLowerCase()}{currentItemCount === 1 ? '' : 's'}
             </p>
           </div>

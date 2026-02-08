@@ -302,57 +302,57 @@ export default function Layout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200 overflow-visible">
+          <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 overflow-visible">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="text-gray-500 hover:text-gray-600 lg:hidden"
+              className="text-gray-400 hover:text-gray-600 lg:hidden transition-colors"
             >
-              <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+              <Menu className="h-5 w-5 sm:h-6 sm:w-6 stroke-[1.5]" />
             </button>
 
             {/* Spacer to push account details to far right */}
             <div className="flex-1"></div>
 
-            <div className={`flex items-center ${isTourist ? 'space-x-2' : 'space-x-4'} ml-auto`}>
+            <div className={`flex items-center ${isTourist ? 'space-x-3' : 'space-x-3'} ml-auto`}>
               {/* Global Search Button */}
               <button
                 onClick={() => setShowGlobalSearch(true)}
-                className={`${isTourist ? 'p-1' : 'p-2'} rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600`}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none text-gray-500 hover:text-gray-700"
                 title={t('global_search_tooltip')}
               >
-                <Search className={`${isTourist ? 'h-3 w-3' : 'h-4 w-4'} sm:h-5 sm:w-5 text-gray-600`} />
+                <Search className="h-5 w-5 stroke-[1.5]" />
               </button>
 
               <button
                 onClick={() => setShowPreferences(true)}
-                className={`${isTourist ? 'flex items-center space-x-1 px-2 py-1' : 'flex items-center space-x-2 px-3 py-1.5'} border border-gray-300 rounded-full hover:bg-gray-50 transition-colors`}
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 text-gray-600 hover:text-gray-900"
                 title={t('preferences')}
               >
-                <Globe className={`${isTourist ? 'h-2 w-2' : 'h-3 w-3'} sm:h-4 sm:w-4 text-gray-600`} />
-                <span className="text-sm font-medium text-gray-700">{getRegionShort(selectedRegion)} • {selectedCurrency}</span>
+                <Globe className="h-4 w-4 stroke-[1.5]" />
+                <span className="text-xs font-light text-gray-700">{getRegionShort(selectedRegion)} • {selectedCurrency}</span>
               </button>
 
-              <div className="relative">
+              <div className="relative z-[100]">
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className={`flex items-center ${isTourist ? 'space-x-1 p-1' : 'space-x-2 p-2'} rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-600`}
+                  className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none text-gray-700 hover:text-gray-900"
                 >
-                  <div className={`${isTourist ? 'h-7 w-7' : 'h-8 w-8'} sm:h-10 sm:w-10 rounded-full bg-primary-600 flex items-center justify-center shadow-md`}>
-                    <span className="text-sm font-bold text-white">
+                  <div className="h-9 w-9 rounded-lg bg-emerald-600 flex items-center justify-center shadow-sm">
+                    <span className="text-xs font-medium text-white">
                       {profile?.full_name?.charAt(0).toUpperCase() || 'A'}
                     </span>
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
+                    <p className="text-sm font-light text-gray-900">{profile?.full_name}</p>
+                    <p className="text-xs text-gray-500 capitalize font-light">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
                   </div>
-                  <ChevronDown className={`${isTourist ? 'h-3 w-3' : 'h-3 w-3'} sm:h-4 sm:w-4 text-gray-500 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className="h-4 w-4 text-gray-500 transition-transform stroke-[1.5]" />
                 </button>
 
                 {/* Dropdown Menu */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 min-w-48 max-w-64 bg-white rounded-md shadow-xl border border-gray-200 z-[999]" style={{ position: 'absolute' }}>
                     <div className="py-1">
                       <div className="px-4 py-2 border-b border-gray-200">
                         <p className="text-sm font-medium text-gray-900">{t('my_account')}</p>
