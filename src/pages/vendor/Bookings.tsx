@@ -25,6 +25,9 @@ export default function VendorBookings() {
   const [showForm, setShowForm] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [bookingToReject, setBookingToReject] = useState<Booking | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string>('')
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
@@ -93,6 +96,26 @@ export default function VendorBookings() {
       // Revert local state on error
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
     }
+  }
+
+  const handleRejectBooking = async (bookingId: string, reason: string) => {
+    try {
+      await updateBooking(bookingId, { status: 'cancelled', rejection_reason: reason })
+      // Real-time subscription will update the UI automatically
+      setShowRejectionModal(false)
+      setBookingToReject(null)
+      setRejectionReason('')
+    } catch (error) {
+      console.error('Error rejecting booking:', error)
+      // Revert local state on error
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
+    }
+  }
+
+  const openRejectionModal = (booking: Booking) => {
+    setBookingToReject(booking)
+    setRejectionReason('')
+    setShowRejectionModal(true)
   }
 
   // Filtered bookings
@@ -237,7 +260,6 @@ export default function VendorBookings() {
                       value={b.status}
                       onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                      disabled={b.payment_status !== 'paid'}
                     >
                       <option value="pending">Pending</option>
                       <option value="confirmed">Confirmed</option>
@@ -245,20 +267,32 @@ export default function VendorBookings() {
                       <option value="completed">Completed</option>
                     </select>
 
-                    {b.payment_status === 'paid' && b.status === 'pending' && (
+                    {(b.status === 'pending' || b.status === 'confirmed') && (
                       <div className="flex gap-2">
-                        <button
-                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                          onClick={() => handleStatusChange(b.id, 'confirmed')}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                          onClick={() => handleStatusChange(b.id, 'cancelled')}
-                        >
-                          Reject
-                        </button>
+                        {b.status === 'pending' && (
+                          <>
+                            <button
+                              className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                              onClick={() => handleStatusChange(b.id, 'confirmed')}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                              onClick={() => openRejectionModal(b)}
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                          <button
+                            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                            onClick={() => handleStatusChange(b.id, 'completed')}
+                          >
+                            Mark Complete
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -313,16 +347,16 @@ export default function VendorBookings() {
                           value={b.status}
                           onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
                           className="border rounded-md px-2 py-1"
-                          disabled={b.payment_status !== 'paid'}
-                          title={b.payment_status !== 'paid' ? 'You can only update status after payment is marked as Paid by admin.' : ''}
+                          title="Update booking status"
+                          disabled={b.status === 'confirmed'}
                         >
                           <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
                           <option value="cancelled">Cancelled</option>
                           <option value="completed">Completed</option>
                         </select>
-                        {/* Accept/Reject buttons only if payment is paid and status is pending */}
-                        {b.payment_status === 'paid' && b.status === 'pending' && (
+                        {/* Accept/Reject buttons for pending bookings */}
+                        {b.status === 'pending' && (
                           <>
                             <button
                               className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
@@ -337,10 +371,21 @@ export default function VendorBookings() {
                               title="Reject booking"
                               onClick={e => {
                                 e.stopPropagation();
-                                handleStatusChange(b.id, 'cancelled');
+                                openRejectionModal(b);
                               }}
                             >Reject</button>
                           </>
+                        )}
+                        {/* Mark complete button for confirmed paid bookings */}
+                        {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                          <button
+                            className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                            title="Mark booking as completed"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleStatusChange(b.id, 'completed');
+                            }}
+                          >Complete</button>
                         )}
                         {/* Delete booking functionality not implemented for Supabase yet */}
                         <button
@@ -514,6 +559,63 @@ export default function VendorBookings() {
                   className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {showRejectionModal && bookingToReject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">Reject Booking</h3>
+              <button 
+                onClick={() => {
+                  setShowRejectionModal(false)
+                  setBookingToReject(null)
+                  setRejectionReason('')
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Please provide a reason for rejecting this booking. This will be sent to the customer.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g., Not available on that date, Fully booked, Service issue, etc."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowRejectionModal(false)
+                    setBookingToReject(null)
+                    setRejectionReason('')
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRejectBooking(bookingToReject.id, rejectionReason)}
+                  disabled={!rejectionReason.trim()}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Reject Booking
                 </button>
               </div>
             </div>

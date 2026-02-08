@@ -631,6 +631,7 @@ export interface Booking {
   payment_status: 'pending' | 'paid' | 'refunded'
   special_requests?: string
   payment_reference?: string
+  rejection_reason?: string // Reason for rejecting a booking
   created_at: string
   updated_at: string
   services?: Service
@@ -2293,7 +2294,7 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
   return data
 }
 
-export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>>): Promise<Booking> {
+export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status' | 'rejection_reason'>>): Promise<Booking> {
   try {
     console.log('DB: updateBooking called with id:', id, 'updates:', updates)
 
@@ -2303,6 +2304,7 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
       .update({
         ...(updates.status && { status: updates.status }),
         ...(updates.payment_status && { payment_status: updates.payment_status }),
+        ...(updates.rejection_reason !== undefined && { rejection_reason: updates.rejection_reason }),
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

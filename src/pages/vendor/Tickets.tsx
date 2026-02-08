@@ -31,6 +31,11 @@ interface TicketData {
   orders: {
     currency: string
     created_at: string
+    user_id?: string
+  }
+  buyer_profile?: {
+    full_name?: string
+    email?: string
   }
 }
 
@@ -74,14 +79,39 @@ export default function VendorTickets() {
           *,
           ticket_types(title, price),
           services!inner(title, event_location, location, primary_image_url, vendor_id),
-          orders(currency, created_at)
+          orders(currency, created_at, user_id)
         `)
         .eq('services.vendor_id', vendorId)
         .order('issued_at', { ascending: false })
 
       if (ticketsError) throw ticketsError
 
-      setTickets(ticketsData || [])
+      // Fetch profiles for ticket buyers
+      let profilesMap: Record<string, { full_name: string; email: string }> = {}
+      if (ticketsData && ticketsData.length > 0) {
+        const userIds = [...new Set(ticketsData.map(t => t.orders?.user_id).filter(Boolean))]
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds)
+
+          if (!profilesError && profilesData) {
+            profilesMap = profilesData.reduce((acc, profile) => {
+              acc[profile.id] = { full_name: profile.full_name, email: profile.email }
+              return acc
+            }, {} as Record<string, { full_name: string; email: string }>)
+          }
+        }
+      }
+
+      // Attach profile information to tickets
+      const ticketsWithProfiles = (ticketsData || []).map(ticket => ({
+        ...ticket,
+        buyer_profile: ticket.orders?.user_id ? profilesMap[ticket.orders.user_id] : null
+      }))
+
+      setTickets(ticketsWithProfiles)
     } catch (err) {
       console.error('Error loading tickets:', err)
       setError('Failed to load tickets')
@@ -94,7 +124,9 @@ export default function VendorTickets() {
     const matchesSearch =
       ticket.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.services?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.ticket_types?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      ticket.ticket_types?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.buyer_profile?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.buyer_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
 
@@ -177,23 +209,25 @@ export default function VendorTickets() {
 
             <!-- Center Section - Buyer Information -->
             <div style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; padding: 0 12px;">
-              <h3 style="font-size: 11px; font-weight: 600; color: #374151; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Status</h3>
+              <h3 style="font-size: 11px; font-weight: 600; color: #374151; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Buyer</h3>
               <div style="font-size: 11px; color: #6b7280; line-height: 1.3;">
-                <div style="margin-bottom: 6px;">
-                  <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; background: ${ticket.status === 'issued' ? '#dcfce7' : ticket.status === 'used' ? '#dbeafe' : '#fef3c7'}; color: ${ticket.status === 'issued' ? '#166534' : ticket.status === 'used' ? '#1e40af' : '#92400e'};">
-                    <span>${ticket.status?.toUpperCase()}</span>
-                  </div>
+                <div style="margin-bottom: 2px;"><strong>${ticket.buyer_profile?.full_name || 'N/A'}</strong></div>
+                <div>${ticket.buyer_profile?.email || 'N/A'}</div>
+              </div>
+              <div style="margin-top: 6px;">
+                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; background: ${ticket.status === 'issued' ? '#dcfce7' : ticket.status === 'used' ? '#dbeafe' : '#fef3c7'}; color: ${ticket.status === 'issued' ? '#166534' : ticket.status === 'used' ? '#1e40af' : '#92400e'};">
+                  <span>${ticket.status?.toUpperCase()}</span>
                 </div>
-                <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</div>
               </div>
             </div>
 
-            <!-- Right Section - QR Code -->
+            <!-- Right Section - QR Code & Price -->
             <div style="flex-shrink: 0; text-align: center;">
               <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; margin-bottom: 4px; display: inline-block;">
                 <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
               </div>
-              <div style="font-size: 9px; color: #6b7280; font-weight: 500;">Scan for Entry</div>
+              <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
+              <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</div>
             </div>
           </div>
 
@@ -372,7 +406,7 @@ export default function VendorTickets() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search tickets by code, event, or ticket type..."
+                placeholder="Search tickets by code, event, buyer name, email, or ticket type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"

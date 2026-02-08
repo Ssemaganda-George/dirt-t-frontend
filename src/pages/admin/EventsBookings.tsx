@@ -244,6 +244,31 @@ export function EventsBookings() {
     }
   }, [categories, selectedCategory])
 
+  // Re-filter bookings when new bookings arrive via real-time subscription
+  // This ensures newly created bookings appear in the filtered view
+  useEffect(() => {
+    if (!bookings.length || filteredBookings === null) return
+
+    // If a category filter is active, re-apply it with the new bookings
+    if (selectedCategory && selectedCategory !== 'all') {
+      const categoryFilteredBookings = bookings.filter(booking =>
+        booking.service?.service_categories?.name?.toLowerCase() === selectedCategory.replace('cat_', '') ||
+        booking.service?.category_id === selectedCategory
+      )
+      const searchFiltered = filterBookingsBySearch(categoryFilteredBookings)
+      setFilteredBookings(searchFiltered)
+    }
+
+    // If a vendor filter is active, re-apply it with the new bookings
+    if (selectedVendor && selectedVendor !== 'all') {
+      const vendorFilteredBookings = bookings.filter(booking =>
+        booking.service?.vendor_id === selectedVendor
+      )
+      const searchFiltered = filterBookingsBySearch(vendorFilteredBookings)
+      setFilteredBookings(searchFiltered)
+    }
+  }, [bookings, selectedCategory, selectedVendor])
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
