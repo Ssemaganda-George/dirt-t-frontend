@@ -20,6 +20,7 @@ export default function ScanEventPage() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [showScanDialog, setShowScanDialog] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const qrScannerRef = useRef<QrScanner | null>(null)
 
@@ -40,6 +41,16 @@ export default function ScanEventPage() {
       minute: '2-digit',
       second: '2-digit'
     })
+  }
+
+  const handleCloseScanDialog = () => {
+    setShowScanDialog(false)
+    setScanResult(null)
+    setScanError(null)
+    setIsProcessing(false) // Allow new scans after dialog is closed
+    
+    // Restart scanning after dialog is closed
+    startScanning()
   }
 
   useEffect(() => {
@@ -178,11 +189,9 @@ export default function ScanEventPage() {
   }
 
   const handleScanResult = async (qrData: string) => {
-    if (!id || isProcessing) return
-
-    // Prevent scanning the same code multiple times in quick succession
-    if (lastScannedCode === qrData) {
-      console.log('Same QR code detected again, ignoring')
+    // Prevent any scanning while processing or if same code recently scanned
+    if (!id || isProcessing || lastScannedCode === qrData) {
+      console.log('Scan blocked - processing:', isProcessing, 'same code:', lastScannedCode === qrData)
       return
     }
 
@@ -207,33 +216,48 @@ export default function ScanEventPage() {
           // Don't fail the verification if marking fails, but log it
         }
 
-        // Ticket is valid - show appropriate message based on status
-        const isUsed = result.ticket.status === 'used'
+        // Ticket is valid - show dialog for successful scan
         setScanResult({
           success: true,
-          message: isUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
-          ticket: result.ticket
+          message: 'Ticket verified successfully!',
+          ticket: result.ticket,
+          ticketStatus: 'new'
         })
+        setShowScanDialog(true)
+        
+        // Stop scanning immediately when dialog appears
+        stopScanning()
         console.log('Ticket verified successfully')
       } else {
         setScanResult({
           success: false,
-          message: result.message
+          message: result.message,
+          ticketStatus: 'invalid'
         })
+        setShowScanDialog(true)
+        
+        // Stop scanning for invalid tickets too
+        stopScanning()
         console.log('Ticket verification failed:', result.message)
       }
     } catch (err: any) {
       console.error('Error verifying ticket:', err)
       setScanResult({
         success: false,
-        message: err.message || 'Error verifying ticket'
+        message: err.message || 'Error verifying ticket',
+        ticketStatus: 'invalid'
       })
+      setShowScanDialog(true)
+      
+      // Stop scanning on errors too
+      stopScanning()
     } finally {
       setIsProcessing(false)
-      // Reset last scanned code after a delay to allow re-scanning if needed
+      // Reset last scanned code after a longer delay to prevent accidental re-scans
       setTimeout(() => {
         setLastScannedCode(null)
-      }, 3000)
+        // Note: Scanning will restart when user closes dialog (handled by useEffect)
+      }, 8000) // Increased from 3 to 8 seconds
     }
   }
 
@@ -260,11 +284,10 @@ export default function ScanEventPage() {
           // Don't fail the verification if marking fails, but log it
         }
 
-        // Ticket is valid - show appropriate message based on status
-        const isUsed = result.ticket.status === 'used'
+        // Ticket is valid - show appropriate message based on previous usage
         setManualResult({
           success: true,
-          message: isUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
+          message: 'Ticket verified successfully!',
           ticket: result.ticket
         })
         console.log('Ticket verified successfully')
@@ -491,42 +514,105 @@ export default function ScanEventPage() {
             muted
           />
 
-          {/* Results Section */}
-          {(scanResult || manualResult) && (
+          {/* Results Section - Only for manual verification */}
+          {manualResult && (
             <div className="mt-4">
               <div className="p-4 rounded-lg border bg-white border-gray-200">
                 <div className="flex items-start">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    (scanResult?.success || manualResult?.success) ? 'bg-green-500' : 'bg-red-500'
+                    manualResult?.success ? 'bg-green-500' : 'bg-red-500'
                   }`}>
                     <span className="text-white font-bold text-xs">
-                      {(scanResult?.success || manualResult?.success) ? '✓' : '✗'}
+                      {manualResult?.success ? '✓' : '✗'}
                     </span>
                   </div>
                   <div className="ml-3 flex-1">
                     <p className={`font-medium text-sm ${
-                      (scanResult?.success || manualResult?.success) ? 'text-gray-900' : 'text-gray-900'
+                      manualResult?.success ? 'text-gray-900' : 'text-gray-900'
                     }`}>
-                      {scanResult?.message || manualResult?.message}
+                      {manualResult?.message}
                     </p>
-                    {(scanResult?.ticket || manualResult?.ticket) && (
+                    {manualResult?.ticket && (
                       <div className="mt-3 bg-gray-50 rounded-lg p-3 space-y-1 border border-gray-100">
                         <div className="flex items-center text-gray-700">
                           <span className="font-medium text-xs">Ticket:</span>
-                          <span className="ml-2 font-mono text-xs text-gray-900">{scanResult?.ticket?.code || manualResult?.ticket?.code}</span>
+                          <span className="ml-2 font-mono text-xs text-gray-900">{manualResult?.ticket?.code}</span>
                         </div>
                         <div className="flex items-center text-gray-700">
                           <span className="font-medium text-xs">Type:</span>
-                          <span className="ml-2 text-xs text-gray-900">{scanResult?.ticket?.ticket_types?.title || manualResult?.ticket?.ticket_types?.title}</span>
+                          <span className="ml-2 text-xs text-gray-900">{manualResult?.ticket?.ticket_types?.title}</span>
                         </div>
-                        {(scanResult?.ticket?.used_at || manualResult?.ticket?.used_at) && (
+                        {manualResult?.ticket?.used_at && (
                           <div className="flex items-center text-gray-700">
                             <span className="font-medium text-xs">Verified:</span>
-                            <span className="ml-2 text-xs text-gray-900">{formatTimestamp(scanResult?.ticket?.used_at || manualResult?.ticket?.used_at)}</span>
+                            <span className="ml-2 text-xs text-gray-900">{formatTimestamp(manualResult?.ticket?.used_at)}</span>
                           </div>
                         )}
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Scan Result Dialog */}
+          {showScanDialog && scanResult && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div className="p-6">
+                  <div className="flex items-center mb-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      scanResult.ticketStatus === 'new' ? 'bg-green-500' :
+                      scanResult.ticketStatus === 'used' ? 'bg-blue-500' : 'bg-red-500'
+                    }`}>
+                      {scanResult.ticketStatus === 'new' ? (
+                        <span className="text-white font-bold text-2xl">✓</span>
+                      ) : (
+                        <div className="relative">
+                          <div className="w-6 h-6 border-2 border-white rounded-full"></div>
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-0.5 bg-white rotate-45"></div>
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="ml-3 text-lg font-semibold text-gray-900">
+                      {scanResult.ticketStatus === 'new' ? 'Ticket Verified' :
+                       scanResult.ticketStatus === 'used' ? 'Ticket Already Used' : 'Invalid Ticket'}
+                    </h3>
+                  </div>
+                  
+                  <p className={`mb-4 ${scanResult.success ? 'text-gray-700' : 'text-red-600'}`}>
+                    {scanResult.message}
+                  </p>
+                  
+                  {scanResult.ticket && scanResult.success && (
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2 mb-6">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm text-gray-600">Ticket Code:</span>
+                        <span className="font-mono text-sm text-gray-900">{scanResult.ticket.code}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-sm text-gray-600">Type:</span>
+                        <span className="text-sm text-gray-900">{scanResult.ticket.ticket_types?.title}</span>
+                      </div>
+                      {scanResult.ticket.used_at && (
+                        <div className="flex justify-between">
+                          <span className="font-medium text-sm text-gray-600">Verified:</span>
+                          <span className="text-sm text-gray-900">{formatTimestamp(scanResult.ticket.used_at)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleCloseScanDialog}
+                      className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                        scanResult.success ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-600 text-white hover:bg-gray-700'
+                      }`}
+                    >
+                      OK
+                    </button>
                   </div>
                 </div>
               </div>
