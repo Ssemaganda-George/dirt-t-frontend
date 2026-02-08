@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import QrScanner from 'qr-scanner'
-import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode, markTicketUsed } from '../lib/database'
+import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function ScanEventPage() {
@@ -217,18 +217,8 @@ export default function ScanEventPage() {
       const result = await verifyTicketByCode(qrData, id)
       
       if (result.valid) {
-        // Check if ticket was already used BEFORE marking it
-        const wasAlreadyUsed = !!result.ticket.used_at
+        const wasAlreadyUsed = (result as any).already_used || false
         
-        // Ticket is valid - mark as used for attendance tracking
-        try {
-          await markTicketUsed(result.ticket.id)
-          console.log('Ticket marked as used for attendance')
-        } catch (markError) {
-          console.error('Error marking ticket as used:', markError)
-          // Don't fail the verification if marking fails, but log it
-        }
-
         // Ticket is valid - show dialog for successful scan
         setScanResult({
           success: true,
@@ -288,18 +278,8 @@ export default function ScanEventPage() {
       const result = await verifyTicketByCode(manualCode.trim().toUpperCase(), id)
       
       if (result.valid) {
-        // Check if ticket was already used BEFORE marking it
-        const wasAlreadyUsed = !!result.ticket.used_at
+        const wasAlreadyUsed = (result as any).already_used || false
         
-        // Ticket is valid - mark as used for attendance tracking
-        try {
-          await markTicketUsed(result.ticket.id)
-          console.log('Ticket marked as used for attendance')
-        } catch (markError) {
-          console.error('Error marking ticket as used:', markError)
-          // Don't fail the verification if marking fails, but log it
-        }
-
         // Ticket is valid - show appropriate message based on previous usage
         setManualResult({
           success: true,

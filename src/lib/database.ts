@@ -4,6 +4,43 @@ import { formatCurrency } from './utils';
 import { creditWallet } from './creditWallet';
 import { executeWithCircuitBreaker } from './concurrency';
 
+// Simple in-memory cache for IP -> country lookups to avoid repeated external calls
+const ipCountryCache = new Map<string, string | null>()
+
+/**
+ * Lookup country name for an IP address using ipapi.co with a short timeout.
+ * Caches results in-memory. Returns null if lookup fails or no country found.
+ */
+async function lookupCountryByIp(ip: string): Promise<string | null> {
+  if (!ip) return null
+  if (ipCountryCache.has(ip)) return ipCountryCache.get(ip) || null
+
+  // small timeout for third-party call
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 3000)
+
+  try {
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: controller.signal, headers: { 'Accept': 'application/json' } })
+    clearTimeout(timeout)
+    if (!res.ok) {
+      ipCountryCache.set(ip, null)
+      return null
+    }
+
+    const data = await res.json()
+    // ipapi returns country_name or country
+    const country = data?.country_name || data?.country || null
+    if (country) ipCountryCache.set(ip, country)
+    else ipCountryCache.set(ip, null)
+    return country
+  } catch (err) {
+    clearTimeout(timeout)
+    // Network error / timeout — cache negative result briefly
+    ipCountryCache.set(ip, null)
+    return null
+  }
+}
+
 // Visitor Activity Types
 export interface VisitorSession {
   id: string;
@@ -1734,6 +1771,7 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
       return {
         valid: true,
         ticket: { id: result.ticket_id, status: 'used', used_at: new Date().toISOString() },
+        already_used: result.already_used,
         message: result.already_used ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
       }
     }
@@ -1742,6 +1780,7 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
     return {
       valid: true,
       ticket: ticketDetails,
+      already_used: result.already_used,
       message: result.already_used ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
     }
   }, 'verifyTicketByCode').catch(async (err: any) => {
@@ -1818,6 +1857,7 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
       return {
         valid: true,
         ticket: ticket,
+        already_used: !!ticket.used_at,
         message: ticket.used_at ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
       }
     }, 'verifyTicketByCode_fallback').catch((fallbackErr: any) => {
@@ -4032,6 +4072,23 @@ export async function getVendorActivityStats(vendorId: string) {
         console.warn('Visitor sessions table unavailable:', sessionsError)
       }
 
+      // For sessions missing country info, attempt an IP->country lookup (cached)
+      try {
+        const sessionsToLookup = visitorSessions.filter((s: any) => (!s.country || s.country === '') && s.ip_address)
+        if (sessionsToLookup.length > 0) {
+          await Promise.all(sessionsToLookup.map(async (s: any) => {
+            try {
+              const country = await lookupCountryByIp(s.ip_address)
+              if (country) s.country = country
+            } catch (err) {
+              // ignore lookup errors per-session
+            }
+          }))
+        }
+      } catch (err) {
+        console.warn('Error during IP->country lookups:', err)
+      }
+
       // Get view logs for services
       const { data: viewLogsData, error: viewLogsError } = await supabase
         .from('service_view_logs')
@@ -4073,30 +4130,45 @@ export async function getVendorActivityStats(vendorId: string) {
       uniqueVisitors.add(booking.user_id)
     })
 
-    // Track visitor countries from sessions with proper country names
-    const countryCounts: Record<string, number> = {}
-    const countryNamesMap: Record<string, string> = {}
-    
-    visitorSessions.forEach((session: any) => {
-      // Use country name or resolve from code
-      const countryName = session.country ? getCountryName(session.country) : 'Unknown'
-      countryCounts[countryName] = (countryCounts[countryName] || 0) + 1
-      countryNamesMap[countryName] = countryName
+    // Track visitor countries using service view logs mapped to visitor sessions.
+    // Prefer countries from sessions that actually viewed vendor services so the counts reflect relevant visitors.
+    const sessionById: Record<string, any> = {}
+    visitorSessions.forEach((s: any) => {
+      if (s && s.id) sessionById[s.id] = s
     })
 
-    // Get top countries with proper names
+    const countryCounts: Record<string, number> = {}
+
+    // Count countries for sessions that viewed this vendor's services
+    serviceViewLogs.forEach((log: any) => {
+      const sess = sessionById[log.visitor_session_id]
+      const country = sess?.country || sess?.country_code || null
+      if (country) {
+        countryCounts[country] = (countryCounts[country] || 0) + 1
+      }
+    })
+
+    // Fallback: if no view-log-derived countries, fall back to counting all recent sessions
+    if (Object.keys(countryCounts).length === 0) {
+      visitorSessions.forEach((session: any) => {
+        if (session && session.country) {
+          countryCounts[session.country] = (countryCounts[session.country] || 0) + 1
+        }
+      })
+    }
+
+    // Compute total for percentage calculations (use total counted visitors not total sessions to avoid 0 division)
+    const totalCountryCount = Object.values(countryCounts).reduce((s, v) => s + v, 0) || visitorSessions.length || 1
+
+    // Get top countries (sorted)
     const topCountries = Object.entries(countryCounts)
       .map(([country, count]) => ({
         country,
         count: count as number,
-        percentage: '0'
+        percentage: ((count / totalCountryCount) * 100).toFixed(1)
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
-      .map(item => ({
-        ...item,
-        percentage: ((item.count / Math.max(visitorSessions.length, 1)) * 100).toFixed(1)
-      }))
 
     // Track services checked by visitors
     const serviceCheckedCounts: Record<string, { title: string; count: number }> = {}
@@ -4330,120 +4402,45 @@ export async function getAllVendorsWithActivity() {
 // ============================================
 
 /**
- * Map of country codes to country names
+ * Get or create a visitor session based on IP address
  */
-const COUNTRY_CODES: Record<string, string> = {
-  'US': 'United States',
-  'GB': 'United Kingdom',
-  'CA': 'Canada',
-  'AU': 'Australia',
-  'DE': 'Germany',
-  'FR': 'France',
-  'IT': 'Italy',
-  'ES': 'Spain',
-  'JP': 'Japan',
-  'CN': 'China',
-  'IN': 'India',
-  'BR': 'Brazil',
-  'MX': 'Mexico',
-  'UG': 'Uganda',
-  'KE': 'Kenya',
-  'NG': 'Nigeria',
-  'ZA': 'South Africa',
-  'AE': 'United Arab Emirates',
-  'SG': 'Singapore',
-  'MY': 'Malaysia',
-  'TH': 'Thailand',
-  'PH': 'Philippines',
-  'ID': 'Indonesia',
-  'VN': 'Vietnam',
-  'PK': 'Pakistan',
-  'BD': 'Bangladesh',
-  'RU': 'Russia',
-  'TR': 'Turkey',
-  'SA': 'Saudi Arabia',
-  'IL': 'Israel',
-  'NZ': 'New Zealand',
-  'SE': 'Sweden',
-  'NO': 'Norway',
-  'CH': 'Switzerland',
-  'AT': 'Austria',
-  'BE': 'Belgium',
-  'NL': 'Netherlands',
-  'PL': 'Poland',
-  'CZ': 'Czech Republic',
-  'IE': 'Ireland',
-  'PT': 'Portugal',
-  'GR': 'Greece',
-  'HU': 'Hungary',
-  'RO': 'Romania',
-  'CO': 'Colombia',
-  'AR': 'Argentina',
-  'PE': 'Peru',
-  'CL': 'Chile',
-  'TW': 'Taiwan',
-  'HK': 'Hong Kong',
-  'KR': 'South Korea'
-};
-
-/**
- * Fetch geolocation data for an IP address
- */
-async function getGeoLocationFromIP(ipAddress: string): Promise<{
-  country: string;
-  city: string;
-  countryCode: string;
-}> {
-  try {
-    // Skip private IP addresses
-    if (isPrivateIP(ipAddress)) {
-      return { country: 'Private Network', city: '', countryCode: 'PRIVATE' };
-    }
-
-    const response = await fetch(`https://ipapi.co/${ipAddress}/json/`);
-    if (!response.ok) throw new Error('Geolocation API error');
-    
-    const data = await response.json();
-    return {
-      country: data.country_name || 'Unknown',
-      city: data.city || '',
-      countryCode: data.country_code || 'UNKNOWN'
-    };
-  } catch (error) {
-    console.warn(`Error fetching geolocation for IP ${ipAddress}:`, error);
-    return { country: 'Unknown', city: '', countryCode: 'UNKNOWN' };
+export async function getOrCreateVisitorSession(
+  ipAddress: string,
+  options?: {
+    userId?: string;
+    country?: string;
+    city?: string;
+    deviceType?: string;
+    browserInfo?: string;
+    userAgent?: string;
   }
-}
+): Promise<VisitorSession> {
+  try {
+    const { data, error } = await supabase.rpc('get_or_create_visitor_session', {
+      p_ip_address: ipAddress,
+      p_user_id: options?.userId,
+      p_country: options?.country,
+      p_city: options?.city,
+      p_device_type: options?.deviceType,
+      p_browser_info: options?.browserInfo,
+      p_user_agent: options?.userAgent,
+    });
 
-/**
- * Check if IP address is private
- */
-function isPrivateIP(ip: string): boolean {
-  const parts = ip.split('.');
-  if (parts.length !== 4) return false;
-  
-  const first = parseInt(parts[0]);
-  const second = parseInt(parts[1]);
-  
-  // 10.0.0.0 - 10.255.255.255
-  if (first === 10) return true;
-  // 172.16.0.0 - 172.31.255.255
-  if (first === 172 && second >= 16 && second <= 31) return true;
-  // 192.168.0.0 - 192.168.255.255
-  if (first === 192 && second === 168) return true;
-  // 127.0.0.0 - 127.255.255.255 (localhost)
-  if (first === 127) return true;
-  
-  return false;
-}
+    if (error) throw error;
 
-/**
- * Resolve country code to country name
- */
-function getCountryName(countryCode: string | null): string {
-  if (!countryCode) return 'Unknown';
-  const upperCode = countryCode.toUpperCase();
-  return COUNTRY_CODES[upperCode] || countryCode;
+    // Fetch the created/updated session
+    const { data: session, error: fetchError } = await supabase
+      .from('visitor_sessions')
+      .select('*')
+      .eq('id', data)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return session;
+  } catch (err) {
+    console.error('Error getting/creating visitor session:', err);
+    throw err;
+  }
 }
 
 /**
@@ -5024,96 +5021,6 @@ export async function getVisitorJourney(visitorSessionId: string) {
     return data || [];
   } catch (err) {
     console.error('Error fetching visitor journey:', err);
-    throw err;
-  }
-}
-
-/**
- * Get or create a visitor session with geolocation data
- */
-export async function getOrCreateVisitorSession(
-  ipAddress: string,
-  options?: {
-    userId?: string;
-    country?: string;
-    city?: string;
-    deviceType?: string;
-    browserInfo?: string;
-    userAgent?: string;
-  }
-): Promise<VisitorSession> {
-  try {
-    // Fetch geolocation data if not provided
-    let country = options?.country
-    let city = options?.city
-    
-    if (!country && !isPrivateIP(ipAddress)) {
-      try {
-        const geoData = await getGeoLocationFromIP(ipAddress)
-        country = geoData.countryCode
-        city = geoData.city
-      } catch (geoErr) {
-        console.warn('Failed to fetch geolocation, continuing without location data:', geoErr)
-      }
-    }
-
-    // Check if session already exists for this IP
-    const { data: existingSession, error: lookupError } = await supabase
-      .from('visitor_sessions')
-      .select('*')
-      .eq('ip_address', ipAddress)
-      .order('first_visit_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (lookupError && lookupError.code !== 'PGRST116') {
-      console.warn('Error checking for existing session:', lookupError)
-    }
-
-    if (existingSession) {
-      // Update last visit and increment visit count
-      const { data: updatedSession, error: updateError } = await supabase
-        .from('visitor_sessions')
-        .update({
-          last_visit_at: new Date().toISOString(),
-          visit_count: (existingSession.visit_count || 0) + 1,
-          country: country || existingSession.country,
-          city: city || existingSession.city,
-          device_type: options?.deviceType || existingSession.device_type,
-          browser_info: options?.browserInfo || existingSession.browser_info,
-          user_agent: options?.userAgent || existingSession.user_agent,
-          user_id: options?.userId || existingSession.user_id,
-        })
-        .eq('id', existingSession.id)
-        .select('*')
-        .single();
-
-      if (updateError) throw updateError;
-      return updatedSession;
-    }
-
-    // Create new session
-    const { data: newSession, error: createError } = await supabase
-      .from('visitor_sessions')
-      .insert({
-        ip_address: ipAddress,
-        user_id: options?.userId,
-        country: country,
-        city: city,
-        device_type: options?.deviceType,
-        browser_info: options?.browserInfo,
-        user_agent: options?.userAgent,
-        visit_count: 1,
-        first_visit_at: new Date().toISOString(),
-        last_visit_at: new Date().toISOString(),
-      })
-      .select('*')
-      .single();
-
-    if (createError) throw createError;
-    return newSession;
-  } catch (err) {
-    console.error('Error getting/creating visitor session:', err);
     throw err;
   }
 }
