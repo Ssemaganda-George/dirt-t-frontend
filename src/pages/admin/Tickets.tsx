@@ -558,9 +558,16 @@ export default function AdminTickets() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {ticket.status === 'used' ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  ✓ Attended
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-1">
+                                    ✓ Attended
+                                  </span>
+                                  {ticket.used_at && (
+                                    <span className="text-xs text-gray-500">
+                                      {formatDateTime(ticket.used_at)}
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                   Not Attended

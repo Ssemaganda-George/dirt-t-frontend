@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
 import { formatCurrencyWithConversion, formatDateTime, convertCurrency } from '../../lib/utils'
@@ -36,6 +37,7 @@ interface TicketData {
 export default function VendorTickets() {
   const { vendor, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
+  const navigate = useNavigate()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
 
   const [tickets, setTickets] = useState<TicketData[]>([])
@@ -265,6 +267,24 @@ export default function VendorTickets() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vendor/events')}>
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">{stats.totalEvents}</span>
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
+                  <dd className="text-lg font-medium text-gray-900">{stats.totalEvents}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -331,24 +351,6 @@ export default function VendorTickets() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Cancelled</dt>
                   <dd className="text-lg font-medium text-gray-900">{stats.cancelled}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.totalEvents}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalEvents}</dd>
                 </dl>
               </div>
             </div>
@@ -458,9 +460,16 @@ export default function VendorTickets() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {ticket.status === 'used' ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        ✓ Attended
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-1">
+                          ✓ Attended
+                        </span>
+                        {ticket.used_at && (
+                          <span className="text-xs text-gray-500">
+                            {formatDateTime(ticket.used_at)}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         Not Attended
