@@ -150,6 +150,13 @@ export default function ScanEventPage() {
         videoRef.current,
         async (result) => {
           console.log('QR code detected:', result.data)
+          
+          // Stop scanning immediately to prevent multiple detections
+          if (qrScannerRef.current) {
+            qrScannerRef.current.stop()
+            setIsScanning(false)
+          }
+          
           await handleScanResult(result.data)
         },
         {
@@ -228,8 +235,6 @@ export default function ScanEventPage() {
         })
         setShowScanDialog(true)
         
-        // Stop scanning immediately when dialog appears
-        stopScanning()
         console.log('Ticket verified successfully')
       } else {
         setScanResult({
@@ -239,8 +244,6 @@ export default function ScanEventPage() {
         })
         setShowScanDialog(true)
         
-        // Stop scanning for invalid tickets too
-        stopScanning()
         console.log('Ticket verification failed:', result.message)
       }
     } catch (err: any) {
