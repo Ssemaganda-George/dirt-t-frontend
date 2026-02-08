@@ -380,129 +380,63 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 {/* Wallet Statistics Cards */}
                 {walletStats && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Current Balance</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.currentBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-indigo-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Current Balance</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.currentBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">Available for withdrawal</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">Available for withdrawal</div>
                       </div>
                     </div>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Completed Earnings</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.completedBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-green-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Completed Earnings</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.completedBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">From completed bookings</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">From completed bookings</div>
                       </div>
                     </div>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Pending Earnings</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.pendingBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-yellow-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Pending Earnings</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.pendingBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">Awaiting completion</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">Awaiting completion</div>
                       </div>
                     </div>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Total Earned</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.totalEarned, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-blue-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Total Earned</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.totalEarned, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">All-time earnings</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">All-time earnings</div>
                       </div>
                     </div>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Pending Withdrawals</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.pendingWithdrawals, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-orange-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Pending Withdrawals</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.pendingWithdrawals, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">{walletStats.pendingWithdrawalsCount || 0} pending</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">{walletStats.pendingWithdrawalsCount || 0} pending</div>
                       </div>
                     </div>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                      <div className="p-4 md:p-5">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-5 w-0 flex-1">
-                            <dl>
-                              <dt className="text-sm font-medium text-gray-500 truncate">Total Withdrawn</dt>
-                              <dd className="text-lg font-medium text-gray-900">{formatCurrencyWithConversion(walletStats.totalWithdrawn, walletStats.currency, selectedCurrency, selectedLanguage)}</dd>
-                            </dl>
-                          </div>
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-purple-600 rounded-lg p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-600">Total Withdrawn</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.totalWithdrawn, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-gray-600 mt-2">{walletStats.completedWithdrawals || 0} completed</p>
                         </div>
-                      </div>
-                      <div className="bg-gray-50 px-4 md:px-5 py-3">
-                        <div className="text-sm text-gray-500">{walletStats.completedWithdrawals || 0} completed</div>
                       </div>
                     </div>
                   </div>
@@ -510,93 +444,58 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                 {/* Performance Insights */}
                 {filteredTxs.length > 0 && (
-                  <div className="bg-white shadow rounded-lg p-4 md:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-                      <div className="mb-4 sm:mb-0">
-                        <h3 className="text-lg font-medium text-gray-900">Performance Insights</h3>
-                        <p className="text-sm text-gray-500">Key metrics and trends for your business</p>
-                      </div>
-                      <div className="text-left sm:text-right">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {filteredTxs.length}
-                        </div>
-                        <div className="text-sm text-gray-500">Total Transactions</div>
-                      </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="mb-5">
+                      <h3 className="text-base font-semibold text-gray-900">Performance Insights</h3>
+                      <p className="text-xs text-gray-600 mt-1">Key metrics and trends for your business</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                      <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 md:h-8 w-6 md:w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-4">
-                            <div className="text-sm font-medium text-green-800">Average Transaction</div>
-                            <div className="text-lg font-bold text-green-900">
-                              {formatCurrencyWithConversion(
-                                filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length,
-                                currency,
-                                selectedCurrency,
-                                selectedLanguage
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-white border border-gray-200 border-l-4 border-l-green-600 rounded p-4">
+                        <p className="text-xs font-medium text-gray-600">Average Transaction</p>
+                        <p className="text-xl font-bold text-gray-900 mt-2">
+                          {formatCurrencyWithConversion(
+                            filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length,
+                            currency,
+                            selectedCurrency,
+                            selectedLanguage
+                          )}
+                        </p>
                       </div>
 
-                      <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 md:h-8 w-6 md:w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-4">
-                            <div className="text-sm font-medium text-blue-800">Total Revenue</div>
-                            <div className="text-lg font-bold text-blue-900">
-                              {formatCurrencyWithConversion(
-                                filteredTxs.reduce((sum, tx) => sum + tx.amount, 0),
-                                currency,
-                                selectedCurrency,
-                                selectedLanguage
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                      <div className="bg-white border border-gray-200 border-l-4 border-l-blue-600 rounded p-4">
+                        <p className="text-xs font-medium text-gray-600">Total Revenue</p>
+                        <p className="text-xl font-bold text-gray-900 mt-2">
+                          {formatCurrencyWithConversion(
+                            filteredTxs.reduce((sum, tx) => sum + tx.amount, 0),
+                            currency,
+                            selectedCurrency,
+                            selectedLanguage
+                          )}
+                        </p>
                       </div>
 
-                      <div className="bg-white p-4 rounded-lg border border-gray-200">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <svg className="h-6 md:h-8 w-6 md:w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <div className="ml-3 md:ml-4">
-                            <div className="text-sm font-medium text-purple-800">Success Rate</div>
-                            <div className="text-lg font-bold text-purple-900">
-                              {Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100)}%
-                            </div>
-                          </div>
-                        </div>
+                      <div className="bg-white border border-gray-200 border-l-4 border-l-purple-600 rounded p-4">
+                        <p className="text-xs font-medium text-gray-600">Success Rate</p>
+                        <p className="text-xl font-bold text-gray-900 mt-2">
+                          {Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100)}%
+                        </p>
                       </div>
                     </div>
 
                     {/* Quick Stats */}
-                    <div className="mt-4 md:mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 pt-4 md:pt-6 border-t border-gray-200">
+                    <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 pt-5 border-t border-gray-100">
                       <div className="text-center">
-                        <div className="text-xl md:text-2xl font-bold text-green-600">
+                        <p className="text-lg font-bold text-green-600">
                           {filteredTxs.filter(tx => tx.status === 'completed').length}
-                        </div>
-                        <div className="text-xs md:text-sm text-gray-500">Completed</div>
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Completed</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-xl md:text-2xl font-bold text-yellow-600">
+                        <p className="text-lg font-bold text-yellow-600">
                           {filteredTxs.filter(tx => tx.status === 'pending').length}
-                        </div>
-                        <div className="text-xs md:text-sm text-gray-500">Pending</div>
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Pending</p>
                       </div>
                       <div className="text-center">
                         <div className="text-xl md:text-2xl font-bold text-blue-600">

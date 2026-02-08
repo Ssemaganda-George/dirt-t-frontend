@@ -5,21 +5,15 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { getVendorStats } from '../../lib/database'
 import { supabase } from '../../lib/supabaseClient'
 import { formatDateTime, getVendorDisplayStatus, formatCurrencyWithConversion } from '../../lib/utils'
-import StatCard from '../../components/StatCard'
 import { StatusBadge } from '../../components/StatusBadge'
 import {
   MapPin,
   Calendar,
   DollarSign,
-  TrendingUp,
-  Users,
   Clock,
   CheckCircle,
   RefreshCw,
-  ArrowUpRight,
-  ArrowDownRight,
-  MessageSquare,
-  CreditCard
+  MessageSquare
 } from 'lucide-react'
 
 export default function VendorDashboard() {
@@ -313,206 +307,216 @@ export default function VendorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Dashboard</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">Welcome back, {profile?.full_name || 'Vendor'}!</p>
-          </div>
-          <div className="flex-shrink-0">
-            <button
-              onClick={refresh}
-              className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <StatCard
-            title="Total Services"
-            value={stats.servicesCount}
-            icon={MapPin}
-            color="blue"
-            trend="+12% this month"
-            subtitle="Active listings"
-            onClick={() => navigate('/vendor/services')}
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
-          <StatCard
-            title="Pending Bookings"
-            value={stats.pendingBookings}
-            icon={Clock}
-            color="yellow"
-            trend="+5% this week"
-            subtitle="Awaiting confirmation"
-            onClick={() => navigate('/vendor/bookings')}
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
-          <StatCard
-            title="Completed Bookings"
-            value={stats.completedBookings}
-            icon={CheckCircle}
-            color="green"
-            trend="+18% this month"
-            subtitle="Successfully completed"
-            onClick={() => navigate('/vendor/bookings')}
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
-          <StatCard
-            title="Wallet Balance"
-            value={formatCurrencyWithConversion(stats.balance, stats.currency, selectedCurrency || stats.currency, selectedLanguage || 'en-US')}
-            icon={DollarSign}
-            color={balanceStatus === 'critical' ? 'red' : balanceStatus === 'warning' ? 'yellow' : 'teal'}
-            trend={stats.balanceTrend}
-            subtitle={
-              stats.pendingBalance > 0 
-                ? `${formatCurrencyWithConversion(stats.pendingBalance, stats.currency, selectedCurrency || stats.currency, selectedLanguage || 'en-US')} pending • ${balanceStatus === 'critical' ? 'Low balance' : balanceStatus === 'warning' ? 'Balance running low' : 'Available earnings'}`
-                : balanceStatus === 'critical' 
-                  ? 'Low balance - consider adding funds' 
-                  : balanceStatus === 'warning' 
-                    ? 'Balance running low' 
-                    : 'Available earnings'
-            }
-            onClick={() => navigate('/vendor/transactions')}
-            isWalletCard={true}
-            actions={
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Professional Header */}
+        <div className="mb-12">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-end sm:space-y-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">Dashboard</p>
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">
+                Welcome back, <span className="text-blue-600">{profile?.full_name || 'Vendor'}</span>
+              </h1>
+              <p className="text-lg text-gray-600">
+                Monitor your business performance and manage your bookings
+              </p>
+            </div>
+            <div className="flex-shrink-0">
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigate('/vendor/transactions')
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white text-sm font-medium rounded-md transition-all duration-200 backdrop-blur-sm"
+                onClick={refresh}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
               >
-                <CreditCard className="h-4 w-4" />
-                Withdraw Funds
+                <RefreshCw className="h-5 w-5" />
+                <span>Refresh</span>
               </button>
-            }
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
-          <StatCard
-            title="Inquiries"
-            value={stats.inquiriesCount}
-            icon={MessageSquare}
-            color="purple"
-            trend="0 unread"
-            subtitle="Customer inquiries"
-            onClick={() => navigate('/vendor/inquiries')}
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
+            </div>
+          </div>
         </div>
 
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-        {/* Recent Bookings - Takes 2 columns on large screens */}
-        <div className="lg:col-span-2">
-          <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-700">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-300" />
-                  Recent Bookings
-                </h3>
-                <span className="text-xs sm:text-sm text-gray-300">{stats.recentBookings.length} total</span>
+        {/* Professional Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
+          {/* Wallet Balance Card */}
+          <div 
+            onClick={() => navigate('/vendor/transactions')}
+            className="group bg-white border border-gray-200 border-l-4 border-l-purple-600 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Balance</p>
+                <p className="text-lg font-bold text-gray-900 mt-4">
+                  {formatCurrencyWithConversion(stats.balance, stats.currency, selectedCurrency || stats.currency, selectedLanguage || 'en-US')}
+                </p>
+              </div>
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-4 w-4 text-purple-600" />
               </div>
             </div>
-            <div className="p-4 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                {stats.recentBookings.map((b) => (
-                  <div key={b.id} className="bg-gray-700 hover:bg-gray-600 transition-colors rounded-lg p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white text-sm sm:text-base truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
-                          <p className="text-xs sm:text-sm text-gray-300">{formatDateTime(b.created_at)}</p>
-                        </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-600">
+                {balanceStatus === 'critical' ? '⚠️ Low' : balanceStatus === 'warning' ? '⚡ Low' : '✓ Healthy'}
+              </p>
+            </div>
+          </div>
+
+          {/* Total Services Card */}
+          <div 
+            onClick={() => navigate('/vendor/services')}
+            className="group bg-white border border-gray-200 border-l-4 border-l-blue-600 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Services</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">{stats.servicesCount}</h3>
+              </div>
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-4 w-4 text-blue-600" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-600">Active</p>
+            </div>
+          </div>
+
+          {/* Pending Bookings Card */}
+          <div 
+            onClick={() => navigate('/vendor/bookings')}
+            className="group bg-white border border-gray-200 border-l-4 border-l-yellow-600 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Pending</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">{stats.pendingBookings}</h3>
+              </div>
+              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-600">Awaiting</p>
+            </div>
+          </div>
+
+          {/* Completed Bookings Card */}
+          <div 
+            onClick={() => navigate('/vendor/bookings')}
+            className="group bg-white border border-gray-200 border-l-4 border-l-emerald-600 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Completed</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">{stats.completedBookings}</h3>
+              </div>
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-600">Completed</p>
+            </div>
+          </div>
+
+          {/* Inquiries Card */}
+          <div 
+            onClick={() => navigate('/vendor/inquiries')}
+            className="group bg-white border border-gray-200 border-l-4 border-l-cyan-600 rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer"
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Inquiries</p>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">{stats.inquiriesCount}</h3>
+              </div>
+              <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MessageSquare className="h-4 w-4 text-cyan-600" />
+              </div>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-600">Customers</p>
+            </div>
+          </div>
+        </div>
+
+      {/* Professional Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Bookings Section - Takes 2 columns */}
+        <div className="lg:col-span-2">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden h-full flex flex-col">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-6 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Recent Bookings</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Latest booking activity</p>
+                </div>
+                <div className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs">
+                  <span className="font-semibold text-blue-600">{stats.recentBookings.length}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 flex-1 overflow-y-auto">
+              <div className="space-y-2">
+                {stats.recentBookings.map((b, index) => (
+                  <div key={b.id} className={`py-2 ${index !== stats.recentBookings.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-xs">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDateTime(b.created_at)}</p>
                       </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 flex-shrink-0">
-                        <span className="font-semibold text-white text-sm sm:text-base">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <span className="font-bold text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
                         <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
                       </div>
                     </div>
                   </div>
                 ))}
                 {stats.recentBookings.length === 0 && (
-                  <div className="text-center py-8">
-                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No bookings yet</p>
-                    <p className="text-sm text-gray-400">Your recent bookings will appear here</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-900 font-semibold mb-1">No bookings yet</p>
+                    <p className="text-gray-600 text-sm">Your recent bookings will appear here</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Recent Transactions - Takes 1 column */}
-        <div className="lg:col-span-1">
-          <div className="bg-white shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 bg-gray-800">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <h3 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
-                  Recent Transactions
-                </h3>
-                <span className="text-xs sm:text-sm text-gray-300">{stats.recentTransactions.length} recent</span>
-              </div>
-            </div>
-            <div className="p-4 sm:p-6">
-              <div className="space-y-3 sm:space-y-4">
-                {stats.recentTransactions.map((t) => (
-                  <div key={t.id} className="bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 transition-all duration-200 rounded-lg p-3 sm:p-4 border border-gray-600/50 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      {/* Transaction Icon and Type */}
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          t.transaction_type === 'payment' ? 'bg-emerald-900/50 border border-emerald-700/50' : 'bg-blue-900/50 border border-blue-700/50'
-                        }`}>
-                          {t.transaction_type === 'payment' ? (
-                            <ArrowDownRight className="h-4 w-4 text-emerald-400" />
-                          ) : (
-                            <ArrowUpRight className="h-4 w-4 text-blue-400" />
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Transaction Details */}
+        {/* Recent Transactions Section - Takes 1 column */}
+        <div className="lg:col-span-1">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden h-full flex flex-col">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-6 py-3">
+              <h3 className="text-base font-semibold text-gray-900">Transactions</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Financial activity</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 flex-1 overflow-y-auto">
+              <div className="space-y-2">
+                {stats.recentTransactions.map((t, index) => (
+                  <div key={t.id} className={`py-2 ${index !== stats.recentTransactions.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white capitalize leading-tight">
-                              {t.transaction_type === 'payment' ? 'Payment Received' : 'Withdrawal'}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">{formatDateTime(t.created_at)}</p>
-                            {t.description && (
-                              <p className="text-xs text-gray-500 mt-1 truncate">{t.description}</p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <p className={`text-sm font-bold ${
-                              t.transaction_type === 'payment' ? 'text-emerald-400' : 'text-blue-400'
-                            }`}>
-                              {t.transaction_type === 'payment' ? '+' : '-'}{formatCurrencyWithConversion(t.amount, t.currency, selectedCurrency || t.currency, selectedLanguage || 'en-US')}
-                            </p>
-                            <StatusBadge status={t.status} variant="small" />
-                          </div>
-                        </div>
+                        <p className="text-xs font-semibold text-gray-900 capitalize">
+                          {t.transaction_type === 'payment' ? 'Payment Received' : 'Withdrawal'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDateTime(t.created_at)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <p className="text-xs font-bold text-gray-900">
+                          {t.transaction_type === 'payment' ? '+' : '-'}{formatCurrencyWithConversion(t.amount, t.currency, selectedCurrency || t.currency, selectedLanguage || 'en-US')}
+                        </p>
+                        <StatusBadge status={t.status} variant="small" />
                       </div>
                     </div>
                   </div>
                 ))}
                 {stats.recentTransactions.length === 0 && (
-                  <div className="text-center py-8">
-                    <TrendingUp className="h-12 w-12 text-gray-500 mx-auto mb-3" />
-                    <p className="text-gray-400 font-medium">No transactions yet</p>
-                    <p className="text-sm text-gray-400 mt-1">Your recent transactions will appear here</p>
+                  <div className="text-center py-12">
+                    <p className="text-gray-900 font-semibold mb-1">No transactions yet</p>
+                    <p className="text-gray-600 text-sm">Financial activity will appear here</p>
                   </div>
                 )}
               </div>
