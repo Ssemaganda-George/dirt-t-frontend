@@ -9,7 +9,6 @@ import { usePreferences } from '../contexts/PreferencesContext'
 const navigation = [
   { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
   { name: 'My Services', href: '/vendor/services', icon: ShoppingBag },
-  { name: 'My Events', href: '/vendor/events', icon: MapPin },
   { name: 'Bookings', href: '/vendor/bookings', icon: Map },
   { name: 'Tickets', href: '/vendor/tickets', icon: Ticket },
   { name: 'Inquiries', href: '/vendor/inquiries', icon: MessageSquare },

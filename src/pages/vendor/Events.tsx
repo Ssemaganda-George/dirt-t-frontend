@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { Calendar, MapPin, Users, DollarSign, CheckCircle, Clock, ExternalLink, Copy } from 'lucide-react'
+import { Calendar, MapPin, Users, DollarSign, CheckCircle, Clock, ExternalLink, Copy, ArrowLeft } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { createActivationRequest } from '../../lib/database'
 
@@ -183,29 +184,40 @@ export default function VendorEvents() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">My Events</h1>
-        <p className="text-sm text-gray-600">Manage your event listings and activation requests</p>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-3 md:gap-4 w-full">
+          <Link
+            to="/vendor/tickets"
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors w-fit"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm font-medium">Back to Tickets</span>
+          </Link>
+          <div className="px-1">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">My Events</h1>
+            <p className="text-sm text-gray-600 mt-1">Manage your event listings and activation requests</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+      <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+        <div className="flex flex-col gap-3 md:gap-4">
+          <div className="w-full">
             <input
               type="text"
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="sm:w-48">
+          <div className="w-full md:w-48">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -218,11 +230,11 @@ export default function VendorEvents() {
       </div>
 
       {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
         {filteredEvents.map((event) => (
           <div key={event.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-200">
             {/* Event Image */}
-            <div className="h-32 bg-gray-200 relative">
+            <div className="h-32 md:h-36 bg-gray-200 relative">
               {event.primary_image_url ? (
                 <img
                   src={event.primary_image_url}
@@ -234,32 +246,32 @@ export default function VendorEvents() {
                   <Calendar className="w-8 h-8 text-gray-400" />
                 </div>
               )}
-              <div className="absolute top-1 right-1">
-                <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${getStatusColor(event.status)}`}>
+              <div className="absolute top-2 right-2">
+                <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(event.status)}`}>
                   {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                 </span>
               </div>
             </div>
 
             {/* Event Details */}
-            <div className="p-3">
-              <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-1">
+            <div className="p-3 md:p-4">
+              <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-2 line-clamp-2">
                 {event.title}
               </h3>
 
-              <div className="space-y-1 mb-2">
-                <div className="flex items-center text-xs text-gray-600">
-                  <MapPin className="w-3 h-3 mr-1 text-gray-400 flex-shrink-0" />
-                  <span className="line-clamp-1">{event.event_location || event.location}</span>
+              <div className="space-y-2 mb-3">
+                <div className="flex items-start text-xs md:text-sm text-gray-600">
+                  <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <span className="line-clamp-2">{event.event_location || event.location}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs md:text-sm">
                   <div className="flex items-center text-gray-600">
-                    <Users className="w-3 h-3 mr-1 text-gray-400" />
-                    <span>{event.ticket_sales}</span>
+                    <Users className="w-3 h-3 md:w-4 md:h-4 mr-1 text-gray-400" />
+                    <span>{event.ticket_sales} sold</span>
                   </div>
                   <div className="flex items-center text-green-600 font-medium">
-                    <DollarSign className="w-3 h-3 mr-0.5" />
+                    <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-0.5" />
                     <span>{formatCurrencyWithConversion(event.total_revenue, 'UGX', selectedCurrency)}</span>
                   </div>
                 </div>
@@ -267,11 +279,11 @@ export default function VendorEvents() {
 
               {/* Ticket Types Summary */}
               {event.ticket_types && event.ticket_types.length > 0 && (
-                <div className="mb-2">
+                <div className="mb-3">
                   <div className="text-xs text-gray-500 mb-1">
                     {event.ticket_types.length} ticket type{event.ticket_types.length !== 1 ? 's' : ''}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs md:text-sm text-gray-600 font-medium">
                     From {formatCurrencyWithConversion(Math.min(...event.ticket_types.map(t => t.price)), 'UGX', selectedCurrency)}
                   </div>
                 </div>
@@ -279,15 +291,15 @@ export default function VendorEvents() {
 
               {/* Event Scan Link */}
               {event.scan_enabled && (
-                <div className="mb-2 text-sm">
+                <div className="mb-3">
                   <div className="flex items-center gap-2">
-                    <a href={`${window.location.origin}/scan/${event.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Event scan link</a>
+                    <a href={`${window.location.origin}/scan/${event.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs md:text-sm">Event scan link</a>
                     <button
                       onClick={() => handleCopyLink(event.id, `${window.location.origin}/scan/${event.id}`)}
                       className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       title="Copy link"
                     >
-                      <Copy className="w-3 h-3" />
+                      <Copy className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                     {copiedLinkId === event.id && (
                       <span className="text-xs text-green-600">Copied!</span>
@@ -301,9 +313,9 @@ export default function VendorEvents() {
                 {!event.scan_enabled && (
                   <button
                     onClick={() => handleActivationRequest(event.id)}
-                    className="w-full bg-blue-600 text-white px-2 py-1.5 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                    className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <CheckCircle className="w-3 h-3" />
+                    <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />
                     Request activation
                   </button>
                 )}
@@ -315,28 +327,28 @@ export default function VendorEvents() {
                       href={activationRequest.activation_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full bg-yellow-100 text-yellow-800 px-2 py-1.5 rounded text-xs font-medium hover:bg-yellow-200 transition-colors flex items-center justify-center gap-1"
+                      className="w-full bg-yellow-100 text-yellow-800 px-3 py-2 rounded text-sm font-medium hover:bg-yellow-200 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                       View Link
                     </a>
                   ) : (
-                    <div className="w-full bg-yellow-100 text-yellow-800 px-2 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1">
-                      <Clock className="w-3 h-3" />
+                    <div className="w-full bg-yellow-100 text-yellow-800 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5">
+                      <Clock className="w-3 h-3 md:w-4 md:h-4" />
                       Pending
                     </div>
                   )
                 })()}
 
                 {event.scan_enabled && event.status === 'active' && (
-                  <div className="w-full bg-green-100 text-green-800 px-2 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1">
-                    <CheckCircle className="w-3 h-3" />
+                  <div className="w-full bg-green-100 text-green-800 px-3 py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5">
+                    <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />
                     Active
                   </div>
                 )}
 
                 {event.status === 'draft' && (
-                  <div className="w-full bg-gray-100 text-gray-800 px-2 py-1.5 rounded text-xs font-medium flex items-center justify-center">
+                  <div className="w-full bg-gray-100 text-gray-800 px-3 py-2 rounded text-sm font-medium flex items-center justify-center">
                     Draft
                   </div>
                 )}
@@ -347,10 +359,10 @@ export default function VendorEvents() {
       </div>
 
       {filteredEvents.length === 0 && (
-        <div className="text-center py-12">
+        <div className="text-center py-8 md:py-12 px-4">
           <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm md:text-base">
             {searchQuery || statusFilter !== 'all'
               ? 'Try adjusting your search or filters'
               : 'Create your first event to get started'
