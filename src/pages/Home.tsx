@@ -386,7 +386,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative min-h-[300px] md:min-h-[500px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
+      <div className="relative min-h-[200px] md:min-h-[300px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         <div className="absolute inset-0 bg-black/30"></div>
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -422,27 +422,27 @@ export default function Home() {
           ))
         )}
         
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 z-20">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 text-center text-heading">
+        <div className="absolute inset-0 flex flex-col items-center justify-end px-4 py-8 z-20">
+          <h1 className="text-3xl md:text-6xl font-bold text-white mb-2 md:mb-4 text-center text-heading">
             {t('hero_title')}
           </h1>
-          <p className="text-xl text-white/90 mb-8 text-center max-w-2xl text-elegant">
+          <p className="text-base md:text-xl text-white/90 mb-8 md:mb-12 text-center max-w-2xl text-elegant line-clamp-2 md:line-clamp-none">
             {t('hero_subtitle')}
           </p>
         </div>
       </div>
 
       {/* Fixed Search Bar - Always Visible */}
-      <div className="fixed top-16 left-0 right-0 z-[60] w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-4">
-          <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-2xl p-2 relative">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center px-4">
-                <Search className="h-5 w-5 text-gray-400 mr-3" />
+      <div className="fixed top-20 left-0 right-0 z-[60] w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 md:py-2">
+          <div className="w-full max-w-3xl mx-auto bg-white rounded-full shadow-lg p-1.5 relative">
+            <div className="flex items-center gap-1">
+              <div className="flex-1 flex items-center px-3">
+                <Search className="h-4 w-4 text-gray-400 mr-2" />
                 <input
                   type="text"
                   placeholder={t('search_placeholder')}
-                  className="w-full py-2 md:py-3 text-gray-900 placeholder-gray-500 focus:outline-none text-base md:text-lg"
+                  className="w-full py-1.5 md:py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-sm md:text-base"
                   value={searchQuery}
                   onChange={(e) => {
                     const newValue = e.target.value;
@@ -455,18 +455,18 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-2 bg-gray-700 hover:bg-gray-900 text-white px-4 md:px-6 py-2 md:py-4 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs md:text-sm"
+                  className="category-dropdown flex items-center gap-1 bg-gray-700 hover:bg-gray-900 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs"
                   title="Filter services by category - click to select multiple categories"
                 >
-                  <Filter className="w-4 h-4" />
-                  <span className="text-sm">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span className="text-xs hidden sm:inline">
                     {selectedCategories.includes('all')
-                      ? 'All Listings'
+                      ? 'All'
                       : selectedCategories.length === 1
                         ? categories.find(cat => cat.id === selectedCategories[0])?.name || 'Filter'
                         : `${selectedCategories.length} Selected`}
                   </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -711,7 +711,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
     >
       <div className="bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 h-full flex flex-col">
         {/* Image Container */}
-        <div className="relative h-48 overflow-hidden">
+        <div className="relative h-64 overflow-hidden">
           <img
             src={imageUrl}
             alt={service.title}
@@ -743,62 +743,41 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 flex flex-col">
-          {/* Location & Rating */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center text-sm text-gray-600 flex-1 min-w-0">
-              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">{service.location || 'Location TBA'}</span>
+        <div className="flex-1 px-2.5 py-2 flex flex-col justify-between">
+          {/* Title with Location and Rating */}
+          <div className="flex items-start justify-between gap-1 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-2 text-sm leading-snug">
+                {service.title}
+                <span className="text-xs text-gray-500 font-normal">
+                  {service.category_id === 'cat_activities' ? ' at ' : ' in '} 
+                  {service.location || 'Location TBA'}
+                </span>
+              </h3>
             </div>
-            <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg ml-2">
-              <Star className="h-4 w-4 text-emerald-600 fill-current flex-shrink-0" />
-              <span className="text-sm font-bold text-emerald-700">4.5</span>
+            <div className="flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded flex-shrink-0">
+              <Star className="h-2.5 w-2.5 text-emerald-600 fill-current" />
+              <span className="text-xs font-medium text-emerald-700">4.5</span>
             </div>
           </div>
-
-          {/* Title */}
-          <h3 className="font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-2 min-h-[3rem]">
-            {service.title}
-          </h3>
 
           {/* Category-specific info */}
-          <div className="mb-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <span>{categoryInfo.primaryInfo}</span>
-            </div>
+          <div className="mb-1.5 text-xs text-gray-600 space-y-0.5">
+            <div className="line-clamp-1 font-normal">{categoryInfo.primaryInfo}</div>
             {categoryInfo.secondaryInfo && (
-              <div className="text-sm text-gray-600">
-                {categoryInfo.secondaryInfo}
-              </div>
-            )}
-            {/* Flight-specific details */}
-            {service.category_id === 'cat_flights' && service.departure_time && service.arrival_time && (
-              <div className="mt-2 text-xs text-gray-500">
-                <div className="flex justify-between">
-                  <span>Dep: {new Date(service.departure_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                  <span>Arr: {new Date(service.arrival_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                {service.aircraft_type && (
-                  <div className="mt-1">Aircraft: {service.aircraft_type}</div>
-                )}
-              </div>
+              <div className="text-gray-500 text-xs line-clamp-1 font-light">{categoryInfo.secondaryInfo}</div>
             )}
           </div>
 
-          {/* Description */}
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">
-            {service.description}
-          </p>
-
-          {/* Reviews & Vendor */}
-          <div className="text-xs text-gray-500 mb-3">
-            0 reviews • {service.vendors?.business_name || 'Service Provider'}
+          {/* Vendor Name */}
+          <div className="text-xs text-gray-500 mb-1.5 line-clamp-1 font-normal">
+            By {service.vendors?.business_name || 'Service Provider'}
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
-                <span className="text-xs text-gray-500">{t('from')}</span>
-            <span className="text-xl font-bold text-gray-900">
+          <div className="flex items-baseline gap-1 pt-1.5 border-t border-gray-100 mt-auto">
+            <span className="text-xs text-gray-500 font-light">{t('from')}</span>
+            <span className="text-xs font-medium text-gray-900">
               {formatCurrencyWithConversion(
                 service.ticket_types && service.ticket_types.length > 0
                   ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0)))
@@ -808,7 +787,13 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                 selectedLanguage || 'en-US'
               )}
             </span>
-            <span className="text-xs text-gray-500">{t(categoryInfo.priceUnit)}</span>
+            <span className="text-xs text-gray-500 ml-0.5 font-light">
+              {service.category_id === 'cat_hotels' ? 'per night' :
+               service.category_id === 'cat_transport' ? 'per day' :
+               service.category_id === 'cat_restaurants' ? 'per meal' :
+               service.category_id === 'cat_shops' ? 'per item' :
+               'per person'}
+            </span>
           </div>
         </div>
       </div>
