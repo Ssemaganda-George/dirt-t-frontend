@@ -4,7 +4,7 @@ import * as QRCode from 'qrcode'
 import { useBookings } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
-import { formatCurrencyWithConversion } from '../../lib/utils';
+import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { useCart } from '../../contexts/CartContext';
 import type { Booking } from '../../types';
@@ -338,7 +338,7 @@ export function Bookings() {
               *,
               ticket_types(title, price),
               services(title, event_location, location, vendors(business_name)),
-              orders(currency, created_at)
+              orders(currency, created_at, status)
             `)
             .in('service_id', serviceIds)
             .order('issued_at', { ascending: false })
@@ -662,7 +662,7 @@ export function Bookings() {
                       {booking.service?.title || 'Unknown Service'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {booking.tourist_profile?.full_name || 'Unknown Tourist'}
+                      {booking.tourist_profile?.full_name || booking.guest_name || 'Unknown Tourist'}
                     </p>
                   </div>
                   <div className="text-right">
@@ -784,10 +784,10 @@ export function Bookings() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {booking.tourist_profile?.full_name || 'Unknown'}
+                          {booking.tourist_profile?.full_name || booking.guest_name || 'Unknown'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {booking.tourist_profile?.phone}
+                          {booking.tourist_profile?.phone || booking.guest_email || booking.guest_phone}
                         </div>
                       </div>
                     </td>
@@ -951,27 +951,56 @@ export function Bookings() {
                           <tr key={t.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
-                                const match = (filteredBookings || []).find((b: any) =>
+                                // Match tickets to bookings based on service and tourist
+                                let match = (filteredBookings || []).find((b: any) =>
                                   b.service_id === t.service_id && (b.tourist_id === t.owner_id || (t.orders && b.tourist_id === t.orders.user_id))
                                 )
-                                return match ? `#${match.id.slice(0,8)}` : '—'
+
+                                // If no direct match, try to match by order user and service with date proximity
+                                if (!match && t.orders) {
+                                  match = (filteredBookings || []).find((b: any) => {
+                                    const bookingDate = new Date(b.created_at)
+                                    const orderDate = new Date(t.orders!.created_at)
+                                    const timeDiff = Math.abs(bookingDate.getTime() - orderDate.getTime())
+                                    // Match if within 5 minutes and same service
+                                    return b.service_id === t.service_id && timeDiff < 5 * 60 * 1000
+                                  })
+                                }
+
+                                return match ? `#${match.id.slice(0,8)}` : t.order_id ? `#${t.order_id.slice(0,8)}` : `#${t.id.slice(0,8)}`
                               })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.code}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.services?.title || 'Event'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{t.ticket_types?.title || 'Ticket'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{t.services?.vendors?.business_name || 'Unknown'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.issued_at ? format(new Date(t.issued_at), 'MMM dd, yyyy') : '—'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.issued_at ? formatDateTime(t.issued_at) : '—'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <StatusBadge status={t.status} variant="small" />
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(t.ticket_types?.price || 0, t.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {(() => {
-                                const match = (filteredBookings || []).find((b: any) =>
+                                // Match tickets to bookings based on service and tourist
+                                let match = (filteredBookings || []).find((b: any) =>
                                   b.service_id === t.service_id && (b.tourist_id === t.owner_id || (t.orders && b.tourist_id === t.orders.user_id))
                                 )
-                                return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
+
+                                // If no direct match, try to match by order user and service with date proximity
+                                if (!match && t.orders) {
+                                  match = (filteredBookings || []).find((b: any) => {
+                                    const bookingDate = new Date(b.created_at)
+                                    const orderDate = new Date(t.orders!.created_at)
+                                    const timeDiff = Math.abs(bookingDate.getTime() - orderDate.getTime())
+                                    // Match if within 5 minutes and same service
+                                    return b.service_id === t.service_id && timeDiff < 5 * 60 * 1000
+                                  })
+                                }
+                                
+                                // If ticket's order is paid, booking should be confirmed
+                                const bookingStatus = t.orders?.status === 'paid' ? 'confirmed' : (match?.status || null)
+                                
+                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-gray-500">—</span>
                               })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">

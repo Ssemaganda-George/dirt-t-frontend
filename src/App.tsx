@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import VendorLayout from './components/VendorLayout'
 import { PageTransition } from './components/PageTransition'
 import { SmoothLoader } from './components/SmoothLoader'
+import { AppVisitorTracker } from './components/AppVisitorTracker'
 
 // Lazy load all page components for better UX with loading states
 const Home = lazy(() => import('./pages/Home'))
@@ -33,15 +34,16 @@ const VendorProfile = lazy(() => import('./pages/vendor/Profile'))
 const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
 const VendorTickets = lazy(() => import('./pages/vendor/Tickets'))
 const VendorEvents = lazy(() => import('./pages/vendor/Events'))
+const VendorVisitorActivity = lazy(() => import('./pages/vendor/VisitorActivity'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
-const Users = lazy(() => import('./pages/admin/Users'))
-const Vendors = lazy(() => import('./pages/admin/Vendors'))
+const Businesses = lazy(() => import('./pages/admin/Businesses'))
 const Messages = lazy(() => import('./pages/admin/Messages'))
 const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminServices = lazy(() => import('./pages/admin/Services').then(module => ({ default: module.Services })))
 const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module => ({ default: module.Bookings })))
 const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
+const DirtTrailsWallet = lazy(() => import('./pages/admin/DirtTrailsWallet').then(module => ({ default: module.DirtTrailsWallet })))
 const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
@@ -54,6 +56,21 @@ const Checkout = lazy(() => import('./pages/Checkout'))
 const Payment = lazy(() => import('./pages/Payment'))
 const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
 const BookingDetail = lazy(() => import('./pages/BookingDetail'))
+const Tourists = lazy(() => import('./pages/admin/Tourists'))
+const ActivitiesServices = lazy(() => import('./pages/admin/ActivitiesServices').then(module => ({ default: module.ActivitiesServices })))
+const HotelsServices = lazy(() => import('./pages/admin/HotelsServices').then(module => ({ default: module.HotelsServices })))
+const RestaurantsServices = lazy(() => import('./pages/admin/RestaurantsServices').then(module => ({ default: module.RestaurantsServices })))
+const ShopsServices = lazy(() => import('./pages/admin/ShopsServices').then(module => ({ default: module.ShopsServices })))
+const ToursServices = lazy(() => import('./pages/admin/ToursServices').then(module => ({ default: module.ToursServices })))
+const TransportServices = lazy(() => import('./pages/admin/TransportServices').then(module => ({ default: module.TransportServices })))
+const EventsBookings = lazy(() => import('./pages/admin/EventsBookings').then(module => ({ default: module.EventsBookings })))
+const FlightsBookings = lazy(() => import('./pages/admin/FlightsBookings').then(module => ({ default: module.FlightsBookings })))
+const HotelsBookings = lazy(() => import('./pages/admin/HotelsBookings').then(module => ({ default: module.HotelsBookings })))
+const RestaurantsBookings = lazy(() => import('./pages/admin/RestaurantsBookings').then(module => ({ default: module.RestaurantsBookings })))
+const ShopsBookings = lazy(() => import('./pages/admin/ShopsBookings').then(module => ({ default: module.ShopsBookings })))
+const ToursBookings = lazy(() => import('./pages/admin/ToursBookings').then(module => ({ default: module.ToursBookings })))
+const TransportBookings = lazy(() => import('./pages/admin/TransportBookings').then(module => ({ default: module.TransportBookings })))
+const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(module => ({ default: module.VisitorActivity })))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -105,8 +122,9 @@ function App() {
         <CartProvider>
           <BookingProvider>
             <Router>
-            <ScrollToTop />
-            <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
+              <AppVisitorTracker />
+              <ScrollToTop />
+              <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
               <Routes>
           {/* Public Routes */}
           <Route path="/connection-test" element={<ConnectionTest />} />
@@ -205,6 +223,7 @@ function App() {
             <Route path="messages" element={<VendorMessages />} />
             <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
+            <Route path="visitor-activity" element={<VendorVisitorActivity />} />
           </Route>
           
           {/* Admin Routes */}
@@ -219,14 +238,28 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="profile" element={<AdminProfile />} />
             <Route path="settings" element={<AdminSettings />} />
-            <Route path="users" element={<Users />} />
-            <Route path="vendors" element={<Vendors />} />
+            <Route path="businesses" element={<Businesses />} />
+            <Route path="tourists" element={<Tourists />} />
             <Route path="services" element={<AdminServices />} />
+            <Route path="services/activities" element={<ActivitiesServices />} />
+            <Route path="services/hotels" element={<HotelsServices />} />
+            <Route path="services/restaurants" element={<RestaurantsServices />} />
+            <Route path="services/shops" element={<ShopsServices />} />
+            <Route path="services/tours" element={<ToursServices />} />
+            <Route path="services/transport" element={<TransportServices />} />
             <Route path="bookings" element={<AdminBookings />} />
+            <Route path="bookings/events" element={<EventsBookings />} />
+            <Route path="bookings/flights" element={<FlightsBookings />} />
+            <Route path="bookings/hotels" element={<HotelsBookings />} />
+            <Route path="bookings/restaurants" element={<RestaurantsBookings />} />
+            <Route path="bookings/shops" element={<ShopsBookings />} />
+            <Route path="bookings/tours" element={<ToursBookings />} />
+            <Route path="bookings/transport" element={<TransportBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="wallets" element={<Transactions />} />
+            <Route path="dirt-trails-wallet" element={<DirtTrailsWallet />} />
             <Route path="finance" element={<Finance />} />
             <Route path="vendor-messages" element={
               <ProtectedRoute requiredRole="admin">
@@ -234,6 +267,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
+            <Route path="visitor-activity" element={<VisitorActivity />} />
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">

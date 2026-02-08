@@ -16,7 +16,9 @@ import {
   Ticket,
   DollarSign,
   Search,
-  Globe
+  Globe,
+  ChevronRight,
+  Eye
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -24,16 +26,67 @@ import PreferencesModal from './PreferencesModal'
 import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
-  { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
-  { labelKey: 'users', href: '/admin/users', icon: Users },
-  { labelKey: 'services', href: '/admin/services', icon: ShoppingBag },
-  { labelKey: 'bookings', href: '/admin/bookings', icon: MapPin },
-  { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket },
-  { labelKey: 'messages', href: '/admin/messages', icon: MessageSquare },
-  { labelKey: 'partnerships', href: '/admin/partnerships', icon: Users },
-  { labelKey: 'wallets', href: '/admin/wallets', icon: CreditCard },
-  { labelKey: 'finance', href: '/admin/finance', icon: DollarSign },
-  { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 },
+  {
+    category: 'Overview',
+    items: [
+      { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
+      { labelKey: 'visitor_activity', href: '/admin/visitor-activity', icon: Eye }
+    ]
+  },
+  {
+    category: 'Users',
+    items: [
+      { labelKey: 'businesses', href: '/admin/businesses', icon: Users },
+      { labelKey: 'tourists', href: '/admin/tourists', icon: User }
+    ]
+  },
+  {
+    category: 'Services',
+    items: [
+      { labelKey: 'services', href: '/admin/services', icon: ShoppingBag },
+      { labelKey: 'activities', href: '/admin/services/activities', icon: ShoppingBag },
+      { labelKey: 'hotels', href: '/admin/services/hotels', icon: ShoppingBag },
+      { labelKey: 'restaurants', href: '/admin/services/restaurants', icon: ShoppingBag },
+      { labelKey: 'shops', href: '/admin/services/shops', icon: ShoppingBag },
+      { labelKey: 'tours', href: '/admin/services/tours', icon: ShoppingBag },
+      { labelKey: 'transport', href: '/admin/services/transport', icon: ShoppingBag }
+    ]
+  },
+  {
+    category: 'Bookings',
+    items: [
+      { labelKey: 'bookings', href: '/admin/bookings', icon: MapPin },
+      { labelKey: 'events_bookings', href: '/admin/bookings/events', icon: MapPin },
+      { labelKey: 'flights_bookings', href: '/admin/bookings/flights', icon: MapPin },
+      { labelKey: 'hotels_bookings', href: '/admin/bookings/hotels', icon: MapPin },
+      { labelKey: 'restaurants_bookings', href: '/admin/bookings/restaurants', icon: MapPin },
+      { labelKey: 'shops_bookings', href: '/admin/bookings/shops', icon: MapPin },
+      { labelKey: 'tours_bookings', href: '/admin/bookings/tours', icon: MapPin },
+      { labelKey: 'transport_bookings', href: '/admin/bookings/transport', icon: MapPin },
+      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket }
+    ]
+  },
+  {
+    category: 'Finance',
+    items: [
+      { labelKey: 'dirt_trails_wallet', href: '/admin/dirt-trails-wallet', icon: CreditCard },
+      { labelKey: 'business_wallets', href: '/admin/wallets', icon: CreditCard },
+      { labelKey: 'finance', href: '/admin/finance', icon: DollarSign }
+    ]
+  },
+  {
+    category: 'Content',
+    items: [
+      { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 }
+    ]
+  },
+  {
+    category: 'Communication',
+    items: [
+      { labelKey: 'messages', href: '/admin/messages', icon: MessageSquare },
+      { labelKey: 'partnerships', href: '/admin/partnerships', icon: Users }
+    ]
+  }
 ]
 
 export default function Layout() {
@@ -46,6 +99,7 @@ export default function Layout() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Overview', 'Users']))
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown when clicking outside
@@ -117,13 +171,25 @@ export default function Layout() {
     setShowLogoutConfirm(false)
   }
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(category)) {
+        newSet.delete(category)
+      } else {
+        newSet.add(category)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
-          <div className="flex h-16 items-center justify-between px-4">
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white h-screen">
+          <div className="flex h-16 items-center justify-between px-4 flex-shrink-0">
             <div className="flex items-center">
               <MapPin className="h-8 w-8 text-primary-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">DirtTrails</span>
@@ -135,62 +201,100 @@ export default function Layout() {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.labelKey}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
-                    isActive
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                  onClick={() => setSidebarOpen(false)}
+          <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
+            {navigation.map((category) => (
+              <div key={category.category} className="space-y-1">
+                <button
+                  onClick={() => toggleCategory(category.category)}
+                  className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-none group"
                 >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 ${
-                      isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
+                  <span className="font-semibold text-gray-900">{category.category}</span>
+                  <ChevronRight
+                    className={`h-4 w-4 transition-transform ${
+                      expandedCategories.has(category.category) ? 'rotate-90' : ''
                     }`}
                   />
-                  {t(item.labelKey)}
-                </Link>
-              )
-            })}
+                </button>
+                {expandedCategories.has(category.category) && (
+                  <div className="ml-4 space-y-1">
+                    {category.items.map((item) => {
+                      const isActive = location.pathname === item.href
+                      return (
+                        <Link
+                          key={item.labelKey}
+                          to={item.href}
+                          className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
+                            isActive
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          <item.icon
+                            className={`mr-3 h-5 w-5 ${
+                              isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
+                            }`}
+                          />
+                          {t(item.labelKey)}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </nav>
         </div>
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
-          <div className="flex items-center h-16 px-4">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:h-screen">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-hidden">
+          <div className="flex items-center h-16 px-4 flex-shrink-0">
             <MapPin className="h-8 w-8 text-primary-600" />
             <span className="ml-2 text-xl font-bold text-gray-900">DirtTrails</span>
           </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.labelKey}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
-                    isActive
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+          <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
+            {navigation.map((category) => (
+              <div key={category.category} className="space-y-1">
+                <button
+                  onClick={() => toggleCategory(category.category)}
+                  className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-none group"
                 >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 ${
-                      isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
+                  <span className="font-semibold text-gray-900">{category.category}</span>
+                  <ChevronRight
+                    className={`h-4 w-4 transition-transform ${
+                      expandedCategories.has(category.category) ? 'rotate-90' : ''
                     }`}
                   />
-                  {t(item.labelKey)}
-                </Link>
-              )
-            })}
+                </button>
+                {expandedCategories.has(category.category) && (
+                  <div className="ml-4 space-y-1">
+                    {category.items.map((item) => {
+                      const isActive = location.pathname === item.href
+                      return (
+                        <Link
+                          key={item.labelKey}
+                          to={item.href}
+                          className={`group flex items-center px-2 py-2 text-sm font-medium rounded-none ${
+                            isActive
+                              ? 'bg-primary-600 text-white'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }`}
+                        >
+                          <item.icon
+                            className={`mr-3 h-5 w-5 ${
+                              isActive ? 'text-blue-200' : 'text-gray-400 group-hover:text-gray-500'
+                            }`}
+                          />
+                          {t(item.labelKey)}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </nav>
         </div>
       </div>

@@ -48,6 +48,7 @@ export default function VendorTickets() {
   const [selectedEventFilter, setSelectedEventFilter] = useState<string>('all')
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
   const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -55,6 +56,7 @@ export default function VendorTickets() {
     setSelectedEventFilter('all')
     setSelectedTypeFilter('all')
     setSelectedAttendanceFilter('all')
+    setSelectedStatusFilter('all')
   }
 
   useEffect(() => {
@@ -91,20 +93,24 @@ export default function VendorTickets() {
   const filteredTickets = tickets.filter(ticket => {
     const matchesSearch =
       ticket.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.services?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      ticket.services?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.ticket_types?.title?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
 
-    const matchesEvent = selectedEventFilter === 'all' || (ticket.services?.title || 'Event') === selectedEventFilter
-
-    const matchesType = selectedTypeFilter === 'all' || (ticket.ticket_types?.title || 'Ticket') === selectedTypeFilter
-
-    const matchesAttendance = selectedAttendanceFilter === 'all' ||
-      (selectedAttendanceFilter === 'attended' && ticket.status === 'used') ||
-      (selectedAttendanceFilter === 'not-attended' && ticket.status !== 'used')
-
-    return matchesSearch && matchesStatus && matchesEvent && matchesType && matchesAttendance
+    return matchesSearch && matchesStatus
   })
+
+  const tableFilteredTickets = filteredTickets
+    .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
+    .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
+    .filter(t => selectedStatusFilter === 'all' || t.status === selectedStatusFilter)
+    .filter(t => {
+      if (selectedAttendanceFilter === 'all') return true;
+      if (selectedAttendanceFilter === 'attended') return t.status === 'used';
+      if (selectedAttendanceFilter === 'not-attended') return t.status !== 'used';
+      return true;
+    })
 
   const stats = {
     total: tickets.length,
@@ -366,7 +372,7 @@ export default function VendorTickets() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search tickets..."
+                placeholder="Search tickets by code, event, or ticket type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
@@ -432,7 +438,18 @@ export default function VendorTickets() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issued</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <select
+                    value={selectedStatusFilter}
+                    onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                    className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="issued">Active</option>
+                    <option value="used">Used</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <select
                     value={selectedAttendanceFilter}
@@ -448,7 +465,7 @@ export default function VendorTickets() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredTickets.map((ticket) => (
+              {tableFilteredTickets.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
@@ -486,14 +503,14 @@ export default function VendorTickets() {
                   </td>
                 </tr>
               ))}
-              {filteredTickets.length > 0 && (
+              {tableFilteredTickets.length > 0 && (
                 <tr className="bg-gray-50 border-t-2 border-gray-200">
                   <td colSpan={4} className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    Total ({filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}):
+                    Total ({tableFilteredTickets.length} ticket{tableFilteredTickets.length !== 1 ? 's' : ''}):
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                     {(() => {
-                      const total = filteredTickets.reduce((sum, ticket) => {
+                      const total = tableFilteredTickets.reduce((sum, ticket) => {
                         const price = ticket.ticket_types?.price || 0;
                         const originalCurrency = ticket.orders?.currency || 'UGX';
                         return sum + convertCurrency(price, originalCurrency, selectedCurrency);
@@ -507,7 +524,7 @@ export default function VendorTickets() {
             </tbody>
           </table>
         </div>
-        {filteredTickets.length === 0 && (
+        {tableFilteredTickets.length === 0 && (
           <div className="text-center py-8">
             <Ticket className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets found</h3>

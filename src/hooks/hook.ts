@@ -91,15 +91,15 @@ export function useBookings() {
         event: '*',
         schema: 'public',
         table: 'bookings'
-      }, (payload) => {
+      }, async (payload) => {
         console.log('Admin real-time booking change:', payload);
         
         if (payload.eventType === 'INSERT') {
-          setBookings(prev => [payload.new as Booking, ...prev]);
+          // For new bookings, refetch to get complete joined data (service, profile)
+          await fetchBookings();
         } else if (payload.eventType === 'UPDATE') {
-          setBookings(prev => prev.map(booking => 
-            booking.id === payload.new.id ? payload.new as Booking : booking
-          ));
+          // For updated bookings, also refetch to get complete joined data
+          await fetchBookings();
         } else if (payload.eventType === 'DELETE') {
           setBookings(prev => prev.filter(booking => booking.id !== payload.old.id));
         }
@@ -248,6 +248,7 @@ export function useServices(vendorId?: string) {
     max_capacity: number;
     amenities: string[];
     category_id: string;
+    scan_enabled?: boolean;
 
     // Hotel-specific fields
     room_types?: string[]
@@ -263,12 +264,24 @@ export function useServices(vendorId?: string) {
   }>) => {
     try {
       setError(null);
+      console.log('HOOK: updateExistingService called with:', { serviceId, updates });
+      
       const updated = await updateService(serviceId, vendorId, updates);
-      setServices(prevServices => 
-        prevServices.map(service => 
+      
+      console.log('HOOK: updateService returned:', { 
+        serviceId: updated?.id,
+        scan_enabled: updated?.scan_enabled,
+        title: updated?.title
+      });
+      
+      setServices(prevServices => {
+        const newServices = prevServices.map(service => 
           service.id === serviceId ? updated : service
-        )
-      );
+        );
+        console.log('HOOK: setServices called, new services array:', newServices.map(s => ({ id: s.id, scan_enabled: s.scan_enabled })));
+        return newServices;
+      });
+      
       return updated;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update service');

@@ -61,7 +61,16 @@ export default function ScanEventPage() {
         setService(svc)
 
         // If service not found or not an event, show not found
-        if (!svc) return
+        if (!svc) {
+          setError('Event not found')
+          return
+        }
+
+        // Check if scanning is enabled for this event
+        if (!svc.scan_enabled) {
+          setError('Ticket scanning is not enabled for this event')
+          return
+        }
 
         // If visitor is vendor of service or admin and scan_enabled, allow immediate access
         if (svc.scan_enabled && user?.id) {

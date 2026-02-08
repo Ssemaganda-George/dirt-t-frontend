@@ -1,37 +1,25 @@
 import { supabase } from './supabaseClient';
 // Utility to credit a wallet by vendor_id
 export async function creditWallet(vendor_id: string, amount: number, currency: string) {
-  const { data: wallet, error } = await supabase
-    .from('wallets')
-    .select('*')
-    .eq('vendor_id', vendor_id)
-    .single();
+  try {
+    // Use atomic function to update wallet balance
+    const { data, error } = await supabase.rpc('update_wallet_balance_atomic', {
+      p_vendor_id: vendor_id,
+      p_amount: amount,
+      p_currency: currency,
+      p_operation: 'credit'
+    });
 
-  if (error && error.code !== 'PGRST116') {
+    if (error) throw error;
+
+    if (!data?.success) {
+      throw new Error(data.error || 'Failed to credit wallet');
+    }
+
+    console.log('Wallet credited successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Error crediting wallet:', error);
     throw error;
-  }
-
-  if (wallet) {
-    // Update existing wallet
-    const { error: updateError } = await supabase
-      .from('wallets')
-      .update({
-        balance: (wallet.balance || 0) + amount,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', wallet.id);
-    if (updateError) throw updateError;
-  } else {
-    // Create new wallet
-    const { error: insertError } = await supabase
-      .from('wallets')
-      .insert({
-        vendor_id,
-        balance: amount,
-        currency,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    if (insertError) throw insertError;
   }
 }

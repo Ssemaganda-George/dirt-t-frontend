@@ -463,68 +463,68 @@ export default function CheckoutPage() {
   if (!order) return <div className="p-6">Order not found</div>
 
   return (
-    <div className="min-h-screen flex items-start justify-center p-6 bg-gray-50">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-6">
       {/* Modal-like centered container */}
-      <div className="w-full max-w-6xl bg-white rounded-lg shadow-lg overflow-hidden" style={{ maxHeight: '92vh' }}>
-        {/* Progress Header */}
-        <div className="px-6 py-4 border-b">
+      <div className="w-full md:max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg md:shadow-lg overflow-hidden flex flex-col" style={{ height: '100vh', maxHeight: 'none', '--tw-max-height': 'auto' } as React.CSSProperties}>
+        {/* Progress Header - Fixed at top */}
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">Checkout</h2>
+            <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
             <div>
-              <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">Close</button>
+              <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">1</div>
-              <div className="text-sm text-gray-600">TICKETS</div>
+          <div className="mt-3 md:mt-4 flex items-center gap-2 md:gap-4 overflow-x-auto pb-2">
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">1</div>
+              <div className="text-xs md:text-sm text-gray-600 whitespace-nowrap">TICKETS</div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-[#61B82C] text-white flex items-center justify-center text-xs">2</div>
-              <div className="text-sm font-medium text-[#61B82C]">DETAILS</div>
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-[#61B82C] text-white flex items-center justify-center text-xs">2</div>
+              <div className="text-xs md:text-sm font-medium text-[#61B82C] whitespace-nowrap">DETAILS</div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs">3</div>
-              <div className="text-sm text-gray-400">PAYMENT</div>
+            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs">3</div>
+              <div className="text-xs md:text-sm text-gray-400 whitespace-nowrap">PAYMENT</div>
             </div>
           </div>
         </div>
 
-        {/* Content area: two-column on md+ */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 px-6 py-6 overflow-auto">
-          {/* Left: form & actions (span 3 cols on md) */}
-          <div className="md:col-span-3 space-y-4">
-            <div className="bg-white p-4 rounded shadow">
-              <h3 className="font-medium text-lg">Buyer Information</h3>
-              <div className="grid grid-cols-1 gap-4 mt-3">
+        {/* Content area: scrollable in the middle */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-6">
+            {/* Left: form & actions (span 3 cols on md) */}
+            <div className="md:col-span-3 space-y-4">
+              <div className="bg-white p-4 rounded shadow">
+                <h3 className="font-medium text-lg">Buyer Information</h3>
+                <div className="grid grid-cols-1 gap-4 mt-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">First name *</label>
-                    <input className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First name *</label>
+                    <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Surname *</label>
-                    <input className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                    <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                  <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cellphone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cellphone</label>
                   <div className="flex gap-2">
-                    <div className="relative country-dropdown">
+                    <div className="relative country-dropdown flex-shrink-0">
                       <button
                         type="button"
-                        className="border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent bg-white flex items-center justify-between min-w-[120px]"
+                        className="border px-2 md:px-3 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent bg-white flex items-center justify-between min-w-[90px] md:min-w-[120px] text-sm"
                         onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                        style={{ width: '140px' }}
                       >
                         <span className="truncate">
                           {countries.find(c => c.code === buyer.countryCode)?.flag || '🌍'} {buyer.countryCode}
                         </span>
-                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 md:w-4 md:h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
@@ -544,7 +544,7 @@ export default function CheckoutPage() {
                               <button
                                 key={country.code}
                                 type="button"
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
+                                className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-sm"
                                 onClick={() => {
                                   setBuyer(s => ({ ...s, countryCode: country.code }))
                                   setCountrySearch('')
@@ -561,37 +561,29 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <input
-                      className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent"
+                      className="flex-1 border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base"
                       value={buyer.phone}
                       onChange={(e) => setBuyer(s => ({ ...s, phone: e.target.value }))}
                       placeholder="759 918649"
+                      type="tel"
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="emailCopy" checked={buyer.emailCopy} onChange={(e) => setBuyer(s => ({ ...s, emailCopy: e.target.checked }))} className="rounded" />
-                  <label htmlFor="emailCopy" className="text-sm text-gray-700">Email this ticket holder a copy of this ticket</label>
+                <div className="flex items-start gap-3 pt-2">
+                  <input type="checkbox" id="emailCopy" checked={buyer.emailCopy} onChange={(e) => setBuyer(s => ({ ...s, emailCopy: e.target.checked }))} className="rounded mt-1 cursor-pointer flex-shrink-0" />
+                  <label htmlFor="emailCopy" className="text-sm text-gray-700 cursor-pointer pt-0.5">Email this ticket holder a copy of this ticket</label>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded shadow">
+            <div className="bg-white p-4 rounded shadow md:block hidden">
               <h3 className="font-medium text-lg mb-2">Payment</h3>
-              <div className="mt-4 flex items-center gap-3">
-                <button 
-                  onClick={() => navigate(`/checkout/${orderId}/payment`)} 
-                  style={{ backgroundColor: '#61B82C' }} 
-                  className="text-white px-4 py-2 rounded hover:opacity-90"
-                >
-                  Next
-                </button>
-                <button onClick={() => navigate(-1)} className="bg-gray-100 px-4 py-2 rounded">Back</button>
-              </div>
+              <p className="text-sm text-gray-600">Scroll down to proceed →</p>
             </div>
           </div>
 
-          {/* Right: Order Summary */}
-          <div className="md:col-span-2">
+          {/* Right: Order Summary - hidden on mobile, visible on md+ */}
+          <div className="md:col-span-2 hidden md:block">
             <div className="sticky top-6 space-y-4">
               <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
@@ -709,6 +701,54 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
+          </div>
+        </div>
+
+        {/* Fixed Action Buttons at Bottom - visible on all devices */}
+        <div className="flex-shrink-0 border-t bg-white px-4 md:px-6 py-3 md:py-4 flex gap-3">
+          <button onClick={() => navigate(-1)} className="flex-1 md:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 md:px-6 py-2 md:py-3 rounded font-medium transition-colors">
+            Back
+          </button>
+          <button 
+            onClick={async () => {
+              try {
+                // Save buyer information to order
+                const buyerInfo = {
+                  guest_name: buyer.name && buyer.surname ? `${buyer.name} ${buyer.surname}` : buyer.name || null,
+                  guest_email: buyer.email || null,
+                  guest_phone: buyer.phone ? `${buyer.countryCode}${buyer.phone}` : null
+                };
+
+                const { error: updateError } = await supabase
+                  .from('orders')
+                  .update(buyerInfo)
+                  .eq('id', orderId);
+
+                if (updateError) {
+                  console.error('Failed to save buyer information:', updateError);
+                  
+                  // Check if it's a schema error (missing columns)
+                  if (updateError.message && updateError.message.includes('guest_email')) {
+                    alert('The checkout system is still initializing. Please contact support or try again in a moment.\n\nReference: SCHEMA_MIGRATION_PENDING');
+                    return;
+                  }
+                  
+                  alert('Failed to save buyer information. Please try again.');
+                  return;
+                }
+
+                // Navigate to payment
+                navigate(`/checkout/${orderId}/payment`);
+              } catch (err) {
+                console.error('Failed to save buyer information:', err);
+                alert('Failed to save buyer information. Please try again.');
+              }
+            }} 
+            style={{ backgroundColor: '#61B82C' }} 
+            className="flex-1 text-white px-4 md:px-6 py-2 md:py-3 rounded font-medium hover:opacity-90 transition-opacity"
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

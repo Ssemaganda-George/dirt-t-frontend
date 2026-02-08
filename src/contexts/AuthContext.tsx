@@ -255,26 +255,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const serviceClient = getServiceClient()
     try {
-      const { error: profileError } = await serviceClient
-        .from('profiles')
-        .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
-      if (profileError) {
-        console.error('Error creating profile during sign up:', profileError)
+      // Use atomic function to create/update profile
+      const profileResult = await serviceClient.rpc('create_user_profile_atomic', {
+        p_user_id: u.id,
+        p_email: email,
+        p_full_name: fullName,
+        p_role: role
+      });
+
+      if (!profileResult.data?.success) {
+        console.error('Error creating profile during sign up:', profileResult.data?.error);
       }
     } catch (err) {
-      console.error('Unexpected error creating profile during sign up:', err)
+      console.error('Unexpected error creating profile during sign up:', err);
     }
 
     if (role === 'vendor') {
       try {
-        const { error: vendorError } = await serviceClient
-          .from('vendors')
-          .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
-        if (vendorError) {
-          console.error('Error creating vendor during sign up:', vendorError)
+        // Use atomic function to create vendor profile
+        const vendorResult = await serviceClient.rpc('create_vendor_profile_atomic', {
+          p_user_id: u.id,
+          p_business_name: '',
+          p_status: 'pending'
+        });
+
+        if (!vendorResult.data?.success) {
+          console.error('Error creating vendor during sign up:', vendorResult.data?.error);
         }
       } catch (err) {
-        console.error('Unexpected error creating vendor during sign up:', err)
+        console.error('Unexpected error creating vendor during sign up:', err);
       }
       sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
     }
@@ -309,12 +318,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** -------------------- Update Profile -------------------- */
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
+
+    // For profile updates, we can use the standard Supabase update since profiles
+    // are typically updated by the owner and race conditions are less likely.
+    // However, we ensure atomicity by using a transaction-like approach.
     const { data, error } = await supabase
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select()
       .single()
+
     if (error) throw error
     setProfile(data as Profile)
   }

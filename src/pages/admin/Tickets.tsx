@@ -9,6 +9,7 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 
 interface TicketData {
   id: string
+  order_id: string
   code: string
   status: 'issued' | 'used' | 'cancelled'
   issued_at: string
@@ -33,7 +34,8 @@ interface TicketData {
     currency: string
     created_at: string
     user_id: string
-  }
+    status: string
+  } | null
   buyer_profile?: {
     full_name: string
     email: string
@@ -51,6 +53,7 @@ export default function AdminTickets() {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
   const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all')
   const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
   const { selectedCurrency } = usePreferences()
 
   const clearFilters = () => {
@@ -60,6 +63,7 @@ export default function AdminTickets() {
     setSelectedTypeFilter('all')
     setSelectedVendorFilter('all')
     setSelectedAttendanceFilter('all')
+    setSelectedStatusFilter('all')
   }
 
   useEffect(() => {
@@ -77,7 +81,7 @@ export default function AdminTickets() {
           *,
           ticket_types(title, price),
           services(title, event_location, location, primary_image_url, vendors(business_name)),
-          orders(currency, created_at, user_id)
+          orders(currency, created_at, user_id, status)
         `)
         .order('issued_at', { ascending: false })
 
@@ -137,7 +141,10 @@ export default function AdminTickets() {
     const matchesSearch =
       ticket.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.services?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.services?.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      ticket.services?.vendors?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.ticket_types?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.buyer_profile?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.buyer_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
 
@@ -410,7 +417,7 @@ export default function AdminTickets() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search tickets by code, event, or vendor..."
+                placeholder="Search tickets by code, event, vendor, buyer name, email, or ticket type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-[#61B82C] focus:border-[#61B82C]"
@@ -495,7 +502,18 @@ export default function AdminTickets() {
                       </select>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      <select
+                        value={selectedStatusFilter}
+                        onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="issued">Active</option>
+                        <option value="used">Used</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -514,10 +532,11 @@ export default function AdminTickets() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(() => {
-                    const filteredTickets = tickets
+                    const tableFilteredTickets = filteredTickets
                       .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
                       .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
                       .filter(t => selectedVendorFilter === 'all' || (t.services?.vendors?.business_name || 'Unknown') === selectedVendorFilter)
+                      .filter(t => selectedStatusFilter === 'all' || t.status === selectedStatusFilter)
                       .filter(t => {
                         if (selectedAttendanceFilter === 'all') return true;
                         if (selectedAttendanceFilter === 'attended') return t.status === 'used';
@@ -527,15 +546,27 @@ export default function AdminTickets() {
 
                     return (
                       <>
-                        {filteredTickets.map((ticket) => (
+                        {tableFilteredTickets.map((ticket) => (
                           <tr key={ticket.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
                                 // Match tickets to bookings based on service and tourist
-                                const match = bookings.find((b: any) =>
+                                let match = bookings.find((b: any) =>
                                   b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
                                 )
-                                return match ? `#${match.id.slice(0,8)}` : '—'
+
+                                // If no direct match, try to match by order user and service with date proximity
+                                if (!match && ticket.orders) {
+                                  match = bookings.find((b: any) => {
+                                    const bookingDate = new Date(b.created_at)
+                                    const orderDate = new Date(ticket.orders!.created_at)
+                                    const timeDiff = Math.abs(bookingDate.getTime() - orderDate.getTime())
+                                    // Match if within 5 minutes and same service
+                                    return b.service_id === ticket.service_id && timeDiff < 5 * 60 * 1000
+                                  })
+                                }
+
+                                return match ? `#${match.id.slice(0,8)}` : ticket.order_id ? `#${ticket.order_id.slice(0,8)}` : `#${ticket.id.slice(0,8)}`
                               })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
@@ -553,7 +584,11 @@ export default function AdminTickets() {
                                 const match = bookings.find((b: any) =>
                                   b.service_id === ticket.service_id && (b.tourist_id === ticket.owner_id || (ticket.orders && b.tourist_id === ticket.orders.user_id))
                                 )
-                                return match ? <StatusBadge status={match.status} variant="small" /> : <span className="text-sm text-gray-500">—</span>
+                                
+                                // If ticket's order is paid, booking should be confirmed
+                                const bookingStatus = ticket.orders?.status === 'paid' ? 'confirmed' : (match?.status || null)
+                                
+                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-gray-500">—</span>
                               })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -584,14 +619,14 @@ export default function AdminTickets() {
                             </td>
                           </tr>
                         ))}
-                        {filteredTickets.length > 0 && (
+                        {tableFilteredTickets.length > 0 && (
                           <tr className="bg-gray-50 border-t-2 border-gray-200">
                             <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                              Total ({filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}):
+                              Total ({tableFilteredTickets.length} ticket{tableFilteredTickets.length !== 1 ? 's' : ''}):
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                               {(() => {
-                                const total = filteredTickets.reduce((sum, ticket) => {
+                                const total = tableFilteredTickets.reduce((sum, ticket) => {
                                   const price = ticket.ticket_types?.price || 0;
                                   const originalCurrency = ticket.orders?.currency || 'UGX';
                                   return sum + convertCurrency(price, originalCurrency, selectedCurrency);
