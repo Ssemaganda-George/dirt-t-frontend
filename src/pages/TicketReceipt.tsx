@@ -163,54 +163,54 @@ export default function TicketReceiptPage() {
     }, 1000)
   }
 
-  if (loading) return <div className="p-6">Loading tickets…</div>
-  if (!tickets || tickets.length === 0) return <div className="p-6">No tickets found for this order.</div>
+  if (loading) return <div className="p-4">Loading tickets…</div>
+  if (!tickets || tickets.length === 0) return <div className="p-4">No tickets found for this order.</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-light text-gray-900">Your Tickets</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-light text-gray-900">Your Tickets</h2>
           {tickets.length > 1 && (
             <button
               onClick={downloadAllTickets}
               style={{ backgroundColor: '#3B82F6' }}
-              className="text-white px-4 py-2 rounded-lg hover:opacity-90 text-sm font-light flex items-center gap-2 transition-opacity"
+              className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
             >
               Download All
             </button>
           )}
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-2">
           {tickets.map(t => (
             <div
               key={t.id}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+              className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden"
             >
               {/* Ticket Header */}
-              <div className="border-b border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              <div className="border-b border-gray-200 p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     {t.services?.images?.[0] ? (
                       <img
                         src={t.services.images[0]}
                         alt={t.services.title}
-                        className="w-12 h-12 object-cover rounded border border-gray-200"
+                        className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs font-light">
+                      <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs font-light flex-shrink-0">
                         IMG
                       </div>
                     )}
-                    <div>
-                      <h3 className="font-light text-base text-gray-900">{t.services?.title || 'Event'}</h3>
-                      <p className="text-gray-600 text-xs font-light">{t.ticket_types?.title || 'Ticket'}</p>
+                    <div className="min-w-0">
+                      <h3 className="font-light text-xs text-gray-900 truncate">{t.services?.title || 'Event'}</h3>
+                      <p className="text-gray-600 text-xs font-light truncate">{t.ticket_types?.title || 'Ticket'}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-500 font-light">Ticket Code</div>
-                    <div className="font-mono font-light text-sm text-gray-900">{t.code}</div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-xs text-gray-500 font-light">Code</div>
+                    <div className="font-mono font-light text-xs text-gray-900">{t.code}</div>
                   </div>
                 </div>
               </div>
@@ -218,20 +218,20 @@ export default function TicketReceiptPage() {
               {/* Main ticket content */}
               <div className="flex flex-col md:flex-row">
                 {/* Left side - QR and basic info */}
-                <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
-                  <div className="flex items-start gap-4">
+                <div className="flex-1 p-2.5 border-b md:border-b-0 md:border-r border-gray-200">
+                  <div className="flex items-start gap-2.5">
                     <div className="flex-shrink-0">
                       {qrMap[t.id] ? (
-                        <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-20 h-20 border border-gray-200 rounded" />
+                        <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-14 h-14 border border-gray-200 rounded" />
                       ) : (
-                        <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
+                        <div className="w-14 h-14 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
                       )}
                     </div>
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-1">
                       {t.services?.event_datetime && (
-                        <div className="text-xs">
-                          <span className="text-gray-500 font-light">Date</span>
-                          <p className="text-gray-900 font-light text-sm mt-1">
+                        <div>
+                          <span className="text-xs text-gray-500 font-light">Date</span>
+                          <p className="text-gray-900 font-light text-xs">
                             {new Date(t.services.event_datetime).toLocaleDateString('en-US', {
                               weekday: 'short',
                               year: 'numeric',
@@ -243,15 +243,15 @@ export default function TicketReceiptPage() {
                           </p>
                         </div>
                       )}
-                      <div className="text-xs">
-                        <span className="text-gray-500 font-light">Location</span>
-                        <p className="text-gray-900 font-light text-sm mt-1">{t.services?.event_location || t.services?.location || 'Venue TBA'}</p>
+                      <div>
+                        <span className="text-xs text-gray-500 font-light">Location</span>
+                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.event_location || t.services?.location || 'Venue TBA'}</p>
                       </div>
-                      <div className="text-xs">
-                        <span className="text-gray-500 font-light">Provider</span>
-                        <p className="text-gray-900 font-light text-sm mt-1">{t.services?.vendors?.business_name || 'Service Provider'}</p>
+                      <div>
+                        <span className="text-xs text-gray-500 font-light">Provider</span>
+                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.vendors?.business_name || 'Service Provider'}</p>
                       </div>
-                      <div className="text-xs text-gray-500 font-light pt-2">
+                      <div className="text-xs text-gray-500 font-light pt-1">
                         Issued: {new Date(t.issued_at).toLocaleDateString()}
                       </div>
                     </div>
@@ -259,17 +259,17 @@ export default function TicketReceiptPage() {
                 </div>
 
                 {/* Right side - Details */}
-                <div className="flex-1 p-4 flex items-center justify-between md:justify-start md:flex-col md:space-y-3">
-                  <div className="flex-1">
+                <div className="flex-1 p-2.5 flex items-center justify-between md:justify-start md:flex-col md:space-y-1.5">
+                  <div>
                     <div className="text-xs">
                       <span className="text-gray-500 font-light">Price</span>
-                      <p className="text-gray-900 font-light text-sm mt-1">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</p>
+                      <p className="text-gray-900 font-light text-xs">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</p>
                     </div>
                   </div>
-                  <div className="flex-1 md:flex-none">
+                  <div>
                     <div className="text-xs">
                       <span className="text-gray-500 font-light">Status</span>
-                      <p className={`font-light text-sm mt-1 ${
+                      <p className={`font-light text-xs ${
                         t.status === 'issued' ? 'text-green-600' :
                         t.status === 'used' ? 'text-blue-600' :
                         'text-gray-600'
@@ -278,7 +278,7 @@ export default function TicketReceiptPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 font-light md:pt-2">
+                  <div className="text-xs text-gray-500 font-light">
                     Valid for entry
                   </div>
                 </div>
