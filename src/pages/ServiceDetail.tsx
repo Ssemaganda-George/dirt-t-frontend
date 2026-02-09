@@ -10,7 +10,10 @@ import {
   Heart,
   Share2,
   ShoppingCart,
-  CheckCircle
+  CheckCircle,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
@@ -146,6 +149,8 @@ export default function ServiceDetail() {
   const [guests, setGuests] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
   const [reviews, setReviews] = useState<any[]>([])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
@@ -1160,34 +1165,6 @@ export default function ServiceDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - Desktop only */}
-      <div className="hidden md:block bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to search
-            </Link>
-            <div className="flex items-center space-x-3 md:space-x-2 ml-auto">
-              <button className="flex items-center text-gray-600 hover:text-red-600 group">
-                <Heart className="h-4 w-4 md:h-5 md:w-5" />
-                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Save</span>
-              </button>
-              <button className="flex items-center text-gray-600 hover:text-gray-900 group">
-                <Share2 className="h-4 w-4 md:h-5 md:w-5" />
-                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Share</span>
-              </button>
-              <button 
-                onClick={handleSaveToCart}
-                className="flex items-center text-gray-600 hover:text-green-600 group"
-              >
-                <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
-                <span className="hidden md:inline ml-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm">Save to Cart</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Mobile Image with Header Overlay */}
       <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
@@ -1205,7 +1182,8 @@ export default function ServiceDetail() {
                     <img
                       src={image}
                       alt={`${service.title} ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
                     />
                   </div>
                 ))
@@ -1459,8 +1437,32 @@ export default function ServiceDetail() {
                 <img
                   src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                   alt={service.title}
-                  className="w-full h-[640px] object-cover rounded-lg shadow-lg"
+                  className="w-full h-[520px] object-cover rounded-lg shadow-lg cursor-pointer"
+                  onClick={() => {
+                    const idx = service.images?.indexOf(selectedImage || service.images?.[0] || '') ?? 0
+                    setLightboxIndex(Math.max(0, idx))
+                    setLightboxOpen(true)
+                  }}
                 />
+
+                {/* Desktop Header Overlay – inside image */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+                  <Link to="/" className="flex items-center gap-2 text-white bg-black/50 hover:bg-black/70 px-3 py-2 rounded-lg backdrop-blur-sm transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="text-sm font-medium">Back</span>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <button className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <Heart className="h-4 w-4" />
+                    </button>
+                    <button className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                    <button onClick={handleSaveToCart} className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <ShoppingCart className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
 
                 {/* Event hero overlay for Activities to mimic Quicket-style layout */}
                 {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
@@ -1879,6 +1881,52 @@ export default function ServiceDetail() {
       </div>
 
       {/* Booking Modal - Removed, replaced with direct navigation */}
+
+      {/* Fullscreen Image Lightbox */}
+      {lightboxOpen && service.images && service.images.length > 0 && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
+          {/* Close */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Counter */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+            {lightboxIndex + 1} / {service.images.length}
+          </div>
+
+          {/* Prev */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + service.images.length) % service.images.length) }}
+              className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          )}
+
+          {/* Image */}
+          <img
+            src={service.images[lightboxIndex]}
+            alt={`${service.title} ${lightboxIndex + 1}`}
+            className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % service.images.length) }}
+              className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
