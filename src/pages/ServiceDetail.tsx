@@ -551,9 +551,9 @@ export default function ServiceDetail() {
             </div>
 
             {/* Hotel Policies */}
-            <div className="mt-6 bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-3">Hotel Policies</h4>
-              <div className="text-sm text-blue-800 space-y-2">
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-3">Hotel Policies</h4>
+              <div className="text-sm text-gray-600 space-y-2">
                 <p>• <span className="font-medium">Check-in:</span> {service.check_in_time || '2:00 PM'}</p>
                 <p>• <span className="font-medium">Check-out:</span> {service.check_out_time || '11:00 AM'}</p>
                 <p>• Free cancellation up to 24 hours before check-in</p>
@@ -837,12 +837,12 @@ export default function ServiceDetail() {
             )}
 
             {/* Fuel Policy */}
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <h4 className="text-sm font-medium text-amber-900 mb-1">Fuel Policy</h4>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-1">Fuel Policy</h4>
               {service.fuel_included ? (
-                <p className="text-sm text-amber-800">Fuel is included in your rental — no extra charges for fuel.</p>
+                <p className="text-sm text-gray-600">Fuel is included in your rental — no extra charges for fuel.</p>
               ) : (
-                <p className="text-sm text-amber-800">
+                <p className="text-sm text-gray-600">
                   Fuel costs are your responsibility. You'll be charged for fuel used during your rental.
                 </p>
               )}

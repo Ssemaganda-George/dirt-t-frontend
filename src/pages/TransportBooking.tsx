@@ -980,7 +980,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Service Details */}
-            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
               <div className="space-y-3 text-xs sm:text-sm">
                 <div className="flex justify-between items-start">
@@ -999,7 +999,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Trip Details */}
-            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
               <div className="space-y-3 text-xs sm:text-sm">
                 <div className="flex justify-between items-start">
@@ -1031,7 +1031,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Passenger & Payment Details */}
-            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
               <div className="space-y-3 text-xs sm:text-sm">
                 <div className="flex justify-between items-start">
@@ -1060,7 +1060,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Contact Details */}
-            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
               <div className="space-y-3 text-xs sm:text-sm">
                 <div className="flex justify-between items-start">
@@ -1079,7 +1079,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Price Summary */}
-            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
                 <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
@@ -1087,7 +1087,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 sm:gap-3 justify-center pt-2">
+            <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
                 className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
@@ -1151,7 +1151,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Trip Details */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between items-start">
@@ -1183,7 +1183,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Passenger & Payment Details */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between items-start">
@@ -1212,7 +1212,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Contact Details */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between items-start">
@@ -1231,7 +1231,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Price Summary */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
               <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
@@ -1239,7 +1239,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 sm:gap-3 justify-center pt-2">
+          <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
             <button
               onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
               className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
