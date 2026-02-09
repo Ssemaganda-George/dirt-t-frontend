@@ -49,7 +49,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 (Booking Details)
-  const [bookingId, setBookingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Currency conversion rates (simplified)
@@ -524,7 +523,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const handleCompleteBooking = async () => {
     setIsSubmitting(true)
     try {
-      const booking = await createBooking({
+      await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
         booking_date: new Date().toISOString(),
@@ -546,8 +545,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         end_date: bookingData.checkOutDate
       })
 
-      setBookingId(booking.id)
-      setCurrentStep(5) // Go to confirmation step
+      setCurrentStep(3) // Go to confirmation step
     } catch (error) {
       console.error('Error creating booking:', error)
       alert('Failed to complete booking. Please try again.')
@@ -810,126 +808,190 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
       case 3:
         return (
-          <div className="max-w-2xl mx-auto">
+          <div className="space-y-4 sm:space-y-6">
             {/* Success Header */}
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <CheckCircle className="w-10 h-10 text-green-600" />
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
-              <p className="text-gray-600 font-light text-lg">
-                Your reservation has been successfully completed. A confirmation email is on its way to you.
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Your accommodation booking has been successfully confirmed. You will receive a confirmation email shortly.
               </p>
             </div>
 
-            {/* Booking Reference */}
-            {bookingId && (
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 mb-8 text-center">
-                <p className="text-gray-600 font-light text-sm mb-1">Booking Reference Number</p>
-                <p className="text-2xl font-bold text-blue-600 font-mono">{bookingId}</p>
-              </div>
-            )}
-
-            {/* Booking Details Card */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-              {/* Hotel Header in Card */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
-                <h3 className="text-xl font-bold mb-1">{service.title}</h3>
-                <p className="text-blue-100 font-light text-sm">{service.location}</p>
-              </div>
-
-              {/* Details Grid */}
-              <div className="p-6 space-y-4">
-                {/* Check-in & Check-out */}
-                <div className="grid grid-cols-2 gap-4 pb-4 border-b">
-                  <div>
-                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Check-in</p>
-                    <p className="text-gray-900 font-medium">{bookingData.checkInDate}</p>
-                    {service.check_in_time && (
-                      <p className="text-gray-500 text-sm font-light">After {service.check_in_time}</p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Check-out</p>
-                    <p className="text-gray-900 font-medium">{bookingData.checkOutDate}</p>
-                    {service.check_out_time && (
-                      <p className="text-gray-500 text-sm font-light">Before {service.check_out_time}</p>
-                    )}
-                  </div>
+            {/* Service Details */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Service:</span>
+                  <span className="font-medium text-right">{service.title}</span>
                 </div>
-
-                {/* Room & Guests */}
-                <div className="grid grid-cols-2 gap-4 pb-4 border-b">
-                  <div>
-                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Room Type</p>
-                    <p className="text-gray-900 font-medium">{bookingData.roomType || 'Standard'}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Guests</p>
-                    <p className="text-gray-900 font-medium">{bookingData.guests} {bookingData.guests > 1 ? 'Guests' : 'Guest'}</p>
-                  </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Location:</span>
+                  <span className="font-medium text-right">{service.location}</span>
                 </div>
-
-                {/* Special Requests if any */}
-                {bookingData.specialRequests && (
-                  <div className="pb-4 border-b">
-                    <p className="text-gray-600 text-xs font-semibold uppercase mb-2">Special Requests</p>
-                    <p className="text-gray-700 font-light italic">{bookingData.specialRequests}</p>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Category:</span>
+                  <span className="font-medium text-right">{service.service_categories.name}</span>
+                </div>
+                {service.star_rating && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Star Rating:</span>
+                    <span className="font-medium text-right">{'⭐'.repeat(service.star_rating)} ({service.star_rating}/5)</span>
                   </div>
                 )}
+              </div>
+            </div>
 
-                {/* Price Breakdown */}
-                <div className="pt-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 font-light">Rate per night</span>
-                    <span className="text-gray-900 font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
+            {/* Service Provider */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
+                </div>
+                {service.vendors?.business_address && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Address:</span>
+                    <span className="font-medium text-right">{service.vendors.business_address}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 font-light">Number of nights</span>
-                    <span className="text-gray-900 font-medium">
-                      {Math.ceil((new Date(bookingData.checkOutDate).getTime() - new Date(bookingData.checkInDate).getTime()) / (1000 * 60 * 60 * 24))} nights
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t">
-                    <span className="text-gray-900 font-semibold">Total Amount Paid</span>
-                    <span className="text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Accommodation Details */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Accommodation Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Check-in Date:</span>
+                  <span className="font-medium text-right">{bookingData.checkInDate || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Check-out Date:</span>
+                  <span className="font-medium text-right">{bookingData.checkOutDate || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium text-right">
+                    {bookingData.checkInDate && bookingData.checkOutDate 
+                      ? `${Math.ceil((new Date(bookingData.checkOutDate).getTime() - new Date(bookingData.checkInDate).getTime()) / (1000 * 60 * 60 * 24))} nights`
+                      : 'N/A'
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Room Type:</span>
+                  <span className="font-medium text-right">{bookingData.roomType || 'Standard'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Number of Rooms:</span>
+                  <span className="font-medium text-right">{bookingData.rooms}</span>
                 </div>
               </div>
             </div>
 
-            {/* What's Next Section */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-              <h4 className="text-gray-900 font-semibold mb-3">What's Next?</h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start">
-                  <span className="text-blue-600 font-bold mr-3">✓</span>
-                  <span className="text-gray-700">Check your email for booking confirmation and details</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-600 font-bold mr-3">✓</span>
-                  <span className="text-gray-700">Review our check-in instructions and hotel policies</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-600 font-bold mr-3">✓</span>
-                  <span className="text-gray-700">Contact the hotel if you have any questions or special needs</span>
-                </li>
-              </ul>
+            {/* Guest Information */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Guest Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Number of Guests:</span>
+                  <span className="font-medium">{bookingData.guests}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking Information */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Special Requests:</span>
+                  <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Payment Method:</span>
+                  <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
+                </div>
+                {bookingData.paymentMethod === 'mobile' && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Provider:</span>
+                    <span className="font-medium">{bookingData.mobileProvider}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Your Contact Information */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Name:</span>
+                  <span className="font-medium text-right">{bookingData.contactName}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Summary */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <div className="space-y-3 text-xs sm:text-sm mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Rate per night:</span>
+                  <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Number of nights:</span>
+                  <span className="font-medium">
+                    {Math.ceil((new Date(bookingData.checkOutDate).getTime() - new Date(bookingData.checkInDate).getTime()) / (1000 * 60 * 60 * 24))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t">
+                  <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
+                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-              <button
-                onClick={() => navigate('/')}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg"
-              >
-                Back to Home
-              </button>
+            <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="flex-1 bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300"
+                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
-                Browse More
+                Similar Hotels
+              </button>
+              <button
+                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+              >
+                Message Provider
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+              >
+                Home
               </button>
             </div>
           </div>

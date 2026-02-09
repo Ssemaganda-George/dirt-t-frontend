@@ -750,9 +750,21 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   <span className="text-gray-600">Participants:</span>
                   <span className="font-medium">{bookingData.guests}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between border-t pt-2">
                   <span className="text-gray-600">Total:</span>
                   <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium">{service.vendors?.business_name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium break-all">{service.vendors?.business_email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium">{service.vendors?.business_phone || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -767,7 +779,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
-                Send Inquiry
+                Message Provider
               </button>
               <button
                 onClick={() => navigate('/')}
