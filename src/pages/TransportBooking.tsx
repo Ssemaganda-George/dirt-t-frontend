@@ -998,6 +998,25 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               </div>
             </div>
 
+            {/* Service Provider */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Trip Details */}
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
@@ -1098,7 +1117,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
                 className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
-                Send Inquiry
+                Message Provider
               </button>
               <button
                 onClick={() => navigate('/')}
@@ -1132,7 +1151,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
 
           {/* Service Details */}
-          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
             <div className="space-y-3 text-xs sm:text-sm">
               <div className="flex justify-between items-start">
@@ -1146,6 +1165,25 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="flex justify-between items-start">
                 <span className="text-gray-600">Category:</span>
                 <span className="font-medium text-right">{service.service_categories.name}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Service Provider */}
+          <div className="pt-4 sm:pt-6 border-t border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Provider:</span>
+                <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Email:</span>
+                <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Phone:</span>
+                <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -1250,7 +1288,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
               className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
             >
-              Send Inquiry
+              Message Provider
             </button>
             <button
               onClick={() => navigate('/')}
