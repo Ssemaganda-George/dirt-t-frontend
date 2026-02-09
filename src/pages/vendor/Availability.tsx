@@ -4,7 +4,7 @@ import { getAllBookings, getServices as getServicesDb } from '../../lib/database
 import { format } from 'date-fns'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { formatCurrencyWithConversion } from '../../lib/utils'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -142,152 +142,161 @@ export default function VendorAvailability() {
   const days = getMonthDays(month)
 
   return (
-    <div className="space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="w-6 h-6 text-gray-700" />
-          <h1 className="text-2xl font-bold text-gray-900">Availability</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Availability</h1>
+          <p className="text-sm text-gray-500 mt-1">View your booking calendar</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <label className="text-sm text-gray-600 hidden sm:block">Service</label>
-          <select
-            className="w-full sm:w-auto px-3 py-2 border rounded-md text-sm"
-            value={selectedServiceId}
-            onChange={e => setSelectedServiceId(e.target.value)}
-          >
-            <option value="all">All bookings</option>
-            {services.map(s => (
-              <option key={s.id} value={s.id}>{s.title}</option>
-            ))}
-          </select>
-        </div>
+        <select
+          className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          value={selectedServiceId}
+          onChange={e => setSelectedServiceId(e.target.value)}
+        >
+          <option value="all">All bookings</option>
+          {services.map(s => (
+            <option key={s.id} value={s.id}>{s.title}</option>
+          ))}
+        </select>
       </div>
 
-      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+      {/* Calendar */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMonth(prev => addMonths(prev, -1))}
-              className="p-2 rounded-md border hover:bg-gray-50"
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition"
               aria-label="Previous month"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-700" />
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
             </button>
-            <div className="font-medium text-sm">{format(month, 'MMMM yyyy')}</div>
+            <span className="text-sm font-semibold text-gray-900 min-w-[140px] text-center">{format(month, 'MMMM yyyy')}</span>
             <button
               onClick={() => setMonth(prev => addMonths(prev, 1))}
-              className="p-2 rounded-md border hover:bg-gray-50"
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition"
               aria-label="Next month"
             >
-              <ChevronRight className="w-5 h-5 text-gray-700" />
+              <ChevronRight className="w-4 h-4 text-gray-600" />
             </button>
           </div>
-          <div className="text-sm text-gray-600"> 
-            <span className="inline-flex items-center mr-3"><span className="w-2 h-2 rounded-full bg-green-400 inline-block mr-2"></span>Available</span>
-            <span className="inline-flex items-center"><span className="w-2 h-2 rounded-full bg-red-400 inline-block mr-2"></span>Booked</span>
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />Available</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400" />Booked</span>
           </div>
         </div>
 
-        {/* Month header */}
-        <div className="text-center">
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-              <div key={d} className="text-xs font-medium text-gray-500">{d}</div>
-            ))}
-          </div>
-
-          {/* Build tiles with week separators */}
-          {(() => {
-            const startPad = days[0].getDay()
-            const tiles: (Date | null)[] = [...Array(startPad).fill(null), ...days]
-            const weeks: (Date | null)[][] = []
-            for (let i = 0; i < tiles.length; i += 7) weeks.push(tiles.slice(i, i + 7))
-
-            return (
-              <div className="space-y-2">
-                {weeks.map((week, wi) => (
-                  <div key={wi} className={`grid grid-cols-7 gap-2 items-stretch border-b ${wi === weeks.length - 1 ? 'border-b-0' : 'border-gray-100'} pb-2`}>
-                    {week.map((cell, ci) => {
-                      if (!cell) return <div key={ci} />
-                      const key = format(cell, 'yyyy-MM-dd')
-                      const isBooked = bookedDates.has(key)
-                      // Date is blocked if any transport/accommodation booking exists on that date
-                      const isSingleBlocked = singleBookingUnavailableDates.has(key) && (
-                        selectedServiceId === 'all' || (selectedServiceCategory && singleBookingCategories.has(selectedServiceCategory))
-                      )
-
-                      return (
-                        <div key={key} className="p-1">
-                          <div
-                            onClick={() => {
-                              if (!isBooked) return
-                              const matched = bookingsForService.filter(b => {
-                                if (!b.service_date) return false
-                                try {
-                                  const start = new Date(b.service_date)
-                                  const end = b.end_date ? new Date(b.end_date) : start
-                                  if (isNaN(start.getTime())) return false
-                                  if (isNaN(end.getTime())) return format(start, 'yyyy-MM-dd') === key
-                                  const dates = getDatesBetween(start < end ? start : end, end >= start ? end : start)
-                                  return dates.some(dt => format(dt, 'yyyy-MM-dd') === key)
-                                } catch {
-                                  return false
-                                }
-                              })
-                              setSelectedDate(key)
-                              setSelectedDateBookings(matched)
-                            }}
-                            aria-disabled={isSingleBlocked}
-                            className={`rounded-md p-2 min-h-[52px] sm:min-h-[64px] flex flex-col justify-between items-center text-sm
-                              ${isSingleBlocked ? 'bg-gray-50 text-gray-400 opacity-80' : isBooked ? 'bg-red-50 text-red-700 cursor-pointer' : 'bg-white'}`}
-                          >
-                            <div className={`text-base font-medium ${isSingleBlocked ? 'line-through' : ''}`}>{format(cell, 'd')}</div>
-                            {isSingleBlocked ? (
-                              <div className="text-xs font-medium text-gray-500">Unavailable</div>
-                            ) : isBooked ? (
-                              <div className="text-xs font-medium">Booked</div>
-                            ) : null}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
+        {/* Day headers */}
+        <div className="grid grid-cols-7 gap-1.5 mb-2">
+          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+            <div key={d} className="text-xs font-medium text-gray-400 text-center py-1">{d}</div>
+          ))}
         </div>
-      </div>
-      
-      {selectedDate && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }} />
-          <div className="relative w-full sm:max-w-2xl bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-500">Bookings on</div>
-                <div className="font-bold text-lg">{format(new Date(selectedDate), 'MMMM d, yyyy')}</div>
-              </div>
-              <button className="text-gray-500" onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }}>Close</button>
+
+        {/* Calendar grid */}
+        {(() => {
+          const startPad = days[0].getDay()
+          const tiles: (Date | null)[] = [...Array(startPad).fill(null), ...days]
+          const weeks: (Date | null)[][] = []
+          for (let i = 0; i < tiles.length; i += 7) weeks.push(tiles.slice(i, i + 7))
+
+          return (
+            <div className="space-y-1.5">
+              {weeks.map((week, wi) => (
+                <div key={wi} className="grid grid-cols-7 gap-1.5">
+                  {week.map((cell, ci) => {
+                    if (!cell) return <div key={ci} />
+                    const key = format(cell, 'yyyy-MM-dd')
+                    const isBooked = bookedDates.has(key)
+                    const isSingleBlocked = singleBookingUnavailableDates.has(key) && (
+                      selectedServiceId === 'all' || (selectedServiceCategory && singleBookingCategories.has(selectedServiceCategory))
+                    )
+
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => {
+                          if (!isBooked) return
+                          const matched = bookingsForService.filter(b => {
+                            if (!b.service_date) return false
+                            try {
+                              const start = new Date(b.service_date)
+                              const end = b.end_date ? new Date(b.end_date) : start
+                              if (isNaN(start.getTime())) return false
+                              if (isNaN(end.getTime())) return format(start, 'yyyy-MM-dd') === key
+                              const dates = getDatesBetween(start < end ? start : end, end >= start ? end : start)
+                              return dates.some(dt => format(dt, 'yyyy-MM-dd') === key)
+                            } catch {
+                              return false
+                            }
+                          })
+                          setSelectedDate(key)
+                          setSelectedDateBookings(matched)
+                        }}
+                        className={`rounded-lg p-2 min-h-[52px] sm:min-h-[60px] flex flex-col items-center justify-center text-sm transition
+                          ${isSingleBlocked
+                            ? 'bg-gray-50 text-gray-300'
+                            : isBooked
+                              ? 'bg-red-50 text-red-700 cursor-pointer hover:bg-red-100'
+                              : 'hover:bg-gray-50'
+                          }`}
+                      >
+                        <span className={`text-sm font-medium ${isSingleBlocked ? 'line-through' : ''}`}>{format(cell, 'd')}</span>
+                        {isSingleBlocked ? (
+                          <span className="text-[10px] text-gray-400 mt-0.5">Blocked</span>
+                        ) : isBooked ? (
+                          <span className="text-[10px] font-medium mt-0.5">Booked</span>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
-            <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+          )
+        })()}
+      </div>
+
+      {/* Date Bookings Modal */}
+      {selectedDate && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }} />
+          <div className="relative w-full sm:max-w-lg bg-white rounded-xl shadow-xl overflow-hidden max-h-[80vh] flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500">Bookings on</p>
+                <p className="text-sm font-semibold text-gray-900">{format(new Date(selectedDate), 'MMMM d, yyyy')}</p>
+              </div>
+              <button
+                onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3 overflow-y-auto">
               {selectedDateBookings.length === 0 ? (
-                <div className="text-sm text-gray-500">No bookings found for this date.</div>
+                <p className="text-sm text-gray-500 text-center py-6">No bookings found for this date.</p>
               ) : (
                 selectedDateBookings.map(b => (
-                  <div key={b.id} className="p-3 border rounded-md">
+                  <div key={b.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50/50 transition">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
-                        <div className="font-medium text-sm truncate">{b.profiles?.full_name || b.guest_name || 'Guest'}</div>
-                        <div className="text-xs text-gray-500">{b.service?.title || b.services?.title || `Service ${b.service_id}`}</div>
+                        <p className="text-sm font-medium text-gray-900 truncate">{b.profiles?.full_name || b.guest_name || 'Guest'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{b.service?.title || b.services?.title || `Service ${b.service_id}`}</p>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{b.guests} guest{b.guests > 1 ? 's' : ''}</div>
-                        <div className="text-xs text-gray-500">{b.status}</div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-sm font-medium text-gray-900">{b.guests} guest{b.guests > 1 ? 's' : ''}</p>
+                        <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium mt-0.5 ${
+                          b.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700'
+                            : b.status === 'pending' ? 'bg-amber-50 text-amber-700'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}>{b.status}</span>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <div className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-500">
                         {b.service_date ? (
                           b.end_date ? (
                             `${format(new Date(b.service_date), 'MMM d, h:mm a')} — ${format(new Date(b.end_date), 'MMM d, h:mm a')}`
@@ -295,15 +304,13 @@ export default function VendorAvailability() {
                             format(new Date(b.service_date), 'h:mm a')
                           )
                         ) : ''}
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setSelectedBookingObj(b)}
-                          className="px-3 py-1 text-sm bg-primary-600 text-white rounded-md"
-                        >
-                          View details
-                        </button>
-                      </div>
+                      </p>
+                      <button
+                        onClick={() => setSelectedBookingObj(b)}
+                        className="text-xs font-medium text-gray-900 hover:underline"
+                      >
+                        View details
+                      </button>
                     </div>
                   </div>
                 ))
@@ -311,65 +318,108 @@ export default function VendorAvailability() {
             </div>
           </div>
         </div>
-        )}
+      )}
 
-        {/* Booking Details Dialog (opened from View details) */}
-        {selectedBookingObj && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-[80] flex items-center justify-center p-4">
-            <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-lg overflow-y-auto max-h-[90vh]">
-              <div className="px-6 py-4 border-b flex items-center justify-between">
-                <h2 className="text-lg font-medium">Booking Details</h2>
-                <button onClick={() => setSelectedBookingObj(null)} className="text-gray-500">✕</button>
-              </div>
+      {/* Booking Details Modal */}
+      {selectedBookingObj && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedBookingObj(null)} />
+          <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl overflow-y-auto max-h-[85vh]">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-sm font-semibold text-gray-900">Booking Details</h2>
+              <button onClick={() => setSelectedBookingObj(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
 
-              <div className="p-6 space-y-4">
-                <div>
-                  <h3 className="font-semibold">Booking Information</h3>
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
-                    <div><span className="font-medium">Booking ID:</span> #{selectedBookingObj.id?.slice(0,8)}</div>
-                    <div><span className="font-medium">Service:</span> {selectedBookingObj.service?.title || selectedBookingObj.services?.title || '—'}</div>
-                    <div><span className="font-medium">Booked Date:</span> {selectedBookingObj.booking_date ? format(new Date(selectedBookingObj.booking_date), 'dd MMM yyyy, HH:mm') : '—'}</div>
-                    <div>
-                      <span className="font-medium">Service Date:</span>{' '}
+            <div className="p-5 space-y-5">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Booking Information</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">ID</span>
+                    <p className="font-medium text-gray-900">#{selectedBookingObj.id?.slice(0,8)}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Service</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.service?.title || selectedBookingObj.services?.title || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Booked</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.booking_date ? format(new Date(selectedBookingObj.booking_date), 'dd MMM yyyy, HH:mm') : '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Service Date</span>
+                    <p className="font-medium text-gray-900">
                       {selectedBookingObj.service_date ? (
                         selectedBookingObj.end_date ? (
-                          `${format(new Date(selectedBookingObj.service_date), 'dd MMM yyyy, HH:mm')} — ${format(new Date(selectedBookingObj.end_date), 'dd MMM yyyy, HH:mm')}`
+                          `${format(new Date(selectedBookingObj.service_date), 'dd MMM yyyy')} — ${format(new Date(selectedBookingObj.end_date), 'dd MMM yyyy')}`
                         ) : (
                           format(new Date(selectedBookingObj.service_date), 'dd MMM yyyy, HH:mm')
                         )
                       ) : '—'}
-                    </div>
-                    <div><span className="font-medium">Guests:</span> {selectedBookingObj.guests ?? '—'}</div>
-                    <div><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBookingObj.total_amount || 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</div>
-                    <div><span className="font-medium">Status:</span> {selectedBookingObj.status || '—'}</div>
-                    <div><span className="font-medium">Payment Status:</span> {selectedBookingObj.payment_status || '—'}</div>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Guests</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.guests ?? '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Amount</span>
+                    <p className="font-medium text-gray-900">{formatCurrencyWithConversion(selectedBookingObj.total_amount || 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.status || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Payment</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.payment_status || '—'}</p>
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <h3 className="font-semibold">Customer Information</h3>
-                  <div className="mt-3 text-sm text-gray-700">
-                    <div><span className="font-medium">Customer ID:</span> #{selectedBookingObj.tourist_id ? selectedBookingObj.tourist_id.slice(0,8) : '—'}</div>
-                    <div><span className="font-medium">Name:</span> {selectedBookingObj.tourist_profile?.full_name || selectedBookingObj.guest_name || 'Not available'}</div>
+              <div className="border-t border-gray-100 pt-5">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Customer</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">ID</span>
+                    <p className="font-medium text-gray-900">#{selectedBookingObj.tourist_id ? selectedBookingObj.tourist_id.slice(0,8) : '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Name</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.tourist_profile?.full_name || selectedBookingObj.guest_name || 'Not available'}</p>
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <h3 className="font-semibold">Transport Details</h3>
-                  <div className="mt-3 text-sm text-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <div><span className="font-medium">Driver Option:</span> {selectedBookingObj.driver_option || '—'}</div>
-                    <div><span className="font-medium">Start Time:</span> {selectedBookingObj.start_time || '—'}</div>
-                    <div><span className="font-medium">End Time:</span> {selectedBookingObj.end_time || '—'}</div>
+              <div className="border-t border-gray-100 pt-5">
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Transport Details</h3>
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500">Driver</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.driver_option || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Start</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.start_time || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">End</span>
+                    <p className="font-medium text-gray-900">{selectedBookingObj.end_time || '—'}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-end">
-                  <button onClick={() => setSelectedBookingObj(null)} className="px-4 py-2 bg-gray-600 text-white rounded-md">Close</button>
-                </div>
+              <div className="flex justify-end pt-2">
+                <button onClick={() => setSelectedBookingObj(null)} className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition">
+                  Close
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
     </div>
   )
 }

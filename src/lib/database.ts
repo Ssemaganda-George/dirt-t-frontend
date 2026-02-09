@@ -847,37 +847,69 @@ export async function createService(serviceData: {
   status?: string
 }) {
   try {
-    // Use atomic function to create service
-    const result = await supabase.rpc('create_service_atomic', {
-      p_vendor_id: serviceData.vendor_id,
-      p_category_id: serviceData.category_id,
-      p_title: serviceData.title,
-      p_description: serviceData.description,
-      p_price: serviceData.price,
-      p_currency: serviceData.currency || 'UGX',
-      p_images: serviceData.images || [],
-      p_location: serviceData.location,
-      p_duration_hours: serviceData.duration_hours,
-      p_max_capacity: serviceData.max_capacity,
-      p_amenities: serviceData.amenities || [],
-      p_status: serviceData.status || 'pending'
-    });
+    // Try atomic RPC first, fall back to direct insert if RPC fails
+    let serviceId: string;
+    try {
+      const result = await supabase.rpc('create_service_atomic', {
+        p_vendor_id: serviceData.vendor_id,
+        p_category_id: serviceData.category_id,
+        p_title: serviceData.title,
+        p_description: serviceData.description,
+        p_price: serviceData.price,
+        p_currency: serviceData.currency || 'UGX',
+        p_images: serviceData.images || [],
+        p_location: serviceData.location,
+        p_duration_hours: serviceData.duration_hours,
+        p_max_capacity: serviceData.max_capacity,
+        p_amenities: serviceData.amenities || [],
+        p_status: serviceData.status || 'pending'
+      });
 
-    if (result.error) throw result.error;
+      if (result.error) throw result.error;
 
-    if (!result.data?.success) {
-      throw new Error(result.data?.error || 'Failed to create service');
+      if (!result.data?.success) {
+        throw new Error(result.data?.error || 'Failed to create service');
+      }
+
+      serviceId = result.data.service_id;
+    } catch (rpcError: any) {
+      console.warn('RPC create_service_atomic failed, falling back to direct insert:', rpcError?.code || rpcError?.message);
+
+      // Fallback: direct table insert
+      const { data: inserted, error: insertError } = await supabase
+        .from('services')
+        .insert({
+          vendor_id: serviceData.vendor_id,
+          category_id: serviceData.category_id,
+          title: serviceData.title,
+          description: serviceData.description,
+          price: serviceData.price,
+          currency: serviceData.currency || 'UGX',
+          images: serviceData.images || [],
+          location: serviceData.location || null,
+          duration_hours: serviceData.duration_hours || null,
+          max_capacity: serviceData.max_capacity || null,
+          amenities: serviceData.amenities || [],
+          status: serviceData.status || 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+      serviceId = inserted.id;
     }
 
-    const serviceId = result.data.service_id;
+    const basicFields = ['vendor_id', 'category_id', 'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours', 'max_capacity', 'amenities', 'status'];
 
     // If there are additional fields, update the service with them
-    if (Object.keys(serviceData).some(key => !['vendor_id', 'category_id', 'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours', 'max_capacity', 'amenities', 'status'].includes(key))) {
+    if (Object.keys(serviceData).some(key => !basicFields.includes(key))) {
       // Extract additional fields
       const additionalFields: any = {};
       Object.keys(serviceData).forEach(key => {
-        if (!['vendor_id', 'category_id', 'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours', 'max_capacity', 'amenities', 'status'].includes(key) && serviceData[key as keyof typeof serviceData] !== undefined) {
-          additionalFields[key] = serviceData[key as keyof typeof serviceData];
+        if (!basicFields.includes(key) && serviceData[key as keyof typeof serviceData] !== undefined) {
+          const value = serviceData[key as keyof typeof serviceData];
+          if (value === '') return; // Skip empty strings
+          additionalFields[key] = value;
         }
       });
 
@@ -1038,7 +1070,10 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   const filteredUpdates: any = {};
   Object.keys(updates).forEach(key => {
     if (validColumns.has(key) && updates[key as keyof typeof updates] !== undefined) {
-      filteredUpdates[key] = updates[key as keyof typeof updates];
+      const value = updates[key as keyof typeof updates];
+      // Skip empty strings — they cause DB errors on typed columns (timestamps, numerics, etc.)
+      if (value === '') return;
+      filteredUpdates[key] = value;
     }
   });
 
@@ -1047,17 +1082,35 @@ export async function updateService(serviceId: string, vendorId: string | undefi
 
   console.log('Valid updates:', filteredUpdates);
 
-  // Use atomic function for service updates
-  const result = await supabase.rpc('update_service_atomic', {
-    p_service_id: serviceId,
-    p_updates: filteredUpdates,
-    p_vendor_id: vendorId
-  });
+  // Try atomic RPC first, fall back to direct update if RPC fails (e.g. PGRST203 overload issue)
+  try {
+    const result = await supabase.rpc('update_service_atomic', {
+      p_service_id: serviceId,
+      p_updates: filteredUpdates,
+      p_vendor_id: vendorId
+    });
 
-  if (result.error) throw result.error;
+    if (result.error) throw result.error;
 
-  if (!result.data?.success) {
-    throw new Error(result.data?.error || 'Failed to update service');
+    if (!result.data?.success) {
+      throw new Error(result.data?.error || 'Failed to update service');
+    }
+  } catch (rpcError: any) {
+    console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message);
+    
+    // Fallback: direct table update
+    const updateQuery = supabase
+      .from('services')
+      .update(filteredUpdates)
+      .eq('id', serviceId);
+
+    // If vendorId is provided, also filter by it for authorization
+    if (vendorId) {
+      updateQuery.eq('vendor_id', vendorId);
+    }
+
+    const { error: directError } = await updateQuery;
+    if (directError) throw directError;
   }
 
   // Fetch the updated service with relations

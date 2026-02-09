@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
-import { User, Mail, Phone, MapPin, Save, X, Edit, Building, FileText } from 'lucide-react'
 
 export default function Profile() {
   const { profile, user } = useAuth()
@@ -163,315 +162,243 @@ export default function Profile() {
 
   if (!profile || !vendorData) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="h-7 w-40 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+          <div className="flex items-center gap-5">
+            <div className="h-20 w-20 rounded-full bg-gray-200 animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your personal and business information</p>
+        </div>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
           >
-            <Edit className="h-4 w-4 mr-2" />
             Edit Profile
           </button>
         )}
       </div>
 
       {message && (
-        <div className={`p-4 rounded-md ${message.includes('successfully') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+        <div className={`px-4 py-3 rounded-xl text-sm font-medium ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
           {message}
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center mb-6">
-            <div className="h-24 w-24 rounded-full bg-primary-600 flex items-center justify-center text-white text-3xl font-bold mr-6 shadow-lg">
-              {profile.full_name?.charAt(0).toUpperCase() || 'V'}
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{profile.full_name || 'Vendor'}</h2>
-              <p className="text-gray-600">{profile.email}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Vendor • Member since {new Date(profile.created_at || Date.now()).toLocaleDateString()}
-              </p>
-            </div>
+      {/* Profile Header */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-5">
+          <div className="h-20 w-20 rounded-full bg-gray-900 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
+            {profile.full_name?.charAt(0).toUpperCase() || 'V'}
           </div>
-
-          {/* Personal Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h3>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {/* Full Name */}
-              <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    name="full_name"
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email Address
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter your email"
-                  />
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    name="phone"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter your phone number"
-                  />
-                </div>
-              </div>
-
-              {/* Role (Read-only) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Role
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    value="Vendor"
-                    disabled
-                    className="bg-gray-50 text-gray-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{profile.full_name || 'Vendor'}</h2>
+            <p className="text-sm text-gray-500">{profile.email}</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Vendor · Member since {new Date(profile.created_at || Date.now()).toLocaleDateString()}
+            </p>
           </div>
-
-          {/* Business Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Business Information</h3>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {/* Business Name */}
-              <div>
-                <label htmlFor="business_name" className="block text-sm font-medium text-gray-700">
-                  Business Name
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Building className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    name="business_name"
-                    id="business_name"
-                    value={formData.business_name}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter your business name"
-                  />
-                </div>
-              </div>
-
-              {/* Business Email */}
-              <div>
-                <label htmlFor="business_email" className="block text-sm font-medium text-gray-700">
-                  Business Email
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    name="business_email"
-                    id="business_email"
-                    value={formData.business_email}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter business email"
-                  />
-                </div>
-              </div>
-
-              {/* Business Phone */}
-              <div>
-                <label htmlFor="business_phone" className="block text-sm font-medium text-gray-700">
-                  Business Phone
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    name="business_phone"
-                    id="business_phone"
-                    value={formData.business_phone}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Enter business phone"
-                  />
-                </div>
-              </div>
-
-              {/* Business Website */}
-              <div>
-                <label htmlFor="business_website" className="block text-sm font-medium text-gray-700">
-                  Business Website
-                </label>
-                <div className="mt-1 relative rounded-md shadow-sm">
-                  <input
-                    type="url"
-                    name="business_website"
-                    id="business_website"
-                    value={formData.business_website}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="focus:ring-primary-500 focus:border-primary-500 block w-full px-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="https://yourwebsite.com"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Business Address */}
-            <div className="mt-6">
-              <label htmlFor="business_address" className="block text-sm font-medium text-gray-700">
-                Business Address
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  name="business_address"
-                  id="business_address"
-                  value={formData.business_address}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Enter your business address"
-                />
-              </div>
-            </div>
-
-            {/* Business Description */}
-            <div className="mt-6">
-              <label htmlFor="business_description" className="block text-sm font-medium text-gray-700">
-                Business Description
-              </label>
-              <div className="mt-1">
-                <textarea
-                  name="business_description"
-                  id="business_description"
-                  rows={4}
-                  value={formData.business_description}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full px-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="Describe your business..."
-                />
-              </div>
-            </div>
-
-            {/* Operating Hours */}
-            <div className="mt-6">
-              <label htmlFor="operating_hours" className="block text-sm font-medium text-gray-700">
-                Operating Hours
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  name="operating_hours"
-                  id="operating_hours"
-                  value={formData.operating_hours}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-md disabled:bg-gray-50 disabled:text-gray-500"
-                  placeholder="e.g., Mon-Fri 9AM-6PM, Sat-Sun 10AM-4PM"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          {isEditing && (
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={handleCancel}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Personal Information */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Personal Information</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input
+              type="text"
+              name="full_name"
+              id="full_name"
+              value={formData.full_name}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter your full name"
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              id="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              name="phone"
+              id="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter your phone number"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <input
+              type="text"
+              value="Vendor"
+              disabled
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Business Information */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Business Information</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+            <input
+              type="text"
+              name="business_name"
+              id="business_name"
+              value={formData.business_name}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter your business name"
+            />
+          </div>
+          <div>
+            <label htmlFor="business_email" className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
+            <input
+              type="email"
+              name="business_email"
+              id="business_email"
+              value={formData.business_email}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter business email"
+            />
+          </div>
+          <div>
+            <label htmlFor="business_phone" className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label>
+            <input
+              type="tel"
+              name="business_phone"
+              id="business_phone"
+              value={formData.business_phone}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Enter business phone"
+            />
+          </div>
+          <div>
+            <label htmlFor="business_website" className="block text-sm font-medium text-gray-700 mb-1">Business Website</label>
+            <input
+              type="url"
+              name="business_website"
+              id="business_website"
+              value={formData.business_website}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="https://yourwebsite.com"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label htmlFor="business_address" className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
+          <input
+            type="text"
+            name="business_address"
+            id="business_address"
+            value={formData.business_address}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            placeholder="Enter your business address"
+          />
+        </div>
+
+        <div className="mt-4">
+          <label htmlFor="business_description" className="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
+          <textarea
+            name="business_description"
+            id="business_description"
+            rows={4}
+            value={formData.business_description}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 resize-none"
+            placeholder="Describe your business..."
+          />
+        </div>
+
+        <div className="mt-4">
+          <label htmlFor="operating_hours" className="block text-sm font-medium text-gray-700 mb-1">Operating Hours</label>
+          <input
+            type="text"
+            name="operating_hours"
+            id="operating_hours"
+            value={formData.operating_hours}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            placeholder="e.g., Mon-Fri 9AM-6PM, Sat-Sun 10AM-4PM"
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      {isEditing && (
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={handleCancel}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

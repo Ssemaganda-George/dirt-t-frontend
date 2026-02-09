@@ -4,7 +4,6 @@ import { Transaction } from '../../types'
 import { getTransactions, requestWithdrawal, getWalletStats } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { StatusBadge } from '../../components/StatusBadge'
 import { supabase } from '../../lib/supabaseClient'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, format } from 'date-fns'
 
@@ -282,97 +281,54 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-6 md:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="mb-4 sm:mb-0">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Transactions</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Manage your earnings and payment history
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => setShowWithdraw(true)}
-                disabled={!walletStats || walletStats.currentBalance <= 0}
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px]"
-              >
-                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                </svg>
-                Withdraw Funds
-              </button>
-            </div>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Transactions</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your earnings and payment history</p>
+        </div>
+        <button
+          onClick={() => setShowWithdraw(true)}
+          disabled={!walletStats || walletStats.currentBalance <= 0}
+          className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          Withdraw Funds
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 inline-flex gap-1">
+        {(['overview', 'transactions', 'recommendations'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              activeTab === tab ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            {tab === 'overview' ? 'Overview' : tab === 'transactions' ? 'Transactions' : 'Insights'}
+          </button>
+        ))}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-red-600">{error}</p>
+            <button onClick={refresh} className="text-xs font-medium text-gray-600 hover:text-gray-900">Retry</button>
           </div>
         </div>
+      )}
 
-        {/* Tab Navigation */}
-        <div className="mb-6 md:mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6 md:space-x-8 overflow-x-auto">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === 'overview'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('transactions')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === 'transactions'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Transactions
-              </button>
-              <button
-                onClick={() => setActiveTab('recommendations')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === 'recommendations'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Insights
-              </button>
-            </nav>
-          </div>
+      {/* Loading */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p className="mt-3 text-sm text-gray-500">Loading wallet data...</p>
         </div>
-
-        {/* Error State */}
-        {error && (
-          <div className="mb-8 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <svg className="h-5 w-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <div className="text-red-800 text-sm">{error}</div>
-              </div>
-              <button
-                onClick={refresh}
-                className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p className="mt-4 text-sm text-gray-500">Loading wallet data...</p>
-          </div>
-        ) : (
+      ) : (
           <div className="space-y-8">
             {/* Overview Tab Content */}
             {activeTab === 'overview' && (
@@ -689,7 +645,12 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                     <span className="text-sm font-medium text-gray-900 capitalize truncate">
                                       {transaction.transaction_type.replace('_', ' ')}
                                     </span>
-                                    <StatusBadge status={transaction.status} variant="small" />
+                                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                                      transaction.status === 'completed' ? 'bg-emerald-50 text-emerald-700'
+                                        : transaction.status === 'pending' ? 'bg-amber-50 text-amber-700'
+                                          : transaction.status === 'approved' ? 'bg-blue-50 text-blue-700'
+                                            : 'bg-red-50 text-red-700'
+                                    }`}>{transaction.status}</span>
                                   </div>
                                   <div className="text-xs text-gray-500 mb-1 truncate">
                                     {transaction.reference}
@@ -765,7 +726,12 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                   {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <StatusBadge status={transaction.status} variant="small" />
+                                  <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                                    transaction.status === 'completed' ? 'bg-emerald-50 text-emerald-700'
+                                      : transaction.status === 'pending' ? 'bg-amber-50 text-amber-700'
+                                        : transaction.status === 'approved' ? 'bg-blue-50 text-blue-700'
+                                          : 'bg-red-50 text-red-700'
+                                  }`}>{transaction.status}</span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {formatDateTime(transaction.created_at)}
@@ -969,86 +935,51 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
         {/* Withdrawal Modal */}
         {showWithdraw && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-              <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={() => setShowWithdraw(false)}></div>
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-900">Request Withdrawal</h3>
+                <button onClick={() => setShowWithdraw(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
               </div>
-
-              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <div className="sm:flex sm:items-start">
-                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
-                      <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                      </svg>
-                    </div>
-                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">
-                        Request Withdrawal
-                      </h3>
-                      <div className="mt-4">
-                        <div className="mb-4 p-4 bg-indigo-50 rounded-md">
-                          <p className="text-sm text-indigo-800">
-                            <span className="font-medium">Available Balance:</span>{' '}
-                            <span className="font-semibold">{formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
-                          </p>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                              Withdrawal Amount
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                              <input
-                                type="number"
-                                name="amount"
-                                id="amount"
-                                min={1}
-                                max={walletStats?.currentBalance || 0}
-                                value={amount}
-                                onChange={(e) => setAmount(Number(e.target.value))}
-                                className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md"
-                                placeholder="0.00"
-                              />
-                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-sm">{currency}</span>
-                              </div>
-                            </div>
-                            {amount > (walletStats?.currentBalance || 0) && (
-                              <p className="mt-2 text-sm text-red-600">
-                                Amount exceeds available balance
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="px-6 py-4 space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-sm text-gray-600">
+                    Available: <span className="font-semibold text-gray-900">{formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
+                  </p>
                 </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={1}
+                      max={walletStats?.currentBalance || 0}
+                      value={amount}
+                      onChange={(e) => setAmount(Number(e.target.value))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                      placeholder="0.00"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">{currency}</span>
+                  </div>
+                  {amount > (walletStats?.currentBalance || 0) && (
+                    <p className="mt-1 text-xs text-red-600">Exceeds available balance</p>
+                  )}
+                </div>
+                <div className="flex gap-3 pt-2">
                   <button
-                    type="button"
+                    onClick={() => setShowWithdraw(false)}
+                    className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                  >Cancel</button>
+                  <button
                     onClick={handleWithdraw}
                     disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0)}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Submitting...' : 'Request Withdrawal'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowWithdraw(false)}
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  >
-                    Cancel
-                  </button>
+                    className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >{loading ? 'Submitting...' : 'Withdraw'}</button>
                 </div>
               </div>
             </div>
           </div>
         )}
-      </div>
     </div>
   )
 }

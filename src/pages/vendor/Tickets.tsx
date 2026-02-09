@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
 import { formatCurrencyWithConversion, formatDateTime, convertCurrency } from '../../lib/utils'
-import { StatusBadge } from '../../components/StatusBadge'
-import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { Ticket, Search, RotateCcw } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePreferences } from '../../contexts/PreferencesContext'
 
@@ -285,139 +283,78 @@ export default function VendorTickets() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
+      <div className="max-w-6xl mx-auto">
+        <div className="animate-pulse space-y-6">
+          <div className="h-7 bg-gray-200 rounded w-36"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => <div key={i} className="bg-white rounded-xl border border-gray-200 h-20"></div>)}
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 h-64"></div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">Error: {error}</p>
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Tickets</h1>
+        <p className="text-sm text-gray-500 mt-1">Track and manage your event tickets</p>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vendor/events')}>
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.totalEvents}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalEvents}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div onClick={() => navigate('/vendor/events')} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm cursor-pointer transition-all">
+          <p className="text-xs font-medium text-gray-500">Events</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{stats.totalEvents}</p>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.total}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.total}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-medium text-gray-500">Total</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{stats.total}</p>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.issued}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.issued}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-medium text-gray-500">Active</p>
+          <p className="text-2xl font-semibold text-emerald-600 mt-1">{stats.issued}</p>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.used}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Used Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.used}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-medium text-gray-500">Used</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{stats.used}</p>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.cancelled}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Cancelled</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.cancelled}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-medium text-gray-500">Cancelled</p>
+          <p className="text-2xl font-semibold text-red-600 mt-1">{stats.cancelled}</p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Search tickets by code, event, buyer name, email, or ticket type..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-              />
-            </div>
+      {/* Search & Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by code, event, buyer name, email, or type..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
           </div>
           <div className="flex gap-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             >
               <option value="all">All Status</option>
               <option value="issued">Active</option>
@@ -426,123 +363,91 @@ export default function VendorTickets() {
             </select>
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              title="Clear all filters"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Clear
-            </button>
+              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50"
+            >Clear</button>
           </div>
         </div>
       </div>
 
       {/* Tickets Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Tickets</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket Code</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <select
-                    value={selectedEventFilter}
-                    onChange={(e) => setSelectedEventFilter(e.target.value)}
-                    className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Code</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                  <select value={selectedEventFilter} onChange={(e) => setSelectedEventFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">All Events</option>
                     {Array.from(new Set(tickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
                       <option key={eventName} value={eventName}>{eventName}</option>
                     ))}
                   </select>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <select
-                    value={selectedTypeFilter}
-                    onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                    className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                  <select value={selectedTypeFilter} onChange={(e) => setSelectedTypeFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">All Types</option>
                     {Array.from(new Set(tickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
                       <option key={typeName} value={typeName}>{typeName}</option>
                     ))}
                   </select>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issued</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <select
-                    value={selectedStatusFilter}
-                    onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                    className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Status</option>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Issued</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Price</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                  <select value={selectedStatusFilter} onChange={(e) => setSelectedStatusFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
+                    <option value="all">Status</option>
                     <option value="issued">Active</option>
                     <option value="used">Used</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <select
-                    value={selectedAttendanceFilter}
-                    onChange={(e) => setSelectedAttendanceFilter(e.target.value)}
-                    className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Attendance</option>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                  <select value={selectedAttendanceFilter} onChange={(e) => setSelectedAttendanceFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
+                    <option value="all">Attendance</option>
                     <option value="attended">Attended</option>
                     <option value="not-attended">Not Attended</option>
                   </select>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {tableFilteredTickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.ticket_types?.title || 'Ticket'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(ticket.issued_at)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <StatusBadge status={ticket.status} variant="small" />
+                <tr key={ticket.id} className="group border-b border-gray-50 hover:bg-gray-50/50">
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{ticket.code}</td>
+                  <td className="px-5 py-3 text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{ticket.ticket_types?.title || 'Ticket'}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(ticket.issued_at)}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      ticket.status === 'issued' ? 'bg-emerald-50 text-emerald-700'
+                        : ticket.status === 'used' ? 'bg-gray-100 text-gray-600'
+                          : 'bg-red-50 text-red-700'
+                    }`}>{ticket.status}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-5 py-3 text-sm text-gray-500">
                     {ticket.status === 'used' ? (
-                      <div className="flex flex-col">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-1">
-                          ✓ Attended
-                        </span>
-                        {ticket.used_at && (
-                          <span className="text-xs text-gray-500">
-                            {formatDateTime(ticket.used_at)}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-xs text-emerald-600 font-medium">✓ Attended</span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Not Attended
-                      </span>
+                      <span className="text-xs text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  <td className="px-5 py-3 text-right">
                     <button
                       onClick={() => downloadTicket(ticket)}
-                      className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
-                    >
-                      View Ticket
-                    </button>
+                      className="text-xs font-medium text-gray-600 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >View</button>
                   </td>
                 </tr>
               ))}
               {tableFilteredTickets.length > 0 && (
-                <tr className="bg-gray-50 border-t-2 border-gray-200">
-                  <td colSpan={4} className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
+                <tr className="border-t border-gray-200 bg-gray-50/50">
+                  <td colSpan={4} className="px-5 py-3 text-sm font-medium text-gray-500 text-right">
                     Total ({tableFilteredTickets.length} ticket{tableFilteredTickets.length !== 1 ? 's' : ''}):
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">
                     {(() => {
                       const total = tableFilteredTickets.reduce((sum, ticket) => {
                         const price = ticket.ticket_types?.price || 0;
@@ -552,17 +457,40 @@ export default function VendorTickets() {
                       return formatCurrencyWithConversion(total, selectedCurrency, selectedCurrency);
                     })()}
                   </td>
-                  <td colSpan={3} className="px-6 py-4"></td>
+                  <td colSpan={3}></td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className="block md:hidden divide-y divide-gray-100">
+          {tableFilteredTickets.map((ticket) => (
+            <div key={ticket.id} className="p-4">
+              <div className="flex justify-between items-start gap-2 mb-1">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{ticket.services?.title || 'Event'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{ticket.code} · {ticket.ticket_types?.title || 'Ticket'}</p>
+                </div>
+                <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium flex-shrink-0 ${
+                  ticket.status === 'issued' ? 'bg-emerald-50 text-emerald-700'
+                    : ticket.status === 'used' ? 'bg-gray-100 text-gray-600'
+                      : 'bg-red-50 text-red-700'
+                }`}>{ticket.status}</span>
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</p>
+                <button onClick={() => downloadTicket(ticket)} className="text-xs font-medium text-gray-600 hover:text-gray-900">View</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {tableFilteredTickets.length === 0 && (
-          <div className="text-center py-8">
-            <Ticket className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No tickets found</h3>
-            <p className="mt-1 text-sm text-gray-500">No tickets match your current filters.</p>
+          <div className="text-center py-12">
+            <p className="text-sm font-medium text-gray-900">No tickets found</p>
+            <p className="text-xs text-gray-500 mt-1">No tickets match your current filters</p>
           </div>
         )}
       </div>

@@ -6,11 +6,9 @@ import { getServices as getServicesDb } from '../../lib/database'
 import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { StatusBadge } from '../../components/StatusBadge'
-import { Trash2, Calendar } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
-import SearchBar from '../../components/SearchBar'
 
 export default function VendorBookings() {
   const { profile, vendor } = useAuth()
@@ -19,7 +17,6 @@ export default function VendorBookings() {
   const { state: cartState } = useCart()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState<'bookings'>('bookings')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -150,311 +147,239 @@ export default function VendorBookings() {
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Bookings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and track your customer bookings</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/vendor/availability')}
-            aria-label="Manage availability"
-            className="inline-flex items-center gap-2 px-2 py-2 sm:px-3 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-full hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <Calendar className="w-5 h-5 text-gray-700" />
-            <span className="hidden sm:inline">Manage availability</span>
+            Availability
           </button>
-
-          <div className="flex items-center text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live updates
+          <div className="flex items-center text-xs text-emerald-600">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></div>
+            Live
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'bookings'
-                ? 'border-[#61B82C] text-[#61B82C]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Calendar className="inline-block w-4 h-4 mr-2" />
-            Bookings ({searchQuery.trim() ? filteredBookings.length : bookings.length})
-          </button>
-        </nav>
+      {/* Search & Filters Card */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="p-4 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by service, customer, status, or booking ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            />
+          </div>
+          {/* Filter Row */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select
+              value={serviceFilter}
+              onChange={e => setServiceFilter(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              <option value="all">All Services</option>
+              {services.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {activeTab === 'bookings' && (
-        <>
-          {/* Search Bar */}
-          <SearchBar
-            placeholder="Search bookings and tickets by service, customer, status, booking ID, or ticket ID/code..."
-            onSearch={setSearchQuery}
-            initialValue={searchQuery}
-          />
-
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-2">
-            <div className="flex-1 min-w-0">
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-0">
-              <select
-                value={serviceFilter}
-                onChange={e => setServiceFilter(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="all">All Services</option>
-                {services.map(s => (
-                  <option key={s.id} value={s.id}>{s.title}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-  <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
+      {/* Bookings Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Mobile Card View */}
-  <div className="block md:hidden">
+        <div className="block md:hidden divide-y divide-gray-100">
           {filteredBookings.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-gray-500">
-              No bookings yet.
+            <div className="px-6 py-12 text-center">
+              <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+              <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredBookings.map(b => (
-                <div key={b.id} className="p-4 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-xl shadow-sm mb-3 border border-gray-100 hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-3 gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-primary-700 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatDateTime(b.booking_date)} • <span className="font-medium text-gray-700">{b.guests} guests</span>
-                      </p>
-                    </div>
-                    <div className="text-right flex flex-col items-end">
-                      <div className="text-lg font-bold text-primary-900">
-                        {formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
-                      </div>
-                      <div className="mt-1">
-                        <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
-                      </div>
-                    </div>
+            filteredBookings.map(b => (
+              <div key={b.id} className="p-4">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {formatDateTime(b.booking_date)} · {b.guests} guest{b.guests > 1 ? 's' : ''}
+                    </p>
                   </div>
-
-                  {/* Mobile Action Buttons */}
-                  <div className="flex flex-col gap-2 mt-2">
-                    <select
-                      value={b.status}
-                      onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="completed">Completed</option>
-                    </select>
-
-                    {(b.status === 'pending' || b.status === 'confirmed') && (
-                      <div className="flex gap-2">
-                        {b.status === 'pending' && (
-                          <>
-                            <button
-                              className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                              onClick={() => handleStatusChange(b.id, 'confirmed')}
-                            >
-                              Accept
-                            </button>
-                            <button
-                              className="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                              onClick={() => openRejectionModal(b)}
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {b.status === 'confirmed' && b.payment_status === 'paid' && (
-                          <button
-                            className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
-                            onClick={() => handleStatusChange(b.id, 'completed')}
-                          >
-                            Mark Complete
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setSelectedBooking(b)
-                        setShowBookingDetails(true)
-                      }}
-                      className="w-full px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm transition-all"
-                    >
-                      View Details
-                    </button>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
+                    </p>
+                    <span className={`inline-flex mt-1 px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : getVendorDisplayStatus(b.status, b.payment_status) === 'pending'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-red-50 text-red-700'
+                    }`}>
+                      {getVendorDisplayStatus(b.status, b.payment_status)}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col gap-2 mt-3">
+                  {b.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800"
+                        onClick={() => handleStatusChange(b.id, 'confirmed')}
+                      >Accept</button>
+                      <button
+                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50"
+                        onClick={() => openRejectionModal(b)}
+                      >Reject</button>
+                    </div>
+                  )}
+                  {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                    <button
+                      className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800"
+                      onClick={() => handleStatusChange(b.id, 'completed')}
+                    >Mark Complete</button>
+                  )}
+                  <button
+                    onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
+                    className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                  >View Details</button>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booked</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBookings.map(b => (
-                  <tr 
-                    key={b.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedBooking(b)
-                      setShowBookingDetails(true)
-                    }}
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
-                    <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex items-center space-x-3">
-                        <select
-                          value={b.status}
-                          onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                          className="border rounded-md px-2 py-1"
-                          title="Update booking status"
-                          disabled={b.status === 'confirmed'}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                        {/* Accept/Reject buttons for pending bookings */}
-                        {b.status === 'pending' && (
-                          <>
-                            <button
-                              className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-                              title="Accept booking"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleStatusChange(b.id, 'confirmed');
-                              }}
-                            >Accept</button>
-                            <button
-                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                              title="Reject booking"
-                              onClick={e => {
-                                e.stopPropagation();
-                                openRejectionModal(b);
-                              }}
-                            >Reject</button>
-                          </>
-                        )}
-                        {/* Mark complete button for confirmed paid bookings */}
-                        {b.status === 'confirmed' && b.payment_status === 'paid' && (
-                          <button
-                            className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
-                            title="Mark booking as completed"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleStatusChange(b.id, 'completed');
-                            }}
-                          >Complete</button>
-                        )}
-                        {/* Delete booking functionality not implemented for Supabase yet */}
-                        <button
-                          className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
-                          title={b.payment_status !== 'paid' ? 'You can only delete after payment is marked as Paid by admin.' : 'Delete booking (not implemented)'}
-                          disabled
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredBookings.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Saved Cart Items */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Booked</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Guests</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {cartState.items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div>
-                      <div className="font-medium">{item.service.title}</div>
-                      <div className="text-gray-500">{item.service.vendors.business_name}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 capitalize">{item.category}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatDateTime(item.savedAt)}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      {item.status}
+            <tbody>
+              {filteredBookings.map(b => (
+                <tr
+                  key={b.id}
+                  className="group border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer"
+                  onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
+                >
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{b.guests}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : getVendorDisplayStatus(b.status, b.payment_status) === 'pending'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-red-50 text-red-700'
+                    }`}>
+                      {getVendorDisplayStatus(b.status, b.payment_status)}
                     </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {b.status === 'pending' && (
+                        <>
+                          <button
+                            className="text-xs font-medium text-gray-900 hover:underline"
+                            onClick={e => { e.stopPropagation(); handleStatusChange(b.id, 'confirmed') }}
+                          >Accept</button>
+                          <button
+                            className="text-xs font-medium text-red-600 hover:underline"
+                            onClick={e => { e.stopPropagation(); openRejectionModal(b) }}
+                          >Reject</button>
+                        </>
+                      )}
+                      {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                        <button
+                          className="text-xs font-medium text-gray-900 hover:underline"
+                          onClick={e => { e.stopPropagation(); handleStatusChange(b.id, 'completed') }}
+                        >Complete</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
-              {cartState.items.length === 0 && (
+              {filteredBookings.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">No saved cart items.</td>
+                  <td colSpan={6} className="px-5 py-12 text-center">
+                    <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+                    <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
-        </>
+
+      {/* Saved Cart Items */}
+      {cartState.items.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Category</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Saved</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cartState.items.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-5 py-3">
+                      <p className="text-sm font-medium text-gray-900">{item.service.title}</p>
+                      <p className="text-xs text-gray-500">{item.service.vendors.business_name}</p>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-500 capitalize">{item.category}</td>
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(item.savedAt)}</td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{item.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {showForm && (
@@ -474,16 +399,14 @@ export default function VendorBookings() {
 
       {/* Booking Details Modal */}
       {showBookingDetails && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Booking Details</h3>
-              <button 
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
+              <h3 className="text-base font-semibold text-gray-900">Booking Details</h3>
+              <button
                 onClick={() => setShowBookingDetails(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >✕</button>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -496,8 +419,12 @@ export default function VendorBookings() {
                     <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
                     <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
                     <p><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBooking.total_amount, selectedBooking.currency, selectedCurrency, selectedLanguage)}</p>
-                    <p><span className="font-medium">Status:</span> <StatusBadge status={getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)} variant="small" /></p>
-                    <p><span className="font-medium">Payment Status:</span> <StatusBadge status={selectedBooking.payment_status} variant="small" /></p>
+                    <p><span className="font-medium">Status:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'confirmed' || getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                    }`}>{getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)}</span></p>
+                    <p><span className="font-medium">Payment:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      selectedBooking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}>{selectedBooking.payment_status}</span></p>
                   </div>
                 </div>
                 <div>
@@ -553,10 +480,10 @@ export default function VendorBookings() {
                 </div>
               )}
               
-              <div className="border-t pt-4 flex justify-end">
+              <div className="border-t border-gray-100 pt-4 flex justify-end">
                 <button 
                   onClick={() => setShowBookingDetails(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                  className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
                 >
                   Close
                 </button>
@@ -568,55 +495,37 @@ export default function VendorBookings() {
 
       {/* Rejection Reason Modal */}
       {showRejectionModal && bookingToReject && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-md w-full mx-4">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Reject Booking</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-base font-semibold text-gray-900">Reject Booking</h3>
               <button 
-                onClick={() => {
-                  setShowRejectionModal(false)
-                  setBookingToReject(null)
-                  setRejectionReason('')
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+                onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >✕</button>
             </div>
             <div className="px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-500">Provide a reason for rejecting this booking. This will be sent to the customer.</p>
               <div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Please provide a reason for rejecting this booking. This will be sent to the customer.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Reason</label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="e.g., Not available on that date, Fully booked, Service issue, etc."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  placeholder="e.g., Not available on that date, Fully booked..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                   rows={4}
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => {
-                    setShowRejectionModal(false)
-                    setBookingToReject(null)
-                    setRejectionReason('')
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
+                  onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
+                  className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                >Cancel</button>
                 <button
                   onClick={() => handleRejectBooking(bookingToReject.id, rejectionReason)}
                   disabled={!rejectionReason.trim()}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Reject Booking
-                </button>
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >Reject</button>
               </div>
             </div>
           </div>
@@ -646,27 +555,27 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
   }, [form.service_id])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h3 className="text-lg font-medium text-gray-900">Add Booking</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h3 className="text-base font-semibold text-gray-900">Add Booking</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
         <form className="px-6 py-4 space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(form) }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service</label>
-            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="mt-1 w-full border rounded-md px-3 py-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Service</label>
+            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
               {services.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Guests</label>
-              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Guests</label>
+              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="mt-1 w-full border rounded-md px-3 py-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
@@ -675,13 +584,13 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Total Amount</label>
-            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="mt-1 w-full border rounded-md px-3 py-2" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Total Amount</label>
+            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
             <p className="text-xs text-gray-500 mt-1">Currency: {form.currency}</p>
           </div>
-          <div className="flex justify-end space-x-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border bg-white">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white">Create booking</button>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">Create booking</button>
           </div>
         </form>
       </div>

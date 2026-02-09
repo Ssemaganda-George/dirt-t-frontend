@@ -4,9 +4,7 @@ import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { StatusBadge } from '../../components/StatusBadge'
-import SearchBar from '../../components/SearchBar'
-import { Plus, Pencil, Trash2, X } from 'lucide-react'
+import { Plus, X, Search } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
 import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
@@ -457,60 +455,63 @@ export default function VendorServices() {
   const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending')
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
-          {pendingDeleteRequests.length > 0 && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-              {pendingDeleteRequests.length} Pending Delete Request{pendingDeleteRequests.length !== 1 ? 's' : ''}
-            </span>
-          )}
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Services</h1>
+          <p className="text-sm text-gray-500 mt-1">{services.length} total{pendingDeleteRequests.length > 0 ? ` · ${pendingDeleteRequests.length} pending deletion` : ''}</p>
         </div>
-        <button onClick={() => { setEditing(null); setShowForm(true) }} className="inline-flex items-center px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">
-          <Plus className="h-4 w-4 mr-2" /> Add Service
+        <button
+          onClick={() => { setEditing(null); setShowForm(true) }}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          New Service
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <SearchBar
-          placeholder="Search services by title, description, or category..."
-          onSearch={setSearchQuery}
-          initialValue={searchQuery}
-          className="max-w-md"
-        />
-      </div>
-
-      {/* Category Tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto" aria-label="Tabs">
+      {/* Search & Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 mb-6">
+        <div className="p-4 border-b border-gray-100">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search services..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent placeholder:text-gray-400"
+            />
+          </div>
+        </div>
+        <div className="px-4">
+          <nav className="flex gap-1 overflow-x-auto py-2" aria-label="Category tabs">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                 selectedCategory === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              All Services ({services.length})
+              All ({services.length})
             </button>
             {categories
               .filter(category => services.filter(service => service.category_id === category.id).length > 0)
               .map((category) => {
-                const categoryServices = services.filter(service => service.category_id === category.id)
+                const count = services.filter(service => service.category_id === category.id).length
                 return (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                    className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                       selectedCategory === category.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    {category.name} ({categoryServices.length})
+                    {category.name} ({count})
                   </button>
                 )
               })}
@@ -518,70 +519,59 @@ export default function VendorServices() {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      {/* Services List */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Mobile Card View */}
         <div className="block md:hidden">
           {loading ? (
-            <div className="px-6 py-10 text-center text-gray-500">
-              Loading services...
-            </div>
+            <div className="px-6 py-16 text-center text-sm text-gray-500">Loading services...</div>
           ) : error ? (
-            <div className="px-6 py-10 text-center text-red-500">
-              Error: {error}
-            </div>
+            <div className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</div>
           ) : filteredServices.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-gray-500">
-              {selectedCategory === 'all' 
-                ? 'No services yet. Click Add Service to create one.' 
-                : `No services in this category. Click Add Service to create one.`
-              }
+            <div className="px-6 py-16 text-center">
+              <p className="text-sm text-gray-500">No services found.</p>
+              <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-3 text-sm font-medium text-gray-900 hover:underline">Create your first service →</button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-100">
               {filteredServices.map(s => (
-                <div key={s.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">{s.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{s.description}</p>
+                <div key={s.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{s.title}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{s.description}</p>
                     </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <StatusBadge status={s.status} variant="small" />
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {s.status === 'approved' ? 'Available' : 'Pending'}
-                      </span>
-                    </div>
+                    <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      s.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : s.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
+                    </span>
                   </div>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {s.service_categories?.name || s.category_id}
-                      </span>
-                      <span className="text-lg font-bold text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
-                    </div>
+
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-xs text-gray-500">{s.service_categories?.name || s.category_id}</span>
+                    <span className="text-xs text-gray-300">·</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
                   </div>
 
                   {s.category_id === 'cat_activities' && (
-                    <div className="mb-3 text-sm">
+                    <div className="mb-3">
                       {s.scan_enabled ? (
-                        <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Event scan link</a>
+                        <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">View scan link ↗</a>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500">Event link inactive</span>
+                          <span className="text-xs text-gray-400">Scan link inactive</span>
                           <button
                             onClick={async () => {
                               try {
                                 await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                alert('Activation request submitted. An admin will review it.')
+                                alert('Activation request submitted.')
                               } catch (err) {
                                 console.error('Failed to create activation request:', err)
-                                alert('Failed to submit activation request. Please try again later.')
+                                alert('Failed to submit request.')
                               }
                             }}
-                            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                            className="text-xs font-medium text-gray-900 hover:underline"
                           >
                             Request activation
                           </button>
@@ -590,36 +580,22 @@ export default function VendorServices() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
-                    <button 
-                      onClick={() => { setEditing(s); setShowForm(true) }} 
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-50">
+                    <button
+                      onClick={() => { setEditing(s); setShowForm(true) }}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                     >
-                      <Pencil className="h-4 w-4 mr-2" />
                       Edit
                     </button>
                     <button
                       onClick={() => onDelete(s)}
-                      className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        s.status === 'approved' 
-                          ? "text-orange-600 hover:text-orange-800 hover:bg-orange-50" 
-                          : "text-red-600 hover:text-red-800 hover:bg-red-50"
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        s.status === 'approved'
+                          ? 'text-amber-700 hover:bg-amber-50'
+                          : 'text-red-600 hover:bg-red-50'
                       }`}
-                      title={s.status === 'approved' ? "Request deletion (requires admin approval)" : "Delete service"}
                     >
-                      {s.status === 'approved' ? (
-                        <>
-                          <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Request Delete
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </>
-                      )}
+                      {s.status === 'approved' ? 'Request Delete' : 'Delete'}
                     </button>
                   </div>
                 </div>
@@ -629,102 +605,90 @@ export default function VendorServices() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability</th>
-                <th className="px-6 py-3" />
+        <div className="hidden md:block">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    Loading services...
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-gray-500">Loading services...</td></tr>
               ) : error ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-red-500">
-                    Error: {error}
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
-                    {selectedCategory === 'all' 
-                      ? 'No services yet. Click Add Service to create one.' 
-                      : `No services in this category. Click Add Service to create one.`
-                    }
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <p className="text-sm text-gray-500">No services found.</p>
+                    <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-gray-900 hover:underline">Create your first service →</button>
                   </td>
                 </tr>
               ) : (
                 filteredServices.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50">
+                  <tr key={s.id} className="group hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{s.title}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-sm">{s.description}</div>
+                      <p className="text-sm font-medium text-gray-900">{s.title}</p>
+                      <p className="text-xs text-gray-500 truncate max-w-xs mt-0.5">{s.description}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {s.service_categories?.name || s.category_id}
-                      </span>
+                      <span className="text-sm text-gray-600">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
-                        <div className="mt-1 text-sm">
+                        <div className="mt-1">
                           {s.scan_enabled ? (
-                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Event scan link</a>
+                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Scan link ↗</a>
                           ) : (
-                            <div className="flex items-center space-x-2">
-                              <span className="text-gray-500">Event link inactive</span>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    // Send activation request to admin
-                                    await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                    alert('Activation request submitted. An admin will review it.')
-                                  } catch (err) {
-                                    console.error('Failed to create activation request:', err)
-                                    alert('Failed to submit activation request. Please try again later.')
-                                  }
-                                }}
-                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
-                              >Request activation</button>
-                            </div>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                  alert('Activation request submitted.')
+                                } catch (err) {
+                                  console.error('Failed to create activation request:', err)
+                                  alert('Failed to submit request.')
+                                }
+                              }}
+                              className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+                            >
+                              Request scan activation
+                            </button>
                           )}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</td>
-                    <td className="px-6 py-4"><StatusBadge status={s.status} variant="small" /></td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        s.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      <span className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        s.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : s.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
                       }`}>
-                        {s.status === 'approved' ? 'Available' : 'Pending'}
+                        {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-blue-600 hover:text-blue-800 mr-3">
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(s)}
-                        className={s.status === 'approved' ? "text-orange-600 hover:text-orange-800" : "text-red-600 hover:text-red-800"}
-                        title={s.status === 'approved' ? "Request deletion (requires admin approval)" : "Delete service"}
-                      >
-                        {s.status === 'approved' ? (
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </button>
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => { setEditing(s); setShowForm(true) }}
+                          className="px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onDelete(s)}
+                          className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                            s.status === 'approved'
+                              ? 'text-amber-700 hover:bg-amber-50'
+                              : 'text-red-600 hover:bg-red-50'
+                          }`}
+                        >
+                          {s.status === 'approved' ? 'Request Delete' : 'Delete'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -734,48 +698,25 @@ export default function VendorServices() {
         </div>
       </div>
 
-      {/* Delete Requests Section */}
+      {/* Pending Delete Requests */}
       {pendingDeleteRequests.length > 0 && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              My Delete Requests ({pendingDeleteRequests.length})
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {pendingDeleteRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
-                            {request.service?.description}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                        {request.reason}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={request.status} variant="small" />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(request.requested_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900">Pending Delete Requests</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {pendingDeleteRequests.map((request) => (
+              <div key={request.id} className="px-6 py-4 flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{request.service?.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate max-w-md">{request.reason}</p>
+                </div>
+                <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">Pending</span>
+                  <span className="text-xs text-gray-400">{new Date(request.requested_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -3124,18 +3065,17 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h3 className="text-lg font-medium text-gray-900">{initial?.id ? 'Edit Service' : 'Add Service'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white z-10 flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h3 className="text-base font-semibold text-gray-900">{initial?.id ? 'Edit Service' : 'New Service'}</h3>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"><X className="h-4 w-4" /></button>
         </div>
         <form
-          className="px-6 py-4 space-y-4"
+          className="px-6 py-5 space-y-5"
           onSubmit={(e) => { 
             e.preventDefault(); 
             
-            // Validation for event fields
             if (form.category_id === 'cat_activities') {
               if (!form.event_datetime?.trim()) {
                 alert('Event Date & Time is required for events');
@@ -3151,8 +3091,8 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           }}
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" required>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" required>
               <option value="">Select a category</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -3163,13 +3103,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">{form.category_id === 'cat_activities' ? 'Event title' : 'Title'}</label>
-            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Title' : 'Title'}</label>
+            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
-            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" rows={3} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
+            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" rows={3} required />
           </div>
 
           {/* Hide generic pricing/location/capacity fields when creating an Event (category_id === 'cat_activities')
@@ -3178,27 +3118,27 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Currency</label>
-                  <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                  <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Price</label>
-                  <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="mt-1 w-full border rounded-md px-3 py-2" required />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                  <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
-                  <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
-                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
+                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Max Capacity</label>
-                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
+                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent" />
                 </div>
               </div>
             </>
@@ -3207,36 +3147,43 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Images (stickers, banners, previous events)</label>
-            <div className="space-y-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleImageUpload(file)
-                }}
-                disabled={uploadingImage}
-                className="w-full border rounded-md px-3 py-2"
-              />
-              {uploadingImage && <p className="text-sm text-gray-500">Uploading image...</p>}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+            <div className="space-y-3">
+              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">{uploadingImage ? 'Uploading...' : 'Click to upload an image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleImageUpload(file)
+                  }}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+              </label>
 
-              <div className="flex flex-wrap gap-2 mt-2">
-                {(form.images as string[]).map((src, idx) => (
-                  <div key={idx} className="relative">
-                    <img src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded border" />
-                    <button type="button" onClick={() => removeImage(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">×</button>
-                  </div>
-                ))}
-              </div>
+              {(form.images as string[]).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {(form.images as string[]).map((src, idx) => (
+                    <div key={idx} className="relative group">
+                      <img src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                      <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           {renderCategorySpecificFields()}
 
-          <div className="flex justify-end space-x-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border bg-white">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-blue-600 text-white">{initial?.id ? 'Save changes' : 'Create service'}</button>
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors">{initial?.id ? 'Save Changes' : 'Create Service'}</button>
           </div>
         </form>
       </div>
