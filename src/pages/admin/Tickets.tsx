@@ -300,7 +300,7 @@ export default function AdminTickets() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-800">Error: {error}</p>
       </div>
     )
@@ -308,109 +308,52 @@ export default function AdminTickets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Ticket Management</h1>
-        <div className="flex items-center text-sm text-green-600">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          Real-time updates enabled
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Ticket Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Monitor event tickets and attendance</p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-emerald-600">
+          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+          Real-time
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.totalEvents}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalEvents}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Total Events</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.totalEvents}</p>
+          <p className="text-xs text-gray-400 mt-1">Active events</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.total}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.total}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Total Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
+          <p className="text-xs text-gray-400 mt-1">All tickets</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.issued}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.issued}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Active Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.issued}</p>
+          <p className="text-xs text-gray-400 mt-1">Issued</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.used}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Used Tickets</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.used}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-sky-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Used Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.used}</p>
+          <p className="text-xs text-gray-400 mt-1">Scanned</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.cancelled}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Cancelled</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.cancelled}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Cancelled</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
+          <p className="text-xs text-gray-400 mt-1">Voided</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -420,7 +363,7 @@ export default function AdminTickets() {
                 placeholder="Search tickets by code, event, vendor, buyer name, email, or ticket type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-[#61B82C] focus:border-[#61B82C]"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#61B82C] focus:border-[#61B82C]"
               />
             </div>
           </div>
@@ -429,7 +372,7 @@ export default function AdminTickets() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-[#61B82C] focus:border-[#61B82C]"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-[#61B82C] focus:border-[#61B82C]"
             >
               <option value="all">All Statuses</option>
               <option value="issued">Active</option>
@@ -438,7 +381,7 @@ export default function AdminTickets() {
             </select>
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               title="Clear all filters"
             >
               <RotateCcw className="h-4 w-4" />
@@ -449,9 +392,12 @@ export default function AdminTickets() {
       </div>
 
       {/* Tickets Table */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">All Tickets</h3>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Tickets</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Event tickets and attendance records</p>
+        </div>
+        <div className="p-5">
 
           {filteredTickets.length === 0 ? (
             <div className="text-center py-8">

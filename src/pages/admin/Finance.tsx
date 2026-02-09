@@ -109,8 +109,8 @@ export function Finance() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">Error loading finance data: {error}</p>
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+        <p className="text-sm text-red-700">Error loading finance data: {error}</p>
       </div>
     );
   }
@@ -310,52 +310,32 @@ export function Finance() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Approved
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            Completed
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Rejected
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            Pending
-          </span>
-        );
-      case 'failed':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            Failed
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
-    }
+    const styles: Record<string, string> = {
+      approved: 'bg-blue-50 text-blue-700',
+      completed: 'bg-emerald-50 text-emerald-700',
+      rejected: 'bg-red-50 text-red-700',
+      pending: 'bg-amber-50 text-amber-700',
+      failed: 'bg-gray-100 text-gray-600',
+    };
+    const cls = styles[status] || 'bg-gray-100 text-gray-600';
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${cls}`}>
+        {status}
+      </span>
+    );
   };
 
   const getActionButtons = (transaction: any) => {
     // Approved withdrawals - show upload and complete options
     if (transaction.transaction_type === 'withdrawal' && transaction.status === 'approved') {
       return (
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 min-w-[220px]">
+          <label className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
+            transaction.receipt_url 
+              ? 'border border-gray-200 text-gray-600 hover:bg-gray-50' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}>
+            📎 {transaction.receipt_url ? 'Replace' : 'Upload Receipt'}
             <input
               type="file"
               accept="image/*,.pdf"
@@ -366,27 +346,21 @@ export function Finance() {
                 }
               }}
               disabled={uploadingReceipt === transaction.id}
-              className="text-xs border border-gray-300 rounded px-2 py-1"
+              className="hidden"
             />
-            <span className="text-xs text-gray-500">Upload Receipt</span>
-          </div>
-          <textarea
-            placeholder="Payment notes (optional)"
-            value={paymentNotes[transaction.id] || ''}
-            onChange={(e) => setPaymentNotes(prev => ({ ...prev, [transaction.id]: e.target.value }))}
-            className="w-full text-xs border border-gray-300 rounded px-2 py-1"
-            rows={2}
-          />
+          </label>
+          {transaction.receipt_url && (
+            <a href={transaction.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 whitespace-nowrap">
+              View
+            </a>
+          )}
           <button
             onClick={() => handleCompletePayment(transaction.id)}
             disabled={uploadingReceipt === transaction.id || !transaction.receipt_url}
-            className="w-full bg-green-600 text-white text-xs px-3 py-1 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
-            Complete Payment
+            {uploadingReceipt === transaction.id ? 'Uploading…' : '✓ Complete'}
           </button>
-          {uploadingReceipt === transaction.id && (
-            <div className="text-xs text-blue-600">Uploading...</div>
-          )}
         </div>
       );
     }
@@ -394,20 +368,18 @@ export function Finance() {
     // Rejected withdrawals - show follow-up options
     if (transaction.transaction_type === 'withdrawal' && transaction.status === 'rejected') {
       return (
-        <div className="space-y-2">
-          <div className="text-xs text-red-600 font-medium">Rejected Withdrawal</div>
+        <div className="space-y-2 min-w-[180px]">
           {transaction.payment_notes && (
-            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-              <strong>Rejection Notes:</strong><br />
+            <div className="text-xs text-gray-600 bg-red-50 border border-red-100 p-2 rounded-lg">
+              <span className="font-medium text-red-700">Rejection note:</span><br />
               {transaction.payment_notes}
             </div>
           )}
           <button
             onClick={() => {
-              // Could implement follow-up logic here
               alert('Follow-up functionality can be implemented here (e.g., contact service provider, resubmit request)');
             }}
-            className="w-full bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Follow Up
           </button>
@@ -422,247 +394,142 @@ export function Finance() {
           href={transaction.receipt_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-800 text-xs underline"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
         >
           View Receipt
         </a>
       );
     }
 
-    return null;
+    return <span className="text-xs text-gray-400">—</span>;
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Finance Dashboard</h1>
-        <div className="flex items-center space-x-4">
-          {/* Date Range Filter */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Period:</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as any)}
-              className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-            >
-              <option value="all">All Time</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-
-          {/* Export Buttons */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={exportFinancialReport}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 flex items-center"
-            >
-              📊 Export Report
-            </button>
-            <button
-              onClick={exportVendorReport}
-              className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 flex items-center"
-            >
-              🏪 Vendor Report
-            </button>
-            <button
-              onClick={exportMonthlyTrends}
-              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 flex items-center"
-            >
-              📈 Trends Report
-            </button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Finance Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Platform revenue and withdrawal management</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value as any)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Time</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+          </select>
+          <button
+            onClick={exportFinancialReport}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            📊 Export Report
+          </button>
+          <button
+            onClick={exportVendorReport}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            👥 Vendor Report
+          </button>
+          <button
+            onClick={exportMonthlyTrends}
+            className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            📈 Trends
+          </button>
         </div>
       </div>
 
       {/* Business Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">$</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                  </dd>
-                  <dd className="text-xs text-green-600 mt-1">
-                    +{stats.monthlyData[stats.monthlyData.length - 1]?.revenue ?
-                      ((stats.monthlyData[stats.monthlyData.length - 1].revenue /
-                        (stats.monthlyData[stats.monthlyData.length - 2]?.revenue || 1)) * 100 - 100).toFixed(1) : 0}% from last month
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Total Revenue</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">
+            {formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+          </p>
+          <p className="text-xs text-emerald-600 mt-1">
+            +{stats.monthlyData[stats.monthlyData.length - 1]?.revenue ?
+              ((stats.monthlyData[stats.monthlyData.length - 1].revenue /
+                (stats.monthlyData[stats.monthlyData.length - 2]?.revenue || 1)) * 100 - 100).toFixed(1) : 0}% from last month
+          </p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">💰</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Net Revenue</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                  </dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    Revenue - Withdrawals - Refunds
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Net Revenue</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">
+            {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">After withdrawals & refunds</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">⏳</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Withdrawals</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.pendingWithdrawals}</dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    {formatCurrencyWithConversion(stats.pendingAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Pending Withdrawals</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pendingWithdrawals}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {formatCurrencyWithConversion(stats.pendingAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+          </p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">📊</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.successRate}%</dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    {stats.totalTransactions} total transactions
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Success Rate</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.successRate}%</p>
+          <p className="text-xs text-gray-400 mt-1">{stats.totalTransactions} transactions</p>
         </div>
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.approvedWithdrawals}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Ready for Payment</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.approvedWithdrawals}</dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    {formatCurrencyWithConversion(stats.approvedAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Ready for Payment</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.approvedWithdrawals}</p>
+          <p className="text-xs text-gray-400 mt-1">
+            {formatCurrencyWithConversion(stats.approvedAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+          </p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.rejectedWithdrawals}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Rejected Withdrawals</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.rejectedWithdrawals}</dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    Need follow-up
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Rejected Withdrawals</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.rejectedWithdrawals}</p>
+          <p className="text-xs text-gray-400 mt-1">Need follow-up</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.failedTransactions}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Failed Transactions</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.failedTransactions}</dd>
-                  <dd className="text-xs text-gray-600 mt-1">
-                    Require investigation
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Failed Transactions</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.failedTransactions}</p>
+          <p className="text-xs text-gray-400 mt-1">Require investigation</p>
         </div>
       </div>
 
       {/* Monthly Trends Chart */}
-      <div className="bg-white shadow rounded-lg mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Revenue Trends (Last 6 Months)</h3>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Revenue Trends</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Last 6 months performance overview</p>
         </div>
-        <div className="p-6">
-          <div className="space-y-4">
+        <div className="p-5">
+          <div className="space-y-3">
             {stats.monthlyData.map((month: any) => (
-              <div key={month.month} className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-900">{month.month}</span>
-                    <span className="text-sm text-gray-500">
-                      Net: {formatCurrencyWithConversion(month.net, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{
-                        width: `${Math.max((month.revenue / Math.max(...stats.monthlyData.map((m: any) => m.revenue))) * 100, 5)}%`
-                      }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Revenue: {formatCurrencyWithConversion(month.revenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
-                    <span>Withdrawals: {formatCurrencyWithConversion(month.withdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
-                  </div>
+              <div key={month.month} className="group">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-gray-900">{month.month}</span>
+                  <span className="text-xs font-medium text-gray-600">
+                    Net: {formatCurrencyWithConversion(month.net, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.max((month.revenue / Math.max(...stats.monthlyData.map((m: any) => m.revenue), 1)) * 100, 3)}%`
+                    }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                  <span>Revenue: {formatCurrencyWithConversion(month.revenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
+                  <span>Withdrawals: {formatCurrencyWithConversion(month.withdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
                 </div>
               </div>
             ))}
@@ -671,32 +538,31 @@ export function Finance() {
       </div>
 
       {/* Top Vendors */}
-      <div className="bg-white shadow rounded-lg mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Top Performing Vendors</h3>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Top Performing Vendors</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Ranked by total revenue</p>
         </div>
-        <div className="p-6">
-          <div className="space-y-4">
+        <div className="p-5">
+          <div className="space-y-3">
             {stats.topVendors.slice(0, 5).map((vendor: any, index: number) => (
               <div key={vendor.vendorId} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-medium">{index + 1}</span>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">
+                    {index + 1}
                   </div>
-                  <div className="ml-4">
+                  <div>
                     <div className="text-sm font-medium text-gray-900">{vendor.vendorName}</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-xs text-gray-500">
                       {vendor.transactionCount} transactions
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-semibold text-gray-900">
                     {formatCurrencyWithConversion(vendor.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs text-gray-500">
                     {formatCurrencyWithConversion(vendor.pendingWithdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')} pending
                   </div>
                 </div>
@@ -707,123 +573,111 @@ export function Finance() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg mb-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Quick Actions</h3>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => setActiveTab('withdrawals')}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-lg">💰</span>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-sm">💰</div>
+              <div>
                 <div className="text-sm font-medium text-gray-900">Process Withdrawals</div>
-                <div className="text-sm text-gray-500">{stats.approvedWithdrawals} pending</div>
+                <div className="text-xs text-gray-500">{stats.approvedWithdrawals} pending</div>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('rejected')}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-lg">📞</span>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-sm">📞</div>
+              <div>
                 <div className="text-sm font-medium text-gray-900">Follow Up Rejections</div>
-                <div className="text-sm text-gray-500">{stats.rejectedWithdrawals} need attention</div>
+                <div className="text-xs text-gray-500">{stats.rejectedWithdrawals} need attention</div>
               </div>
             </button>
 
             <button
               onClick={exportFinancialReport}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-lg">📊</span>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-sm">📊</div>
+              <div>
                 <div className="text-sm font-medium text-gray-900">Generate Report</div>
-                <div className="text-sm text-gray-500">Export financial data</div>
+                <div className="text-xs text-gray-500">Export financial data</div>
               </div>
             </button>
 
             <button
               onClick={() => refetch()}
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-lg">🔄</span>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="w-8 h-8 bg-violet-50 text-violet-600 rounded-lg flex items-center justify-center text-sm">🔄</div>
+              <div>
                 <div className="text-sm font-medium text-gray-900">Refresh Data</div>
-                <div className="text-sm text-gray-500">Update latest transactions</div>
+                <div className="text-xs text-gray-500">Update latest transactions</div>
               </div>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+      {/* Tabs + Transaction Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Transactions</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{currentTransactions.length} records</p>
+          </div>
+          <div className="inline-flex gap-1 bg-gray-50 rounded-lg p-1">
             <button
               onClick={() => setActiveTab('withdrawals')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'withdrawals'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Approved Withdrawals ({approvedWithdrawals.length})
+              Withdrawals ({approvedWithdrawals.length})
             </button>
             <button
               onClick={() => setActiveTab('payments')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'payments'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Completed Payments ({completedPayments.length})
+              Payments ({completedPayments.length})
             </button>
             <button
               onClick={() => setActiveTab('refunds')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'refunds'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Completed Refunds ({completedRefunds.length})
+              Refunds ({completedRefunds.length})
             </button>
             <button
               onClick={() => setActiveTab('rejected')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'rejected'
-                  ? 'border-red-500 text-red-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              Rejected Withdrawals ({stats.rejectedWithdrawals})
+              Rejected ({stats.rejectedWithdrawals})
             </button>
-          </nav>
+          </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-5">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -888,8 +742,12 @@ export function Finance() {
           </div>
 
           {currentTransactions.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No {activeTab} found</p>
+            <div className="text-center py-12">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span className="text-lg">📋</span>
+              </div>
+              <p className="text-sm font-medium text-gray-900">No {activeTab} found</p>
+              <p className="text-xs text-gray-500 mt-1">Try adjusting your date range or filters</p>
             </div>
           )}
         </div>

@@ -326,7 +326,7 @@ export default function AdminHeroVideoManager() {
               {gallery.length === 0 ? (
                 <div className="text-center py-12">
                   <Image className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No media uploaded yet</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">No media uploaded yet</h3>
                   <p className="text-gray-500">Upload your first hero image or video to get started</p>
                 </div>
               ) : (
@@ -379,7 +379,7 @@ export default function AdminHeroVideoManager() {
 
                           <button
                             onClick={() => handleDelete(item.name)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-md text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="h-3 w-3" />

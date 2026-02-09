@@ -267,7 +267,7 @@ export function Bookings() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-800">Error loading bookings: {error}</p>
       </div>
     );
@@ -369,11 +369,14 @@ export function Bookings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
-        <div className="flex items-center text-sm text-green-600">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          Real-time updates enabled
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Booking Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Monitor and manage all platform bookings</p>
+        </div>
+        <div className="flex items-center text-sm text-emerald-600">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></div>
+          Real-time updates
         </div>
       </div>
 
@@ -390,7 +393,7 @@ export function Bookings() {
         <div className="flex space-x-3 overflow-x-auto pb-2">
           <button
             onClick={() => handleSelectCategoryCard('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded border ${selectedCategory === 'all' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+            className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition ${selectedCategory === 'all' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             All categories
           </button>
@@ -398,7 +401,7 @@ export function Bookings() {
             <button
               key={c.id}
               onClick={() => handleSelectCategoryCard(c.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded border text-left ${selectedCategory === c.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg border text-left transition ${selectedCategory === c.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               <div className="text-sm font-medium truncate" style={{maxWidth: 220}}>{displayCategoryName(c)}</div>
             </button>
@@ -413,7 +416,7 @@ export function Bookings() {
           <select
             value={selectedVendor}
             onChange={async (e) => setSelectedVendor(e.target.value)}
-            className="border rounded px-2 py-2 text-sm w-64"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All vendors</option>
             {vendors.map(v => (
@@ -427,7 +430,7 @@ export function Bookings() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border rounded px-2 py-2 text-sm w-64"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All categories</option>
             {categories.map(c => (
@@ -508,7 +511,7 @@ export function Bookings() {
                 setIsFiltering(false)
               }
             }}
-            className="px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition"
           >
             {isFiltering ? 'Applying...' : 'Apply'}
           </button>
@@ -519,7 +522,7 @@ export function Bookings() {
               setSelectedCategory('all')
               setFilteredBookings(null)
             }}
-            className="ml-2 px-3 py-2 border rounded text-sm"
+            className="ml-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
           >
             Clear
           </button>
@@ -552,102 +555,45 @@ export function Bookings() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.total}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.total}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Total Bookings</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
+          <p className="text-xs text-gray-400 mt-1">All time</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.pending}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.pending}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Pending</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pending}</p>
+          <p className="text-xs text-gray-400 mt-1">Awaiting</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.confirmed}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Confirmed</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.confirmed}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Confirmed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.confirmed}</p>
+          <p className="text-xs text-gray-400 mt-1">Active</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.completed}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Completed</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.completed}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Completed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completed}</p>
+          <p className="text-xs text-gray-400 mt-1">Done</p>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{stats.cancelled}</span>
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Cancelled</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.cancelled}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Cancelled</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
+          <p className="text-xs text-gray-400 mt-1">Dropped</p>
         </div>
       </div>
 
       {/* Bookings Table */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Bookings</h3>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Recent Bookings</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Latest booking activity across all vendors</p>
+          </div>
           
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
@@ -868,9 +814,11 @@ export function Bookings() {
 
           {/* Tickets for selected category - only show for Events (cat_activities) */}
           {selectedCategory === 'cat_activities' && (
-            <div className="mt-6 bg-white border rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Tickets for selected category</h3>
+            <div className="mt-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <div className="border-b border-gray-100 px-5 py-3">
+                <h3 className="text-sm font-semibold text-gray-900">Tickets for selected category</h3>
+              </div>
+              <div className="p-5">
                 {categoryTicketsLoading ? (
                   <div className="py-6"><LoadingSpinner size="md" /></div>
                 ) : categoryTickets.length === 0 ? (
@@ -1052,9 +1000,9 @@ export function Bookings() {
       </div>
 
       {/* Saved Cart Items */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Saved Cart Items ({cartState.items.length})</h3>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -1119,10 +1067,10 @@ export function Bookings() {
 
       {/* Booking Details Modal */}
       {showBookingDetails && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Booking Details</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Booking Details</h3>
               <button 
                 onClick={() => setShowBookingDetails(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1277,10 +1225,10 @@ export function Bookings() {
         </div>
       )}
       {showTicketImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-md w-full mx-4 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-medium">Ticket</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Ticket</h3>
               <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div className="flex flex-col items-center">

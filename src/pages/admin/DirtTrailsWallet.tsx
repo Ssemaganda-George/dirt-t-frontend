@@ -110,7 +110,7 @@ export function DirtTrailsWallet() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-800">Error loading wallet data: {error}</p>
       </div>
     );
@@ -194,7 +194,7 @@ export function DirtTrailsWallet() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-blue-100">Net Balance</p>
-              <p className="text-lg font-bold mt-2">
+              <p className="text-2xl font-semibold text-gray-900 mt-2">
                 {formatCurrencyWithConversion(stats.netBalance, selectedCurrency)}
               </p>
             </div>
@@ -203,10 +203,10 @@ export function DirtTrailsWallet() {
         </div>
 
         {/* Total Revenue Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-600">
+        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Total Revenue</p>
-            <p className="text-lg font-bold text-gray-900 mt-2">
+            <p className="text-2xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalRevenue, selectedCurrency)}
             </p>
           </div>
@@ -214,10 +214,10 @@ export function DirtTrailsWallet() {
         </div>
 
         {/* Total Commissions Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600">
+        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Commissions Earned</p>
-            <p className="text-lg font-bold text-gray-900 mt-2">
+            <p className="text-2xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalCommissions, selectedCurrency)}
             </p>
           </div>
@@ -225,10 +225,10 @@ export function DirtTrailsWallet() {
         </div>
 
         {/* Platform Charges Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-600">
+        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Refunds Issued</p>
-            <p className="text-lg font-bold text-gray-900 mt-2">
+            <p className="text-2xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalRefunds, selectedCurrency)}
             </p>
           </div>
@@ -236,10 +236,10 @@ export function DirtTrailsWallet() {
         </div>
 
         {/* Total Withdrawals Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-600">
+        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Withdrawals</p>
-            <p className="text-lg font-bold text-gray-900 mt-2">
+            <p className="text-2xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalWithdrawals, selectedCurrency)}
             </p>
           </div>
@@ -248,7 +248,7 @@ export function DirtTrailsWallet() {
       </div>
 
       {/* Tabs Section */}
-      <div className="bg-white rounded-lg shadow-md">
+      <div className="bg-white rounded-xl shadow-md">
         {/* Tab Navigation */}
         <div className="border-b border-gray-200">
           <div className="flex space-x-8 px-6">
@@ -452,7 +452,7 @@ export function DirtTrailsWallet() {
       </div>
 
       {/* Date Range Filter */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Date Range</h3>
         <div className="flex space-x-3">
           {(['all', 'month', 'quarter', 'year'] as const).map((range) => (

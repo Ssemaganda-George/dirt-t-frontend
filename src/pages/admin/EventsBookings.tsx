@@ -279,7 +279,7 @@ export function EventsBookings() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <p className="text-red-800">Error loading bookings: {error}</p>
       </div>
     );
@@ -480,63 +480,62 @@ export function EventsBookings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Events Bookings Management</h1>
-        <div className="flex space-x-4 text-sm">
-          <span className="text-blue-600">Total: {totalBookings}</span>
-          <span className="text-green-600">Confirmed: {confirmedBookings}</span>
-          <span className="text-yellow-600">Pending: {pendingBookings}</span>
-          <span className="text-red-600">Cancelled: {cancelledBookings}</span>
-          <span className="text-purple-600">Revenue: {formatCurrencyWithConversion(totalRevenue, 'UGX', selectedCurrency, selectedLanguage)}</span>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Events Bookings Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and track all event bookings</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">Total: {totalBookings}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Confirmed: {confirmedBookings}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">Pending: {pendingBookings}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-700">Cancelled: {cancelledBookings}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700">Revenue: {formatCurrencyWithConversion(totalRevenue, 'UGX', selectedCurrency, selectedLanguage)}</span>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-4">
-        <SearchBar
-          placeholder="Search events bookings by service, customer, or booking ID..."
-          onSearch={setSearchQuery}
-          initialValue={searchQuery}
-          className="max-w-md"
-        />
-      </div>
-
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="vendor-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Filter by Vendor
-            </label>
-            <select
-              id="vendor-filter"
-              value={selectedVendor}
-              onChange={(e) => handleSelectVendorCard(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-            >
-              <option value="all">All Vendors</option>
-              {vendors.map((vendor) => (
-                <option key={vendor.id} value={vendor.id}>
-                  {vendor.business_name}
-                </option>
-              ))}
-            </select>
+      {/* Search & Vendor Filter */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <SearchBar
+              placeholder="Search events bookings by service, customer, or booking ID..."
+              onSearch={setSearchQuery}
+              initialValue={searchQuery}
+              className="max-w-md"
+            />
           </div>
+          <select
+            id="vendor-filter"
+            value={selectedVendor}
+            onChange={(e) => handleSelectVendorCard(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Vendors</option>
+            {vendors.map((vendor) => (
+              <option key={vendor.id} value={vendor.id}>
+                {vendor.business_name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Current Category */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Current Category</h2>
-        <div className="flex space-x-3 overflow-x-auto pb-2">
-          <button
-            className="flex-shrink-0 px-4 py-2 rounded border text-left border-blue-500 bg-blue-50"
-          >
-            <div className="text-sm font-medium truncate" style={{maxWidth: 220}}>Events</div>
-          </button>
+      {/* Current Category */}
+      <div className="bg-white rounded-xl border border-gray-200 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</span>
+          <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white">Events</span>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Event Bookings</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{displayBookings.length} bookings found</p>
+        </div>
+        <div className="p-5">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -636,7 +635,7 @@ export function EventsBookings() {
                         <select
                           value={booking.status || 'pending'}
                           onChange={(e) => handleBookingStatusUpdate(booking.id, e.target.value)}
-                          className="text-xs border border-gray-300 rounded px-2 py-1"
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
@@ -646,7 +645,7 @@ export function EventsBookings() {
                         <select
                           value={booking.payment_status || 'pending'}
                           onChange={(e) => handlePaymentStatusUpdate(booking.id, e.target.value)}
-                          className="text-xs border border-gray-300 rounded px-2 py-1"
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -664,11 +663,11 @@ export function EventsBookings() {
       </div>
 
       {showBookingDetails && selectedBooking && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Event Booking Details</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Event Booking Details</h3>
                 <button
                   onClick={handleCloseBookingDetails}
                   className="text-gray-400 hover:text-gray-600"
@@ -729,7 +728,7 @@ export function EventsBookings() {
                         </div>
                         <button
                           onClick={() => generateTicketQR(ticket)}
-                          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                         >
                           View QR
                         </button>
@@ -744,10 +743,10 @@ export function EventsBookings() {
       )}
 
       {showTicketImage && ticketImageUrl && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Ticket QR Code</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Ticket QR Code</h3>
               <button
                 onClick={() => setShowTicketImage(false)}
                 className="text-gray-400 hover:text-gray-600"

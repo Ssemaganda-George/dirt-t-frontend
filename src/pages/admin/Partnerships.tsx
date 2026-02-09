@@ -128,7 +128,7 @@ const Partnerships: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Partnerships</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Partnerships</h1>
       <div className="mb-4 flex gap-2">
         <button
           className={`px-4 py-2 rounded ${filter === 'requests' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
@@ -500,7 +500,7 @@ const Partnerships: React.FC = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
                 <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowModal(false)}>&times;</button>
-                <h3 className="text-lg font-bold mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
                 <form onSubmit={handleFormSubmit} className="space-y-3">
                   <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border p-2 rounded" required />
                   <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email*" className="w-full border p-2 rounded" required type="email" />
@@ -523,11 +523,11 @@ const Partnerships: React.FC = () => {
 
       {/* Request Details Modal */}
       {showRequestModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-semibold text-gray-900">
                   {selectedRequest.type === 'business_referral' ? 'Business Referral Details' : 'Partnership Inquiry Details'}
                 </h2>
                 <button
@@ -684,7 +684,7 @@ const Partnerships: React.FC = () => {
                   {selectedRequest.status === 'pending' && (
                     <>
                       <button
-                        className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => {
                           handleRequestStatus(selectedRequest.id, 'approved');
                           closeRequestModal();
@@ -694,7 +694,7 @@ const Partnerships: React.FC = () => {
                         {updatingRequests.has(selectedRequest.id) ? 'Approving...' : '✅ Approve Request'}
                       </button>
                       <button
-                        className="bg-red-600 text-white px-4 py-2 rounded-md font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => {
                           handleRequestStatus(selectedRequest.id, 'rejected');
                           closeRequestModal();
@@ -707,7 +707,7 @@ const Partnerships: React.FC = () => {
                   )}
 
                   <button
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
                     onClick={() => window.open(`mailto:${selectedRequest.email}?subject=${selectedRequest.type === 'business_referral' ? 'Business Referral - ' + selectedRequest.company : 'Partnership Inquiry - ' + (selectedRequest.company || selectedRequest.name)}&body=Dear ${selectedRequest.contact_person || selectedRequest.name},%0A%0A${selectedRequest.type === 'business_referral' ? 'Thank you for being referred to Dirt Trails...' : 'Thank you for your interest in partnering with Dirt Trails...'}`, '_blank')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -717,7 +717,7 @@ const Partnerships: React.FC = () => {
                   </button>
 
                   <button
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
                     onClick={() => window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?text=${selectedRequest.type === 'business_referral' ? 'Meeting with ' + selectedRequest.name + ' - Business Referral' : 'Meeting with ' + selectedRequest.name + ' - Partnership'}&details=${selectedRequest.type === 'business_referral' ? 'Business referral discussion' : 'Partnership discussion'} with ${selectedRequest.company || selectedRequest.name}. Contact: ${selectedRequest.email}${selectedRequest.phone ? ' | ' + selectedRequest.phone : ''}${selectedRequest.referrer_name ? ' | Referred by: ' + selectedRequest.referrer_name : ''}&add=${selectedRequest.email}`, '_blank')}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -728,7 +728,7 @@ const Partnerships: React.FC = () => {
 
                   {selectedRequest.status === 'approved' && (
                     <button
-                      className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
                       onClick={() => {
                         const newPartner = {
                           name: selectedRequest.name,

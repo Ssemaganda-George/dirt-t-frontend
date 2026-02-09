@@ -89,7 +89,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
 
   return (
     <div
-      className={`text-left bg-white rounded-lg shadow-sm ${colorConfig.border} border border-gray-200 p-4 hover:shadow-lg hover:scale-105 transition-all duration-300 h-full`}
+      className={`text-left bg-white rounded-xl shadow-sm ${colorConfig.border} border border-gray-200 p-4 hover:shadow-lg hover:scale-105 transition-all duration-300 h-full`}
     >
       <div className="flex items-start justify-between gap-3 h-full flex-col">
         <div className="w-full">
@@ -195,10 +195,10 @@ export const VisitorActivity = () => {
       {/* Demographics and Likes Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Countries */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
             <MapPin className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-900">Top Countries</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Top Countries</h2>
           </div>
           <div className="space-y-4">
             {stats.topCountries.map((country, idx) => (
@@ -222,10 +222,10 @@ export const VisitorActivity = () => {
         </div>
 
         {/* Age Groups */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
             <Users className="h-5 w-5 text-green-600" />
-            <h2 className="text-lg font-bold text-gray-900">Age Distribution</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Age Distribution</h2>
           </div>
           <div className="space-y-4">
             {stats.ageGroups.map((group, idx) => (
@@ -250,8 +250,8 @@ export const VisitorActivity = () => {
       </div>
 
       {/* Gender Distribution */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-sm font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
           Gender Distribution
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -272,10 +272,10 @@ export const VisitorActivity = () => {
       </div>
 
       {/* Top Liked Services */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
           <Heart className="h-5 w-5 text-red-600" />
-          <h2 className="text-lg font-bold text-gray-900">Top Liked Services</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Top Liked Services</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -305,11 +305,11 @@ export const VisitorActivity = () => {
       </div>
 
       {/* Recent Reviews */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
           <Star className="h-5 w-5 text-yellow-600" />
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Recent Reviews</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Recent Reviews</h2>
             <p className="text-xs text-gray-500 mt-1">{stats.reviewsThisMonth} reviews this month • Average rating: {stats.avgRating}/5</p>
           </div>
         </div>
@@ -343,20 +343,20 @@ export const VisitorActivity = () => {
       {/* Vendor Activity Section */}
       <div className="mt-12 pt-8 border-t border-gray-200">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Vendor Account Activity</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Vendor Account Activity</h2>
           <p className="mt-2 text-base text-gray-600">Monitor visitor engagement and performance metrics for individual vendor accounts</p>
         </div>
 
         <div className="space-y-4">
           {vendorStats && vendorStats.length > 0 ? (
             vendorStats.map((vendor: any) => (
-              <div key={vendor.vendorId} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div key={vendor.vendorId} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <button
                   onClick={() => setExpandedVendor(expandedVendor === vendor.vendorId ? null : vendor.vendorId)}
                   className="w-full p-6 hover:bg-gray-50 transition-colors flex items-center justify-between"
                 >
                   <div className="text-left flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">{vendor.vendorName}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{vendor.vendorName}</h3>
                     <p className="text-sm text-gray-600 mt-1">{vendor.vendorEmail}</p>
                     <div className="grid grid-cols-4 gap-4 mt-4">
                       <div>
@@ -391,7 +391,7 @@ export const VisitorActivity = () => {
                     {/* Vendor Demographics */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Top Countries for Vendor */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-blue-600" />
                           Top Countries
@@ -411,7 +411,7 @@ export const VisitorActivity = () => {
                       </div>
 
                       {/* Age Distribution for Vendor */}
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <Users className="h-4 w-4 text-green-600" />
                           Age Distribution
@@ -432,27 +432,27 @@ export const VisitorActivity = () => {
                     </div>
 
                     {/* Gender Distribution */}
-                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="bg-white rounded-xl p-4 border border-gray-200">
                       <h4 className="text-sm font-bold text-gray-900 mb-4">Gender Distribution</h4>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
                           <p className="text-xs text-gray-600 mb-2">Male</p>
-                          <p className="text-lg font-bold text-blue-600">{vendor.genderDistribution?.male || 0}</p>
+                          <p className="text-2xl font-semibold text-blue-600">{vendor.genderDistribution?.male || 0}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-600 mb-2">Female</p>
-                          <p className="text-lg font-bold text-purple-600">{vendor.genderDistribution?.female || 0}</p>
+                          <p className="text-2xl font-semibold text-purple-600">{vendor.genderDistribution?.female || 0}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-600 mb-2">Other</p>
-                          <p className="text-lg font-bold text-orange-600">{vendor.genderDistribution?.other || 0}</p>
+                          <p className="text-2xl font-semibold text-orange-600">{vendor.genderDistribution?.other || 0}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Top Services */}
                     {vendor.topServices && vendor.topServices.length > 0 && (
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <Heart className="h-4 w-4 text-red-600" />
                           Top Services
@@ -476,7 +476,7 @@ export const VisitorActivity = () => {
 
                     {/* Recent Reviews */}
                     {vendor.recentReviews && vendor.recentReviews.length > 0 && (
-                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                           <Star className="h-4 w-4 text-yellow-600" />
                           Recent Reviews ({vendor.reviewsThisMonth} this month)
@@ -509,7 +509,7 @@ export const VisitorActivity = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
               <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No vendors found</p>
             </div>

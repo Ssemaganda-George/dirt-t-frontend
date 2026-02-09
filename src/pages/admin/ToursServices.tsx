@@ -49,14 +49,16 @@ export function ToursServices() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error loading services: {error}</p>
         </div>
         {/* Still show the services management interface even if delete requests fail */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Tours Management</h3>
-            <p className="text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">Tours Management</h3>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
           </div>
         </div>
       </div>
@@ -218,37 +220,35 @@ export function ToursServices() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Tours Management</h1>
-        <div className="flex space-x-4 text-sm">
-          <span className="text-yellow-600">Pending: {selectedVendor === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
-          <span className="text-green-600">Approved: {selectedVendor === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}</span>
-          <span className="text-red-600">Rejected: {selectedVendor === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
-          <span className="text-orange-600">Delete Requests: {deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length}</span>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Tours Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and review all tour services</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">Pending: {selectedVendor === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">Approved: {selectedVendor === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-700">Rejected: {selectedVendor === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700">Delete: {deleteRequestsError ? '—' : pendingDeleteRequests.length}</span>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <SearchBar
-          placeholder="Search tours by title, description, or vendor..."
-          onSearch={setSearchQuery}
-          initialValue={searchQuery}
-          className="max-w-md"
-        />
-      </div>
-
-      {/* Vendor Filter */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex items-center space-x-4">
-          <label htmlFor="vendor-filter" className="text-sm font-medium text-gray-700">
-            Filter by Vendor:
-          </label>
+      {/* Search & Vendor Filter */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <SearchBar
+              placeholder="Search tours by title, description, or vendor..."
+              onSearch={setSearchQuery}
+              initialValue={searchQuery}
+              className="max-w-md"
+            />
+          </div>
           <select
             id="vendor-filter"
             value={selectedVendor}
             onChange={(e) => setSelectedVendor(e.target.value)}
-            className="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Vendors</option>
             {vendors.map((vendor) => (
@@ -261,8 +261,12 @@ export function ToursServices() {
       </div>
 
       {/* Services Table */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Tours</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{filteredServices.length} tours found</p>
+        </div>
+        <div className="p-5">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -343,11 +347,12 @@ export function ToursServices() {
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Pending Approval ({filteredPendingServices.length})
-            </h3>
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">Pending Approval</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{filteredPendingServices.length} tours awaiting review</p>
+          </div>
+          <div className="p-5">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -380,23 +385,25 @@ export function ToursServices() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
                         <button
                           onClick={() => approveService(service.id)}
                           disabled={updatingStatus === service.id}
-                          className="inline-flex items-center px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                         >
-                          <CheckIcon className="h-4 w-4 mr-1" />
+                          <CheckIcon className="h-3.5 w-3.5" />
                           {updatingStatus === service.id ? 'Approving...' : 'Approve'}
                         </button>
                         <button
                           onClick={() => rejectService(service.id)}
                           disabled={updatingStatus === service.id}
-                          className="inline-flex items-center px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
+                          <XMarkIcon className="h-3.5 w-3.5" />
                           {updatingStatus === service.id ? 'Rejecting...' : 'Reject'}
                         </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -408,13 +415,14 @@ export function ToursServices() {
       )}
 
       {/* Delete Requests Section */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Delete Requests ({deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length})
-          </h3>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Delete Requests</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
+        </div>
+        <div className="p-5">
           {deleteRequestsError ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-yellow-800">
                 Delete requests are temporarily unavailable due to a permissions issue.
                 Please contact support or run the database migration to fix RLS policies.

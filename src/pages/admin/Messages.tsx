@@ -220,7 +220,7 @@ export default function Messages() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -233,7 +233,7 @@ export default function Messages() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <MessageSquare className="h-8 w-8 text-primary-600" />
+                <MessageSquare className="h-8 w-8 text-blue-600" />
                 {vendorId || touristId ? 'Chat' : 'Manage Messages'}
               </h1>
               <p className="mt-2 text-lg text-gray-600">
@@ -257,7 +257,7 @@ export default function Messages() {
         <div className={`grid grid-cols-1 ${vendorId || touristId ? 'lg:grid-cols-1' : 'lg:grid-cols-2'} gap-8`}>
           {vendorId || touristId ? (
             /* Chat Interface */
-            <div className={`shadow-sm rounded-lg overflow-hidden ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
+            <div className={`shadow-sm rounded-xl border border-gray-200 overflow-hidden ${isDarkMode ? 'bg-[#0a0a0a]' : 'bg-white'}`}>
               {/* Chat Header */}
               <div className="mb-4 flex items-center justify-between p-4">
                 <div className="flex items-center space-x-3">
@@ -267,11 +267,11 @@ export default function Messages() {
                   >
                     ←
                   </button>
-                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
                     {vendorId ? (
-                      <Store className="w-5 h-5 text-primary-600" />
+                      <Store className="w-5 h-5 text-blue-600" />
                     ) : (
-                      <User className="w-5 h-5 text-primary-600" />
+                      <User className="w-5 h-5 text-blue-600" />
                     )}
                   </div>
                   <div>
@@ -324,11 +324,11 @@ export default function Messages() {
                             <div className={`flex-shrink-0 ${isAdmin ? 'ml-2' : 'mr-2'}`}>
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                                 isAdmin 
-                                  ? (isDarkMode ? 'bg-blue-800' : 'bg-primary-100')
+                                  ? (isDarkMode ? 'bg-blue-800' : 'bg-blue-50')
                                   : (isDarkMode ? 'bg-green-800' : 'bg-blue-100')
                               }`}>
                                 {isAdmin ? (
-                                  <User className={`w-4 h-4 ${isDarkMode ? 'text-blue-300' : 'text-primary-600'}`} />
+                                  <User className={`w-4 h-4 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`} />
                                 ) : (
                                   <Store className={`w-4 h-4 ${isDarkMode ? 'text-green-300' : 'text-blue-600'}`} />
                                 )}
@@ -339,7 +339,7 @@ export default function Messages() {
                           <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
                             <div className={`px-4 py-2 rounded-2xl ${
                               isAdmin
-                                ? (isDarkMode ? 'bg-[#005c4b] text-white rounded-br-md' : 'bg-primary-600 text-white rounded-br-md')
+                                ? (isDarkMode ? 'bg-[#005c4b] text-white rounded-br-md' : 'bg-blue-600 text-white rounded-br-md')
                                 : (isDarkMode ? 'bg-gray-700 text-white rounded-bl-md border border-gray-600' : 'bg-white text-gray-900 rounded-bl-md border border-gray-200')
                             }`}>
                               <p className="text-sm whitespace-pre-wrap">{message.message}</p>
@@ -382,7 +382,7 @@ export default function Messages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500 resize-none ${
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none ${
                       isDarkMode 
                         ? 'border-gray-600 bg-gray-800 text-white placeholder-gray-400' 
                         : 'border-gray-300 bg-white text-gray-900 placeholder-gray-500'
@@ -400,7 +400,7 @@ export default function Messages() {
                     disabled={!newMessageContent.trim() || sendingMessage}
                     className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
                       newMessageContent.trim() && !sendingMessage
-                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
@@ -419,7 +419,7 @@ export default function Messages() {
               <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-primary-600" />
+                    <MessageSquare className="h-5 w-5 text-blue-600" />
                     Messages
                   </h2>
                 </div>
@@ -462,7 +462,7 @@ export default function Messages() {
                             onClick={() => setFilter('all')}
                             className={`px-3 py-1 rounded-lg text-sm font-medium ${
                               filter === 'all'
-                                ? 'bg-primary-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
@@ -472,7 +472,7 @@ export default function Messages() {
                             onClick={() => setFilter('unread')}
                             className={`px-3 py-1 rounded-lg text-sm font-medium ${
                               filter === 'unread'
-                                ? 'bg-primary-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
@@ -482,7 +482,7 @@ export default function Messages() {
                             onClick={() => setFilter('vendor_to_admin')}
                             className={`px-3 py-1 rounded-lg text-sm font-medium ${
                               filter === 'vendor_to_admin'
-                                ? 'bg-primary-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
@@ -492,7 +492,7 @@ export default function Messages() {
                             onClick={() => setFilter('tourist_to_admin')}
                             className={`px-3 py-1 rounded-lg text-sm font-medium ${
                               filter === 'tourist_to_admin'
-                                ? 'bg-primary-600 text-white'
+                                ? 'bg-blue-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
@@ -662,7 +662,7 @@ export default function Messages() {
                 <div className="bg-white shadow-sm rounded-lg p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <Store className="h-5 w-5 text-primary-600" />
+                    <Store className="h-5 w-5 text-blue-600" />
                     Vendor Accounts
                   </h2>
                   <span className="text-sm text-gray-500">
@@ -692,7 +692,7 @@ export default function Messages() {
                       placeholder="Search vendors by business name or email..."
                       value={vendorSearch}
                       onChange={(e) => setVendorSearch(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
                 </div>
@@ -772,7 +772,7 @@ export default function Messages() {
                         <button
                           onClick={() => setCurrentVendorPage(prev => Math.max(1, prev - 1))}
                           disabled={currentVendorPage === 1}
-                          className="p-1 rounded-md text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-1 rounded-lg text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Previous page"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -785,7 +785,7 @@ export default function Messages() {
                         <button
                           onClick={() => setCurrentVendorPage(prev => Math.min(totalPages, prev + 1))}
                           disabled={currentVendorPage === totalPages}
-                          className="p-1 rounded-md text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-1 rounded-lg text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Next page"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -804,10 +804,10 @@ export default function Messages() {
 
         {/* Message Detail Modal */}
         {selectedMessage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Message Details</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Message Details</h3>
                 <button
                   onClick={() => setSelectedMessage(null)}
                   className="text-gray-400 hover:text-gray-600"
@@ -850,7 +850,7 @@ export default function Messages() {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setShowReplyForm(true)}
-                      className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
                       Reply
                     </button>
@@ -867,14 +867,14 @@ export default function Messages() {
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       placeholder="Type your reply..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                       rows={4}
                     />
                     <div className="flex space-x-2">
                       <button
                         onClick={handleReply}
                         disabled={!replyMessage.trim()}
-                        className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Send Reply
                       </button>
