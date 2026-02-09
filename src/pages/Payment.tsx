@@ -78,14 +78,14 @@ export default function PaymentPage() {
           <div className="px-6 py-4 border-b bg-gray-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
                 <div className="text-sm">
                   <p className="font-light text-gray-900">Tickets</p>
                 </div>
               </div>
               <div className="w-12 h-px bg-gray-300"></div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
                 <div className="text-sm">
                   <p className="font-light text-gray-900">Details</p>
                 </div>
