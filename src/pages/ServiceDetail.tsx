@@ -835,6 +835,18 @@ export default function ServiceDetail() {
                 <p className="text-sm text-gray-600 mt-1">{service.transport_terms}</p>
               </div>
             )}
+
+            {/* Fuel Policy */}
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <h4 className="text-sm font-medium text-amber-900 mb-1">Fuel Policy</h4>
+              {service.fuel_included ? (
+                <p className="text-sm text-amber-800">Fuel is included in your rental — no extra charges for fuel.</p>
+              ) : (
+                <p className="text-sm text-amber-800">
+                  Fuel costs are your responsibility. You'll be charged for fuel used during your rental.
+                </p>
+              )}
+            </div>
           </div>
         )
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Users, CreditCard, CheckCircle, Car, XCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
@@ -476,27 +476,43 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     fetchTouristData()
   }, [user, profile])
 
-  const nextImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const nextIndex = (currentImageIndex + 1) % service.images.length
-      setCurrentImageIndex(nextIndex)
-      setSelectedImage(service.images[nextIndex])
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Store touch start position
+    const touchDownClientX = e.targetTouches[0].clientX
+    e.currentTarget.setAttribute('data-touch-start', touchDownClientX.toString())
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchDownClientX = parseFloat(e.currentTarget.getAttribute('data-touch-start') || '0')
+    const touchUpClientX = e.changedTouches[0].clientX
+    handleSwipe(touchDownClientX, touchUpClientX)
+  }
+
+  const handleSwipe = (start: number, end: number) => {
+    if (!service?.images || service.images.length <= 1) return
+    
+    const swipeThreshold = 50
+    const diff = start - end
+
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        // Swiped left - show next image
+        const nextIndex = (currentImageIndex + 1) % service.images.length
+        setCurrentImageIndex(nextIndex)
+        setSelectedImage(service.images[nextIndex])
+      } else {
+        // Swiped right - show previous image
+        const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
+        setCurrentImageIndex(prevIndex)
+        setSelectedImage(service.images[prevIndex])
+      }
     }
   }
 
-  const prevImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
-      setCurrentImageIndex(prevIndex)
-      setSelectedImage(service.images[prevIndex])
-    }
-  }
 
   const steps = [
-    { id: 1, title: 'Trip Details', icon: Car },
-    { id: 2, title: 'Your Details', icon: Users },
-    { id: 3, title: 'Payment', icon: CreditCard },
-    { id: 4, title: 'Confirmation', icon: CheckCircle }
+    { id: 1, title: 'Details & Payment', icon: CreditCard },
+    { id: 2, title: 'Confirmation', icon: CheckCircle }
   ]
 
   const validateCurrentStep = () => {
@@ -523,8 +539,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           alert(`Number of passengers must be between 1 and ${service.vehicle_capacity || service.max_capacity}.`)
           return false
         }
-        break
-      case 2:
         // Validate contact details
         if (!bookingData.contactName.trim()) {
           alert('Please enter your full name.')
@@ -534,11 +548,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           alert('Please enter a valid email address.')
           return false
         }
-        // Phone number is now optional
-        // if (!bookingData.contactPhone.trim()) {
-        //   alert('Please enter your phone number.')
-        //   return false
-        // }
         break
       default:
         break
@@ -553,8 +562,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         return
       }
 
-      // If completing booking (step 3), create the actual booking
-      if (currentStep === 3) {
+      // If completing booking (step 1), create the actual booking
+      if (currentStep === 1) {
         setBookingError(null)
         // Prepare booking data for localStorage (vendor panel)
         const bookingDataToSave = {
@@ -684,473 +693,416 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     switch (currentStep) {
       case 1:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
+            {/* Trip Dates Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Transportation Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Pick-up Date & Time
-                  </label>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 sm:mb-4">Trip Dates & Times</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Pick-up Date & Time</label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className={`w-full px-3 py-3 md:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base ${
+                      className={`w-full px-2 py-2 border rounded text-xs sm:text-sm ${
                         blockedError ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                       value={bookingData.startDate}
                       onChange={(e) => handleInputChange('startDate', e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
                     />
-                    {blockedError && (
-                      <p className="text-xs text-red-600 mt-1 col-span-2">{blockedError}</p>
-                    )}
                     <input
                       type="time"
-                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                      className="w-full px-2 py-2 border border-gray-300 rounded text-xs sm:text-sm"
                       value={bookingData.startTime || '09:00'}
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
                     />
                   </div>
+                  {blockedError && <p className="text-xs text-red-600 mt-1">{blockedError}</p>}
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Drop-off Date & Time
-                  </label>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Drop-off Date & Time</label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                      className="w-full px-2 py-2 border border-gray-300 rounded text-xs sm:text-sm"
                       value={bookingData.endDate}
                       onChange={(e) => handleInputChange('endDate', e.target.value)}
                       min={bookingData.startDate || new Date().toISOString().split('T')[0]}
                     />
                     <input
                       type="time"
-                      className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                      className="w-full px-2 py-2 border border-gray-300 rounded text-xs sm:text-sm"
                       value={bookingData.endTime || '17:00'}
                       onChange={(e) => handleInputChange('endTime', e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Number of Passengers
-                  </label>
-                  <select
-                    className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    value={bookingData.passengers}
-                    onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
-                  >
-                    {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num}>{num} passenger{num > 1 ? 's' : ''}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Driver Option
-                  </label>
-                  <select
-                    className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
-                    onChange={(e) => handleInputChange('driverOption', e.target.value)}
-                  >
-                    {!service.driver_included && (
-                      <option value="self-drive">Self-drive</option>
-                    )}
-                    <option value="with-driver">
-                      {service.driver_included ? 'With driver (included)' : 'With driver (+30% extra cost)'}
-                    </option>
-                  </select>
-                  {service.driver_included === false && bookingData.driverOption === 'with-driver' && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      Additional 30% charge for driver service
-                    </p>
-                  )}
-                  {service.driver_included === false && bookingData.driverOption === 'self-drive' && (
-                    <p className="text-xs text-gray-500 mt-1">Self-drive available</p>
-                  )}
-                  {service.driver_included === true && (
-                    <p className="text-xs text-amber-600 mt-1">Driver included in base price</p>
-                  )}
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-medium text-blue-900 mb-1">Fuel Policy</h4>
-                    {service.fuel_included ? (
-                      <p className="text-xs text-blue-700">Fuel is included in your rental - no extra charges for fuel.</p>
-                    ) : (
-                      <div className="text-xs text-blue-700">
-                        {bookingData.driverOption === 'self-drive' ? (
-                          <p>Fuel costs are your responsibility. You'll be charged for fuel used during your rental.</p>
-                        ) : (
-                          <p>Fuel costs are your responsibility. The driver will coordinate fuel stops during your trip.</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 
+            {/* Passengers & Driver Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Passengers *</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  value={bookingData.passengers}
+                  onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
+                >
+                  {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>{num} {num > 1 ? 'passengers' : 'passenger'}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Driver Option *</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
+                  onChange={(e) => handleInputChange('driverOption', e.target.value)}
+                >
+                  {!service.driver_included && <option value="self-drive">Self-drive</option>}
+                  <option value="with-driver">
+                    {service.driver_included ? 'With driver (included)' : 'With driver (+30%)'}
+                  </option>
+                </select>
+                {service.driver_included === false && bookingData.driverOption === 'with-driver' && (
+                  <p className="text-xs text-amber-600 mt-1">+30% additional cost</p>
+                )}
+              </div>
+            </div>
+
+            {/* Locations & Options Section */}
             {bookingData.driverOption === 'with-driver' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pickup Location *
-                  </label>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Pickup & Drop-off Locations</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Pickup location"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     value={bookingData.pickupLocation}
                     onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
-                    placeholder="Enter pickup location"
                     required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Drop-off Location *
-                  </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Drop-off location"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     value={bookingData.dropoffLocation}
                     onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
-                    placeholder="Enter drop-off location"
                     required
                   />
                 </div>
               </div>
             )}
 
+            
             <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="mr-2"
-                  checked={bookingData.returnTrip}
-                  onChange={(e) => handleInputChange('returnTrip', e.target.checked)}
-                />
-                <span className="text-sm font-medium text-gray-700">Return trip (+{formatCurrencyWithConversion(service.price, service.currency)})</span>
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Special Requests (Optional)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={3}
-                placeholder="Any special requirements for your transportation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="Any special requirements..."
                 value={bookingData.specialRequests}
                 onChange={(e) => handleInputChange('specialRequests', e.target.value)}
               />
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-2">Vehicle Information</h4>
-              <div className="text-sm text-blue-800">
-                <p>• Vehicle: {service.vehicle_type || 'Standard vehicle'}</p>
-                <p>• Capacity: {service.vehicle_capacity ? `Up to ${service.vehicle_capacity} passengers` : service.max_capacity ? `Up to ${service.max_capacity} passengers` : 'Capacity not specified'}</p>
-                <p>• Daily rental service</p>
+            {/* Contact Information Section */}
+            <div className="border-t pt-4 sm:pt-6">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 sm:mb-4">Your Contact Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <input
+                  type="text"
+                  placeholder="Full name *"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm"
+                  value={bookingData.contactName}
+                  onChange={(e) => handleInputChange('contactName', e.target.value)}
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Email address *"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  value={bookingData.contactEmail}
+                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  required
+                />
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone (Optional)</label>
+                  <div className="flex gap-2">
+                    <div className="relative country-dropdown w-32">
+                      <button
+                        type="button"
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm flex items-center justify-between"
+                        onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                      >
+                        <span className="truncate text-xs">
+                          {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
+                        </span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {countryDropdownOpen && (
+                        <div className="absolute top-full left-0 z-50 w-56 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          <div className="p-2 border-b">
+                            <input
+                              type="text"
+                              placeholder="Search..."
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                              value={countrySearch}
+                              onChange={(e) => setCountrySearch(e.target.value)}
+                            />
+                          </div>
+                          <div className="max-h-40 overflow-y-auto">
+                            {filteredCountries.map((country) => (
+                              <button
+                                key={country.code}
+                                type="button"
+                                className="w-full px-2 py-1 text-left hover:bg-gray-100 flex items-center gap-2 text-xs"
+                                onClick={() => {
+                                  handleInputChange('countryCode', country.code)
+                                  setCountrySearch('')
+                                  setCountryDropdownOpen(false)
+                                }}
+                              >
+                                <span>{country.flag}</span>
+                                <span className="flex-1">{country.name}</span>
+                                <span className="text-gray-500">{country.code}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="tel"
+                      placeholder="Phone number"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      value={bookingData.contactPhone}
+                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Payment Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Payment Details</h3>
+              
+              {/* Price Breakdown */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">{service.title}</span>
+                    <span className="font-medium">{formatCurrencyWithConversion(basePrice, service.currency)}</span>
+                  </div>
+                  {driverCost > 0 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Driver service (30%)</span>
+                      <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
+                    </div>
+                  )}
+                  <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
+                    <span>Total</span>
+                    <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method *</label>
+                <div className="space-y-3">
+                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="card"
+                      checked={bookingData.paymentMethod === 'card'}
+                      onChange={() => handlePaymentMethodChange('card')}
+                      className="w-4 h-4"
+                      disabled
+                    />
+                    <span className="ml-2 text-sm opacity-50">Card (Coming soon)</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="mobile"
+                      checked={bookingData.paymentMethod === 'mobile'}
+                      onChange={() => handlePaymentMethodChange('mobile')}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-2 text-sm">Mobile Money</span>
+                  </label>
+                </div>
+                {cardNoticeVisible && (
+                  <p className="text-xs text-red-600 mt-2">Card payments not available yet</p>
+                )}
+              </div>
+
+              {/* Mobile Money Provider */}
+              {bookingData.paymentMethod === 'mobile' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    value={bookingData.mobileProvider}
+                    onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
+                  >
+                    <option value="">Select provider</option>
+                    <option value="MTN">MTN Mobile Money</option>
+                    <option value="Airtel">Airtel Money</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         )
 
       case 2:
         return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                  value={bookingData.contactName}
-                  onChange={(e) => handleInputChange('contactName', e.target.value)}
-                  required
-                />
+          <div className="space-y-4 sm:space-y-6 -mt-20 sm:-mt-24">
+            {/* Success Header */}
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  className="w-full px-3 py-3 md:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                  value={bookingData.contactEmail}
-                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="md:col-span-2 space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone Number (Optional)
-                </label>
-                <div className="flex">
-                  <div className="relative country-dropdown">
-                    <button
-                      type="button"
-                      className="px-3 py-3 md:py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base bg-gray-50 border-r-0 flex items-center justify-between min-w-[120px]"
-                      onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                      style={{ width: '140px' }}
-                    >
-                      <span className="truncate">
-                        {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
-                      </span>
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {countryDropdownOpen && (
-                      <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div className="p-2 border-b">
-                          <input
-                            type="text"
-                            placeholder="Search countries..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={countrySearch}
-                            onChange={(e) => setCountrySearch(e.target.value)}
-                          />
-                        </div>
-                        <div className="max-h-48 overflow-y-auto">
-                          {filteredCountries.map((country) => (
-                            <button
-                              key={country.code}
-                              type="button"
-                              className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
-                              onClick={() => {
-                                handleInputChange('countryCode', country.code)
-                                setCountrySearch('')
-                                setCountryDropdownOpen(false)
-                              }}
-                            >
-                              <span>{country.flag}</span>
-                              <span className="text-sm">{country.name}</span>
-                              <span className="text-sm text-gray-500 ml-auto">{country.code}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    type="tel"
-                    className="flex-1 px-3 py-3 md:py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    value={bookingData.contactPhone}
-                    onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                    placeholder="700 000 000"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-600">Transportation: {service.title} ({calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days)</span>
-                <span className="font-medium">{formatCurrencyWithConversion(basePrice, service.currency)}</span>
-              </div>
-              {driverCost > 0 && (
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Driver service (30% extra)</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
-                <span>Total Amount</span>
-                <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-              </div>
-            </div>
-            
-            {/* Fuel Responsibility Notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-amber-900 mb-2">Fuel Policy</h4>
-              {service.fuel_included ? (
-                <p className="text-sm text-amber-800">
-                  Fuel costs are included in your booking. No additional fuel charges will apply.
-                </p>
-              ) : (
-                <div className="text-sm text-amber-800">
-                  {bookingData.driverOption === 'self-drive' ? (
-                    <div>
-                      <p className="font-medium mb-1">Fuel costs are your responsibility</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li>You'll be charged for fuel used during your rental</li>
-                        <li>Fuel costs will be calculated at current market rates</li>
-                      </ul>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="font-medium mb-1">Fuel costs are your responsibility</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li>The driver will coordinate fuel stops during your trip</li>
-                        <li>You'll be responsible for all fuel costs incurred</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Method
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={bookingData.paymentMethod === 'card'}
-                    onChange={() => handlePaymentMethodChange('card')}
-                    className="mr-2"
-                  />
-                  Credit/Debit Card
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="mobile"
-                    checked={bookingData.paymentMethod === 'mobile'}
-                    onChange={() => handlePaymentMethodChange('mobile')}
-                    className="mr-2"
-                  />
-                  Mobile Money
-                </label>
-                {cardNoticeVisible && (
-                  <p className="text-sm text-red-600 mt-2">
-                    Credit/Debit Card payments are not active yet. Please select other Methods.
-                  </p>
-                )}
-              </div>
-            </div>
-            {bookingData.paymentMethod === 'mobile' && (
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.mobileProvider}
-                  onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                >
-                  <option value="" disabled>Select Provider</option>
-                  <option value="MTN">MTN Mobile Money</option>
-                  <option value="Airtel">Airtel Money</option>
-                </select>
-              </div>
-            )}
-            {bookingData.paymentMethod === 'card' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Card Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="1234 5678 9012 3456"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CVV
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )
-
-      case 4:
-        return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
               </p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-left">
-              <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+
+            {/* Service Details */}
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
                   <span className="text-gray-600">Service:</span>
-                  <span className="font-medium">{service.title}</span>
+                  <span className="font-medium text-right">{service.title}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Date:</span>
-                  <span className="font-medium">{bookingData.date}</span>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Location:</span>
+                  <span className="font-medium text-right">{service.location}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Pickup:</span>
-                  <span className="font-medium">{bookingData.pickupLocation}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Drop-off:</span>
-                  <span className="font-medium">{bookingData.dropoffLocation}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Passengers:</span>
-                  <span className="font-medium">{bookingData.passengers}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Return Trip:</span>
-                  <span className="font-medium">{bookingData.returnTrip ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Paid:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Category:</span>
+                  <span className="font-medium text-right">{service.service_categories.name}</span>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+            {/* Trip Details */}
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Pick-up Date & Time:</span>
+                  <span className="font-medium text-right">{bookingData.startDate || 'Not set'} {bookingData.startTime ? `at ${bookingData.startTime}` : ''}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Drop-off Date & Time:</span>
+                  <span className="font-medium text-right">{bookingData.endDate || 'Not set'} {bookingData.endTime ? `at ${bookingData.endTime}` : ''}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium text-right">
+                    {bookingData.startDate && bookingData.endDate 
+                      ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days`
+                      : 'N/A'
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Pick-up Location:</span>
+                  <span className="font-medium text-right max-w-xs">{bookingData.pickupLocation || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Drop-off Location:</span>
+                  <span className="font-medium text-right max-w-xs">{bookingData.dropoffLocation || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Passenger & Payment Details */}
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Passengers:</span>
+                  <span className="font-medium">{bookingData.passengers}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Driver Option:</span>
+                  <span className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Special Requests:</span>
+                  <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Payment Method:</span>
+                  <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
+                </div>
+                {bookingData.paymentMethod === 'mobile' && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Provider:</span>
+                    <span className="font-medium">{bookingData.mobileProvider}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Contact Details */}
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Name:</span>
+                  <span className="font-medium text-right">{bookingData.contactName}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Summary */}
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
+                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 sm:gap-3 justify-center pt-2">
               <button
                 onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Similar Services
               </button>
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Send Inquiry
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Home
               </button>
@@ -1166,66 +1118,143 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center space-y-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-            <p className="text-gray-600">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32 min-h-screen">
+        <div className="space-y-4 sm:space-y-6 -mt-20 sm:-mt-24">
+          {/* Success Header */}
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
+            <p className="text-gray-600 text-sm sm:text-base">
               Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
             </p>
           </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-left">
-            <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+
+          {/* Service Details */}
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-start">
                 <span className="text-gray-600">Service:</span>
-                <span className="font-medium">{service.title}</span>
+                <span className="font-medium text-right">{service.title}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-medium">{bookingData.date}</span>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Location:</span>
+                <span className="font-medium text-right">{service.location}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Pickup:</span>
-                <span className="font-medium">{bookingData.pickupLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Drop-off:</span>
-                <span className="font-medium">{bookingData.dropoffLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Passengers:</span>
-                <span className="font-medium">{bookingData.passengers}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Return Trip:</span>
-                <span className="font-medium">{bookingData.returnTrip ? 'Yes' : 'No'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Paid:</span>
-                <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Category:</span>
+                <span className="font-medium text-right">{service.service_categories.name}</span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+          {/* Trip Details */}
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Pick-up Date & Time:</span>
+                <span className="font-medium text-right">{bookingData.startDate || 'Not set'} {bookingData.startTime ? `at ${bookingData.startTime}` : ''}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Drop-off Date & Time:</span>
+                <span className="font-medium text-right">{bookingData.endDate || 'Not set'} {bookingData.endTime ? `at ${bookingData.endTime}` : ''}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Duration:</span>
+                <span className="font-medium text-right">
+                  {bookingData.startDate && bookingData.endDate 
+                    ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days`
+                    : 'N/A'
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Pick-up Location:</span>
+                <span className="font-medium text-right max-w-xs">{bookingData.pickupLocation || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Drop-off Location:</span>
+                <span className="font-medium text-right max-w-xs">{bookingData.dropoffLocation || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Passenger & Payment Details */}
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Passengers:</span>
+                <span className="font-medium">{bookingData.passengers}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Driver Option:</span>
+                <span className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Special Requests:</span>
+                <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Payment Method:</span>
+                <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
+              </div>
+              {bookingData.paymentMethod === 'mobile' && (
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium">{bookingData.mobileProvider}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact Details */}
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Name:</span>
+                <span className="font-medium text-right">{bookingData.contactName}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Email:</span>
+                <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
+              </div>
+              <div className="flex justify-between items-start">
+                <span className="text-gray-600">Phone:</span>
+                <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Price Summary */}
+          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+            <div className="flex justify-between items-center">
+              <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
+              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 sm:gap-3 justify-center pt-2">
             <button
               onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
             >
               Similar Services
             </button>
             <button
               onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
             >
               Send Inquiry
             </button>
             <button
               onClick={() => navigate('/')}
-              className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
             >
               Home
             </button>
@@ -1302,7 +1331,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   <span className={`ml-0.5 md:ml-1 text-[10px] md:text-xs font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
                   }`}>
-                    {step.id === 1 ? 'Trip' : step.id === 2 ? 'Details' : step.id === 3 ? 'Payment' : 'Confirmation'}
+                    {step.title}
                   </span>
                   {index < steps.length - 1 && (
                     <div className={`${isCompleted ? 'bg-green-600' : 'bg-gray-200'} w-2 md:w-3 h-0.5 mx-0.5 md:mx-1`} />
@@ -1314,141 +1343,136 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32">
 
-        {/* Service Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-4 md:p-6 mb-6">
-          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
-            {/* Image with Navigation */}
-            <div className="relative flex-shrink-0 w-full md:w-auto">
-              <img
-                src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                alt={service.title}
-                className="w-full md:max-w-xs lg:max-w-sm xl:max-w-md h-48 md:h-64 lg:h-80 object-cover rounded-lg shadow-lg border-2 border-gray-200"
-              />
-              {service.images && service.images.length > 1 && (
-                <>
-                  {/* Navigation Arrows - Larger touch targets on mobile */}
-                  <button
-                    onClick={prevImage}
-                    className="absolute left-2 md:left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 md:p-2 rounded-full hover:bg-opacity-75 transition-all touch-manipulation"
-                  >
-                    <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
-                  </button>
-                  <button
-                    onClick={nextImage}
-                    className="absolute right-2 md:right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 md:p-2 rounded-full hover:bg-opacity-75 transition-all touch-manipulation"
-                  >
-                    <ArrowLeft className="h-5 w-5 md:h-4 md:w-4 rotate-180" />
-                  </button>
-                  {/* Image Counter */}
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-3 py-1 md:px-2 md:py-1 rounded-full text-sm md:text-xs">
+        {/* Main Layout: Image on Left, Form on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 -mt-32">
+          
+          {/* Service Image - Sticky on Desktop */}
+          <div className="lg:col-span-5 -mx-3 sm:-mx-0 lg:mx-0">
+            <div className="sticky top-4">
+              <div className="relative">
+                <img
+                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                  alt={service.title}
+                  className="w-screen lg:w-full h-64 md:h-80 object-cover cursor-pointer"
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                />
+                {service.images && service.images.length > 0 && (
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
                     {currentImageIndex + 1} / {service.images.length}
                   </div>
-                </>
+                )}
+              </div>
+              
+              {/* Image Thumbnails - Desktop Only */}
+              {service.images && service.images.length > 1 && (
+                <div className="hidden lg:flex gap-2 mt-3">
+                  {service.images.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setCurrentImageIndex(index)
+                        setSelectedImage(img)
+                      }}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        currentImageIndex === index ? 'border-blue-600' : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Thumbnail ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            <div className="flex-1 w-full md:w-auto">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">{service.title}</h2>
-              <p className="text-gray-600 text-sm mb-1">{service.location}</p>
-              <p className="text-gray-600 text-sm mb-3">{service.service_categories.name}</p>
-              
-              {/* Mobile: Show key details */}
-              <div className="block md:hidden space-y-2">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600 text-sm">Duration:</span>
-                  <span className="font-medium text-sm">{calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-gray-600 text-sm">Passengers:</span>
-                  <span className="font-medium text-sm">{bookingData.passengers}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600 text-sm">Driver:</span>
-                  <span className="font-medium text-sm">{bookingData.driverOption === 'with-driver' ? 'Included' : 'Self-drive'}</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-right w-full md:w-auto md:text-right">
-              <div className="text-xl md:text-lg font-bold text-gray-900 mb-1">
-                {formatCurrencyWithConversion(totalPrice, service.currency)}
-              </div>
-              <div className="text-sm text-gray-500">
-                {bookingData.returnTrip ? 'Return trip' : 'One way'}
-              </div>
-              
-              {/* Desktop: Show additional details */}
-              <div className="hidden md:block mt-2 space-y-1">
-                <div className="text-xs text-gray-500">
-                  {calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days
-                </div>
-                <div className="text-xs text-gray-500">
-                  {bookingData.passengers} passengers
-                </div>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          {renderStepContent()}
-        </div>
+          {/* Form and Details - Right Side */}
+          <div className="lg:col-span-7 space-y-3 sm:space-y-4 pt-2 sm:pt-4">
+            {/* Service Info Header */}
+            <div>
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1">
+                {service.title} <span className="text-gray-600 font-normal">in {service.location}</span>
+              </h2>
+              <p className="text-gray-600 text-xs sm:text-sm mb-3">{service.service_categories.name}</p>
+              
+              {/* Price Summary */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg sm:text-xl font-bold text-gray-900">
+                    {formatCurrencyWithConversion(totalPrice, service.currency)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    One way {bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step Content */}
+            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
+              {renderStepContent()}
+            </div>
 
         {/* Navigation */}
-        {currentStep < 4 && (
-          <div className="mt-6">
+        {currentStep < 2 && (
+          <div className="mt-4 sm:mt-6">
             {/* Mobile: Horizontal layout with smaller buttons */}
             <div className="flex md:hidden justify-between gap-2">
               <button
                 onClick={handleBack}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium"
               >
-                {currentStep === 1 ? 'Cancel' : 'Back'}
+                Cancel
               </button>
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && (
-                    !bookingData.startDate ||
-                    !bookingData.endDate ||
-                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
-                  )) ||
-                  (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
-                  || (currentStep === 3 && bookingData.paymentMethod === 'card')
+                  !bookingData.startDate ||
+                  !bookingData.endDate ||
+                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                  !bookingData.contactName ||
+                  !bookingData.contactEmail ||
+                  bookingData.paymentMethod === 'card'
                 }
-                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium"
               >
-                {currentStep === 3 ? 'Complete' : 'Next'}
+                Complete Booking
               </button>
             </div>
 
             {/* Desktop: Horizontal layout */}
-            <div className="hidden md:flex justify-between">
+            <div className="hidden md:flex justify-between gap-3 mt-4">
               <button
                 onClick={handleBack}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
               >
-                {currentStep === 1 ? 'Cancel' : 'Back'}
+                Cancel
               </button>
               <button
                 onClick={handleNext}
                 disabled={
-                  (currentStep === 1 && (
-                    !bookingData.startDate ||
-                    !bookingData.endDate ||
-                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation))
-                  )) ||
-                  (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
-                  || (currentStep === 3 && bookingData.paymentMethod === 'card')
+                  !bookingData.startDate ||
+                  !bookingData.endDate ||
+                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                  !bookingData.contactName ||
+                  !bookingData.contactEmail ||
+                  bookingData.paymentMethod === 'card'
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                {currentStep === 3 ? 'Complete Booking' : 'Next'}
+                Complete Booking
               </button>
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   )
