@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
   MapPin, 
@@ -12,7 +12,7 @@ import {
   ShoppingCart,
   CheckCircle
 } from 'lucide-react'
-import { getServiceBySlug, getServiceById, getTicketTypes, createOrder } from '../lib/database'
+import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -146,6 +146,8 @@ export default function ServiceDetail() {
   const [guests, setGuests] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
+  const [reviews, setReviews] = useState<any[]>([])
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   const { addToCart } = useCart()
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -242,26 +244,22 @@ export default function ServiceDetail() {
     }
   }, [service])
 
-  const handleImageClick = (imageUrl: string, index: number) => {
-    setSelectedImage(imageUrl)
-    setCurrentImageIndex(index)
-  }
-
-  const nextImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const nextIndex = (currentImageIndex + 1) % service.images.length
-      setCurrentImageIndex(nextIndex)
-      setSelectedImage(service.images[nextIndex])
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollLeft = scrollContainerRef.current.scrollLeft
+        const width = scrollContainerRef.current.clientWidth
+        const index = Math.round(scrollLeft / width)
+        setCurrentImageIndex(Math.min(index, (service?.images?.length || 1) - 1))
+      }
     }
-  }
 
-  const prevImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
-      setCurrentImageIndex(prevIndex)
-      setSelectedImage(service.images[prevIndex])
+    const container = scrollContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
     }
-  }
+  }, [service?.images?.length])
 
   const fetchService = async () => {
     try {
@@ -290,6 +288,14 @@ export default function ServiceDetail() {
         setService(null)
       } else {
         setService(serviceData)
+        // Fetch reviews for this service
+        try {
+          const serviceReviews = await getServiceReviews(serviceData.id)
+          setReviews(serviceReviews || [])
+        } catch (error) {
+          console.error('Error fetching reviews:', error)
+          setReviews([])
+        }
       }
       setLoading(false)
     } catch (error) {
@@ -411,20 +417,6 @@ export default function ServiceDetail() {
     
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
     return categoryTexts[mappedCategory] || 'Check Availability'
-  }
-
-  const getInquiryButtonText = (categoryName: string): string => {
-    const categoryTexts: { [key: string]: string } = {
-    'hotels': 'Contact Provider',
-    'transport': 'Contact Provider',
-    'tours': 'Contact Provider',
-    'restaurants': 'Contact Provider',
-    'activities': 'Contact Provider',
-    'flights': 'Contact Provider'
-    }
-    
-    const mappedCategory = mapCategoryToBookingFlow(categoryName)
-  return categoryTexts[mappedCategory] || 'Contact Provider'
   }
 
   // Render category-specific information
@@ -558,16 +550,22 @@ export default function ServiceDetail() {
               )}
             </div>
 
-            {service.hotel_policies && service.hotel_policies.length > 0 && (
-              <div className="mt-4">
-                <span className="text-sm font-medium text-gray-700">Hotel Policies:</span>
-                <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
-                  {service.hotel_policies.map((policy, index) => (
-                    <li key={index}>{policy}</li>
-                  ))}
-                </ul>
+            {/* Hotel Policies */}
+            <div className="mt-6 bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-semibold text-blue-900 mb-3">Hotel Policies</h4>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p>• <span className="font-medium">Check-in:</span> {service.check_in_time || '2:00 PM'}</p>
+                <p>• <span className="font-medium">Check-out:</span> {service.check_out_time || '11:00 AM'}</p>
+                <p>• Free cancellation up to 24 hours before check-in</p>
+                {service.hotel_policies && service.hotel_policies.length > 0 && (
+                  <>
+                    {service.hotel_policies.map((policy, index) => (
+                      <p key={index}>• {policy}</p>
+                    ))}
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )
 
@@ -1150,8 +1148,8 @@ export default function ServiceDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
+      {/* Header - Desktop only */}
+      <div className="hidden md:block bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center text-gray-600 hover:text-gray-900">
@@ -1179,18 +1177,277 @@ export default function ServiceDetail() {
         </div>
       </div>
 
+      {/* Mobile Image with Header Overlay */}
+      <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
+        <div className="relative h-[60vh]">
+          {/* Scrollable Image Container */}
+          <div 
+            ref={scrollContainerRef}
+            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" 
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            <div className="flex w-full h-full">
+              {service.images && service.images.length > 0 ? (
+                service.images.map((image, index) => (
+                  <div key={index} className="flex-shrink-0 w-full snap-center">
+                    <img
+                      src={image}
+                      alt={`${service.title} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="flex-shrink-0 w-full snap-center">
+                  <img
+                    src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
+                    alt={service.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Mobile Header Overlay */}
+          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+            <Link to="/" className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 px-3 py-2 rounded-lg drop-shadow-lg transition-all">
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              <span className="text-sm">Back</span>
+            </Link>
+            <div className="flex items-center space-x-2">
+              <button className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all">
+                <Heart className="h-5 w-5" />
+              </button>
+              <button className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all">
+                <Share2 className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={handleSaveToCart}
+                className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all"
+              >
+                <ShoppingCart className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Image Counter */}
+          {service.images && service.images.length > 0 && (
+            <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
+              {currentImageIndex + 1} / {service.images.length}
+            </div>
+          )}
+
+          {/* Event hero overlay for Activities to mimic Quicket-style layout */}
+          {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
+            <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
+              <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
+              <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
+              <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
+                {service.duration_hours && (
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span>{service.duration_hours} hours</span>
+                  </div>
+                )}
+                {service.location && (
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span>{service.location}</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-300">From</div>
+                  <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                </div>
+                <div>
+                  <button onClick={() => {
+                    // scroll to tickets sidebar
+                    const el = document.querySelector('[data-tickets-section]')
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Buy Tickets</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile - Centered Info Block Near Image */}
+      <div className="md:hidden bg-white border-b">
+        <div className="max-w-md mx-auto px-4 py-3 text-center">
+          {/* Title */}
+          <h1 className="text-lg font-bold text-gray-900 mb-2">{service.title}</h1>
+
+          {/* Description */}
+          <p className="text-gray-700 text-xs leading-relaxed mb-1">
+            {service.description}
+          </p>
+
+          {/* Location */}
+          <p className="text-gray-600 text-xs mb-2">
+            in {service.location}
+          </p>
+
+          {/* Rating & Reviews */}
+          <div className="flex items-center justify-center">
+            <div className="flex items-center">
+              <Star className="h-3 w-3 text-yellow-400 fill-current" />
+              <span className="ml-1 text-xs font-medium text-gray-900">4.5</span>
+            </div>
+            <span className="text-xs text-gray-500 ml-2">(24 reviews)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Information Section - Organized & Logical Flow */}
+      <div className="md:hidden bg-gray-50 pb-20">
+        <div className="px-4 py-6 space-y-6">
+          {/* 2. Quick Info - All Details Consolidated */}
+          <div className="bg-white rounded-lg p-4">
+            <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Quick Info</p>
+            <div className="space-y-2">
+              {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                <div className="flex items-center text-xs text-gray-700">
+                  <Clock className="h-4 w-4 text-gray-400 mr-2" />
+                  Duration: {service.duration_hours} hours
+                </div>
+              )}
+              {service.max_capacity && (
+                <div className="flex items-center text-xs text-gray-700">
+                  <Users className="h-4 w-4 text-gray-400 mr-2" />
+                  Up to {service.max_capacity} guests
+                </div>
+              )}
+              <div className="flex items-center text-xs text-gray-700">
+                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                Instant confirmation
+              </div>
+              
+              {/* Amenities in Quick Info */}
+              {service.amenities && service.amenities.length > 0 && (
+                <>
+                  <div className="border-t pt-2 mt-2">
+                    <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
+                    <div className="space-y-1">
+                      {service.amenities.map((amenity, index) => (
+                        <div key={index} className="flex items-center text-xs text-gray-700">
+                          <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                          {amenity}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Hotel-specific details in Quick Info */}
+              {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                <>
+                  <div className="border-t pt-2 mt-2">
+                    <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
+                    <div className="space-y-1 text-xs">
+                      {service.star_rating && (
+                        <div className="flex items-center">
+                          <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
+                          <span className="text-gray-700">{service.star_rating} Star</span>
+                        </div>
+                      )}
+                      {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                      {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
+                      {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
+                      {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Provider info in Quick Info */}
+              {service.vendors && (
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
+                  <div className="flex items-start space-x-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-blue-600">
+                        {service.vendors.business_name?.charAt(0) || 'V'}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 text-xs">{service.vendors.business_name || 'Service Provider'}</h4>
+                      <p className="text-gray-600 text-xs mt-0.5 line-clamp-2">
+                        {service.vendors.business_description || 'No description available'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Reviews Summary */}
+          <div className="bg-white rounded-lg p-4 border-t-4 border-yellow-400">
+            <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Reviews</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                  <span className="ml-1 text-lg font-bold text-gray-900">4.5</span>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">({reviews.length} reviews)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* User Reviews Messages */}
+          {reviews.length > 0 && (
+            <div className="bg-white rounded-lg p-4">
+              <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Recent Reviews</p>
+              <div className="space-y-3">
+                {reviews.slice(0, 5).map((review, index) => (
+                  <div key={index} className="border-b pb-3 last:border-b-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900">{review.visitor_name || 'Anonymous'}</p>
+                        <div className="flex items-center mt-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {review.comment && (
+                      <p className="text-xs text-gray-600 line-clamp-3 mt-1">{review.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Image Gallery */}
-            <div className="mb-8">
+            {/* Image Gallery - Desktop */}
+            <div className="mb-8 hidden md:block">
               {/* Main Image Display */}
               <div className="relative mb-4">
                 <img
                   src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                   alt={service.title}
-                  className="w-full h-[560px] md:h-[640px] object-cover rounded-lg shadow-lg"
+                  className="w-full h-[640px] object-cover rounded-lg shadow-lg"
                 />
 
                 {/* Event hero overlay for Activities to mimic Quicket-style layout */}
@@ -1228,35 +1485,19 @@ export default function ServiceDetail() {
                   </div>
                 )}
                 {service.images && service.images.length > 1 && (
-                  <>
-                    {/* Navigation Arrows */}
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
-                    >
-                      <ArrowLeft className="h-5 w-5 rotate-180" />
-                    </button>
-                    {/* Image Counter */}
-                    <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                      {currentImageIndex + 1} / {service.images.length}
-                    </div>
-                  </>
+                  <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                    Images
+                  </div>
                 )}
               </div>
 
-              {/* Thumbnail Gallery */}
+              {/* Thumbnail Gallery - Desktop */}
               {service.images && service.images.length > 1 && (
                 <div className="flex space-x-2 overflow-x-auto pb-2">
                   {service.images.map((image, index) => (
                     <button
                       key={index}
-                      onClick={() => handleImageClick(image, index)}
+                      onClick={() => setSelectedImage(image)}
                       className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                         selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -1270,115 +1511,169 @@ export default function ServiceDetail() {
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Service Info */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {service.service_categories?.name || 'Service'}
-                </span>
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="ml-1 text-sm font-medium">4.5</span>
-                  <span className="ml-1 text-sm text-gray-500">(24 reviews)</span>
+              {/* Desktop - Centered Info Block Near Image (matches mobile) */}
+              <div className="hidden md:block bg-white border-b mb-8 px-4 py-6">
+                {/* Title */}
+                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{service.title}</h1>
+
+                {/* Description + Location in one line */}
+                <div className="text-center">
+                  {service.description && (
+                    <p className="text-gray-700 text-sm leading-relaxed mb-2">
+                      {service.description}
+                    </p>
+                  )}
+                  {service.location && (
+                    <p className="text-gray-600 text-sm">
+                      {['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in'} <span className="font-medium">{service.location}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Rating & Reviews */}
+                <div className="flex items-center justify-center mt-4">
+                  <div className="flex items-center">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="ml-1 text-sm font-medium text-gray-900">4.5</span>
+                  </div>
+                  <span className="text-sm text-gray-500 ml-2">({reviews.length} reviews)</span>
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{service.title}</h1>
-              
-              <div className="flex items-center text-gray-600 mb-6">
-                <MapPin className="h-5 w-5 mr-2" />
-                {service.location}
-              </div>
-
-              <p className="text-gray-700 leading-relaxed mb-6 text-elegant">
-                {service.description}
-              </p>
-
-              {/* Service Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      {service.duration_hours} hours
-                    </span>
-                  </div>
-                )}
-                {service.max_capacity && (
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      Up to {service.max_capacity} guests
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  <span className="text-sm text-gray-600">Instant confirmation</span>
-                </div>
-              </div>
-
-              {/* Amenities */}
-              {service.amenities && service.amenities.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">What's included</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {service.amenities.map((amenity, index) => (
-                      <div key={index} className="flex items-center">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                        <span className="text-sm text-gray-600">{amenity}</span>
+              {/* Description, Location, and Reviews - Top Priority Sections */}
+              <div className="mt-8 space-y-6">
+                {/* Quick Info - Consolidated Details */}
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Quick Info</p>
+                  <div className="space-y-3">
+                    {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Clock className="h-4 w-4 text-gray-400 mr-3" />
+                        Duration: {service.duration_hours} hours
                       </div>
-                    ))}
+                    )}
+                    {service.max_capacity && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Users className="h-4 w-4 text-gray-400 mr-3" />
+                        Up to {service.max_capacity} guests
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-700">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-3" />
+                      Instant confirmation
+                    </div>
+                    
+                    {/* Amenities in Quick Info */}
+                    {service.amenities && service.amenities.length > 0 && (
+                      <>
+                        <div className="border-t pt-3 mt-3">
+                          <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
+                          <div className="space-y-1">
+                            {service.amenities.map((amenity, index) => (
+                              <div key={index} className="flex items-center text-sm text-gray-700">
+                                <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                                {amenity}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Hotel-specific details in Quick Info */}
+                    {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                      <>
+                        <div className="border-t pt-3 mt-3">
+                          <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
+                          <div className="space-y-1 text-sm">
+                            {service.star_rating && (
+                              <div className="flex items-center">
+                                <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
+                                <span className="text-gray-700">{service.star_rating} Star</span>
+                              </div>
+                            )}
+                            {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                            {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
+                            {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
+                            {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Provider info in Quick Info */}
+                    {service.vendors && (
+                      <div className="border-t pt-3 mt-3">
+                        <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-blue-600">
+                              {service.vendors.business_name?.charAt(0) || 'V'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
+                            <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">
+                              {service.vendors.business_description || 'No description available'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Reviews Summary */}
+                <div className="bg-white rounded-lg p-6 shadow-sm border-t-4 border-yellow-400">
+                  <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Reviews</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center">
+                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                        <span className="ml-1 text-2xl font-bold text-gray-900">4.5</span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">({reviews.length} reviews)</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Reviews List */}
+                  {reviews && reviews.length > 0 ? (
+                    <div className="space-y-4 border-t pt-4">
+                      {reviews.map((review, index) => (
+                        <div key={index} className="border-b pb-4 last:border-b-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{review.visitor_name || 'Anonymous'}</p>
+                              <div className="flex items-center mt-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-3 w-3 ${
+                                      i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm text-gray-600">{review.comment}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600 pt-4 border-t">No reviews yet. Be the first to share your experience!</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Category-Specific Information */}
             {renderCategorySpecificInfo(service)}
-
-            {/* Vendor Info */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">About the Service Provider</h3>
-              {service.vendors ? (
-                <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xl font-bold text-blue-600">
-                      {service.vendors.business_name?.charAt(0) || 'V'}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{service.vendors.business_name || 'Service Provider'}</h4>
-                    <p className="text-gray-600 text-sm mb-3 text-elegant">
-                      {service.vendors.business_description || 'No description available'}
-                    </p>
-                    {/* Contact information hidden until payment confirmed */}
-                    {/* 
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      {service.vendors.business_phone && (
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-1" />
-                          {service.vendors.business_phone}
-                        </div>
-                      )}
-                      {service.vendors.business_email && (
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-1" />
-                          {service.vendors.business_email}
-                        </div>
-                      )}
-                    </div>
-                    */}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  <p>Service provider information not available</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Booking Sidebar */}
@@ -1462,63 +1757,65 @@ export default function ServiceDetail() {
                        service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
                     </div>
                   </div>
-                  <div className="space-y-4 mb-6">
+
+                  {/* Date & Guest Selection Form */}
+                  <div className="space-y-3 mb-6">
                     {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                      <div className="grid grid-cols-1 gap-4">
+                      <>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up date & time</label>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
-                              <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                              <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
                             </div>
-                            <input type="time" className="w-full px-4 py-3 border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Drop-off date & time</label>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Drop-off</label>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
-                              <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                              <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
                             </div>
-                            <input type="time" className="w-full px-4 py-3 border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                           </div>
                         </div>
-                      </div>
+                      </>
                     ) : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? (
-                      <div className="space-y-4">
+                      <>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Check-in date</label>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-in</label>
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Check-out date</label>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-out</label>
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                            <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
+                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
                           </div>
                         </div>
-                      </div>
+                      </>
                     ) : (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Select date</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Date</label>
                         <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <input type="date" className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                          <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
                         </div>
                       </div>
                     )}
 
                     {service.service_categories?.name?.toLowerCase() !== 'transport' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Number of guests</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Guests</label>
                         <div className="relative">
-                          <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <select className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
+                          <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <select className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
                             {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (<option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>))}
                           </select>
                         </div>
@@ -1526,8 +1823,9 @@ export default function ServiceDetail() {
                     )}
                   </div>
 
-                  <div className="border-t pt-4 mb-6">
-                    <div className="flex justify-between items-center mb-2">
+                  {/* Price Calculation */}
+                  <div className="bg-gray-50 rounded-lg p-3 mb-6">
+                    <div className="flex justify-between items-center mb-2 text-xs">
                       <span className="text-gray-600">
                         {service.service_categories?.name?.toLowerCase() === 'transport' 
                           ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
@@ -1535,21 +1833,25 @@ export default function ServiceDetail() {
                           ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
                           : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
                       </span>
-                      <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                      <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-lg font-bold"><span>Total</span><span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span></div>
+                    <div className="flex justify-between items-center font-bold text-sm">
+                      <span>Total</span>
+                      <span className="text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                    </div>
                   </div>
 
-                  <div className="flex space-x-3">
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mb-3">
                     <button onClick={handleBooking} disabled={
                       service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
                       ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
                       !selectedDate
-                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
-                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">{service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Provider'}</button>
+                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact</button>
                   </div>
 
-                  <p className="text-xs text-gray-500 text-center mt-3">You won't be charged yet</p>
+                  <p className="text-xs text-gray-500 text-center">No charge yet</p>
                 </div>
               )}
 

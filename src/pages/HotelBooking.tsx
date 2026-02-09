@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle, Bed, Wifi, Car } from 'lucide-react'
+import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -48,7 +48,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const location = useLocation()
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState(2) // Start at step 2 (Booking Details)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -316,21 +316,27 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     { code: '+998', name: 'Uzbekistan', flag: '🇺🇿' }
   ];
 
-  const [bookingData, setBookingData] = useState({
-    checkInDate: '',
-    checkOutDate: '',
-    guests: 1,
-    rooms: 1,
-    roomType: service.room_types?.[0] || 'Standard',
-    specialRequests: '',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
-    countryCode: '+256', // Default to Uganda
-    paymentMethod: 'card',
-    mobileProvider: ''
+  const [bookingData, setBookingData] = useState(() => {
+    // Initialize with default dates (today and tomorrow)
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    
+    return {
+      checkInDate: today.toISOString().split('T')[0],
+      checkOutDate: tomorrow.toISOString().split('T')[0],
+      guests: 1,
+      rooms: 1,
+      roomType: service.room_types?.[0] || 'Standard',
+      specialRequests: '',
+      contactName: '',
+      contactEmail: '',
+      contactPhone: '',
+      countryCode: '+256', // Default to Uganda
+      paymentMethod: 'card',
+      mobileProvider: ''
+    }
   })
-  const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
 
@@ -461,22 +467,20 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
   const steps = [
     { id: 1, title: 'Select Dates & Rooms', icon: Calendar },
-    { id: 2, title: 'Room Details', icon: Bed },
-    { id: 3, title: 'Your Details', icon: Users },
-    { id: 4, title: 'Payment', icon: CreditCard },
-    { id: 5, title: 'Confirmation', icon: CheckCircle }
+    { id: 2, title: 'Booking Details', icon: Bed },
+    { id: 3, title: 'Confirmation', icon: CheckCircle }
   ]
 
   const handleNext = () => {
     if (currentStep < steps.length) {
-      // Prevent advancing from date selection if check-in is blocked
-      if (currentStep === 1) {
-        if (!bookingData.checkInDate || !bookingData.checkOutDate) {
-          alert('Please select both check-in and check-out dates.')
+      // Validate step 2 (Booking Details) before advancing
+      if (currentStep === 2) {
+        if (!bookingData.contactName || !bookingData.contactEmail) {
+          alert('Please fill in all required details.')
           return
         }
-        if (blockedDates.has(bookingData.checkInDate)) {
-          setBlockedError('Selected check-in date is unavailable (another accommodation/transport booking exists).')
+        if (bookingData.paymentMethod === 'card') {
+          alert('Please select a valid payment method.')
           return
         }
       }
@@ -485,7 +489,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   }
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 2) { // Can only go back from step 2 onwards
       setCurrentStep(currentStep - 1)
     } else {
       navigate(`/service/${service.slug || service.id}`)
@@ -503,17 +507,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     }
   }
 
-  // Intercept payment method changes so "card" shows a notice and isn't selectable yet
+  // Handle payment method change
   const handlePaymentMethodChange = (value: string) => {
-    // Always set the selected method. The mobile provider dropdown is shown only when paymentMethod === 'mobile'.
     setBookingData(prev => ({ ...prev, paymentMethod: value }))
-    if (value === 'card') {
-      // Show notice that card payments are not active yet
-      setCardNoticeVisible(true)
-      setTimeout(() => setCardNoticeVisible(false), 5000)
-    } else {
-      setCardNoticeVisible(false)
-    }
   }
 
   // Calculate number of nights
@@ -604,61 +600,18 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 </p>
               )}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Guests
-                </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.guests}
-                  onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
-                >
-                  {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Rooms
-                </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.rooms}
-                  onChange={(e) => handleInputChange('rooms', parseInt(e.target.value))}
-                >
-                  {Array.from({ length: 5 }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num}>{num} room{num > 1 ? 's' : ''}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-2">Hotel Policies</h4>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>• Check-in: {service.check_in_time || '2:00 PM'}</p>
-                <p>• Check-out: {service.check_out_time || '11:00 AM'}</p>
-                <p>• Free cancellation up to 24 hours before check-in</p>
-              </div>
-            </div>
           </div>
         )
 
       case 2:
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Room Type</h3>
-            <div className="space-y-4">
-              {service.room_types?.map((roomType, index) => (
-                <label key={index} className="block">
-                  <div className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                    bookingData.roomType === roomType
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}>
+            {/* Room Details */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Room Selection</h3>
+              <div className="space-y-3">
+                {service.room_types?.map((roomType, index) => (
+                  <label key={index} className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-colors" style={{backgroundColor: bookingData.roomType === roomType ? '#EFF6FF' : 'transparent'}}>
                     <input
                       type="radio"
                       name="roomType"
@@ -667,15 +620,15 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                       onChange={(e) => handleInputChange('roomType', e.target.value)}
                       className="mr-3"
                     />
-                    <span className="font-medium">{roomType}</span>
-                    <span className="text-gray-600 ml-2">
-                      - {formatCurrencyWithConversion(service.price, service.currency)} per night
-                    </span>
-                  </div>
-                </label>
-              )) || (
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center">
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">{roomType}</span>
+                      <span className="text-gray-600 ml-2 text-sm font-light">
+                        {formatCurrencyWithConversion(service.price, service.currency)} per night
+                      </span>
+                    </div>
+                  </label>
+                )) || (
+                  <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-colors" style={{backgroundColor: bookingData.roomType === 'Standard' ? '#EFF6FF' : 'transparent'}}>
                     <input
                       type="radio"
                       name="roomType"
@@ -684,314 +637,299 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                       onChange={(e) => handleInputChange('roomType', e.target.value)}
                       className="mr-3"
                     />
-                    <span className="font-medium">Standard Room</span>
-                    <span className="text-gray-600 ml-2">
-                      - {formatCurrencyWithConversion(service.price, service.currency)} per night
-                    </span>
-                  </div>
-                </div>
-              )}
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900">Standard Room</span>
+                      <span className="text-gray-600 ml-2 text-sm font-light">
+                        {formatCurrencyWithConversion(service.price, service.currency)} per night
+                      </span>
+                    </div>
+                  </label>
+                )}
+              </div>
             </div>
 
+            {/* Special Requests */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Special Requests (Optional)
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Special Requests <span className="font-light text-gray-500">(Optional)</span>
               </label>
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
                 rows={3}
-                placeholder="Any special requests for your stay..."
+                placeholder="e.g., high floor, late check-in, extra pillows..."
                 value={bookingData.specialRequests}
                 onChange={(e) => handleInputChange('specialRequests', e.target.value)}
               />
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Room Amenities</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {service.facilities?.slice(0, 6).map((facility, index) => (
-                  <div key={index} className="flex items-center">
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                    {facility}
-                  </div>
-                )) || (
-                  <>
-                    <div className="flex items-center">
-                      <Wifi className="w-4 h-4 text-blue-500 mr-2" />
-                      Free WiFi
-                    </div>
-                    <div className="flex items-center">
-                      <Car className="w-4 h-4 text-blue-500 mr-2" />
-                      Parking
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Guest Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.contactName}
-                  onChange={(e) => handleInputChange('contactName', e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={bookingData.contactEmail}
-                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number (Optional)
-                </label>
-                <div className="flex">
-                  <div className="relative country-dropdown">
-                    <button
-                      type="button"
-                      className="px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base bg-gray-50 border-r-0 flex items-center justify-between min-w-[120px]"
-                      onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                      style={{ width: '140px' }}
-                    >
-                      <span className="truncate">
-                        {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
-                      </span>
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {countryDropdownOpen && (
-                      <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div className="p-2 border-b">
-                          <input
-                            type="text"
-                            placeholder="Search countries..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={countrySearch}
-                            onChange={(e) => setCountrySearch(e.target.value)}
-                          />
-                        </div>
-                        <div className="max-h-48 overflow-y-auto">
-                          {filteredCountries.map((country) => (
-                            <button
-                              key={country.code}
-                              type="button"
-                              className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2"
-                              onClick={() => {
-                                handleInputChange('countryCode', country.code)
-                                setCountrySearch('')
-                                setCountryDropdownOpen(false)
-                              }}
-                            >
-                              <span>{country.flag}</span>
-                              <span className="text-sm">{country.name}</span>
-                              <span className="text-sm text-gray-500 ml-auto">{country.code}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            {/* Your Details */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Your Information</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="tel"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    value={bookingData.contactPhone}
-                    onChange={(e) => handleInputChange('contactPhone', e.target.value)}
-                    placeholder="700 000 000"
+                    type="text"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    placeholder="John Doe"
+                    value={bookingData.contactName}
+                    onChange={(e) => handleInputChange('contactName', e.target.value)}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    placeholder="john@example.com"
+                    value={bookingData.contactEmail}
+                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Phone Number <span className="font-light text-gray-500">(Optional)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative country-dropdown" style={{width: '120px'}}>
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-sm font-light flex items-center justify-between"
+                        onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                      >
+                        <span>
+                          {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
+                        </span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {countryDropdownOpen && (
+                        <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg">
+                          <div className="p-2 border-b">
+                            <input
+                              type="text"
+                              placeholder="Search..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-light focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              value={countrySearch}
+                              onChange={(e) => setCountrySearch(e.target.value)}
+                            />
+                          </div>
+                          <div className="max-h-48 overflow-y-auto">
+                            {filteredCountries.map((country) => (
+                              <button
+                                key={country.code}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-gray-100 text-sm font-light flex items-center space-x-2"
+                                onClick={() => {
+                                  handleInputChange('countryCode', country.code)
+                                  setCountrySearch('')
+                                  setCountryDropdownOpen(false)
+                                }}
+                              >
+                                <span>{country.flag}</span>
+                                <span className="flex-1">{country.name}</span>
+                                <span className="text-gray-500">{country.code}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="tel"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                      placeholder="700 000 000"
+                      value={bookingData.contactPhone}
+                      onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )
 
-      case 4:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-600">Hotel: {service.title}</span>
-                <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)} × {bookingData.rooms} × {nights} nights</span>
-              </div>
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Amount</span>
-                <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-              </div>
-            </div>
+            {/* Payment */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Method
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={bookingData.paymentMethod === 'card'}
-                    onChange={() => handlePaymentMethodChange('card')}
-                    className="mr-2"
-                  />
-                  Credit/Debit Card
-                </label>
-                <label className="flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-light">Total Amount Due:</span>
+                  <span className="text-2xl font-semibold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-colors" style={{backgroundColor: bookingData.paymentMethod === 'mobile' ? '#EFF6FF' : 'transparent'}}>
                   <input
                     type="radio"
                     name="paymentMethod"
                     value="mobile"
                     checked={bookingData.paymentMethod === 'mobile'}
                     onChange={() => handlePaymentMethodChange('mobile')}
-                    className="mr-2"
+                    className="mr-3"
                   />
-                  Mobile Money
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">Mobile Money</span>
+                    <p className="text-sm font-light text-gray-600">MTN Mobile Money, Airtel Money</p>
+                  </div>
                 </label>
-                {cardNoticeVisible && (
-                  <p className="text-sm text-red-600 mt-2">
-                    Credit/Debit Card payments are not active yet. Please select other Methods.
-                  </p>
-                )}
-              </div>
-            </div>
-            {bookingData.paymentMethod === 'mobile' && (
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                  value={bookingData.mobileProvider}
-                  onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                >
-                  <option value="MTN">MTN Mobile Money</option>
-                  <option value="Airtel">Airtel Money</option>
-                </select>
-              </div>
-            )}
-            {bookingData.paymentMethod === 'card' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Card Number
-                  </label>
+                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer opacity-50 hover:border-gray-300 transition-colors">
                   <input
-                    type="text"
-                    placeholder="1234 5678 9012 3456"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    type="radio"
+                    name="paymentMethod"
+                    value="card"
+                    disabled
+                    className="mr-3"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expiry Date
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="MM/YY"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                  <div className="flex-1">
+                    <span className="font-medium text-gray-900">Credit/Debit Card</span>
+                    <p className="text-sm font-light text-gray-600">Coming soon</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CVV
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
+                </label>
               </div>
-            )}
+              {bookingData.paymentMethod === 'mobile' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Provider</label>
+                  <select
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    value={bookingData.mobileProvider}
+                    onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
+                  >
+                    <option value="">Select a provider</option>
+                    <option value="MTN">MTN Mobile Money</option>
+                    <option value="Airtel">Airtel Money</option>
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
         )
 
-      case 5:
+      case 3:
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600 mb-2">
-                Your hotel booking has been successfully confirmed. You will receive a confirmation email shortly.
+          <div className="max-w-2xl mx-auto">
+            {/* Success Header */}
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <CheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
+              <p className="text-gray-600 font-light text-lg">
+                Your reservation has been successfully completed. A confirmation email is on its way to you.
               </p>
-              {bookingId && (
-                <p className="text-sm text-blue-600 font-medium">
-                  Booking Reference: {bookingId}
-                </p>
-              )}
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-left">
-              <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Hotel:</span>
-                  <span className="font-medium">{service.title}</span>
+
+            {/* Booking Reference */}
+            {bookingId && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6 mb-8 text-center">
+                <p className="text-gray-600 font-light text-sm mb-1">Booking Reference Number</p>
+                <p className="text-2xl font-bold text-blue-600 font-mono">{bookingId}</p>
+              </div>
+            )}
+
+            {/* Booking Details Card */}
+            <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+              {/* Hotel Header in Card */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6 text-white">
+                <h3 className="text-xl font-bold mb-1">{service.title}</h3>
+                <p className="text-blue-100 font-light text-sm">{service.location}</p>
+              </div>
+
+              {/* Details Grid */}
+              <div className="p-6 space-y-4">
+                {/* Check-in & Check-out */}
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b">
+                  <div>
+                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Check-in</p>
+                    <p className="text-gray-900 font-medium">{bookingData.checkInDate}</p>
+                    {service.check_in_time && (
+                      <p className="text-gray-500 text-sm font-light">After {service.check_in_time}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Check-out</p>
+                    <p className="text-gray-900 font-medium">{bookingData.checkOutDate}</p>
+                    {service.check_out_time && (
+                      <p className="text-gray-500 text-sm font-light">Before {service.check_out_time}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Room Type:</span>
-                  <span className="font-medium">{bookingData.roomType}</span>
+
+                {/* Room & Guests */}
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b">
+                  <div>
+                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Room Type</p>
+                    <p className="text-gray-900 font-medium">{bookingData.roomType || 'Standard'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-xs font-semibold uppercase mb-1">Guests</p>
+                    <p className="text-gray-900 font-medium">{bookingData.guests} {bookingData.guests > 1 ? 'Guests' : 'Guest'}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Check-in:</span>
-                  <span className="font-medium">{bookingData.checkInDate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Check-out:</span>
-                  <span className="font-medium">{bookingData.checkOutDate}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Guests:</span>
-                  <span className="font-medium">{bookingData.guests}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Rooms:</span>
-                  <span className="font-medium">{bookingData.rooms}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Paid:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+
+                {/* Special Requests if any */}
+                {bookingData.specialRequests && (
+                  <div className="pb-4 border-b">
+                    <p className="text-gray-600 text-xs font-semibold uppercase mb-2">Special Requests</p>
+                    <p className="text-gray-700 font-light italic">{bookingData.specialRequests}</p>
+                  </div>
+                )}
+
+                {/* Price Breakdown */}
+                <div className="pt-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-light">Rate per night</span>
+                    <span className="text-gray-900 font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-light">Number of nights</span>
+                    <span className="text-gray-900 font-medium">
+                      {Math.ceil((new Date(bookingData.checkOutDate).getTime() - new Date(bookingData.checkInDate).getTime()) / (1000 * 60 * 60 * 24))} nights
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3 border-t">
+                    <span className="text-gray-900 font-semibold">Total Amount Paid</span>
+                    <span className="text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                Similar Services
-              </button>
-              <button
-                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                Send Inquiry
-              </button>
+
+            {/* What's Next Section */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+              <h4 className="text-gray-900 font-semibold mb-3">What's Next?</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <span className="text-blue-600 font-bold mr-3">✓</span>
+                  <span className="text-gray-700">Check your email for booking confirmation and details</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 font-bold mr-3">✓</span>
+                  <span className="text-gray-700">Review our check-in instructions and hotel policies</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 font-bold mr-3">✓</span>
+                  <span className="text-gray-700">Contact the hotel if you have any questions or special needs</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
               <button
                 onClick={() => navigate('/')}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors shadow-md hover:shadow-lg"
               >
-                Home
+                Back to Home
+              </button>
+              <button
+                onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
+                className="flex-1 bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors border border-gray-300"
+              >
+                Browse More
               </button>
             </div>
           </div>
@@ -1005,7 +943,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={handleBack}
@@ -1018,90 +956,52 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              const isActive = step.id === currentStep
-              const isCompleted = step.id < currentStep
-
-              return (
-                <div key={step.id} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    isCompleted
-                      ? 'bg-green-600 text-white'
-                      : isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`w-12 h-0.5 mx-4 ${
-                      isCompleted ? 'bg-green-600' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Service Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-start space-x-4">
+        {/* Service Summary Card */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center space-x-3">
             <img
               src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
               alt={service.title}
-              className="w-20 h-20 object-cover rounded-lg"
+              className="w-16 h-16 object-cover rounded"
             />
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{service.title}</h2>
-              <p className="text-gray-600 text-sm">{service.location}</p>
-              <p className="text-gray-600 text-sm">{service.service_categories.name}</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-medium text-gray-900 truncate">{service.title}</h1>
+              <p className="text-sm font-light text-gray-600">{service.location}</p>
             </div>
-            <div className="text-right">
-              <div className="text-lg font-bold text-gray-900">
+            <div className="text-right flex-shrink-0">
+              <div className="text-xl font-semibold text-blue-600">
                 {formatCurrencyWithConversion(totalPrice, service.currency)}
               </div>
-              <div className="text-sm text-gray-500">
-                {nights} night{nights > 1 ? 's' : ''}, {bookingData.rooms} room{bookingData.rooms > 1 ? 's' : ''}
+              <div className="text-xs font-light text-gray-500">
+                {nights} night{nights > 1 ? 's' : ''}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Step Content */}
+        {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           {renderStepContent()}
         </div>
 
-        {/* Navigation */}
-        {currentStep < 5 && (
-          <div className="flex justify-between mt-6">
+        {/* Navigation Buttons */}
+        {currentStep < 3 && (
+          <div className="flex gap-3 mt-6">
             <button
               onClick={handleBack}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
             >
-              {currentStep === 1 ? 'Cancel' : 'Back'}
+              Back
             </button>
             <button
-              onClick={currentStep === 4 ? handleCompleteBooking : handleNext}
+              onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
               disabled={
                 isSubmitting ||
-                (currentStep === 1 && (!bookingData.checkInDate || !bookingData.checkOutDate)) ||
-                (currentStep === 3 && (!bookingData.contactName || !bookingData.contactEmail)) ||
-                (currentStep === 4 && bookingData.paymentMethod === 'card')
+                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || bookingData.paymentMethod === 'card'))
               }
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
-              {isSubmitting ? 'Processing...' : (currentStep === 4 ? 'Complete Booking' : 'Next')}
+              {isSubmitting ? 'Processing...' : (currentStep === 2 ? 'Complete Booking' : 'Next')}
             </button>
           </div>
         )}

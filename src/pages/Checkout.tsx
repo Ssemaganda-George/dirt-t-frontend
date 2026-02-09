@@ -463,250 +463,241 @@ export default function CheckoutPage() {
   if (!order) return <div className="p-6">Order not found</div>
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-4">
       {/* Modal-like centered container */}
-      <div className="w-full md:max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg md:shadow-lg overflow-hidden flex flex-col" style={{ height: '100vh', maxHeight: 'none', '--tw-max-height': 'auto' } as React.CSSProperties}>
+      <div className="w-full md:max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg overflow-hidden flex flex-col" style={{ height: '100vh', maxHeight: 'none', '--tw-max-height': 'auto' } as React.CSSProperties}>
         {/* Progress Header - Fixed at top */}
-        <div className="px-4 md:px-6 py-3 md:py-4 border-b flex-shrink-0">
+        <div className="px-4 md:px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
+            <h2 className="text-lg md:text-xl font-light">Checkout</h2>
             <div>
               <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
             </div>
           </div>
-          <div className="mt-3 md:mt-4 flex items-center gap-2 md:gap-4 overflow-x-auto pb-2">
+          <div className="mt-3 flex items-center gap-2 md:gap-4 overflow-x-auto pb-2">
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs">1</div>
-              <div className="text-xs md:text-sm text-gray-600 whitespace-nowrap">TICKETS</div>
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
+              <div className="text-xs md:text-sm font-light text-gray-700 whitespace-nowrap">Tickets</div>
             </div>
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-[#61B82C] text-white flex items-center justify-center text-xs">2</div>
-              <div className="text-xs md:text-sm font-medium text-[#61B82C] whitespace-nowrap">DETAILS</div>
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
+              <div className="text-xs md:text-sm font-light text-blue-600 whitespace-nowrap">Details</div>
             </div>
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-5 md:w-6 h-5 md:h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs">3</div>
-              <div className="text-xs md:text-sm text-gray-400 whitespace-nowrap">PAYMENT</div>
+              <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-semibold">3</div>
+              <div className="text-xs md:text-sm font-light text-gray-700 whitespace-nowrap">Payment</div>
             </div>
           </div>
         </div>
 
         {/* Content area: scrollable in the middle */}
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-6">
-            {/* Left: form & actions (span 3 cols on md) */}
-            <div className="md:col-span-3 space-y-4">
-              <div className="bg-white p-4 rounded shadow">
-                <h3 className="font-medium text-lg">Buyer Information</h3>
-                <div className="grid grid-cols-1 gap-4 mt-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">First name *</label>
-                    <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
-                    <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                  <input className="w-full border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cellphone</label>
-                  <div className="flex gap-2">
-                    <div className="relative country-dropdown flex-shrink-0">
-                      <button
-                        type="button"
-                        className="border px-2 md:px-3 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent bg-white flex items-center justify-between min-w-[90px] md:min-w-[120px] text-sm"
-                        onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
-                      >
-                        <span className="truncate">
-                          {countries.find(c => c.code === buyer.countryCode)?.flag || '🌍'} {buyer.countryCode}
-                        </span>
-                        <svg className="w-3 h-3 md:w-4 md:h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                      {countryDropdownOpen && (
-                        <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          <div className="p-2 border-b">
-                            <input
-                              type="text"
-                              placeholder="Search countries..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-[#61B82C] focus:border-transparent"
-                              value={countrySearch}
-                              onChange={(e) => setCountrySearch(e.target.value)}
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {filteredCountries.map((country) => (
-                              <button
-                                key={country.code}
-                                type="button"
-                                className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center space-x-2 text-sm"
-                                onClick={() => {
-                                  setBuyer(s => ({ ...s, countryCode: country.code }))
-                                  setCountrySearch('')
-                                  setCountryDropdownOpen(false)
-                                }}
-                              >
-                                <span>{country.flag}</span>
-                                <span className="text-sm">{country.name}</span>
-                                <span className="text-sm text-gray-500 ml-auto">{country.code}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 px-4 md:px-6 py-4 md:py-6">
+            {/* Left: Buyer Information (span 1 col on md) */}
+            <div className="md:col-span-1 space-y-4">
+              <div className="bg-white p-4 rounded border border-gray-200">
+                <h3 className="font-light text-base">Buyer Information</h3>
+                <div className="grid grid-cols-1 gap-3 mt-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-light text-gray-700 mb-2">First name *</label>
+                      <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
                     </div>
-                    <input
-                      className="flex-1 border px-3 md:px-4 py-3 md:py-2 rounded focus:outline-none focus:ring-2 focus:ring-[#61B82C] focus:border-transparent text-base"
-                      value={buyer.phone}
-                      onChange={(e) => setBuyer(s => ({ ...s, phone: e.target.value }))}
-                      placeholder="759 918649"
-                      type="tel"
-                    />
+                    <div>
+                      <label className="block text-xs font-light text-gray-700 mb-2">Surname *</label>
+                      <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3 pt-2">
-                  <input type="checkbox" id="emailCopy" checked={buyer.emailCopy} onChange={(e) => setBuyer(s => ({ ...s, emailCopy: e.target.checked }))} className="rounded mt-1 cursor-pointer flex-shrink-0" />
-                  <label htmlFor="emailCopy" className="text-sm text-gray-700 cursor-pointer pt-0.5">Email this ticket holder a copy of this ticket</label>
+                  <div>
+                    <label className="block text-xs font-light text-gray-700 mb-2">Email *</label>
+                    <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-light text-gray-700 mb-2">Cellphone</label>
+                    <div className="flex gap-2">
+                      <div className="relative country-dropdown flex-shrink-0">
+                        <button
+                          type="button"
+                          className="border border-gray-300 px-2 py-2 rounded focus:outline-none focus:border-gray-400 bg-white flex items-center justify-between min-w-[80px] text-xs font-light"
+                          onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
+                        >
+                          <span className="truncate text-xs">
+                            {buyer.countryCode}
+                          </span>
+                          <svg className="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {countryDropdownOpen && (
+                          <div className="absolute top-full left-0 z-50 w-56 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div className="p-2 border-b">
+                              <input
+                                type="text"
+                                placeholder="Search..."
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs font-light focus:outline-none focus:border-gray-400"
+                                value={countrySearch}
+                                onChange={(e) => setCountrySearch(e.target.value)}
+                              />
+                            </div>
+                            <div className="max-h-40 overflow-y-auto">
+                              {filteredCountries.map((country) => (
+                                <button
+                                  key={country.code}
+                                  type="button"
+                                  className="w-full px-2 py-1 text-left hover:bg-gray-50 flex items-center space-x-2 text-xs font-light"
+                                  onClick={() => {
+                                    setBuyer(s => ({ ...s, countryCode: country.code }))
+                                    setCountrySearch('')
+                                    setCountryDropdownOpen(false)
+                                  }}
+                                >
+                                  <span className="text-xs">{country.name}</span>
+                                  <span className="text-xs text-gray-500 ml-auto">{country.code}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        className="flex-1 border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light"
+                        value={buyer.phone}
+                        onChange={(e) => setBuyer(s => ({ ...s, phone: e.target.value }))}
+                        placeholder="Phone"
+                        type="tel"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 pt-1">
+                    <input type="checkbox" id="emailCopy" checked={buyer.emailCopy} onChange={(e) => setBuyer(s => ({ ...s, emailCopy: e.target.checked }))} className="rounded cursor-pointer flex-shrink-0 mt-0.5" />
+                    <label htmlFor="emailCopy" className="text-xs font-light text-gray-700 cursor-pointer">Email this ticket holder a copy of this ticket</label>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded shadow md:block hidden">
-              <h3 className="font-medium text-lg mb-2">Payment</h3>
-              <p className="text-sm text-gray-600">Scroll down to proceed →</p>
-            </div>
-          </div>
-
-          {/* Right: Order Summary - hidden on mobile, visible on md+ */}
-          <div className="md:col-span-2 hidden md:block">
-            <div className="sticky top-6 space-y-4">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
-                <div>
-                  {/* Event sticker and basic event info */}
-                  <div className="flex items-center gap-4 mb-6">
-                    {order._service?.images?.[0] ? (
-                      <img src={order._service.images[0]} alt={order._service.title} className="w-24 h-24 object-cover rounded-lg shadow-sm" />
-                    ) : (
-                      <div className="w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-500">Sticker</div>
-                    )}
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{order._service?.title || 'Event'}</div>
-                      <div className="text-sm text-gray-600 mt-1">Order #{order.reference || `#${(order.id || '').toString().slice(0,8)}`}</div>
-                      {order._service?.event_datetime && (
-                        <div className="text-sm text-gray-600">
-                          📅 {new Date(order._service.event_datetime).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
+            {/* Right: Order Summary (span 2 cols on md) */}
+            <div className="md:col-span-2">
+              <div className="sticky top-6 space-y-3">
+                <div className="bg-white p-4 rounded border border-gray-200">
+                  <h3 className="font-light text-sm mb-3">Order Summary</h3>
+                  <div>
+                    {/* Event info */}
+                    <div className="flex items-center gap-3 mb-4">
+                      {order._service?.images?.[0] ? (
+                        <img src={order._service.images[0]} alt={order._service.title} className="w-16 h-16 object-cover rounded" />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">Image</div>
                       )}
-                      <div className="text-sm text-gray-600">📍 {order._service?.event_location || order._service?.location || 'Venue'}</div>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="text-sm font-medium text-gray-700">Tickets</div>
-                      {!showAllTickets && (
-                        <button 
-                          onClick={() => setShowAllTickets(true)}
-                          className="text-[#61B82C] hover:text-[#4a8f23] text-sm font-medium underline transition-colors"
-                        >
-                          Edit Order
-                        </button>
-                      )}
-                      {showAllTickets && (
-                        <button 
-                          onClick={() => setShowAllTickets(false)}
-                          className="text-gray-600 hover:text-gray-800 text-sm font-medium underline transition-colors"
-                        >
-                          Done Editing
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-3 mb-6">
-                      {allTicketTypes
-                        .filter(ticketType => showAllTickets || items.some(item => item.ticket_type_id === ticketType.id && item.quantity > 0))
-                        .map((ticketType: any) => {
-                        const existingItem = items.find(item => item.ticket_type_id === ticketType.id)
-                        const quantity = existingItem?.quantity || 0
-                        
-                        return (
-                          <div key={ticketType.id} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-lg">
-                            <div className="text-sm flex-1">
-                              <div className="font-medium">{ticketType.title}</div>
-                              <div className="text-xs text-gray-500">{formatCurrencyWithConversion(ticketType.price, order.currency)} each</div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {showAllTickets ? (
-                                <>
-                                  <button 
-                                    onClick={() => updateTicketQuantity(ticketType.id, quantity - 1)}
-                                    className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors disabled:opacity-50"
-                                    disabled={quantity <= 0}
-                                  >
-                                    -
-                                  </button>
-                                  <span className="text-sm font-medium min-w-[20px] text-center">{quantity}</span>
-                                  <button 
-                                    onClick={() => updateTicketQuantity(ticketType.id, quantity + 1)}
-                                    className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors"
-                                  >
-                                    +
-                                  </button>
-                                </>
-                              ) : (
-                                <span className="text-sm font-medium">{quantity}</span>
-                              )}
-                            </div>
-                            <div className="text-sm font-medium ml-4">{formatCurrencyWithConversion(ticketType.price * quantity, order.currency)}</div>
+                      <div className="flex-1">
+                        <div className="font-light text-sm">{order._service?.title || 'Event'}</div>
+                        <div className="text-xs text-gray-600 mt-1 font-light">Order #{order.reference || `#${(order.id || '').toString().slice(0,8)}`}</div>
+                        {order._service?.event_datetime && (
+                          <div className="text-xs text-gray-600 font-light">
+                            {new Date(order._service.event_datetime).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                           </div>
-                        )
-                      })}
+                        )}
+                      </div>
                     </div>
 
-                    <div className="border-t pt-4 space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <div>Total Tickets</div>
-                        <div className="font-medium">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</div>
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="text-xs font-light text-gray-700">Tickets</div>
+                        {!showAllTickets && (
+                          <button 
+                            onClick={() => setShowAllTickets(true)}
+                            className="text-gray-600 hover:text-gray-900 text-xs font-light underline transition-colors"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {showAllTickets && (
+                          <button 
+                            onClick={() => setShowAllTickets(false)}
+                            className="text-gray-600 hover:text-gray-900 text-xs font-light underline transition-colors"
+                          >
+                            Done
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-2 mb-4">
+                        {allTicketTypes
+                          .filter(ticketType => showAllTickets || items.some(item => item.ticket_type_id === ticketType.id && item.quantity > 0))
+                          .map((ticketType: any) => {
+                          const existingItem = items.find(item => item.ticket_type_id === ticketType.id)
+                          const quantity = existingItem?.quantity || 0
+                          
+                          return (
+                            <div key={ticketType.id} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded text-xs">
+                              <div className="flex-1">
+                                <div className="font-light">{ticketType.title}</div>
+                                <div className="text-xs text-gray-500 font-light">{formatCurrencyWithConversion(ticketType.price, order.currency)}</div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {showAllTickets ? (
+                                  <>
+                                    <button 
+                                      onClick={() => updateTicketQuantity(ticketType.id, quantity - 1)}
+                                      className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs font-light transition-colors disabled:opacity-50"
+                                      disabled={quantity <= 0}
+                                    >
+                                      -
+                                    </button>
+                                    <span className="text-xs font-light min-w-[16px] text-center">{quantity}</span>
+                                    <button 
+                                      onClick={() => updateTicketQuantity(ticketType.id, quantity + 1)}
+                                      className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs font-light transition-colors"
+                                    >
+                                      +
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-light">{quantity}</span>
+                                )}
+                              </div>
+                              <div className="text-xs font-light ml-3">{formatCurrencyWithConversion(ticketType.price * quantity, order.currency)}</div>
+                            </div>
+                          )
+                        })}
                       </div>
 
-                      <div className="flex justify-between text-sm">
-                        <div>Subtotal</div>
-                        <div className="font-medium">{formatCurrencyWithConversion(Number(order.total_amount || 0), order.currency)}</div>
-                      </div>
+                      <div className="border-t pt-3 space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <div className="font-light text-gray-700">Total Tickets</div>
+                          <div className="font-light">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</div>
+                        </div>
 
-                      <div className="flex justify-between text-sm">
-                        <div>Service Fees</div>
-                        <div className="font-medium">{formatCurrencyWithConversion(Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
-                      </div>
+                        <div className="flex justify-between">
+                          <div className="font-light text-gray-700">Subtotal</div>
+                          <div className="font-light">{formatCurrencyWithConversion(Number(order.total_amount || 0), order.currency)}</div>
+                        </div>
 
-                      <div className="flex justify-between text-lg font-bold mt-4 pt-3 border-t">
-                        <div>Total</div>
-                        <div>{formatCurrencyWithConversion(Number(order.total_amount || 0) + Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                        <div className="flex justify-between">
+                          <div className="font-light text-gray-700">Service Fees</div>
+                          <div className="font-light">{formatCurrencyWithConversion(Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                        </div>
+
+                        <div className="flex justify-between border-t pt-2 mt-2">
+                          <div className="font-light text-gray-900">Total</div>
+                          <div className="font-semibold">{formatCurrencyWithConversion(Number(order.total_amount || 0) + Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
 
         {/* Fixed Action Buttons at Bottom - visible on all devices */}
-        <div className="flex-shrink-0 border-t bg-white px-4 md:px-6 py-3 md:py-4 flex gap-3">
-          <button onClick={() => navigate(-1)} className="flex-1 md:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 md:px-6 py-2 md:py-3 rounded font-medium transition-colors">
+        <div className="flex-shrink-0 border-t bg-white px-4 md:px-6 py-3 flex gap-2">
+          <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
             Back
           </button>
           <button 
@@ -744,8 +735,8 @@ export default function CheckoutPage() {
                 alert('Failed to save buyer information. Please try again.');
               }
             }} 
-            style={{ backgroundColor: '#61B82C' }} 
-            className="flex-1 text-white px-4 md:px-6 py-2 md:py-3 rounded font-medium hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#3B82F6' }} 
+            className="flex-1 text-white py-2 px-4 rounded font-light text-sm hover:opacity-90 transition-opacity"
           >
             Next
           </button>
