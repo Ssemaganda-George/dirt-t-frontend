@@ -42,7 +42,6 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   const { user, profile } = useAuth()
   const { selectedCurrency } = usePreferences()
   const [currentStep, setCurrentStep] = useState(1)
-  const [bookingId, setBookingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Country search state
@@ -431,7 +430,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
     setIsSubmitting(true)
     try {
-      const booking = await createBooking({
+      await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
         booking_date: new Date().toISOString(),
@@ -449,7 +448,6 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`
       })
 
-      setBookingId(booking.id)
       setCurrentStep(5) // Go to confirmation step
     } catch (error) {
       console.error('Error creating booking:', error)
@@ -721,69 +719,156 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
       case 5:
         return (
-          <div className="text-center space-y-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600">
+          <div className="space-y-4 sm:space-y-6">
+            {/* Success Header */}
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
+              <p className="text-gray-600 text-sm sm:text-base">
                 Your activity booking has been successfully confirmed. You will receive a confirmation email shortly.
               </p>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-left">
-              <h4 className="font-semibold text-gray-900 mb-3">Booking Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Booking ID:</span>
-                  <span className="font-medium">#{bookingId?.slice(0, 8)}</span>
-                </div>
-                <div className="flex justify-between">
+
+            {/* Service Details */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
                   <span className="text-gray-600">Activity:</span>
-                  <span className="font-medium">{service.title}</span>
+                  <span className="font-medium text-right">{service.title}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Date:</span>
-                  <span className="font-medium">{bookingData.date || 'TBD'}</span>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Location:</span>
+                  <span className="font-medium text-right">{service.location}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Participants:</span>
-                  <span className="font-medium">{bookingData.guests}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-gray-600">Total:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Provider:</span>
-                  <span className="font-medium">{service.vendors?.business_name || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium break-all">{service.vendors?.business_email || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium">{service.vendors?.business_phone || 'N/A'}</span>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Category:</span>
+                  <span className="font-medium text-right">{service.service_categories.name}</span>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-center">
+
+            {/* Service Provider */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Provider:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
+                </div>
+                {service.vendors?.business_address && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Address:</span>
+                    <span className="font-medium text-right">{service.vendors.business_address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Activity Details */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Activity Details</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Activity Date:</span>
+                  <span className="font-medium text-right">{bookingData.date || 'Not set'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium text-right">{service.duration_hours} hours</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Number of Participants:</span>
+                  <span className="font-medium text-right">{bookingData.guests}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Booking Information */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Special Requests:</span>
+                  <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Payment Method:</span>
+                  <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
+                </div>
+                {bookingData.paymentMethod === 'mobile' && (
+                  <div className="flex justify-between items-start">
+                    <span className="text-gray-600">Provider:</span>
+                    <span className="font-medium">{bookingData.mobileProvider}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Your Contact Information */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Name:</span>
+                  <span className="font-medium text-right">{bookingData.contactName}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Email:</span>
+                  <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">Phone:</span>
+                  <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Summary */}
+            <div className="pt-4 sm:pt-6 border-t border-gray-200">
+              <div className="space-y-3 text-xs sm:text-sm mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Price per participant:</span>
+                  <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Number of participants:</span>
+                  <span className="font-medium">{bookingData.guests}</span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t">
+                  <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
+                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
-                Similar Services
+                Similar Activities
               </button>
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Message Provider
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Home
               </button>
