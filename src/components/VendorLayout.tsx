@@ -145,7 +145,7 @@ export default function VendorLayout() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white border-r border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 border-b border-gray-100">
-            <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails</span>
+            <span className="text-sm font-semibold text-blue-600 tracking-tight">DirtTrails</span>
             <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
               <X className="h-4 w-4 text-gray-500" />
             </button>
@@ -174,12 +174,12 @@ export default function VendorLayout() {
                           to={item.href}
                           className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
                             isActive
-                              ? 'bg-gray-900 text-white'
+                              ? 'bg-blue-600 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? 'text-gray-300' : 'text-gray-400'}`} />
+                          <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
                           {item.name}
                         </Link>
                       )
@@ -199,7 +199,7 @@ export default function VendorLayout() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100">
             {!sidebarCollapsed && (
-              <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails Business</span>
+              <span className="text-sm font-semibold text-blue-600 tracking-tight">DirtTrails Business</span>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -244,13 +244,13 @@ export default function VendorLayout() {
                           to={item.href}
                           className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
                             isActive
-                              ? 'bg-gray-900 text-white'
+                              ? 'bg-blue-600 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           title={sidebarCollapsed ? item.name : ''}
                         >
                           <item.icon className={`${sidebarCollapsed ? 'mx-auto' : ''} h-4 w-4 ${
-                            isActive ? 'text-gray-300' : 'text-gray-400'
+                            isActive ? 'text-blue-200' : 'text-gray-400'
                           }`} />
                           {!sidebarCollapsed && item.name}
                         </Link>
@@ -303,7 +303,7 @@ export default function VendorLayout() {
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition"
                 >
-                  <div className="h-8 w-8 rounded-full bg-gray-900 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
                     <span className="text-xs font-semibold text-white">{profile?.full_name?.charAt(0).toUpperCase() || 'V'}</span>
                   </div>
                   <div className="hidden sm:block text-left">

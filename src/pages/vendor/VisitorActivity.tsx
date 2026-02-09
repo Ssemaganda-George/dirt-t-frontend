@@ -126,22 +126,22 @@ export default function VendorVisitorActivity() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Visitors</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalVisitors}</p>
           <p className="mt-1 text-xs text-gray-500">{stats.uniqueVisitors} unique</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bookings</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalBookings}</p>
           <p className="mt-1 text-xs text-gray-500">{stats.conversionRate.toFixed(1)}% conversion</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Services</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalServices}</p>
           <p className="mt-1 text-xs text-gray-500">Active listings</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-5">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Rating</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.avgRating.toFixed(1)}</p>
           <p className="mt-1 text-xs text-gray-500">{stats.reviewsThisMonth} reviews this month</p>
@@ -259,7 +259,7 @@ export default function VendorVisitorActivity() {
                         </div>
                         <div className="w-full bg-gray-100 rounded-full h-1.5">
                           <div
-                            className="bg-gray-900 h-1.5 rounded-full"
+                            className="bg-blue-500 h-1.5 rounded-full"
                             style={{ width: `${parseFloat(age.percentage)}%` }}
                           />
                         </div>
@@ -279,9 +279,9 @@ export default function VendorVisitorActivity() {
                     const total = Object.values(stats.genderDistribution).reduce((a: number, b: number) => a + b, 0);
                     const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
                     const colors: Record<string, string> = {
-                      male: 'bg-gray-900',
-                      female: 'bg-gray-600',
-                      other: 'bg-gray-400'
+                      male: 'bg-blue-500',
+                      female: 'bg-emerald-500',
+                      other: 'bg-amber-400'
                     };
                     const labels: Record<string, string> = {
                       male: 'Male',
@@ -415,7 +415,7 @@ export default function VendorVisitorActivity() {
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-1.5">
                       <div
-                        className="bg-gray-900 h-1.5 rounded-full"
+                        className="bg-emerald-500 h-1.5 rounded-full"
                         style={{ width: `${parseFloat(country.percentage)}%` }}
                       />
                     </div>

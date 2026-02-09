@@ -247,7 +247,7 @@ export default function VendorDashboard() {
         </div>
         <button
           onClick={refresh}
-          className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           Refresh
         </button>
@@ -257,7 +257,7 @@ export default function VendorDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div
           onClick={() => navigate('/vendor/transactions')}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
           <p className="text-xs font-medium text-gray-500">Balance</p>
           <p className="text-lg font-semibold text-gray-900 mt-2">
@@ -270,7 +270,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/services')}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
           <p className="text-xs font-medium text-gray-500">Services</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.servicesCount}</p>
@@ -279,7 +279,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
           <p className="text-xs font-medium text-gray-500">Pending</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pendingBookings}</p>
@@ -288,7 +288,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
           <p className="text-xs font-medium text-gray-500">Completed</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completedBookings}</p>
@@ -297,7 +297,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/inquiries')}
-          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
           <p className="text-xs font-medium text-gray-500">Inquiries</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.inquiriesCount}</p>

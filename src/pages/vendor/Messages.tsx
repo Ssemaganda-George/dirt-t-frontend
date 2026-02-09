@@ -234,7 +234,7 @@ export default function VendorMessages() {
                 >
                   <ChevronLeft className="w-4 h-4 text-gray-500" />
                 </button>
-                <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-semibold">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold">
                   {selectedConversation === 'admin' ? 'A' : 'C'}
                 </div>
                 <div>
@@ -278,7 +278,7 @@ export default function VendorMessages() {
                             {showAvatar && (
                               <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                  isVendor ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600'
+                                  isVendor ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
                                 }`}>
                                   {isVendor ? 'Y' : (message.sender_name?.[0] || 'U')}
                                 </div>
@@ -288,7 +288,7 @@ export default function VendorMessages() {
                             <div className={`flex flex-col ${isVendor ? 'items-end' : 'items-start'}`}>
                               <div className={`px-3 py-2 rounded-xl text-sm ${
                                 isVendor
-                                  ? 'bg-gray-900 text-white rounded-br-sm'
+                                  ? 'bg-blue-600 text-white rounded-br-sm'
                                   : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                               }`}>
                                 <p className="whitespace-pre-wrap">{message.message}</p>
@@ -331,7 +331,7 @@ export default function VendorMessages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     rows={1}
                     style={{ minHeight: '38px', maxHeight: '100px' }}
                     onInput={(e) => {
@@ -345,7 +345,7 @@ export default function VendorMessages() {
                     disabled={!newMessageContent.trim() || sendingMessage}
                     className={`px-3 py-2 rounded-lg transition flex items-center ${
                       newMessageContent.trim() && !sendingMessage
-                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -373,7 +373,7 @@ export default function VendorMessages() {
                     onClick={() => setFilter(tab.key as any)}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
                       filter === tab.key
-                        ? 'bg-gray-900 text-white'
+                        ? 'bg-blue-600 text-white'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >

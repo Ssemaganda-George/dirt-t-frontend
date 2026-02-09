@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Transaction } from '../../types'
 import { getTransactions, requestWithdrawal, getWalletStats } from '../../lib/database'
@@ -6,6 +6,8 @@ import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { supabase } from '../../lib/supabaseClient'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, format } from 'date-fns'
+import { getDailyQuote } from '../../lib/businessQuotes'
+import { getDailyRecommendations, type VendorMetrics } from '../../lib/businessRecommendations'
 
 export default function VendorTransactions() {
   const { profile, vendor, loading: authLoading } = useAuth()
@@ -30,6 +32,28 @@ export default function VendorTransactions() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'recommendations'>('overview')
+
+  // Daily quote — changes every day, unique per vendor
+  const dailyQuote = useMemo(() => getDailyQuote(vendorId), [vendorId])
+
+  // Daily recommendations — changes every day, unique per vendor, adapts to data
+  const dailyRecs = useMemo(() => {
+    const metrics: VendorMetrics = {
+      currentBalance: walletStats?.currentBalance || 0,
+      totalEarned: walletStats?.totalEarned || 0,
+      pendingBalance: walletStats?.pendingBalance || 0,
+      completedBalance: walletStats?.completedBalance || 0,
+      pendingWithdrawals: walletStats?.pendingWithdrawals || 0,
+      totalWithdrawn: walletStats?.totalWithdrawn || 0,
+      currency: walletStats?.currency || currency || 'UGX',
+      totalTransactions: filteredTxs.length,
+      completedTransactions: filteredTxs.filter(tx => tx.status === 'completed').length,
+      failedTransactions: filteredTxs.filter(tx => tx.status === 'failed' || tx.status === 'rejected').length,
+      avgTransactionAmount: filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length : 0,
+      successRate: filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0,
+    }
+    return getDailyRecommendations(vendorId, metrics)
+  }, [vendorId, walletStats, filteredTxs, currency])
 
   const refresh = async () => {
     if (authLoading) return
@@ -291,7 +315,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         <button
           onClick={() => setShowWithdraw(true)}
           disabled={!walletStats || walletStats.currentBalance <= 0}
-          className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           Withdraw Funds
         </button>
@@ -304,7 +328,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+              activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             {tab === 'overview' ? 'Overview' : tab === 'transactions' ? 'Transactions' : 'Insights'}
@@ -325,7 +349,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
       {/* Loading */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="mt-3 text-sm text-gray-500">Loading wallet data...</p>
         </div>
       ) : (
@@ -336,7 +360,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 {/* Wallet Statistics Cards */}
                 {walletStats && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-indigo-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Current Balance</p>
@@ -750,182 +774,138 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
             {/* Business Recommendations Tab Content */}
             {activeTab === 'recommendations' && (
               <>
-                <div className="bg-white shadow rounded-lg p-4 md:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6">
-                    <div className="mb-4 sm:mb-0">
-                      <h3 className="text-lg md:text-xl font-medium text-gray-900">Business Recommendations</h3>
-                      <p className="text-sm text-gray-500">Professional advice to optimize your business performance</p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <div className="text-xl md:text-2xl font-bold text-indigo-600">
-                        
+                {/* Daily Business Quote */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl px-4 py-3 mb-5 text-white">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl leading-none opacity-30 select-none">&ldquo;</span>
+                    <p className="flex-1 text-sm font-medium leading-snug italic min-w-0">
+                      {dailyQuote.text}
+                    </p>
+                    <div className="flex items-center gap-2 flex-shrink-0 border-l border-white/20 pl-2.5">
+                      <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">
+                        {dailyQuote.author.charAt(0)}
                       </div>
-                      <div className="text-sm text-gray-500">AI-Powered Insights</div>
+                      <div>
+                        <p className="text-xs font-semibold leading-tight">{dailyQuote.author}</p>
+                        <p className="text-[10px] text-blue-200 leading-tight">{dailyQuote.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Header */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5 md:p-6 mb-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Business Recommendations</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">Personalized advice that refreshes daily based on your business data</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium self-start sm:self-auto">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      DirtTrails Ai
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+                  {/* Financial Health — Dynamic */}
+                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h4 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Financial Health</h4>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      {dailyRecs.financial.map((rec, i) => (
+                        <div key={i}>
+                          {i > 0 && <hr className="border-gray-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="space-y-4 md:space-y-6">
-                    {/* Financial Health Recommendations */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-200">
-                      <div className="flex flex-col sm:flex-row sm:items-start">
-                        <div className="flex-shrink-0 mb-4 sm:mb-0">
-                          <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                          </svg>
-                        </div>
-                        <div className="sm:ml-4 flex-1">
-                          <h4 className="text-lg font-semibold text-green-800 mb-2">Financial Health</h4>
-                          <div className="space-y-3">
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Cash Flow Management</h5>
-                              <p className="text-sm text-gray-600">
-                                Maintain at least 3 months of operating expenses in your account. Your current balance of {formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)} 
-                                {walletStats?.currentBalance < 500000 ? 'is below recommended levels. Consider reducing expenses or increasing prices.' : 'is healthy. Keep up the good work!'}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Withdrawal Strategy</h5>
-                              <p className="text-sm text-gray-600">
-                                Withdraw profits regularly but leave enough for business operations. Consider withdrawing {Math.round((walletStats?.currentBalance || 0) * 0.3)} UGX monthly to maintain healthy cash reserves.
-                              </p>
-                            </div>
+                  {/* Performance Optimization — Dynamic */}
+                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h4 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Performance Optimization</h4>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      {/* Success rate bar — always shown */}
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-900 mb-1">Success Rate</h5>
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 rounded-full transition-all"
+                              style={{ width: `${filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%` }}
+                            />
                           </div>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%
+                          </span>
                         </div>
                       </div>
+                      {dailyRecs.performance.map((rec, i) => (
+                        <div key={i}>
+                          <hr className="border-gray-100 mb-4" />
+                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
-                    {/* Performance Optimization */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-200">
-                      <div className="flex flex-col sm:flex-row sm:items-start">
-                        <div className="flex-shrink-0 mb-4 sm:mb-0">
-                          <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                        </div>
-                        <div className="sm:ml-4 flex-1">
-                          <h4 className="text-lg font-semibold text-blue-800 mb-2">Performance Optimization</h4>
-                          <div className="space-y-3">
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Success Rate Improvement</h5>
-                              <p className="text-sm text-gray-600">
-                                Your current success rate is {filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%. 
-                                {filteredTxs.length > 0 && Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) < 80 
-                                  ? 'Focus on improving service quality and customer communication to increase completion rates.' 
-                                  : 'Excellent completion rate! Maintain your high standards.'}
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Pricing Strategy</h5>
-                              <p className="text-sm text-gray-600">
-                                Your average transaction is {filteredTxs.length > 0 ? formatCurrencyWithConversion(filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length, currency, selectedCurrency, selectedLanguage) : 'N/A'}. 
-                                Consider competitive pricing while maintaining profit margins. Regular price reviews can help optimize revenue.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Growth Opportunities — Dynamic */}
+                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h4 className="text-sm font-semibold text-violet-700 uppercase tracking-wide">Growth Opportunities</h4>
                     </div>
+                    <div className="p-5 space-y-4">
+                      {dailyRecs.growth.map((rec, i) => (
+                        <div key={i}>
+                          {i > 0 && <hr className="border-gray-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                    {/* Growth Recommendations */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-200">
-                      <div className="flex flex-col sm:flex-row sm:items-start">
-                        <div className="flex-shrink-0 mb-4 sm:mb-0">
-                          <svg className="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                          </svg>
-                        </div>
-                        <div className="sm:ml-4 flex-1">
-                          <h4 className="text-lg font-semibold text-purple-800 mb-2">Growth Opportunities</h4>
-                          <div className="space-y-3">
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Expansion Strategies</h5>
-                              <p className="text-sm text-gray-600">
-                                With {filteredTxs.length} total transactions, consider expanding your service offerings or targeting new customer segments. 
-                                Consistent performance like yours suggests readiness for business growth.
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Customer Retention</h5>
-                              <p className="text-sm text-gray-600">
-                                Focus on building long-term customer relationships. Satisfied customers often return and provide referrals, creating sustainable business growth.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Risk Management — Dynamic */}
+                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h4 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Risk Management</h4>
                     </div>
+                    <div className="p-5 space-y-4">
+                      {dailyRecs.risk.map((rec, i) => (
+                        <div key={i}>
+                          {i > 0 && <hr className="border-gray-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Risk Management */}
-                    <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-200">
-                      <div className="flex flex-col sm:flex-row sm:items-start">
-                        <div className="flex-shrink-0 mb-4 sm:mb-0">
-                          <svg className="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                          </svg>
-                        </div>
-                        <div className="sm:ml-4 flex-1">
-                          <h4 className="text-lg font-semibold text-orange-800 mb-2">Risk Management</h4>
-                          <div className="space-y-3">
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Transaction Monitoring</h5>
-                              <p className="text-sm text-gray-600">
-                                Monitor failed/rejected transactions ({filteredTxs.filter(tx => tx.status === 'failed' || tx.status === 'rejected').length} total). 
-                                High failure rates may indicate service issues that need immediate attention.
-                              </p>
-                            </div>
-                            <div className="bg-white p-3 md:p-4 rounded-md shadow-sm border">
-                              <h5 className="font-medium text-gray-900 mb-1">Contingency Planning</h5>
-                              <p className="text-sm text-gray-600">
-                                Prepare for seasonal fluctuations. Build emergency funds and have backup plans for service disruptions to ensure business continuity.
-                              </p>
-                            </div>
+                {/* Recommended Actions — Dynamic */}
+                <div className="mt-5 bg-white rounded-xl border border-gray-200 p-5 md:p-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Today's Action Items</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {dailyRecs.actions.map((item, i) => {
+                      const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-500']
+                      return (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <span className={`flex-shrink-0 w-6 h-6 ${colors[i % colors.length]} text-white rounded-full flex items-center justify-center text-xs font-bold`}>
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Action Items */}
-                    <div className="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Recommended Actions</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-indigo-600">1</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Review Pricing Strategy</p>
-                            <p className="text-xs text-gray-500">Monthly assessment of competitive pricing</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-indigo-600">2</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Customer Feedback Collection</p>
-                            <p className="text-xs text-gray-500">Implement regular feedback mechanisms</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-indigo-600">3</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Cash Reserve Building</p>
-                            <p className="text-xs text-gray-500">Maintain 3-month expense buffer</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-indigo-600">4</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Performance Monitoring</p>
-                            <p className="text-xs text-gray-500">Weekly review of key metrics</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      )
+                    })}
                   </div>
                 </div>
               </>
@@ -956,7 +936,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       max={walletStats?.currentBalance || 0}
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="0.00"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">{currency}</span>
@@ -973,7 +953,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   <button
                     onClick={handleWithdraw}
                     disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0)}
-                    className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >{loading ? 'Submitting...' : 'Withdraw'}</button>
                 </div>
               </div>

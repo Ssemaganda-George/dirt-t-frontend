@@ -195,7 +195,7 @@ export default function Profile() {
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             Edit Profile
           </button>
@@ -211,7 +211,7 @@ export default function Profile() {
       {/* Profile Header */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center gap-5">
-          <div className="h-20 w-20 rounded-full bg-gray-900 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
+          <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
             {profile.full_name?.charAt(0).toUpperCase() || 'V'}
           </div>
           <div>
@@ -237,7 +237,7 @@ export default function Profile() {
               value={formData.full_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your full name"
             />
           </div>
@@ -250,7 +250,7 @@ export default function Profile() {
               value={formData.email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your email"
             />
           </div>
@@ -263,7 +263,7 @@ export default function Profile() {
               value={formData.phone}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your phone number"
             />
           </div>
@@ -292,7 +292,7 @@ export default function Profile() {
               value={formData.business_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your business name"
             />
           </div>
@@ -305,7 +305,7 @@ export default function Profile() {
               value={formData.business_email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter business email"
             />
           </div>
@@ -318,7 +318,7 @@ export default function Profile() {
               value={formData.business_phone}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter business phone"
             />
           </div>
@@ -331,7 +331,7 @@ export default function Profile() {
               value={formData.business_website}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="https://yourwebsite.com"
             />
           </div>
@@ -346,7 +346,7 @@ export default function Profile() {
             value={formData.business_address}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
             placeholder="Enter your business address"
           />
         </div>
@@ -360,7 +360,7 @@ export default function Profile() {
             value={formData.business_description}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 resize-none"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 resize-none"
             placeholder="Describe your business..."
           />
         </div>
@@ -374,7 +374,7 @@ export default function Profile() {
             value={formData.operating_hours}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
             placeholder="e.g., Mon-Fri 9AM-6PM, Sat-Sun 10AM-4PM"
           />
         </div>
@@ -393,7 +393,7 @@ export default function Profile() {
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Save Changes'}
           </button>

@@ -150,7 +150,7 @@ export default function VendorAvailability() {
           <p className="text-sm text-gray-500 mt-1">View your booking calendar</p>
         </div>
         <select
-          className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={selectedServiceId}
           onChange={e => setSelectedServiceId(e.target.value)}
         >
@@ -412,7 +412,7 @@ export default function VendorAvailability() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <button onClick={() => setSelectedBookingObj(null)} className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition">
+                <button onClick={() => setSelectedBookingObj(null)} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
                   Close
                 </button>
               </div>
