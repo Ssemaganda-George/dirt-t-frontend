@@ -349,7 +349,7 @@ export default function ScanEventPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Event Banner Header */}
-        <div className="relative h-40 md:h-48 bg-gray-900 overflow-hidden">
+        <div className="fixed top-16 left-0 right-0 z-10 h-48 md:h-56 bg-gray-900 overflow-hidden">
           {service.images && service.images.length > 0 && (
             <img
               src={service.images[0]}
@@ -360,12 +360,7 @@ export default function ScanEventPage() {
           <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white px-4">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full mb-3">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-lg md:text-xl font-semibold mb-1">Dirt Trails Verification</h1>
+              <h1 className="text-lg md:text-xl font-semibold mb-1">Event Verification</h1>
               <p className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-lg">{service.title}</p>
 
               {/* Event Details */}
@@ -411,7 +406,7 @@ export default function ScanEventPage() {
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-6 max-w-2xl">
+        <div className="container mx-auto px-4 py-6 max-w-2xl pt-64 md:pt-72 h-screen md:h-auto md:min-h-screen pb-20 md:pb-6 overflow-y-auto md:overflow-visible">
           <div className="space-y-4">
             {/* QR Scanning Card */}
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
