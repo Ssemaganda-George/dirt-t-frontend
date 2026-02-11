@@ -55,47 +55,9 @@ export default function PublicLayout() {
   const { selectedRegion, selectedCurrency, t } = usePreferences()
 
   // Map category IDs to navigation items
-  const getNavigationItems = () => {
-    const baseNavigation = [
-      { name: 'Home', href: '/' }
-    ]
-
-    // Temporarily hide categories - only show Home
-    // const categoryNavigation = categories
-    //   .map(cat => {
-    //     // Map category IDs to URL-friendly names
-    //     const urlMapping: { [key: string]: string } = {
-    //       'cat_hotels': 'hotels',
-    //       'cat_tour_packages': 'tours',
-    //       'cat_restaurants': 'restaurants',
-    //       'cat_transport': 'transport',
-    //       'cat_flights': 'flights',
-    //       'cat_activities': 'activities'
-    //     }
-
-    //     const urlSlug = urlMapping[cat.id] || cat.id.replace('cat_', '')
-    //     return {
-    //       name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
-    //       href: `/category/${urlSlug}`
-    //     }
-    //   })
-    //   .sort((a, b) => {
-    //     // Custom sorting: Accommodation, Transport, Tours, Restaurants, Shops, Events
-    //     const order: { [key: string]: number } = {
-    //       'hotels': 0,      // Accommodation
-    //       'transport': 1,   // Transport
-    //       'tours': 2,       // Tours
-    //       'restaurants': 3, // Restaurants
-    //       'shops': 4,       // Shops
-    //       'activities': 5   // Events
-    //     }
-    //     const aPriority = order[a.href.split('/').pop() || ''] ?? 6
-    //     const bPriority = order[b.href.split('/').pop() || ''] ?? 6
-        
-    //     return aPriority - bPriority
-    //   })
-
-    return baseNavigation
+  const getNavigationItems = (): Array<{name: string, href: string}> => {
+    // Home navigation removed - return empty array
+    return []
   }
 
   const navigation = getNavigationItems()
@@ -141,12 +103,25 @@ export default function PublicLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className={`sticky top-0 z-50 transition-all duration-300 ${
+        location.pathname.includes('/scan/') 
+          ? 'bg-transparent shadow-none' 
+          : 'bg-white shadow-sm'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">DirtTrails</span>
+            <Link to="/" className={`flex items-center transition-colors duration-300 ${
+              location.pathname.includes('/scan/') 
+                ? 'text-white drop-shadow-lg' 
+                : 'text-gray-900'
+            }`}>
+              <span className="text-2xl font-bold">DirtTrails</span>
+              {location.pathname.includes('/scan/') && (
+                <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
+                  Event Verification
+                </span>
+              )}
             </Link>
 
             {/* Desktop Navigation */}

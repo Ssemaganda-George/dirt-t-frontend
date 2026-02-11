@@ -354,9 +354,9 @@ export default function ScanEventPage() {
   if (verified) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Event Banner Header - Compact when scanning */}
-        <div className={`fixed top-16 left-0 right-0 z-10 bg-gray-900 overflow-hidden transition-all duration-300 ${
-          isScanning ? 'h-20 md:h-24' : 'h-48 md:h-56'
+        {/* Event Banner Header - Full screen hero */}
+        <div className={`fixed top-0 left-0 right-0 z-10 bg-gray-900 overflow-hidden transition-all duration-300 ${
+          isScanning ? 'h-28 md:h-32' : 'h-56 md:h-72'
         }`}>
           {service.images && service.images.length > 0 && (
             <img
@@ -366,87 +366,72 @@ export default function ScanEventPage() {
             />
           )}
           <div className="absolute inset-0 bg-black/40"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className={`text-center text-white px-4 transition-all duration-300 ${
-              isScanning ? 'scale-90' : 'scale-100'
+          <div className="absolute inset-0 flex flex-col justify-center px-4 py-3">
+            <div className={`text-center text-white transition-all duration-300 ${
+              isScanning ? 'space-y-1' : 'space-y-2'
             }`}>
-              <h1 className={`font-semibold mb-1 transition-all duration-300 ${
-                isScanning ? 'text-sm md:text-base' : 'text-lg md:text-xl'
-              }`}>Event Verification</h1>
-              <p className={`font-bold mb-2 text-white drop-shadow-lg transition-all duration-300 ${
-                isScanning ? 'text-lg md:text-xl' : 'text-2xl md:text-3xl'
-              }`}>{service.title}</p>
+              {/* Event Title - Primary focus */}
+              <h2 className={`font-bold text-white drop-shadow-lg leading-tight transition-all duration-300 ${
+                isScanning ? 'text-xl md:text-2xl' : 'text-3xl md:text-4xl lg:text-5xl'
+              }`}>{service.title}</h2>
 
               {/* Event Details - Hidden when scanning for cleaner interface */}
               {!isScanning && (
-                <div className="flex flex-row items-center justify-center gap-3 text-xs text-white/90">
+                <div className="flex flex-row items-center justify-center gap-3 mt-4">
                   {service.event_datetime ? (
-                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="font-medium text-xs">{new Date(service.event_datetime).toLocaleDateString('en-US', {
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
+                      <span className="font-medium text-sm text-white">{new Date(service.event_datetime).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
-                        day: 'numeric'
+                        day: 'numeric',
+                        year: 'numeric'
                       })}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="font-medium text-xs">Date not set</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
+                      <span className="font-medium text-sm text-white/80">Date not set</span>
                     </div>
                   )}
                   {(service.location || service.event_location) ? (
-                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="font-medium text-xs">{service.event_location || service.location}</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
+                      <span className="font-medium text-sm text-white truncate max-w-64">{service.event_location || service.location}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="font-medium text-xs">Location not set</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
+                      <span className="font-medium text-sm text-white/80">Location not set</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Compact event info when scanning */}
+              {/* Compact event info when scanning - Better spacing and typography */}
               {isScanning && (
-                <div className="flex flex-row items-center justify-center gap-2 text-xs text-white/90 mt-1">
+                <div className="flex flex-row items-center justify-center gap-2 mt-3">
                   {service.event_datetime && (
-                    <span className="font-medium">
-                      {new Date(service.event_datetime).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </span>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-3 py-1">
+                      <span className="font-semibold text-sm text-white">
+                        {new Date(service.event_datetime).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
                   )}
                   {(service.location || service.event_location) && (
-                    <>
-                      <span className="text-white/60">•</span>
-                      <span className="font-medium truncate max-w-32">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-3 py-1">
+                      <span className="font-semibold text-sm text-white truncate max-w-48">
                         {service.event_location || service.location}
                       </span>
-                    </>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-        </div>
-
-        {/* Scanning Interface - positioned below header when active */}
+        </div>        {/* Scanning Interface - positioned below header when active */}
         {isScanning && (
-          <div className="fixed top-36 md:top-40 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
+          <div className="fixed top-28 md:top-32 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
             {/* Camera Container with Professional Styling - Constrained to viewport */}
             <div className="h-full max-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700 overflow-hidden backdrop-blur-sm flex flex-col">
               {/* Camera Viewfinder - Takes most of the space */}
