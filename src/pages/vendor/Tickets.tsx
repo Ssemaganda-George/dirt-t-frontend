@@ -78,7 +78,7 @@ export default function VendorTickets() {
           *,
           ticket_types(title, price),
           services!inner(title, slug, event_location, location, primary_image_url, vendor_id),
-          orders(currency, created_at, user_id)
+          orders(currency, created_at, user_id, guest_name, guest_email, guest_phone)
         `)
         .eq('services.vendor_id', vendorId)
         .order('issued_at', { ascending: false })
@@ -105,10 +105,25 @@ export default function VendorTickets() {
       }
 
       // Attach profile information to tickets
-      const ticketsWithProfiles = (ticketsData || []).map(ticket => ({
-        ...ticket,
-        buyer_profile: ticket.orders?.user_id ? profilesMap[ticket.orders.user_id] : null
-      }))
+      const ticketsWithProfiles = (ticketsData || []).map(ticket => {
+        let buyer_profile = null
+
+        if (ticket.orders?.user_id) {
+          // Registered user
+          buyer_profile = profilesMap[ticket.orders.user_id] || null
+        } else if (ticket.orders?.guest_name || ticket.orders?.guest_email) {
+          // Guest user
+          buyer_profile = {
+            full_name: ticket.orders.guest_name || 'Guest User',
+            email: ticket.orders.guest_email || null
+          }
+        }
+
+        return {
+          ...ticket,
+          buyer_profile
+        }
+      })
 
       setTickets(ticketsWithProfiles)
     } catch (err) {

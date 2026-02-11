@@ -729,7 +729,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
     >
       <div className="bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 h-full flex flex-col">
         {/* Image Container */}
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-48 overflow-hidden">
           <img
             src={imageUrl}
             alt={service.title}
@@ -761,15 +761,15 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-2.5 py-2 flex flex-col justify-between">
+        <div className="flex-1 px-2.5 py-1.5 flex flex-col justify-between">
           {/* Title with Location and Rating */}
-          <div className="flex items-start justify-between gap-1 mb-2">
+          <div className="flex items-start justify-between gap-1 mb-1.5">
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-2 text-sm leading-snug">
                 {service.title}
                 <span className="text-xs text-gray-500 font-normal">
                   {service.category_id === 'cat_activities' ? ' at ' : ' in '} 
-                  {service.location || 'Location TBA'}
+                  {service.location || service.event_location || 'Location TBA'}
                 </span>
               </h3>
             </div>
@@ -782,21 +782,13 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
             </div>
           </div>
 
-          {/* Category-specific info */}
-          <div className="mb-1.5 text-xs text-gray-600 space-y-0.5">
-            <div className="line-clamp-1 font-normal">{categoryInfo.primaryInfo}</div>
-            {categoryInfo.secondaryInfo && (
-              <div className="text-gray-500 text-xs line-clamp-1 font-light">{categoryInfo.secondaryInfo}</div>
-            )}
-          </div>
-
           {/* Vendor Name */}
-          <div className="text-xs text-gray-500 mb-1.5 line-clamp-1 font-normal">
+          <div className="text-xs text-gray-500 mb-1 line-clamp-1 font-normal">
             By {service.vendors?.business_name || 'Service Provider'}
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-1 pt-1.5 border-t border-gray-100 mt-auto">
+          <div className="flex items-baseline gap-1 pt-1 border-t border-gray-100 mt-auto">
             <span className="text-xs text-gray-500 font-light">{t('from')}</span>
             <span className="text-xs font-medium text-gray-900">
               {formatCurrencyWithConversion(

@@ -81,7 +81,7 @@ export default function AdminTickets() {
           *,
           ticket_types(title, price),
           services(title, event_location, location, primary_image_url, vendors(business_name)),
-          orders(currency, created_at, user_id, status)
+          orders(currency, created_at, user_id, status, guest_name, guest_email, guest_phone)
         `)
         .order('issued_at', { ascending: false })
 
@@ -122,10 +122,25 @@ export default function AdminTickets() {
       }
 
       // Attach profile information to tickets
-      const ticketsWithProfiles = (ticketsData || []).map(ticket => ({
-        ...ticket,
-        buyer_profile: ticket.orders?.user_id ? profilesMap[ticket.orders.user_id] : null
-      }))
+      const ticketsWithProfiles = (ticketsData || []).map(ticket => {
+        let buyer_profile = null
+
+        if (ticket.orders?.user_id) {
+          // Registered user
+          buyer_profile = profilesMap[ticket.orders.user_id] || null
+        } else if (ticket.orders?.guest_name || ticket.orders?.guest_email) {
+          // Guest user
+          buyer_profile = {
+            full_name: ticket.orders.guest_name || 'Guest User',
+            email: ticket.orders.guest_email || null
+          }
+        }
+
+        return {
+          ...ticket,
+          buyer_profile
+        }
+      })
 
       setTickets(ticketsWithProfiles)
       setBookings(bookingsData || [])
