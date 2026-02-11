@@ -21,6 +21,7 @@ interface EventData {
   updated_at: string
   vendor_id: string
   category_id?: string
+  price: number
   ticket_types: Array<{
     id: string
     title: string
@@ -33,6 +34,22 @@ interface EventData {
   service_categories?: {
     name: string
   }
+}
+
+const formatServicePrice = (service: EventData, selectedCurrency: string) => {
+  if (service.ticket_types && service.ticket_types.length > 0) {
+    const prices = service.ticket_types.map(t => t.price)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    
+    if (minPrice === maxPrice) {
+      return formatCurrencyWithConversion(minPrice, 'UGX', selectedCurrency)
+    } else {
+      return `${formatCurrencyWithConversion(minPrice, 'UGX', selectedCurrency)} - ${formatCurrencyWithConversion(maxPrice, 'UGX', selectedCurrency)}`
+    }
+  }
+  
+  return formatCurrencyWithConversion(service.price || 0, 'UGX', selectedCurrency)
 }
 
 export default function VendorEvents() {
@@ -274,6 +291,11 @@ export default function VendorEvents() {
                     <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-0.5" />
                     <span>{formatCurrencyWithConversion(event.total_revenue, 'UGX', selectedCurrency)}</span>
                   </div>
+                </div>
+
+                <div className="flex items-center text-lg font-bold text-blue-600">
+                  <DollarSign className="w-4 h-4 mr-1" />
+                  <span>{formatServicePrice(event, selectedCurrency)}</span>
                 </div>
               </div>
 
