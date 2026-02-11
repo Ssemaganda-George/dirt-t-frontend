@@ -15,13 +15,15 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews, createServiceReview, getServiceAverageRating } from '../lib/database'
+import { createOrder, createServiceReview } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib/reviewKpis'
 import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
+import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
+import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
   id: string
@@ -157,8 +159,16 @@ export default function ServiceDetail() {
 
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const [service, setService] = useState<ServiceDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useServiceDetailQueryClient()
+  const { data, isLoading, isSuccess } = useServiceDetailQuery(slug)
+
+  const service = (data?.service ?? null) as ServiceDetail | null
+  const reviews = data?.reviews ?? []
+  const averageRating = data?.ratingData?.average ?? 0
+  const reviewCount = data?.ratingData?.count ?? 0
+  const kpiAverages = data?.ratingData?.kpiAverages ?? {}
+  const ticketTypes = data?.ticketTypes ?? []
+
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -171,19 +181,16 @@ export default function ServiceDetail() {
   const [selectedImage, setSelectedImage] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
-  const [reviews, setReviews] = useState<any[]>([])
-  const [averageRating, setAverageRating] = useState(0)
-  const [reviewCount, setReviewCount] = useState(0)
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
   const [reviewSuccess, setReviewSuccess] = useState(false)
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
-  
+  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
+
   const [hoverRating, setHoverRating] = useState(0)
   const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
   const [kpiHoverRatings, setKpiHoverRatings] = useState<KpiRatings>({})
-  const [kpiAverages, setKpiAverages] = useState<Record<string, { average: number; count: number }>>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { user, profile } = useAuth()
   const { addToCart } = useCart()
@@ -247,33 +254,14 @@ export default function ServiceDetail() {
     const convertedAmount = convertCurrency(amount, serviceCurrency, selectedCurrency || 'UGX')
     return formatAmount(convertedAmount, selectedCurrency || 'UGX')
   }
-  const [ticketTypes, setTicketTypes] = useState<any[]>([])
-  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
+
   const ticketsTotal = ticketTypes.reduce((sum, t) => sum + (t.price * (ticketQuantities[t.id] || 0)), 0)
 
   useEffect(() => {
-    if (slug) {
-      fetchService()
-    }
-  }, [slug])
-
-  useEffect(() => {
-    const loadTickets = async () => {
-      if (!service) return
-      try {
-  if ((service.service_categories?.name?.toLowerCase() === 'activities') || (service.service_categories?.name?.toLowerCase() === 'events')) {
-          const types = await getTicketTypes(service.id)
-          setTicketTypes(types || [])
-          const initial: { [key: string]: number } = {}
-          ;(types || []).forEach((t: any) => { initial[t.id] = 0 })
-          setTicketQuantities(initial)
-        }
-      } catch (err) {
-        console.error('Failed to load ticket types:', err)
-      }
-    }
-    loadTickets()
-  }, [service])
+    const initial: { [key: string]: number } = {}
+    ticketTypes.forEach((t: any) => { initial[t.id] = 0 })
+    setTicketQuantities(initial)
+  }, [ticketTypes])
 
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
@@ -297,55 +285,6 @@ export default function ServiceDetail() {
       return () => container.removeEventListener('scroll', handleScroll)
     }
   }, [service?.images?.length])
-
-  const fetchService = async () => {
-    try {
-      if (!slug) {
-        console.error('No service slug/ID provided')
-        setService(null)
-        setLoading(false)
-        return
-      }
-      
-      console.log('Fetching service with slug/ID:', slug)
-      
-      // Try to fetch by slug first
-      let serviceData = await getServiceBySlug(slug)
-      
-      // If not found by slug, try to fetch by ID
-      if (!serviceData) {
-        console.log('Service not found by slug, trying by ID:', slug)
-        serviceData = await getServiceById(slug)
-      }
-      
-      console.log('Service data received:', serviceData)
-      
-      if (!serviceData) {
-        console.log('No service found with slug/ID:', slug)
-        setService(null)
-      } else {
-        setService(serviceData)
-        // Fetch reviews for this service
-        try {
-          const serviceReviews = await getServiceReviews(serviceData.id)
-          setReviews(serviceReviews || [])
-          // Get real average rating
-          const ratingData = await getServiceAverageRating(serviceData.id)
-          setAverageRating(ratingData.average)
-          setReviewCount(ratingData.count)
-          if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
-        } catch (error) {
-          console.error('Error fetching reviews:', error)
-          setReviews([])
-        }
-      }
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching service:', error)
-      setService(null) // Explicitly set to null on error
-      setLoading(false)
-    }
-  }
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -396,13 +335,7 @@ export default function ServiceDetail() {
       setReviewForm({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
       setKpiRatings({})
       setTimeout(() => setReviewSuccess(false), 5000)
-      // Refresh reviews
-      const updatedReviews = await getServiceReviews(service.id)
-      setReviews(updatedReviews || [])
-      const ratingData = await getServiceAverageRating(service.id)
-      setAverageRating(ratingData.average)
-      setReviewCount(ratingData.count)
-      if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
+      await queryClient.invalidateQueries({ queryKey: serviceDetailQueryKey(slug) })
     } catch (err) {
       setReviewError(err instanceof Error ? err.message : 'Failed to submit review')
     } finally {
@@ -1206,17 +1139,11 @@ export default function ServiceDetail() {
     }
   }
 
-  if (loading) {
-    console.log('ServiceDetail: Loading state is true')
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+  if (isLoading) {
+    return <PageSkeleton type="serviceDetail" />
   }
 
   if (!service) {
-    console.log('ServiceDetail: Service is null, showing not found message')
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">

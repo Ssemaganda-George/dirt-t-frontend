@@ -41,7 +41,7 @@ export function Skeleton({
 }
 
 interface PageSkeletonProps {
-  type?: 'home' | 'service' | 'profile' | 'dashboard' | 'checkout' | 'payment' | 'generic'
+  type?: 'home' | 'service' | 'serviceDetail' | 'profile' | 'dashboard' | 'checkout' | 'payment' | 'generic'
 }
 
 export function PageSkeleton({ type = 'generic' }: PageSkeletonProps) {
@@ -238,6 +238,60 @@ export function PageSkeleton({ type = 'generic' }: PageSkeletonProps) {
 
         {/* Booking section skeleton */}
         <div className="h-32 bg-gray-200 rounded-lg animate-pulse" />
+      </div>
+    )
+  }
+
+  if (type === 'serviceDetail') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Mobile hero */}
+        <div className="md:hidden h-[60vh] bg-gray-200 skeleton-shimmer" />
+        {/* Desktop layout */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main content */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="hidden md:block h-[520px] bg-gray-200 rounded-lg skeleton-shimmer" />
+              <div className="hidden md:block px-4 py-6 space-y-2">
+                <Skeleton className="h-8 w-3/4 mx-auto" />
+                <Skeleton className="h-4 w-full max-w-xl mx-auto" />
+                <div className="flex justify-center gap-2 pt-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm border-t-4 border-gray-200 space-y-3">
+                <Skeleton className="h-5 w-36" />
+                <div className="h-20 bg-gray-100 rounded skeleton-shimmer" />
+              </div>
+            </div>
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8 space-y-4">
+                <div className="text-center py-2">
+                  <Skeleton className="h-9 w-28 mx-auto" />
+                  <Skeleton className="h-4 w-20 mx-auto mt-2" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+                <div className="h-24 bg-gray-100 rounded-lg skeleton-shimmer" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-11 flex-1 rounded-lg" />
+                  <Skeleton className="h-11 flex-1 rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
