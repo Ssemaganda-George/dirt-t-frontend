@@ -1,22 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-async function getPaymentStatus(reference: string): Promise<{ status: string; order_id?: string }> {
-  const res = await fetch(
-    `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(reference)}`,
-    { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
-  )
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error((err as any).error || 'Failed to get payment status')
-  }
-  return res.json()
-}
 
 export default function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -32,6 +21,16 @@ export default function PaymentPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
+  const paymentChannelRef = useRef<RealtimeChannel | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (paymentChannelRef.current) {
+        paymentChannelRef.current.unsubscribe()
+        paymentChannelRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -107,29 +106,45 @@ export default function PaymentPage() {
       setPaymentReference(ref)
       setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
-      const pollInterval = 2500
-      const maxAttempts = 120
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, pollInterval))
-        const statusRes = await getPaymentStatus(ref)
-        if (statusRes.status === 'completed') {
-          setPollingMessage('Payment confirmed! Redirecting…')
-          navigate(`/tickets/${orderId}`)
-          return
-        }
-        if (statusRes.status === 'failed') {
-          setPollingMessage('')
-          setPaymentReference(null)
-          setProcessing(false)
-          alert('Payment was not completed or was declined. Please try again.')
-          return
+      const cleanup = () => {
+        if (paymentChannelRef.current) {
+          paymentChannelRef.current.unsubscribe()
+          paymentChannelRef.current = null
         }
       }
 
-      setPollingMessage('')
-      setPaymentReference(null)
-      setProcessing(false)
-      alert('Payment is taking longer than expected. You can check your tickets page later if the payment went through.')
+      const handleCompleted = () => {
+        cleanup()
+        setPollingMessage('Payment confirmed! Redirecting…')
+        navigate(`/tickets/${orderId}`)
+      }
+
+      const handleFailed = () => {
+        cleanup()
+        setPollingMessage('')
+        setPaymentReference(null)
+        setProcessing(false)
+        alert('Payment was not completed or was declined. Please try again.')
+      }
+
+      const channel = supabase
+        .channel(`payment_${ref}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'payments',
+            filter: `reference=eq.${ref}`,
+          },
+          (payload) => {
+            const row = payload.new as { status: string }
+            if (row.status === 'completed') handleCompleted()
+            else if (row.status === 'failed') handleFailed()
+          }
+        )
+        .subscribe()
+      paymentChannelRef.current = channel
     } catch (err) {
       console.error('Payment error:', err)
       setPollingMessage('')

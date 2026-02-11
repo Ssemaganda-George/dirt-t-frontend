@@ -39,8 +39,14 @@ Replace `<YOUR_PROJECT_REF>` with your Supabase project reference (from project 
 1. User is on **Checkout** → enters buyer details → **Next** goes to **Payment** (`/checkout/:orderId/payment`).
 2. On **Payment**, user selects Mobile Money, enters phone number (e.g. 0712345678 or +256712345678), selects MTN or Airtel.
 3. **Pay with Mobile Money** calls `marzpay-collect` with `order_id`, `amount` (order total + service fee), `phone_number`, and optional `user_id` if logged in.
-4. Frontend polls `marzpay-payment-status?reference=...` every 2.5s until status is `completed` or `failed`.
+4. Frontend subscribes to **Supabase Realtime** for the `payments` row (filter by `reference`). When the webhook updates the row to `completed` or `failed`, the UI updates immediately.
 5. On `completed`, user is redirected to `/tickets/:orderId`. Tickets are created by the webhook when MarzPay sends the success callback.
+
+## Realtime
+
+The `payments` table must be in your Supabase Realtime publication so the Payment page can subscribe to status changes:
+
+- **Supabase Dashboard** → **Database** → **Replication** (or **Publications**): ensure `payments` is included in the publication used by Realtime (e.g. `supabase_realtime`).
 
 ## Database
 
