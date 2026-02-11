@@ -401,7 +401,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips, or search the web..."
+              placeholder="Search DirtTrails..."
               className="flex-1 text-base sm:text-base outline-none placeholder-gray-500 text-gray-900 bg-transparent min-w-0"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -424,7 +424,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 <Search className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Search DirtTrails</h3>
-              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find hotels, tours, restaurants, transport services, FAQs, safety tips, and search the web</p>
+              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find services, get help, and explore</p>
             </div>
           ) : isLoading ? (
             <div className="p-8 sm:p-12 text-center">

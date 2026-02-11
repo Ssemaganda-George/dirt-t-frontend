@@ -495,16 +495,16 @@ export default function ServiceDetail() {
   // Get appropriate button text based on category
   const getBookingButtonText = (categoryName: string): string => {
     const categoryTexts: { [key: string]: string } = {
-      'hotels': 'Check Availability',
-      'transport': 'Check Availability',
-      'tours': 'Check Availability',
-      'restaurants': 'Check Availability',
-      'activities': 'Check Availability',
-      'flights': 'Check Availability'
+      'hotels': 'Check Availability & Book',
+      'transport': 'Check Availability & Book',
+      'tours': 'Check Availability & Book',
+      'restaurants': 'Check Availability & Book',
+      'activities': 'Check Availability & Book',
+      'flights': 'Check Availability & Book'
     }
     
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
-    return categoryTexts[mappedCategory] || 'Check Availability'
+    return categoryTexts[mappedCategory] || 'Check Availability & Book'
   }
 
   // Render category-specific information
@@ -2362,8 +2362,8 @@ export default function ServiceDetail() {
                       service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
                       ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
                       !selectedDate
-                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}</button>
-                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact</button>
+                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
                   <p className="text-xs text-gray-500 text-center">No charge yet</p>
