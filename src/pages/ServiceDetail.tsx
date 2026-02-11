@@ -138,6 +138,23 @@ interface ServiceDetail {
 }
 
 export default function ServiceDetail() {
+  const formatServiceTitle = (service: ServiceDetail, isDesktop = false) => {
+    const location = service.event_location || service.location;
+    if (!location) return service.title;
+    
+    const preposition = ['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in';
+    const locationClass = isDesktop ? 'text-lg font-normal text-blue-600' : 'text-sm font-normal text-blue-600';
+    
+    return (
+      <>
+        {service.title}{' '}
+        <span className={locationClass}>
+          {preposition} {location}
+        </span>
+      </>
+    );
+  }
+
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const [service, setService] = useState<ServiceDetail | null>(null)
@@ -1323,10 +1340,10 @@ export default function ServiceDetail() {
                     <span>{service.duration_hours} hours</span>
                   </div>
                 )}
-                {service.location && (
+                {(service.location || service.event_location) && (
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2" />
-                    <span>{service.location}</span>
+                    <span>{service.event_location || service.location}</span>
                   </div>
                 )}
               </div>
@@ -1350,15 +1367,12 @@ export default function ServiceDetail() {
 
       {/* Mobile - Centered Info Block Near Image */}
       <div className="md:hidden bg-white border-b">
-        <div className="px-4 py-2.5">
+        <div className="px-4 py-2.5 text-center">
           {/* Title */}
-          <h1 className="text-base font-bold text-gray-900 mb-1">{service.title}</h1>
+          <h1 className="text-lg font-bold text-gray-900 mb-1">{formatServiceTitle(service, false)}</h1>
 
-          {/* Location + Rating inline */}
-          <div className="flex items-center justify-between">
-            <p className="text-gray-500 text-[11px]">
-              <MapPin className="inline h-3 w-3 mr-0.5 -mt-0.5" />{service.location}
-            </p>
+          {/* Rating inline */}
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-1">
               <Star className="h-3 w-3 text-yellow-400 fill-current" />
               <span className="text-[11px] font-bold text-gray-900">{averageRating || '0'}</span>
@@ -1804,18 +1818,13 @@ export default function ServiceDetail() {
               {/* Desktop - Centered Info Block Near Image (matches mobile) */}
               <div className="hidden md:block bg-white border-b mb-8 px-4 py-6">
                 {/* Title */}
-                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{service.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{formatServiceTitle(service, true)}</h1>
 
-                {/* Description + Location in one line */}
+                {/* Description */}
                 <div className="text-center">
                   {service.description && (
                     <p className="text-gray-700 text-sm leading-relaxed mb-2">
                       {service.description}
-                    </p>
-                  )}
-                  {service.location && (
-                    <p className="text-gray-600 text-sm">
-                      {['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in'} <span className="font-medium">{service.location}</span>
                     </p>
                   )}
                 </div>
