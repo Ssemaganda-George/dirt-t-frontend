@@ -1298,6 +1298,11 @@ export default function ServiceDetail() {
           {/* Title */}
           <h1 className="text-lg font-bold text-gray-900 mb-1">{formatServiceTitle(service, false)}</h1>
 
+          {/* Description - collapsed */}
+          <p className="text-gray-600 text-[11px] leading-relaxed mt-1.5 mb-2 line-clamp-2">
+            {service.description}
+          </p>
+
           {/* Rating inline */}
           <div className="flex items-center justify-center">
             <div className="flex items-center gap-1">
@@ -1306,11 +1311,6 @@ export default function ServiceDetail() {
               <span className="text-[11px] text-gray-400">({reviewCount})</span>
             </div>
           </div>
-
-          {/* Description - collapsed */}
-          <p className="text-gray-600 text-[11px] leading-relaxed mt-1.5 line-clamp-2">
-            {service.description}
-          </p>
         </div>
       </div>
 
