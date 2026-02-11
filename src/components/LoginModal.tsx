@@ -4,13 +4,17 @@ import { useAuth } from '../contexts/AuthContext'
 import CitySearchInput from './CitySearchInput'
 import { Eye, EyeOff } from 'lucide-react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+import { getServiceById } from '../lib/database'
 
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
+  restrictToScanPage?: boolean
+  serviceId?: string
 }
 
-export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanPage = false, serviceId }: LoginModalProps) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,16 +40,44 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       const userProfile = await signIn(email, password)
 
       if (userProfile) {
-        if (userProfile.role === 'admin') {
-          navigate('/admin')
-        } else if (userProfile.role === 'vendor') {
-          if (userProfile.status === 'pending') {
-            navigate('/vendor-pending')
-          } else {
-            navigate('/vendor')
+        // Check authorization for scan pages
+        if (restrictToScanPage && serviceId) {
+          const isAdmin = userProfile.role === 'admin'
+          let isEventOwner = false
+
+          if (!isAdmin) {
+            // Check if user is the vendor who owns this service
+            try {
+              const service = await getServiceById(serviceId)
+              isEventOwner = service && service.vendor_id === userProfile.id
+            } catch (serviceError) {
+              console.error('Error checking service ownership:', serviceError)
+            }
           }
+
+          if (!isAdmin && !isEventOwner) {
+            setError('This is Secure mode, high level authorisation access required. Contact Admin!')
+            setLoading(false)
+            return
+          }
+        }
+
+        if (onSuccess) {
+          // Custom success callback provided - call it instead of navigating
+          onSuccess()
         } else {
-          navigate('/')
+          // Default behavior - navigate based on role
+          if (userProfile.role === 'admin') {
+            navigate('/admin')
+          } else if (userProfile.role === 'vendor') {
+            if (userProfile.status === 'pending') {
+              navigate('/vendor-pending')
+            } else {
+              navigate('/vendor')
+            }
+          } else {
+            navigate('/')
+          }
         }
         onClose()
       } else {

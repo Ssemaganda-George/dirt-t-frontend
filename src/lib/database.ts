@@ -1553,7 +1553,7 @@ export async function updateActivationRequestStatus(requestId: string, status: '
 }
 
 // Event OTP functions
-export async function createEventOTP(serviceId: string, ttlMinutes = 10) {
+export async function createEventOTP(serviceId: string, ttlMinutes = 30) {
   try {
     // Generate 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
@@ -1562,7 +1562,7 @@ export async function createEventOTP(serviceId: string, ttlMinutes = 10) {
     const { data, error } = await supabase.from('event_otps').insert([{ service_id: serviceId, otp, expires_at: expiresAt }]).select().single()
     if (error) throw error
 
-    // Notify admin and event organizer
+    // Notify admin and event organizer via email and SMS
     const service = await getServiceById(serviceId)
     const adminId = await getAdminProfileId()
     let vendorProfileId: string | null = null
@@ -1573,9 +1573,72 @@ export async function createEventOTP(serviceId: string, ttlMinutes = 10) {
       console.warn('Could not fetch vendor profile for OTP notification', e)
     }
 
+    // Get admin and vendor contact information
+    let adminEmail: string | null = null
+    let adminPhone: string | null = null
+    let vendorEmail: string | null = null
+    let vendorPhone: string | null = null
+
+    if (adminId) {
+      try {
+        const { data: adminProfile } = await supabase.from('profiles').select('email, phone').eq('id', adminId).single()
+        adminEmail = adminProfile?.email || null
+        adminPhone = adminProfile?.phone || null
+      } catch (e) {
+        console.warn('Could not fetch admin profile for OTP notification', e)
+      }
+    }
+
+    if (vendorProfileId) {
+      try {
+        const { data: vendorProfile } = await supabase.from('profiles').select('email, phone').eq('id', vendorProfileId).single()
+        vendorEmail = vendorProfile?.email || null
+        vendorPhone = vendorProfile?.phone || null
+      } catch (e) {
+        console.warn('Could not fetch vendor profile for OTP notification', e)
+      }
+    }
+
     const subject = `OTP for event access: ${service?.title || serviceId}`
     const message = `An OTP was issued for access to event ${service?.title || serviceId}: ${otp}. It expires at ${expiresAt}.`
 
+    // Send email notifications
+    if (adminEmail) {
+      await sendOTPNotification({ 
+        to: adminEmail, 
+        subject, 
+        message: `Admin notification: ${message}`,
+        type: 'email' 
+      })
+    }
+
+    if (vendorEmail) {
+      await sendOTPNotification({ 
+        to: vendorEmail, 
+        subject, 
+        message: `Vendor notification: ${message}`,
+        type: 'email' 
+      })
+    }
+
+    // Send SMS notifications
+    if (adminPhone) {
+      await sendOTPNotification({ 
+        to: adminPhone, 
+        message: `Admin notification: ${message}`,
+        type: 'sms' 
+      })
+    }
+
+    if (vendorPhone) {
+      await sendOTPNotification({ 
+        to: vendorPhone, 
+        message: `Vendor notification: ${message}`,
+        type: 'sms' 
+      })
+    }
+
+    // Also send internal messages as backup
     if (adminId) {
       // Send to admin from vendor if vendorProfileId else from admin
       if (vendorProfileId) await sendMessage({ sender_id: vendorProfileId, sender_role: 'vendor', recipient_id: adminId, recipient_role: 'admin', subject, message })
@@ -1606,6 +1669,24 @@ export async function verifyEventOTP(serviceId: string, otp: string) {
   } catch (err) {
     console.error('Error verifying event OTP:', err)
     throw err
+  }
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-password', {
+      body: { password }
+    })
+
+    if (error) {
+      console.error('Error verifying password:', error)
+      return false
+    }
+
+    return data?.valid === true
+  } catch (err) {
+    console.error('Error verifying password:', err)
+    return false
   }
 }
 
@@ -3120,6 +3201,31 @@ export async function sendMessage(messageData: {
   } catch (error) {
     console.error('Error in sendMessage:', error)
     throw error
+  }
+}
+
+export async function sendOTPNotification(notificationData: {
+  to: string
+  subject?: string
+  message: string
+  type: 'email' | 'sms'
+}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-otp-notification', {
+      body: notificationData
+    })
+
+    if (error) {
+      console.warn(`Error sending ${notificationData.type} notification:`, error)
+      // Don't throw error for notifications - they're supplementary
+      return { sent: false, error }
+    }
+
+    return { sent: true, data }
+  } catch (err) {
+    console.warn(`Exception sending ${notificationData.type} notification:`, err)
+    // Don't throw error for notifications - they're supplementary
+    return { sent: false, error: err }
   }
 }
 
@@ -5588,5 +5694,111 @@ export async function sendReviewRequestEmail(
   } catch (err) {
     console.warn('Email sending failed, review link generated:', reviewUrl);
     return { sent: false, reviewUrl };
+  }
+}
+
+// Scan Session Management Functions
+export interface ScanSession {
+  id: string;
+  service_id: string;
+  created_by: string;
+  start_time: string;
+  duration_hours: number;
+  end_time: string;
+  status: 'active' | 'expired' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createScanSession(serviceId: string, durationHours: number): Promise<ScanSession | null> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .insert([{
+        service_id: serviceId,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        duration_hours: durationHours,
+        end_time: new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
+        status: 'active'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating scan session:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception creating scan session:', err);
+    return null;
+  }
+}
+
+export async function getActiveScanSession(serviceId: string): Promise<ScanSession | null> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .select('*')
+      .eq('service_id', serviceId)
+      .eq('status', 'active')
+      .gt('end_time', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      // No active session found is not an error
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error getting active scan session:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception getting active scan session:', err);
+    return null;
+  }
+}
+
+export async function expireScanSession(sessionId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('scan_sessions')
+      .update({ status: 'expired', updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error expiring scan session:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Exception expiring scan session:', err);
+    return false;
+  }
+}
+
+export async function getScanSessionsForService(serviceId: string): Promise<ScanSession[]> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .select('*')
+      .eq('service_id', serviceId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error getting scan sessions:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Exception getting scan sessions:', err);
+    return [];
   }
 }

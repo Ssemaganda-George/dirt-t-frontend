@@ -8,7 +8,7 @@ import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState, useEffect } from 'react';
-import { getAllVendors, getActivationRequests, updateActivationRequestStatus } from '../../lib/database';
+import { getAllVendors, getActivationRequests, updateActivationRequestStatus, createScanSession } from '../../lib/database';
 import type { Service } from '../../types';
 
 export function ActivitiesServices() {
@@ -25,6 +25,8 @@ export function ActivitiesServices() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activationRequests, setActivationRequests] = useState<any[]>([]);
   const [activationUpdatingId, setActivationUpdatingId] = useState<string | null>(null);
+  const [scanSessionPrompt, setScanSessionPrompt] = useState<{ service: Service; show: boolean } | null>(null);
+  const [sessionDuration, setSessionDuration] = useState<number>(4);
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -83,6 +85,41 @@ export function ActivitiesServices() {
     } finally {
       setActivationUpdatingId(null);
     }
+  };
+
+  const handleCreateScanSession = async () => {
+    if (!scanSessionPrompt?.service) return;
+
+    setUpdatingStatus(scanSessionPrompt.service.id);
+    try {
+      // Create the scan session
+      const session = await createScanSession(scanSessionPrompt.service.id, sessionDuration);
+      if (!session) {
+        throw new Error('Failed to create scan session');
+      }
+
+      // Enable scan_enabled on the service
+      await updateService(scanSessionPrompt.service.id, { scan_enabled: true } as any);
+
+      setSaveMessage({
+        type: 'success',
+        text: `Scan link enabled for ${sessionDuration} hours! Session ends at ${new Date(session.end_time).toLocaleString()}`
+      });
+
+      // Close the prompt
+      setScanSessionPrompt(null);
+      setSessionDuration(4); // Reset to default
+    } catch (err) {
+      console.error('Failed to create scan session:', err);
+      setSaveMessage({ type: 'error', text: 'Failed to enable scan link' });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const cancelScanSessionPrompt = () => {
+    setScanSessionPrompt(null);
+    setSessionDuration(4);
   };
 
   if (loading) {
@@ -416,23 +453,21 @@ export function ActivitiesServices() {
                       {/* Admin toggle for enabling scan link for events */}
                       <button
                         onClick={async () => {
-                          setUpdatingStatus(service.id);
-                          try {
-                            const newEnabledState = !service.scan_enabled;
-                            console.log('BEFORE UPDATE:', { serviceId: service.id, currentState: service.scan_enabled, newState: newEnabledState });
-                            
-                            const updatedService = await updateService(service.id, { scan_enabled: newEnabledState } as any);
-                            
-                            console.log('AFTER UPDATE:', { 
-                              serviceId: service.id, 
-                              updatedServiceState: updatedService?.scan_enabled,
-                              dbConfirmation: updatedService
-                            });
-                          } catch (err) {
-                            console.error('Failed to toggle scan_enabled:', err);
-                            alert('Failed to update event link activation.');
-                          } finally {
-                            setUpdatingStatus(null);
+                          if (service.scan_enabled) {
+                            // Disabling - just update the service
+                            setUpdatingStatus(service.id);
+                            try {
+                              await updateService(service.id, { scan_enabled: false } as any);
+                              console.log('Disabled scan link for service:', service.id);
+                            } catch (err) {
+                              console.error('Failed to disable scan link:', err);
+                              alert('Failed to disable event link.');
+                            } finally {
+                              setUpdatingStatus(null);
+                            }
+                          } else {
+                            // Enabling - show duration prompt
+                            setScanSessionPrompt({ service, show: true });
                           }
                         }}
                         disabled={updatingStatus === service.id}
@@ -636,6 +671,56 @@ export function ActivitiesServices() {
         isLoading={updatingStatus === editingService?.id}
         saveMessage={saveMessage}
       />
+
+      {/* Scan Session Duration Prompt Modal */}
+      {scanSessionPrompt?.show && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Enable Scan Link for {scanSessionPrompt.service.title}
+              </h3>
+              <div className="mb-4">
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
+                  Duration (hours)
+                </label>
+                <select
+                  id="duration"
+                  value={sessionDuration}
+                  onChange={(e) => setSessionDuration(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={1}>1 hour</option>
+                  <option value={2}>2 hours</option>
+                  <option value={4}>4 hours</option>
+                  <option value={6}>6 hours</option>
+                  <option value={8}>8 hours</option>
+                  <option value={12}>12 hours</option>
+                  <option value={24}>24 hours</option>
+                </select>
+                <p className="text-sm text-gray-500 mt-1">
+                  Session will end at: {new Date(Date.now() + sessionDuration * 60 * 60 * 1000).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={cancelScanSessionPrompt}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateScanSession}
+                  disabled={updatingStatus === scanSessionPrompt.service.id}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {updatingStatus === scanSessionPrompt.service.id ? 'Creating...' : 'Enable Link'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

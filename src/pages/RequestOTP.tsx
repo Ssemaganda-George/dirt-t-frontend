@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { createEventOTP, getServiceById } from '../lib/database'
-import { useAuth } from '../contexts/AuthContext'
+import { createEventOTP, getServiceById, verifyPassword } from '../lib/database'
 
 export default function RequestOTPPage() {
   const { id } = useParams()
@@ -10,6 +9,14 @@ export default function RequestOTPPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  // Secure mode state
+  const [secureMode, setSecureMode] = useState(false)
+  const [securePassword, setSecurePassword] = useState('')
+  const [secureConfirmations, setSecureConfirmations] = useState(0)
+  const [firstPassword, setFirstPassword] = useState('')
+  const [secureError, setSecureError] = useState<string | null>(null)
+  const [secureLoading, setSecureLoading] = useState(false)
 
   useEffect(() => {
     const loadService = async () => {
@@ -43,6 +50,71 @@ export default function RequestOTPPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSecureMode = async (e: any) => {
+    e.preventDefault()
+    if (!id) return
+
+    setSecureLoading(true)
+    setSecureError(null)
+
+    try {
+      // First, verify the password is valid (belongs to admin or vendor)
+      const isValidPassword = await verifyPassword(securePassword)
+
+      if (!isValidPassword) {
+        setSecureError('Invalid password. Please enter a valid admin or vendor password.')
+        setSecurePassword('')
+        return
+      }
+
+      // If this is the first confirmation, store the password
+      if (secureConfirmations === 0) {
+        setFirstPassword(securePassword)
+        setSecureConfirmations(1)
+        setSecurePassword('')
+        setSecureError('Password verified. Please enter the password again to confirm.')
+      }
+      // Second confirmation - check if it matches
+      else if (secureConfirmations === 1) {
+        if (securePassword === firstPassword) {
+          setSecureConfirmations(2)
+          setSecurePassword('')
+          setSecureError('Password confirmed. Please enter the password one more time.')
+        } else {
+          setSecureError('Passwords do not match. Please start over.')
+          setSecureConfirmations(0)
+          setFirstPassword('')
+          setSecurePassword('')
+        }
+      }
+      // Third confirmation - final check
+      else if (secureConfirmations === 2) {
+        if (securePassword === firstPassword) {
+          // All confirmations successful, redirect to scan page
+          navigate(`/scan/${id}`)
+        } else {
+          setSecureError('Passwords do not match. Please start over.')
+          setSecureConfirmations(0)
+          setFirstPassword('')
+          setSecurePassword('')
+        }
+      }
+    } catch (err: any) {
+      setSecureError('Password verification failed. Please try again.')
+      setSecurePassword('')
+    } finally {
+      setSecureLoading(false)
+    }
+  }
+
+  const toggleSecureMode = () => {
+    setSecureMode(!secureMode)
+    setSecurePassword('')
+    setSecureConfirmations(0)
+    setFirstPassword('')
+    setSecureError(null)
   }
 
   if (!service) {
@@ -99,12 +171,65 @@ export default function RequestOTPPage() {
             )}
           </button>
 
-          <button
-            onClick={() => navigate('/')}
-            className="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-          >
-            Return to Home
-          </button>
+          {!secureMode ? (
+            <button
+              onClick={toggleSecureMode}
+              className="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Secure Mode
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <form onSubmit={handleSecureMode}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {secureConfirmations === 0 && 'Enter admin or vendor password'}
+                  {secureConfirmations === 1 && 'Confirm password (2nd time)'}
+                  {secureConfirmations === 2 && 'Confirm password (3rd time)'}
+                </label>
+                <input
+                  type="password"
+                  value={securePassword}
+                  onChange={(e) => setSecurePassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={
+                    secureConfirmations === 0 ? 'Enter password' :
+                    secureConfirmations === 1 ? 'Enter password again' :
+                    'Enter password once more'
+                  }
+                  disabled={secureLoading}
+                />
+
+                {secureError && (
+                  <p className="text-red-600 text-sm mt-2">{secureError}</p>
+                )}
+
+                <div className="flex space-x-2 mt-4">
+                  <button
+                    type="submit"
+                    disabled={secureLoading || !securePassword.trim()}
+                    className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    {secureLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Verifying...
+                      </div>
+                    ) : (
+                      'Verify Password'
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleSecureMode}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-center text-sm text-gray-500">

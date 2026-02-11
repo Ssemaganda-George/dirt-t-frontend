@@ -1,18 +1,32 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import QrScanner from 'qr-scanner'
-import { getServiceById, createEventOTP, verifyEventOTP, verifyTicketByCode } from '../lib/database'
+import { getServiceById, createEventOTP, verifyEventOTP, verifyPassword, verifyTicketByCode, getActiveScanSession } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
+import { formatDateTime } from '../lib/utils'
+import LoginModal from '../components/LoginModal'
 
 export default function ScanEventPage() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const navigate = useNavigate()
+  const { user, profile, signOut } = useAuth()
   const [service, setService] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
   const [otpRequested, setOtpRequested] = useState(false)
   const [otp, setOtp] = useState('')
   const [verified, setVerified] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Password-based OTP state
+  const [usePasswordMode, setUsePasswordMode] = useState(false)
+  
+  // Secure mode state
+  const [useSecureMode, setUseSecureMode] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
+  const [passwordInput, setPasswordInput] = useState('')
+  
+  // Logout dropdown state
+  const [showLogoutDropdown, setShowLogoutDropdown] = useState(false)
   
   // QR scanning state
   const [isScanning, setIsScanning] = useState(false)
@@ -25,22 +39,93 @@ export default function ScanEventPage() {
   const qrScannerRef = useRef<QrScanner | null>(null)
   const isProcessingRef = useRef(false)
 
+  // Scan session state
+  const [activeScanSession, setActiveScanSession] = useState<any>(null)
+  const [timeRemaining, setTimeRemaining] = useState<number>(0)
+  const [sessionExpired, setSessionExpired] = useState(false)
+
   // Manual verification state
   const [manualCode, setManualCode] = useState('')
   const [isManualProcessing, setIsManualProcessing] = useState(false)
   const [showManualEntry, setShowManualEntry] = useState(false)
 
-  const formatTimestamp = (timestamp: string) => {
-    if (!timestamp) return null
-    const date = new Date(timestamp)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
+  const togglePasswordMode = () => {
+    setUsePasswordMode(!usePasswordMode)
+    setUseSecureMode(false) // Disable secure mode when enabling password mode
+    setPasswordInput('')
+    setOtp('')
+    setError(null)
+  }
+
+  const toggleSecureMode = () => {
+    if (!useSecureMode) {
+      // Enabling secure mode - show login modal
+      setShowLoginModal(true)
+    } else {
+      // Disabling secure mode
+      setUseSecureMode(false)
+      setUsePasswordMode(false) // Disable password mode when disabling secure mode
+      setPasswordInput('')
+      setOtp('')
+      setError(null)
+    }
+  }
+
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false)
+    setUseSecureMode(true)
+    setUsePasswordMode(false)
+    setPasswordInput('')
+    setOtp('')
+    setError(null)
+    setVerified(true)
+  }
+
+  const handleLoginModalClose = () => {
+    setShowLoginModal(false)
+    setUseSecureMode(false)
+  }
+
+  const handleLogout = async () => {
+    try {
+      // Sign out from Supabase authentication
+      await signOut()
+      
+      // Reset all authentication states
+      setUseSecureMode(false)
+      setVerified(false)
+      setShowLogoutDropdown(false)
+      setOtp('')
+      setPasswordInput('')
+      setError(null)
+      setOtpRequested(false)
+      
+      // Clear any active scan session
+      setActiveScanSession(null)
+      setTimeRemaining(0)
+      setSessionExpired(false)
+      
+      // Stop scanning if active
+      stopScanning()
+      
+      // Navigate back to trigger re-authentication
+      window.location.reload()
+    } catch (error) {
+      console.error('Error signing out:', error)
+      // Still reset local state even if signOut fails
+      setUseSecureMode(false)
+      setVerified(false)
+      setShowLogoutDropdown(false)
+      setOtp('')
+      setPasswordInput('')
+      setError(null)
+      setOtpRequested(false)
+      setActiveScanSession(null)
+      setTimeRemaining(0)
+      setSessionExpired(false)
+      stopScanning()
+      window.location.reload()
+    }
   }
 
   const handleCloseScanDialog = () => {
@@ -99,15 +184,94 @@ export default function ScanEventPage() {
     load()
   }, [id, user?.id])
 
+  // Separate useEffect for scan session check - runs independently of user authentication
+  useEffect(() => {
+    if (!id) return
+    const checkScanSession = async () => {
+      try {
+        // Check for active scan session (takes precedence over user login)
+        const scanSession = await getActiveScanSession(id)
+        if (scanSession) {
+          setActiveScanSession(scanSession)
+          setVerified(true)
+
+          // Calculate initial time remaining
+          const endTime = new Date(scanSession.end_time).getTime()
+          const now = Date.now()
+          const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
+          setTimeRemaining(remaining)
+
+          // Clear any errors and OTP state since we have a valid scan session
+          setError(null)
+          setOtpRequested(false)
+        }
+      } catch (err: any) {
+        console.error('Error checking scan session:', err)
+      }
+    }
+    checkScanSession()
+  }, [id])
+
+  // Countdown timer for scan sessions
+  useEffect(() => {
+    if (!activeScanSession || timeRemaining <= 0) return
+
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        const newTime = prev - 1
+        if (newTime <= 0) {
+          setSessionExpired(true)
+          setVerified(false)
+          setError('Scan session has expired')
+          return 0
+        }
+        return newTime
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [activeScanSession, timeRemaining])
+
   const submitOtp = async (e: any) => {
     e.preventDefault()
     if (!id) return
+
+    // Handle password-based OTP verification
+    if (usePasswordMode) {
+      // Allow any vendor or admin password to work
+      try {
+        const isValidPassword = await verifyPassword(passwordInput)
+        if (isValidPassword) {
+          setVerified(true)
+          setError(null)
+        } else {
+          setError('Invalid password. Please try again.')
+          setPasswordInput('') // Clear the input for retry
+        }
+      } catch (err: any) {
+        setError('Password verification failed. Please try again.')
+        setPasswordInput('') // Clear the input for retry
+      }
+      return
+    }
+
+    // Handle regular OTP verification
     try {
       const res = await verifyEventOTP(id, otp)
       if (res.valid) {
         setVerified(true)
       } else {
-        setError('Invalid or expired OTP')
+        // Check if user is a vendor/admin of this event
+        const isVendorOrAdmin = user?.id && service?.vendors?.user_id === user.id
+
+        if (isVendorOrAdmin) {
+          // Vendor/admin can try logging in again normally
+          setError('Invalid or expired OTP. Please try logging in again.')
+        } else {
+          // Non-vendor users get redirected to request new OTP
+          navigate(`/request-otp/${id}`)
+          return
+        }
       }
     } catch (err: any) {
       setError(err?.message || 'Verification failed')
@@ -339,14 +503,17 @@ export default function ScanEventPage() {
     }
   }
 
-  // Cleanup scanner on unmount
+  // Close dropdown when clicking outside
   useEffect(() => {
-    return () => {
-      if (qrScannerRef.current) {
-        qrScannerRef.current.stop()
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showLogoutDropdown && !(event.target as Element).closest('.logout-dropdown')) {
+        setShowLogoutDropdown(false)
       }
     }
-  }, [])
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showLogoutDropdown])
 
   if (loading) return <div className="p-6">Loading...</div>
   if (!service) return <div className="p-6">Event not found</div>
@@ -363,24 +530,26 @@ export default function ScanEventPage() {
               src={service.images[0]}
               alt={service.title}
               className="w-full h-full object-cover"
+              style={{ pointerEvents: 'none' }}
             />
           )}
-          <div className="absolute inset-0 bg-black/40"></div>
-          <div className="absolute inset-0 flex flex-col justify-center px-4 py-3">
+          <div className="absolute inset-0 bg-black/40" style={{ pointerEvents: 'none' }}></div>
+          
+          <div className="absolute inset-0 flex flex-col justify-center px-3 sm:px-4 py-2 sm:py-3">
             <div className={`text-center text-white transition-all duration-300 ${
-              isScanning ? 'space-y-1' : 'space-y-2'
+              isScanning ? 'space-y-1' : 'space-y-3 sm:space-y-4'
             }`}>
               {/* Event Title - Primary focus */}
               <h2 className={`font-bold text-white drop-shadow-lg leading-tight transition-all duration-300 ${
-                isScanning ? 'text-xl md:text-2xl' : 'text-3xl md:text-4xl lg:text-5xl'
+                isScanning ? 'text-lg sm:text-xl md:text-2xl' : 'text-xl sm:text-2xl md:text-3xl lg:text-4xl'
               }`}>{service.title}</h2>
 
               {/* Event Details - Hidden when scanning for cleaner interface */}
               {!isScanning && (
-                <div className="flex flex-row items-center justify-center gap-3 mt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mt-24 sm:mt-28 px-2">
                   {service.event_datetime ? (
-                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-                      <span className="font-medium text-sm text-white">{new Date(service.event_datetime).toLocaleDateString('en-US', {
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-white/10">
+                      <span className="font-medium text-xs sm:text-sm text-white">{new Date(service.event_datetime).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric',
@@ -388,17 +557,17 @@ export default function ScanEventPage() {
                       })}</span>
                     </div>
                   ) : (
-                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-                      <span className="font-medium text-sm text-white/80">Date not set</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-white/10">
+                      <span className="font-medium text-xs sm:text-sm text-white/80">Date not set</span>
                     </div>
                   )}
                   {(service.location || service.event_location) ? (
-                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-                      <span className="font-medium text-sm text-white truncate max-w-64">{service.event_location || service.location}</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-white/10 max-w-xs sm:max-w-none">
+                      <span className="font-medium text-xs sm:text-sm text-white truncate">{service.event_location || service.location}</span>
                     </div>
                   ) : (
-                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/10">
-                      <span className="font-medium text-sm text-white/80">Location not set</span>
+                    <div className="bg-white/15 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2 border border-white/10">
+                      <span className="font-medium text-xs sm:text-sm text-white/80">Location not set</span>
                     </div>
                   )}
                 </div>
@@ -406,10 +575,10 @@ export default function ScanEventPage() {
 
               {/* Compact event info when scanning - Better spacing and typography */}
               {isScanning && (
-                <div className="flex flex-row items-center justify-center gap-2 mt-3">
+                <div className="flex flex-row items-center justify-center gap-2 mt-2 px-2">
                   {service.event_datetime && (
-                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-3 py-1">
-                      <span className="font-semibold text-sm text-white">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-2 sm:px-3 py-1">
+                      <span className="font-semibold text-xs sm:text-sm text-white">
                         {new Date(service.event_datetime).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -419,8 +588,8 @@ export default function ScanEventPage() {
                     </div>
                   )}
                   {(service.location || service.event_location) && (
-                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-3 py-1">
-                      <span className="font-semibold text-sm text-white truncate max-w-48">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-md px-2 sm:px-3 py-1 max-w-32 sm:max-w-48">
+                      <span className="font-semibold text-xs sm:text-sm text-white truncate">
                         {service.event_location || service.location}
                       </span>
                     </div>
@@ -429,7 +598,54 @@ export default function ScanEventPage() {
               )}
             </div>
           </div>
-        </div>        {/* Scanning Interface - positioned below header when active */}
+        </div>
+
+        {/* Logout Dropdown - Top Right Corner - Outside header to avoid pointer event conflicts */}
+        {/* {(useSecureMode || user?.id) && ( */}
+          <div className="fixed top-4 right-4 z-50">
+            <div className="relative logout-dropdown">
+              <button
+                onClick={() => setShowLogoutDropdown(!showLogoutDropdown)}
+                className="flex items-center justify-center w-10 h-10 bg-white/10 backdrop-blur-sm rounded-full hover:bg-white/20 transition-colors border border-white/20 cursor-pointer"
+                aria-label="User menu"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+              
+              {showLogoutDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
+                      <div className="font-medium">{user?.email || 'Authenticated User'}</div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {useSecureMode ? 'Secure Mode' : (profile?.role === 'vendor' ? 'Secure Event Mode' : (profile?.role || 'User'))}
+                      </div>
+                      {activeScanSession && !sessionExpired && (
+                        <div className="text-xs text-red-600 mt-1 font-medium">
+                          Session expires in: {Math.floor(timeRemaining / 3600)}:{String(Math.floor((timeRemaining % 3600) / 60)).padStart(2, '0')}:{String(timeRemaining % 60).padStart(2, '0')}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        {/* )} */}
+
+        {/* Scanning Interface - positioned below header when active */}
         {isScanning && (
           <div className="fixed top-28 md:top-32 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
             {/* Camera Container with Professional Styling - Constrained to viewport */}
@@ -633,7 +849,7 @@ export default function ScanEventPage() {
                       {scanResult.ticket.used_at && (
                         <div className="flex justify-between">
                           <span className="font-medium text-sm text-gray-600">Verified:</span>
-                          <span className="text-sm text-gray-900">{formatTimestamp(scanResult.ticket.used_at)}</span>
+                          <span className="text-sm text-gray-900">{formatDateTime(scanResult.ticket.used_at)}</span>
                         </div>
                       )}
                     </div>
@@ -674,18 +890,99 @@ export default function ScanEventPage() {
     <div className="p-6 max-w-md mx-auto">
       <h2 className="text-xl font-bold">Event verification required</h2>
       <p className="mt-2">An OTP has been sent to the event organizer and an admin. Enter the OTP below to proceed.</p>
-      {otpRequested ? (
-        <form onSubmit={submitOtp} className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">OTP</label>
-          <input value={otp} onChange={(e) => setOtp(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
-          {error && <div className="text-red-600 mt-2">{error}</div>}
+
+      {/* Mode toggles */}
+      <div className="mt-4 mb-4 space-y-2">
+        {user?.id && (
+          <button
+            type="button"
+            onClick={togglePasswordMode}
+            className="text-sm text-primary-600 hover:text-primary-800 underline block"
+          >
+            {usePasswordMode ? 'Use OTP instead' : 'Use vendor/admin password instead'}
+          </button>
+        )}
+        
+        <button
+          type="button"
+          onClick={toggleSecureMode}
+          className={`text-sm underline block ${useSecureMode ? 'text-red-600 hover:text-red-800' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          {useSecureMode ? 'Disable secure mode' : 'Enable secure mode'}
+        </button>
+        
+        {useSecureMode && (
+          <div className="text-xs text-gray-600 mt-1">
+            Secure mode: Additional verification required for enhanced security
+          </div>
+        )}
+      </div>
+
+      {otpRequested || usePasswordMode ? (
+        <form onSubmit={submitOtp} className="mt-4 space-y-4">
+          {usePasswordMode ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enter vendor or admin password
+                </label>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter password"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">OTP</label>
+                <input 
+                  value={otp} 
+                  onChange={(e) => setOtp(e.target.value)} 
+                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  placeholder="Enter OTP"
+                />
+              </div>
+            </>
+          )}
+
+          {error && <div className="text-red-600 mt-2 text-sm">{error}</div>}
           <div className="mt-4">
-            <button className="px-4 py-2 bg-primary-600 text-white rounded">Verify OTP</button>
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded font-medium transition-colors"
+            >
+              {usePasswordMode ? 'Verify Password' : 'Verify OTP'}
+            </button>
           </div>
         </form>
+      ) : useSecureMode ? (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-green-800 font-medium">Secure mode enabled</p>
+              <p className="text-green-600 text-sm">You have been authenticated and can now scan tickets.</p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="mt-4 text-gray-500">Requesting OTP…</div>
       )}
+
+      {/* Login Modal for Secure Mode */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={handleLoginModalClose}
+        onSuccess={handleLoginSuccess}
+        restrictToScanPage={true}
+        serviceId={id}
+      />
     </div>
   )
 }

@@ -56,8 +56,10 @@ export default function PublicLayout() {
 
   // Map category IDs to navigation items
   const getNavigationItems = (): Array<{name: string, href: string}> => {
-    // Home navigation removed - return empty array
-    return []
+    // Return home navigation
+    return [
+      { name: 'home', href: '/' }
+    ]
   }
 
   const navigation = getNavigationItems()
@@ -125,21 +127,23 @@ export default function PublicLayout() {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`text-sm font-medium transition-colors ${
-                    location.pathname === item.href
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-700 hover:text-blue-600'
-                  }`}
-                >
-                  {t('home')}
-                </Link>
-              ))}
-            </nav>
+            {!location.pathname.includes('/scan/') && (
+              <nav className="hidden md:flex space-x-8 mt-6">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`text-sm font-medium transition-colors ${
+                      location.pathname === item.href
+                        ? 'text-blue-600 border-b-2 border-blue-600'
+                        : 'text-gray-700 hover:text-blue-600'
+                    }`}
+                  >
+                    {t(item.name)}
+                  </Link>
+                ))}
+              </nav>
+            )}
 
             {/* Right side actions */}
             {!location.pathname.includes('/scan/') && (

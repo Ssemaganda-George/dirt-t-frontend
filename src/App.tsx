@@ -51,6 +51,7 @@ const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
+const RequestOTP = lazy(() => import('./pages/RequestOTP'))
 const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
 const VerifyTicket = lazy(() => import('./pages/VerifyTicket'))
 const Checkout = lazy(() => import('./pages/Checkout'))
@@ -136,6 +137,7 @@ function App() {
             <Route path="booking/:id" element={<BookingDetail />} />
             <Route index element={<Home />} />
             <Route path="scan/:id" element={<ScanEvent />} />
+            <Route path="request-otp/:id" element={<RequestOTP />} />
             <Route path="tickets/:orderId" element={<TicketReceipt />} />
             <Route path="verify-ticket/:ticketCode" element={<VerifyTicket />} />
             <Route path="checkout/:orderId" element={<Checkout />} />

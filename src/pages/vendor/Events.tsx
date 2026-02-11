@@ -108,7 +108,7 @@ export default function VendorEvents() {
         .from('activation_requests')
         .select('*')
         .eq('vendor_id', vendorId)
-        .order('created_at', { ascending: false })
+        .order('requested_at', { ascending: false })
 
       if (activationError) {
         console.error('Error loading activation requests:', activationError)
