@@ -157,16 +157,6 @@ export default function ServiceDetail() {
     );
   }
 
-  // Small helper to build a concise meta line (guests / duration / location)
-  const formatMetaLine = (service: ServiceDetail) => {
-    const parts: string[] = []
-    if (service.max_capacity) parts.push(`${service.max_capacity} guest${service.max_capacity > 1 ? 's' : ''}`)
-    if (service.duration_hours) parts.push(`${service.duration_hours} hour${service.duration_hours > 1 ? 's' : ''}`)
-    const loc = service.event_location || service.location
-    if (loc) parts.push(loc)
-    return parts.join(' · ')
-  }
-
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const queryClient = useServiceDetailQueryClient()
@@ -265,19 +255,33 @@ export default function ServiceDetail() {
     return formatAmount(convertedAmount, selectedCurrency || 'UGX')
   }
 
-  const ticketsTotal = ticketTypes.reduce((sum, t) => sum + (t.price * (ticketQuantities[t.id] || 0)), 0)
+  const ticketsTotal = ticketTypes.reduce((sum: number, t: any) => sum + (Number(t.price || 0) * (ticketQuantities[t.id] || 0)), 0)
 
   useEffect(() => {
+    // Initialize ticket quantities only when ticket types change and
+    // when the current quantities don't already match the new set.
     const initial: { [key: string]: number } = {}
     ticketTypes.forEach((t: any) => { initial[t.id] = 0 })
-    setTicketQuantities(initial)
+
+    const initialKeys = Object.keys(initial)
+    const currentKeys = Object.keys(ticketQuantities)
+    const needsInit = initialKeys.length !== currentKeys.length || initialKeys.some(k => ticketQuantities[k] !== initial[k])
+
+    if (needsInit) {
+      setTicketQuantities(initial)
+    }
   }, [ticketTypes])
 
   useEffect(() => {
+    // Only set the selected image when it's different from the current one.
     if (service?.images && service.images.length > 0) {
-      setSelectedImage(service.images[0])
+      const first = service.images[0]
+      if (first !== selectedImage) {
+        setSelectedImage(first)
+      }
     }
-  }, [service])
+    // include selectedImage to ensure the guard compares the up-to-date value
+  }, [service?.images, selectedImage])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1024,163 +1028,123 @@ export default function ServiceDetail() {
       case 'activities':
         return (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Event Details</h3>
-
-            {/* Primary Event Information */}
-            <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {service.event_datetime && (
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-5 h-5 text-blue-600 mt-0.5">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Date & Time</div>
-                    <div className="text-sm text-gray-600">
-                      {new Date(service.event_datetime).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Date & Time:</span>{' '}
+                  {new Date(service.event_datetime).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </div>
               )}
-
               {service.event_location && (
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-5 h-5 text-blue-600 mt-0.5">
-                    <MapPin className="w-5 h-5" />
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Location:</span> {service.event_location}
+                </div>
+              )}
+              {service.registration_deadline && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Registration Deadline:</span>{' '}
+                  {new Date(service.registration_deadline).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+              {service.max_participants && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Maximum Participants:</span> {service.max_participants}
+                </div>
+              )}
+              {service.minimum_age && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
+                </div>
+              )}
+              {service.activity_type && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Activity Type:</span> {service.activity_type}
+                </div>
+              )}
+              {service.skill_level_required && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Skill Level:</span> {service.skill_level_required}
+                </div>
+              )}
+              {service.duration_hours && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Duration:</span> {service.duration_hours} hours
+                </div>
+              )}
+              {service.years_experience && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Years of Experience:</span> {service.years_experience}
+                </div>
+              )}
+              {service.service_area && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Service Area:</span> {service.service_area}
+                </div>
+              )}
+              {service.equipment_provided && service.equipment_provided.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Equipment Provided:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.equipment_provided.map((equipment, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                        {equipment}
+                      </span>
+                    ))}
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Location</div>
-                    <div className="text-sm text-gray-600">{service.event_location}</div>
+                </div>
+              )}
+              {service.languages_spoken && service.languages_spoken.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Languages Spoken:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.languages_spoken.map((language, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                        {language}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.specialties && service.specialties.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Specialties:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.specialties.map((specialty, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {service.certifications && service.certifications.length > 0 && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Certifications:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {service.certifications.map((certification, index) => (
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        {certification}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Event Specifications */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Registration</h4>
-                {service.registration_deadline && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Deadline:</span>{' '}
-                    {new Date(service.registration_deadline).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                )}
-                {service.max_participants && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Capacity:</span> {service.max_participants} participants
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Requirements</h4>
-                {service.minimum_age && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
-                  </div>
-                )}
-                {service.skill_level_required && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Skill Level:</span> {service.skill_level_required}
-                  </div>
-                )}
-                {service.duration_hours && (
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Duration:</span> {service.duration_hours} hours
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            {(service.activity_type || service.years_experience || service.service_area || 
-              (service.equipment_provided && service.equipment_provided.length > 0) ||
-              (service.languages_spoken && service.languages_spoken.length > 0) ||
-              (service.specialties && service.specialties.length > 0) ||
-              (service.certifications && service.certifications.length > 0)) && (
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {service.activity_type && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Activity Type:</span> {service.activity_type}
-                    </div>
-                  )}
-                  {service.years_experience && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Guide Experience:</span> {service.years_experience} years
-                    </div>
-                  )}
-                  {service.service_area && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Service Area:</span> {service.service_area}
-                    </div>
-                  )}
-                </div>
-
-                {service.equipment_provided && service.equipment_provided.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-gray-700">Equipment Provided:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {service.equipment_provided.map((equipment, index) => (
-                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
-                          {equipment}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {service.languages_spoken && service.languages_spoken.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-gray-700">Languages Spoken:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {service.languages_spoken.map((language, index) => (
-                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                          {language}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {service.specialties && service.specialties.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-gray-700">Specialties:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {service.specialties.map((specialty, index) => (
-                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                          {specialty}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {service.certifications && service.certifications.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-sm font-medium text-gray-700">Certifications:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {service.certifications.map((certification, index) => (
-                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                          {certification}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )
 
@@ -1241,7 +1205,7 @@ export default function ServiceDetail() {
     : service.price * guests
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 text-base">
+    <div className="min-h-screen bg-gray-50">
 
       {/* Mobile Image with Header Overlay */}
       <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
@@ -1278,19 +1242,19 @@ export default function ServiceDetail() {
           
           {/* Mobile Header Overlay */}
           <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-            <Link to="/" className="flex items-center justify-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-all">
+            <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center space-x-2">
-              <button className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
                 <Heart className="h-5 w-5" />
               </button>
-              <button className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
                 <Share2 className="h-5 w-5" />
               </button>
               <button 
                 onClick={handleSaveToCart}
-                className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow transition-all"
+                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all"
               >
                 <ShoppingCart className="h-5 w-5" />
               </button>
@@ -1299,112 +1263,121 @@ export default function ServiceDetail() {
 
           {/* Image Counter */}
           {service.images && service.images.length > 0 && (
-            <div className="absolute bottom-4 right-4 bg-white text-gray-800 px-3 py-1 rounded-full text-sm z-10 shadow-sm border border-gray-100">
+            <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-sm z-10 border border-gray-200 shadow-sm">
               {currentImageIndex + 1} / {service.images.length}
             </div>
           )}
 
-          {/* Event hero overlay for Activities - improved layout */}
+          {/* Event hero overlay for Activities/Events - compact & mobile-optimized card */}
           {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-            <div className="absolute left-4 right-4 sm:left-6 sm:right-auto bottom-4 sm:bottom-6 max-w-4xl bg-gradient-to-r from-black/75 via-black/40 to-transparent text-white p-4 sm:p-6 rounded-lg shadow-lg flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 text-xs uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
-                <h2 className="text-base sm:text-2xl font-bold leading-tight truncate">{service.title}</h2>
-                <div className="mt-2 text-sm text-gray-200 flex flex-wrap gap-3 items-center">
-                  {service.duration_hours && (
-                    <div className="hidden sm:flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4" />
-                      <span>{service.duration_hours}h</span>
+            <div className="absolute left-3 right-3 bottom-5 z-20">
+              <div className="w-full bg-gradient-to-r from-black/80 via-black/50 to-transparent text-white px-3 py-3 rounded-lg shadow-lg">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-200 font-semibold mb-0">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-base font-semibold leading-tight truncate">{service.title}</h2>
+                    <div className="mt-1 flex items-center text-xs text-gray-200 space-x-2">
+                      {service.duration_hours && (
+                        <div className="flex items-center truncate">
+                          <Clock className="h-3.5 w-3.5 mr-1.5" />
+                          <span>{service.duration_hours}h</span>
+                        </div>
+                      )}
+                      {(service.location || service.event_location) && (
+                        <div className="flex items-center truncate">
+                          <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                          <span className="truncate">{service.event_location || service.location}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {(service.event_location || service.location) && (
-                    <div className="hidden sm:flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4" />
-                      <span className="truncate max-w-xs">{service.event_location || service.location}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </div>
 
-              <div className="flex-shrink-0 w-40 sm:w-56 flex flex-col items-end sm:items-end gap-3">
-                <div className="text-right">
-                  <div className="text-xs text-gray-300">From</div>
-                  <div className="text-base sm:text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                  <div className="flex-shrink-0 text-right pl-2">
+                    <div className="text-[10px] text-gray-300">From</div>
+                    <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                    <button
+                      onClick={() => {
+                        const el = document.querySelector('[data-tickets-section]')
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }}
+                      aria-label="Buy Tickets"
+                      className="mt-2 w-28 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md shadow-sm transition-colors"
+                    >
+                      Buy Tickets
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => {
-                    const el = document.querySelector('[data-tickets-section]')
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                  }}
-                  className="w-24 sm:w-auto md:hidden text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-2 sm:py-2 sm:px-3 rounded-md shadow">
-                  Buy Tickets
-                </button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mobile - Centered Info Block Near Image */}
+      {/* Mobile - Centered Info Block Near Image (organized and compact) */}
       <div className="md:hidden bg-white border-b">
-          <div className="px-4 py-3">
-            {/* Compact Listing Header - Mobile */}
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <h1 className="text-base font-semibold text-gray-900 mb-1 truncate">{formatServiceTitle(service, false)}</h1>
-                <div className="text-sm text-gray-500 mb-2">{formatMetaLine(service)}</div>
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-2">{service.description}</p>
-              </div>
-
-              
+        <div className="px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              {/* Title with location — using formatServiceTitle to include 'in/at' */}
+              <h1 className="text-base font-semibold text-gray-900 leading-tight truncate">{formatServiceTitle(service, false)}</h1>
+              {/* Short subtitle removed from here — moved into a dedicated section above Quick Info */}
             </div>
 
-            {/* Rating & Guest-Favorite badge */}
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-sm text-gray-800">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="font-medium">{averageRating || '0'}</span>
-                  <span className="text-xs text-gray-500">({reviewCount})</span>
-                </div>
-                {averageRating >= 4.8 && reviewCount >= 5 && (
-                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-medium">Guest favorite</span>
-                )}
-              </div>
+            {/* Large numeric rating with review count beneath to match web */}
+            <div className="flex-shrink-0 text-right ml-2">
+              <div className="text-2xl font-bold text-gray-900">{Math.round(averageRating) || 0}</div>
+              <div className="text-xs text-gray-500">({reviewCount} reviews)</div>
+            </div>
+          </div>
 
-              {/* Host quick link */}
-              {service.vendors && (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-800">{service.vendors.business_name?.charAt(0) || 'H'}</div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-600">Hosted by</div>
-                    <div className="text-sm font-medium text-gray-900 truncate">{service.vendors.business_name}</div>
-                  </div>
-                </div>
+          {/* Compact CTA row: price + small button */}
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs text-gray-400">From</div>
+              <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+            </div>
+            <div className="flex-shrink-0 w-32">
+              {/* For activities/events we already show a prominent Buy Tickets button inside the hero image overlay.
+                  Avoid duplicating it below the image by only showing this compact CTA for non-event/service categories. */}
+              {!(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
+                <button onClick={() => {
+                    const el = document.querySelector('[data-tickets-section]')
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md shadow-sm transition-colors"
+                >
+                  Buy Tickets
+                </button>
               )}
             </div>
           </div>
+        </div>
       </div>
 
       {/* Mobile Information Section - Organized & Logical Flow */}
       <div className="md:hidden bg-gray-50 pb-20">
         <div className="px-3 py-3 space-y-3">
-          {/* 2. Quick Info - All Details Consolidated */}
+          {/* New: Instant confirmation + full description (moved from top) */}
           <div className="bg-white rounded-lg p-3">
-            <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
-              <div className="space-y-1.5">
+            <div className="text-sm font-semibold text-gray-900 mb-1">Instant confirmation</div>
+            {service.description && (
+              <p className="text-sm text-gray-600 leading-relaxed mb-3">{service.description}</p>
+            )}
+            <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
+            <div className="space-y-1.5">
               {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                <div className="flex items-center text-sm text-gray-700">
+                <div className="flex items-center text-[11px] text-gray-700">
                   <Clock className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
                   Duration: {service.duration_hours} hours
                 </div>
               )}
               {service.max_capacity && (
-                <div className="flex items-center text-sm text-gray-700">
+                <div className="flex items-center text-[11px] text-gray-700">
                   <Users className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
                   Up to {service.max_capacity} guests
                 </div>
               )}
-              <div className="flex items-center text-sm text-gray-700">
+              <div className="flex items-center text-[11px] text-gray-700">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1.5" />
                 Instant confirmation
               </div>
@@ -1413,10 +1386,10 @@ export default function ServiceDetail() {
               {service.amenities && service.amenities.length > 0 && (
                 <>
                   <div className="border-t pt-1.5 mt-1.5">
-                    <p className="text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
                     <div className="flex flex-wrap gap-1">
                       {service.amenities.map((amenity, index) => (
-                        <span key={index} className="inline-flex items-center text-xs text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
+                        <span key={index} className="inline-flex items-center text-[10px] text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
                           <CheckCircle className="h-2.5 w-2.5 text-green-500 mr-1 flex-shrink-0" />
                           {amenity}
                         </span>
@@ -1430,8 +1403,8 @@ export default function ServiceDetail() {
               {service.service_categories?.name?.toLowerCase() === 'hotels' && (
                 <>
                   <div className="border-t pt-1.5 mt-1.5">
-                    <p className="text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-sm">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
                       {service.star_rating && (
                         <div className="flex items-center text-gray-700">
                           <Star className="h-2.5 w-2.5 text-yellow-400 fill-current mr-1" />
@@ -1450,16 +1423,16 @@ export default function ServiceDetail() {
               {/* Provider info in Quick Info */}
               {service.vendors && (
                 <div className="border-t pt-1.5 mt-1.5">
-                  <p className="text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
+                  <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-blue-600">
+                      <span className="text-[10px] font-bold text-blue-600">
                         {service.vendors.business_name?.charAt(0) || 'V'}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
-                      <p className="text-gray-500 text-xs truncate">
+                      <h4 className="font-semibold text-gray-900 text-[11px]">{service.vendors.business_name || 'Service Provider'}</h4>
+                      <p className="text-gray-500 text-[10px] truncate">
                         {service.vendors.business_description || 'No description available'}
                       </p>
                     </div>
@@ -1475,7 +1448,7 @@ export default function ServiceDetail() {
               <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
               <button
                 onClick={() => setShowReviewForm(!showReviewForm)}
-                className="px-2.5 py-1 bg-emerald-600 text-white text-xs rounded-md hover:bg-emerald-700 transition-colors font-medium"
+                className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium"
               >
                 Write a Review
               </button>
@@ -1664,7 +1637,7 @@ export default function ServiceDetail() {
             <div className="bg-white rounded-lg p-3">
               <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">Recent Reviews</p>
               <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {reviews.slice(0, 10).map((review, index) => (
+                {reviews.slice(0, 10).map((review: any, index: number) => (
                   <div key={index} className="flex-shrink-0 w-52 snap-start bg-gray-50 rounded-lg p-2.5">
                     <div className="flex items-center gap-2 mb-1.5">
                       {/* Avatar */}
@@ -1734,61 +1707,49 @@ export default function ServiceDetail() {
 
                 {/* Desktop Header Overlay – inside image */}
                 <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-                  <Link to="/" className="flex items-center justify-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-colors">
+                  <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
                     <ArrowLeft className="h-4 w-4" />
                   </Link>
                   <div className="flex items-center gap-2">
-                    <button className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-colors">
+                    <button className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
                       <Heart className="h-4 w-4" />
                     </button>
-                    <button className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-colors">
+                    <button className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
                       <Share2 className="h-4 w-4" />
                     </button>
-                    <button onClick={handleSaveToCart} className="flex items-center text-gray-800 bg-white hover:bg-gray-50 p-2 rounded-full shadow-sm transition-colors">
+                    <button onClick={handleSaveToCart} className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
                       <ShoppingCart className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Event hero overlay for Activities - improved layout (desktop) */}
+                {/* Event hero overlay for Activities to mimic Quicket-style layout */}
                 {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-                  <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/80 via-black/40 to-transparent text-white p-6 rounded-lg shadow-lg flex items-center gap-6">
-                    <div className="flex-1 min-w-0">
-                      <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 text-xs uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
-                      <h2 className="text-2xl lg:text-3xl font-bold leading-tight truncate">{service.title}</h2>
-                      <div className="mt-2 text-sm text-gray-200 flex items-center space-x-4">
-                        {service.duration_hours && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            <span>{service.duration_hours}h</span>
-                          </div>
-                        )}
-                        {(service.event_location || service.location) && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            <span className="truncate max-w-xs">{service.event_location || service.location}</span>
-                          </div>
-                        )}
-                      </div>
+                  <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
+                    <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
+                    <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
+                      {service.duration_hours && (
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{service.duration_hours} hours</span>
+                        </div>
+                      )}
+                      {service.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>{service.location}</span>
+                        </div>
+                      )}
                     </div>
-
-                    <div className="flex-shrink-0 w-48 flex flex-col items-end gap-3">
-                      <div className="text-right">
-                        <div className="text-sm text-gray-300">From</div>
-                        <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
-                      </div>
-                      <button onClick={() => {
-                          const el = document.querySelector('[data-tickets-section]')
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                        }}
-                          className="w-full sm:w-auto md:hidden bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-md shadow">
-                        Buy Tickets
-                      </button>
+                    <div className="mt-4">
+                      <div className="text-sm text-gray-300">From</div>
+                      <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
                     </div>
                   </div>
                 )}
                 {service.images && service.images.length > 1 && (
-                  <div className="absolute bottom-4 right-4 bg-white text-gray-800 px-3 py-1 rounded-full text-sm z-10 shadow-sm border border-gray-100">
+                  <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-sm border border-gray-200 shadow-sm">
                     {(service.images.indexOf(selectedImage || service.images[0]) + 1) || 1}/{service.images.length}
                   </div>
                 )}
@@ -1815,34 +1776,20 @@ export default function ServiceDetail() {
                 </div>
               )}
 
-              {/* Desktop - Organized Info Block Near Image (left-aligned with provider on right) */}
+              {/* Desktop - Centered Info Block Near Image (matches mobile) */}
               <div className="hidden md:block bg-white border-b mb-8 px-4 py-6">
-                <div className="max-w-7xl mx-auto flex items-start justify-between">
-                  <div className="max-w-3xl">
-                    <h1 className="text-3xl font-semibold text-gray-900 mb-1">{service.title}</h1>
-                    <div className="text-sm text-gray-500 mb-3">{formatMetaLine(service)}</div>
-                    <p className="text-base leading-relaxed text-gray-700 mb-4">{service.description}</p>
-                  </div>
+                {/* Title */}
+                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{formatServiceTitle(service, true)}</h1>
 
-                  <div className="w-60 flex-shrink-0 text-right">
-                    {service.vendors && (
-                      <div className="flex flex-col items-end">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-800 mb-2">{service.vendors.business_name?.charAt(0) || 'H'}</div>
-                        <div className="text-xs text-gray-500">Hosted by</div>
-                        <div className="text-sm font-medium text-gray-900 truncate max-w-[12rem]">{service.vendors.business_name}</div>
-                      </div>
-                    )}
+                {/* Description removed from the top block — moved to Instant confirmation section below */}
 
-                    <div className="mt-4">
-                      <div className="flex items-center justify-end gap-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-1 text-gray-900">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="font-medium">{averageRating || '0'}</span>
-                        </div>
-                        <div className="text-gray-500">({reviewCount} reviews)</div>
-                      </div>
-                    </div>
+                {/* Rating & Reviews */}
+                <div className="flex items-center justify-center mt-4">
+                  <div className="flex items-center">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="ml-1 text-sm font-medium text-gray-900">{averageRating || '0'}</span>
                   </div>
+                  <span className="text-sm text-gray-500 ml-2">({reviewCount} reviews)</span>
                 </div>
               </div>
 
@@ -1852,61 +1799,80 @@ export default function ServiceDetail() {
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Quick Info</p>
                   <div className="space-y-3">
-                      {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                        <div className="flex items-center text-sm text-gray-700">
-                          <Clock className="h-4 w-4 text-gray-400 mr-3" />
-                          <span className="font-medium text-gray-900">Duration</span>
-                          <span className="ml-2">{service.duration_hours} hour{service.duration_hours > 1 ? 's' : ''}</span>
-                        </div>
-                      )}
-
-                      {service.max_capacity && (
-                        <div className="flex items-center text-sm text-gray-700">
-                          <Users className="h-4 w-4 text-gray-400 mr-3" />
-                          <span className="font-medium text-gray-900">Capacity</span>
-                          <span className="ml-2">Up to {service.max_capacity} guest{service.max_capacity > 1 ? 's' : ''}</span>
-                        </div>
-                      )}
-
+                    {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
                       <div className="flex items-center text-sm text-gray-700">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-3" />
-                        <span className="font-medium text-gray-900">Instant confirmation</span>
+                        <Clock className="h-4 w-4 text-gray-400 mr-3" />
+                        Duration: {service.duration_hours} hours
                       </div>
-
-                      {/* Amenities */}
-                      {service.amenities && service.amenities.length > 0 && (
+                    )}
+                    {service.max_capacity && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Users className="h-4 w-4 text-gray-400 mr-3" />
+                        Up to {service.max_capacity} guests
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-700">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-3" />
+                      Instant confirmation
+                    </div>
+                    
+                    {/* Amenities in Quick Info */}
+                    {service.amenities && service.amenities.length > 0 && (
+                      <>
                         <div className="border-t pt-3 mt-3">
-                          <p className="text-xs text-gray-500 font-medium mb-2">What's included</p>
-                          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-700">
+                          <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
+                          <div className="space-y-1">
                             {service.amenities.map((amenity, index) => (
-                              <li key={index} className="flex items-center">
+                              <div key={index} className="flex items-center text-sm text-gray-700">
                                 <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
-                                <span className="truncate">{amenity}</span>
-                              </li>
+                                {amenity}
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         </div>
-                      )}
-
-                      {/* Hotel-specific details */}
-                      {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                      </>
+                    )}
+                    
+                    {/* Hotel-specific details in Quick Info */}
+                    {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                      <>
                         <div className="border-t pt-3 mt-3">
-                          <p className="text-xs text-gray-500 font-medium mb-2">Accommodation details</p>
-                          <div className="space-y-1 text-sm text-gray-700">
+                          <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
+                          <div className="space-y-1 text-sm">
                             {service.star_rating && (
                               <div className="flex items-center">
                                 <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
                                 <span className="text-gray-700">{service.star_rating} Star</span>
                               </div>
                             )}
-                            {service.total_rooms && <div>Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
-                            {service.minimum_stay && <div>Min. stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
-                            {service.check_in_time && <div>Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
-                            {service.check_out_time && <div>Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
+                            {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                            {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
+                            {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
+                            {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
+                    
+                    {/* Provider info in Quick Info */}
+                    {service.vendors && (
+                      <div className="border-t pt-3 mt-3">
+                        <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-blue-600">
+                              {service.vendors.business_name?.charAt(0) || 'V'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
+                            <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">
+                              {service.vendors.business_description || 'No description available'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1941,7 +1907,7 @@ export default function ServiceDetail() {
                             />
                           ))}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
 
@@ -1953,7 +1919,7 @@ export default function ServiceDetail() {
                           const KpiIcon = getKpiIcon(kpi.key)
                           return (
                             <div key={kpi.key} className="flex items-center gap-1.5">
-                              <span className="text-sm text-gray-500 w-20 flex-shrink-0 flex items-center gap-1">
+                              <span className="text-[11px] text-gray-500 w-20 flex-shrink-0 flex items-center gap-1">
                                 <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
                               </span>
                               <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden min-w-[30px]">
@@ -1962,7 +1928,7 @@ export default function ServiceDetail() {
                                   style={{ width: `${(avg / 5) * 100}%` }}
                                 />
                               </div>
-                              <span className="text-sm font-bold text-gray-700 w-5 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                              <span className="text-[11px] font-bold text-gray-700 w-5 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
                             </div>
                           )
                         })}
@@ -2123,7 +2089,7 @@ export default function ServiceDetail() {
                     <div className="border-t pt-3">
                       <p className="text-xs text-gray-400 font-semibold mb-3 uppercase tracking-wider">{reviews.length} Review{reviews.length !== 1 ? 's' : ''}</p>
                       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {reviews.map((review, index) => (
+                        {reviews.map((review: any, index: number) => (
                           <div key={index} className="flex-shrink-0 w-64 snap-start bg-gray-50 rounded-lg p-3 border border-gray-100">
                             {/* Header: Avatar, Name, Location, and Date */}
                             <div className="flex items-start gap-2 mb-2">
@@ -2192,13 +2158,13 @@ export default function ServiceDetail() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
               {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
-                <div data-tickets-section>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
+                  <div data-tickets-section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
                   <div className="space-y-3 mb-4">
                     {ticketTypes.length === 0 && (
                       <div className="text-sm text-gray-500">No ticket types configured for this event.</div>
                     )}
-                    {ticketTypes.map((t) => {
+                    {ticketTypes.map((t: any) => {
                       const remaining = (t.quantity || 0) - (t.sold || 0)
                       const soldOut = remaining <= 0
                       const saleStart = t.sale_start || (t.metadata && t.metadata.sale_start)
@@ -2378,8 +2344,53 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      
-      {/* Fullscreen Image Lightbox — temporarily disabled while fixing JSX balance */}
+      {/* Booking Modal - Removed, replaced with direct navigation */}
+
+      {/* Fullscreen Image Lightbox */}
+      {lightboxOpen && service.images && service.images.length > 0 && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
+          {/* Close */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Counter */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+            {lightboxIndex + 1} / {service.images.length}
+          </div>
+
+          {/* Prev */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + service.images.length) % service.images.length) }}
+              className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          )}
+
+          {/* Image */}
+          <img
+            src={service.images[lightboxIndex]}
+            alt={`${service.title} ${lightboxIndex + 1}`}
+            className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % service.images.length) }}
+              className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          )}
+        </div>
+      )}
 
     </div>
   )
