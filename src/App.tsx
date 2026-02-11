@@ -31,6 +31,7 @@ const VendorMessages = lazy(() => import('./pages/vendor/Messages'))
 const VendorInquiries = lazy(() => import('./pages/vendor/Inquiries'))
 const VendorTransactions = lazy(() => import('./pages/vendor/Transactions'))
 const VendorProfile = lazy(() => import('./pages/vendor/Profile'))
+const VendorPublicProfile = lazy(() => import('./pages/VendorPublicProfile'))
 const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
 const VendorTickets = lazy(() => import('./pages/vendor/Tickets'))
 const VendorEvents = lazy(() => import('./pages/vendor/Events'))
@@ -145,6 +146,7 @@ function App() {
             <Route path="service/:slug" element={<ServiceDetail />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
+            <Route path="vendor/:vendorId" element={<VendorPublicProfile />} />
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />

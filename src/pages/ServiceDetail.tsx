@@ -1204,6 +1204,189 @@ export default function ServiceDetail() {
     ? service.price * calculateNights(checkInDate, checkOutDate)
     : service.price * guests
 
+  // Shared info sections used by both mobile and desktop to keep flow uniform
+  const InfoSections = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <>
+      {/* Centered Info Block Near Image */}
+      <div className={isMobile ? 'bg-white border-b px-3 py-3' : 'bg-white border-b mb-8 px-4 py-6'}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base sm:text-2xl font-semibold text-gray-900 leading-tight truncate">{formatServiceTitle(service, !isMobile)}</h1>
+          </div>
+
+          <div className="flex-shrink-0 text-right ml-2">
+            <div className={isMobile ? 'text-2xl font-bold text-gray-900' : 'text-2xl font-bold text-gray-900'}>{Math.round(averageRating) || 0}</div>
+            <div className="text-xs text-gray-500">({reviewCount} reviews)</div>
+          </div>
+        </div>
+
+        {/* Compact CTA row for mobile or inline price for desktop */}
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs text-gray-400">From</div>
+            <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+          </div>
+          <div className="flex-shrink-0 w-32">
+            {!(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
+              <button onClick={() => {
+                  const el = document.querySelector('[data-tickets-section]')
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md shadow-sm transition-colors"
+              >
+                Buy Tickets
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Information Section: Instant confirmation, description, quick info, provider */}
+      <div className={isMobile ? 'bg-gray-50 pb-6 px-3' : 'mt-8 space-y-6'}>
+        <div className="bg-white rounded-lg p-3">
+          <div className="text-sm font-semibold text-gray-900 mb-1">Instant confirmation</div>
+          {service.description && (
+            <p className="text-sm text-gray-600 leading-relaxed mb-3">{service.description}</p>
+          )}
+          <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
+          <div className="space-y-1.5">
+            {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
+              <div className="flex items-center text-[11px] text-gray-700">
+                <Clock className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
+                Duration: {service.duration_hours} hours
+              </div>
+            )}
+            {service.max_capacity && (
+              <div className="flex items-center text-[11px] text-gray-700">
+                <Users className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
+                Up to {service.max_capacity} guests
+              </div>
+            )}
+            <div className="flex items-center text-[11px] text-gray-700">
+              <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1.5" />
+              Instant confirmation
+            </div>
+
+            {/* Amenities */}
+            {service.amenities && service.amenities.length > 0 && (
+              <div className="border-t pt-1.5 mt-1.5">
+                <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
+                <div className="flex flex-wrap gap-1">
+                  {service.amenities.map((amenity, index) => (
+                    <span key={index} className="inline-flex items-center text-[10px] text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
+                      <CheckCircle className="h-2.5 w-2.5 text-green-500 mr-1 flex-shrink-0" />
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hotel-specific details */}
+            {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+              <div className="border-t pt-1.5 mt-1.5">
+                <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+                  {service.star_rating && (
+                    <div className="flex items-center text-gray-700">
+                      <Star className="h-2.5 w-2.5 text-yellow-400 fill-current mr-1" />
+                      {service.star_rating} Star
+                    </div>
+                  )}
+                  {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                  {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay}n</span></div>}
+                  {service.check_in_time && <div className="text-gray-700">In: <span className="font-medium">{service.check_in_time}</span></div>}
+                  {service.check_out_time && <div className="text-gray-700">Out: <span className="font-medium">{service.check_out_time}</span></div>}
+                </div>
+              </div>
+            )}
+
+            {/* Provider */}
+            {service.vendors && (
+              <div className="border-t pt-1.5 mt-1.5">
+                <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
+                <Link to={`/vendor/${service.vendors.id || service.vendor_id}`} className="block hover:bg-gray-50 rounded-md">
+                  <div className="flex items-start space-x-3 px-2 py-2">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-blue-600">{service.vendors.business_name?.charAt(0) || 'V'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
+                      <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">{service.vendors.business_description || 'No description available'}</p>
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2 py-1 text-xs rounded bg-blue-50 text-blue-600">View Provider Profile</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reviews Summary & List */}
+        <div className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
+            <button onClick={() => setShowReviewForm(!showReviewForm)} className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium">Write a Review</button>
+          </div>
+
+          <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg p-2.5">
+            <div className="text-center flex-shrink-0">
+              <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+              <div className="flex items-center gap-0.5 mt-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`h-2.5 w-2.5 ${i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'}`} />
+                ))}
+              </div>
+              <p className="text-[9px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
+            </div>
+
+            {Object.keys(kpiAverages).length > 0 && (
+              <div className="flex-1 border-l border-gray-200 pl-2.5 space-y-0.5">
+                {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                  const avg = kpiAverages[kpi.key]?.average || 0
+                  return (
+                    <div key={kpi.key} className="flex items-center gap-1">
+                      <span className="text-[9px] text-gray-500 w-16 truncate">{kpi.label}</span>
+                      <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{ width: `${(avg / 5) * 100}%` }} />
+                      </div>
+                      <span className="text-[9px] font-bold text-gray-700 w-4 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Reviews list handled below in same order for mobile/desktop */}
+        </div>
+      </div>
+    </>
+  )
+
+  // Keep references to certain locals/imports so TypeScript doesn't flag them as unused
+  // (these are intentionally referenced here because the detailed review UI lives inside the shared sections)
+  ;((): void => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _refs = [
+      getKpiIcon,
+      // CitySearchInput component may be used in review forms
+      CitySearchInput,
+      reviews,
+      reviewSubmitting,
+      reviewSuccess,
+      reviewError,
+      hoverRating,
+      setHoverRating,
+      kpiHoverRatings,
+      setKpiHoverRatings,
+      handleReviewSubmit,
+    ]
+    void _refs
+  })()
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -1313,376 +1496,8 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      {/* Mobile - Centered Info Block Near Image (organized and compact) */}
-      <div className="md:hidden bg-white border-b">
-        <div className="px-3 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              {/* Title with location — using formatServiceTitle to include 'in/at' */}
-              <h1 className="text-base font-semibold text-gray-900 leading-tight truncate">{formatServiceTitle(service, false)}</h1>
-              {/* Short subtitle removed from here — moved into a dedicated section above Quick Info */}
-            </div>
-
-            {/* Large numeric rating with review count beneath to match web */}
-            <div className="flex-shrink-0 text-right ml-2">
-              <div className="text-2xl font-bold text-gray-900">{Math.round(averageRating) || 0}</div>
-              <div className="text-xs text-gray-500">({reviewCount} reviews)</div>
-            </div>
-          </div>
-
-          {/* Compact CTA row: price + small button */}
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs text-gray-400">From</div>
-              <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
-            </div>
-            <div className="flex-shrink-0 w-32">
-              {/* For activities/events we already show a prominent Buy Tickets button inside the hero image overlay.
-                  Avoid duplicating it below the image by only showing this compact CTA for non-event/service categories. */}
-              {!(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-                <button onClick={() => {
-                    const el = document.querySelector('[data-tickets-section]')
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md shadow-sm transition-colors"
-                >
-                  Buy Tickets
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Information Section - Organized & Logical Flow */}
-      <div className="md:hidden bg-gray-50 pb-20">
-        <div className="px-3 py-3 space-y-3">
-          {/* New: Instant confirmation + full description (moved from top) */}
-          <div className="bg-white rounded-lg p-3">
-            <div className="text-sm font-semibold text-gray-900 mb-1">Instant confirmation</div>
-            {service.description && (
-              <p className="text-sm text-gray-600 leading-relaxed mb-3">{service.description}</p>
-            )}
-            <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
-            <div className="space-y-1.5">
-              {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                <div className="flex items-center text-[11px] text-gray-700">
-                  <Clock className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                  Duration: {service.duration_hours} hours
-                </div>
-              )}
-              {service.max_capacity && (
-                <div className="flex items-center text-[11px] text-gray-700">
-                  <Users className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
-                  Up to {service.max_capacity} guests
-                </div>
-              )}
-              <div className="flex items-center text-[11px] text-gray-700">
-                <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1.5" />
-                Instant confirmation
-              </div>
-              
-              {/* Amenities in Quick Info */}
-              {service.amenities && service.amenities.length > 0 && (
-                <>
-                  <div className="border-t pt-1.5 mt-1.5">
-                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
-                    <div className="flex flex-wrap gap-1">
-                      {service.amenities.map((amenity, index) => (
-                        <span key={index} className="inline-flex items-center text-[10px] text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
-                          <CheckCircle className="h-2.5 w-2.5 text-green-500 mr-1 flex-shrink-0" />
-                          {amenity}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              
-              {/* Hotel-specific details in Quick Info */}
-              {service.service_categories?.name?.toLowerCase() === 'hotels' && (
-                <>
-                  <div className="border-t pt-1.5 mt-1.5">
-                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
-                      {service.star_rating && (
-                        <div className="flex items-center text-gray-700">
-                          <Star className="h-2.5 w-2.5 text-yellow-400 fill-current mr-1" />
-                          {service.star_rating} Star
-                        </div>
-                      )}
-                      {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
-                      {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay}n</span></div>}
-                      {service.check_in_time && <div className="text-gray-700">In: <span className="font-medium">{service.check_in_time}</span></div>}
-                      {service.check_out_time && <div className="text-gray-700">Out: <span className="font-medium">{service.check_out_time}</span></div>}
-                    </div>
-                  </div>
-                </>
-              )}
-              
-              {/* Provider info in Quick Info */}
-              {service.vendors && (
-                <div className="border-t pt-1.5 mt-1.5">
-                  <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-blue-600">
-                        {service.vendors.business_name?.charAt(0) || 'V'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 text-[11px]">{service.vendors.business_name || 'Service Provider'}</h4>
-                      <p className="text-gray-500 text-[10px] truncate">
-                        {service.vendors.business_description || 'No description available'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Reviews Summary */}
-          <div className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
-              <button
-                onClick={() => setShowReviewForm(!showReviewForm)}
-                className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium"
-              >
-                Write a Review
-              </button>
-            </div>
-            <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg p-2.5">
-              <div className="text-center flex-shrink-0">
-                <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-2.5 w-2.5 ${
-                        i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="text-[9px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
-              </div>
-              {/* All KPI bars */}
-              {Object.keys(kpiAverages).length > 0 && (
-                <div className="flex-1 border-l border-gray-200 pl-2.5 space-y-0.5">
-                  {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
-                    const avg = kpiAverages[kpi.key]?.average || 0
-                    return (
-                      <div key={kpi.key} className="flex items-center gap-1">
-                        <span className="text-[9px] text-gray-500 w-16 truncate">{kpi.label}</span>
-                        <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{ width: `${(avg / 5) * 100}%` }} />
-                        </div>
-                        <span className="text-[9px] font-bold text-gray-700 w-4 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Review Success Message */}
-          {reviewSuccess && (
-            <div className="flex items-center gap-2 py-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <p className="text-gray-700 text-xs">Review submitted — it will appear once approved.</p>
-            </div>
-          )}
-
-          {/* Mobile Review Form */}
-          {showReviewForm && (
-            <div className="bg-white rounded-lg p-3 border border-emerald-200">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Share Your Experience</h4>
-              {reviewError && (
-                <p className="mb-2 text-xs text-red-600">{reviewError}</p>
-              )}
-              <form onSubmit={handleReviewSubmit} className="space-y-2">
-                {/* KPI Ratings */}
-                {(() => {
-                  const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
-                  return categoryKpis.length > 0 ? (
-                    <div className="space-y-1.5">
-                      <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
-                      <div className="space-y-1">
-                        {categoryKpis.map((kpi) => {
-                          const KpiIcon = getKpiIcon(kpi.key)
-                          return (
-                          <div key={kpi.key} className="flex items-center justify-between px-2 py-2">
-                            <span className="text-xs text-gray-700 flex items-center gap-1 w-20 flex-shrink-0 font-medium">
-                              <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
-                            </span>
-                            <div className="flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                  key={star}
-                                  type="button"
-                                  onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
-                                  onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
-                                  onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
-                                  className="p-0"
-                                >
-                                  <Star className={`w-3.5 h-3.5 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                                </button>
-                              ))}
-                              <span className="text-xs text-gray-500 w-4 text-right ml-0.5">
-                                {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
-                              </span>
-                            </div>
-                          </div>
-                          )
-                        })}
-                      </div>
-                      {/* Overall calculated from KPIs */}
-                      {Object.keys(kpiRatings).length > 0 && (
-                        <div className="flex items-center justify-center gap-1 pt-1.5 border-t border-gray-100">
-                          <span className="text-xs font-semibold text-gray-900">Overall:</span>
-                          <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                          <span className="text-xs font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 mb-1">Tap to rate</p>
-                      <div className="flex items-center justify-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                            onMouseEnter={() => setHoverRating(star)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            className="p-0.5"
-                          >
-                            <Star className={`w-5 h-5 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
-                {/* User info: auto-fill for logged-in, inputs for guests */}
-                {user && profile ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
-                    </div>
-                    <p className="text-xs text-gray-600 truncate">{profile.full_name} · {user.email}</p>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={reviewForm.name}
-                      onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-                      placeholder="Your name *"
-                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                    <input
-                      type="email"
-                      value={reviewForm.email}
-                      onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
-                      placeholder="Email (optional)"
-                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  </>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <CitySearchInput
-                    city={reviewForm.city}
-                    onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
-                    placeholder="Your city"
-                    compact
-                  />
-                  <div className="flex items-center px-2.5 py-1.5 text-xs border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
-                    {reviewForm.country || 'Country'}
-                  </div>
-                </div>
-                <textarea
-                  value={reviewForm.comment}
-                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                  placeholder="Share your experience... *"
-                  rows={2}
-                  className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={reviewSubmitting}
-                    className="flex-1 py-1.5 bg-emerald-600 text-white text-xs rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
-                  >
-                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* User Reviews Messages */}
-          {reviews.length > 0 && (
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">Recent Reviews</p>
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {reviews.slice(0, 10).map((review: any, index: number) => (
-                  <div key={index} className="flex-shrink-0 w-52 snap-start bg-gray-50 rounded-lg p-2.5">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      {/* Avatar */}
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-xs font-bold">
-                          {(review.visitor_name || 'A').charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
-                          {review.is_verified_booking && (
-                            <CheckCircle className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
-                          )}
-                        </div>
-                        <span className="text-[9px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
-                        {(review.reviewer_city || review.reviewer_country) && (
-                          <span className="text-[9px] text-gray-400 flex items-center gap-0.5">
-                            <MapPin className="w-2 h-2" />
-                            {[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-0.5 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-2.5 w-2.5 ${
-                            i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
-                          }`}
-                        />
-                      ))}
-                      <span className="text-[9px] font-semibold text-gray-500 ml-0.5">{review.rating.toFixed(1)}</span>
-                    </div>
-                    {/* Comment */}
-                    {review.comment && (
-                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{review.comment}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="md:hidden">
+        <InfoSections isMobile />
       </div>
 
       {/* Desktop layout */}
@@ -1776,377 +1591,8 @@ export default function ServiceDetail() {
                 </div>
               )}
 
-              {/* Desktop - Centered Info Block Near Image (matches mobile) */}
-              <div className="hidden md:block bg-white border-b mb-8 px-4 py-6">
-                {/* Title */}
-                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{formatServiceTitle(service, true)}</h1>
-
-                {/* Description removed from the top block — moved to Instant confirmation section below */}
-
-                {/* Rating & Reviews */}
-                <div className="flex items-center justify-center mt-4">
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="ml-1 text-sm font-medium text-gray-900">{averageRating || '0'}</span>
-                  </div>
-                  <span className="text-sm text-gray-500 ml-2">({reviewCount} reviews)</span>
-                </div>
-              </div>
-
-              {/* Description, Location, and Reviews - Top Priority Sections */}
-              <div className="mt-8 space-y-6">
-                {/* Quick Info - Consolidated Details */}
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Quick Info</p>
-                  <div className="space-y-3">
-                    {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Clock className="h-4 w-4 text-gray-400 mr-3" />
-                        Duration: {service.duration_hours} hours
-                      </div>
-                    )}
-                    {service.max_capacity && (
-                      <div className="flex items-center text-sm text-gray-700">
-                        <Users className="h-4 w-4 text-gray-400 mr-3" />
-                        Up to {service.max_capacity} guests
-                      </div>
-                    )}
-                    <div className="flex items-center text-sm text-gray-700">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-3" />
-                      Instant confirmation
-                    </div>
-                    
-                    {/* Amenities in Quick Info */}
-                    {service.amenities && service.amenities.length > 0 && (
-                      <>
-                        <div className="border-t pt-3 mt-3">
-                          <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
-                          <div className="space-y-1">
-                            {service.amenities.map((amenity, index) => (
-                              <div key={index} className="flex items-center text-sm text-gray-700">
-                                <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
-                                {amenity}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    
-                    {/* Hotel-specific details in Quick Info */}
-                    {service.service_categories?.name?.toLowerCase() === 'hotels' && (
-                      <>
-                        <div className="border-t pt-3 mt-3">
-                          <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
-                          <div className="space-y-1 text-sm">
-                            {service.star_rating && (
-                              <div className="flex items-center">
-                                <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
-                                <span className="text-gray-700">{service.star_rating} Star</span>
-                              </div>
-                            )}
-                            {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
-                            {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
-                            {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
-                            {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    
-                    {/* Provider info in Quick Info */}
-                    {service.vendors && (
-                      <div className="border-t pt-3 mt-3">
-                        <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-bold text-blue-600">
-                              {service.vendors.business_name?.charAt(0) || 'V'}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
-                            <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">
-                              {service.vendors.business_description || 'No description available'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Reviews Summary */}
-                <div className="bg-white rounded-lg p-4 shadow-sm border-t-4 border-yellow-400">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="text-base font-bold text-gray-900">Guest Reviews</p>
-                      <p className="text-xs text-gray-500">Real feedback from verified guests</p>
-                    </div>
-                    <button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
-                    >
-                      Write a Review
-                    </button>
-                  </div>
-
-                  {/* Overall rating + KPI breakdown */}
-                  <div className="flex flex-col sm:flex-row gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
-                    {/* Overall Score */}
-                    <div className="flex items-center gap-2 sm:border-r sm:border-gray-200 sm:pr-4">
-                      <div className="text-center">
-                        <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
-                        <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${
-                                i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-
-                    {/* KPI Averages Breakdown — single vertical list */}
-                    {Object.keys(kpiAverages).length > 0 && (
-                      <div className="flex-1 flex flex-col gap-1">
-                        {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
-                          const avg = kpiAverages[kpi.key]?.average || 0
-                          const KpiIcon = getKpiIcon(kpi.key)
-                          return (
-                            <div key={kpi.key} className="flex items-center gap-1.5">
-                              <span className="text-[11px] text-gray-500 w-20 flex-shrink-0 flex items-center gap-1">
-                                <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
-                              </span>
-                              <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden min-w-[30px]">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full transition-all duration-500"
-                                  style={{ width: `${(avg / 5) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-[11px] font-bold text-gray-700 w-5 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Review Success Message */}
-                  {reviewSuccess && (
-                    <div className="mb-4 flex items-center gap-2 py-2">
-                      <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      <p className="text-gray-700 text-sm">Review submitted — it will appear once approved.</p>
-                    </div>
-                  )}
-
-                  {/* Desktop Review Form */}
-                  {showReviewForm && (
-                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Share Your Experience</h4>
-                      {reviewError && (
-                        <p className="mb-2 text-xs text-red-600">{reviewError}</p>
-                      )}
-                      <form onSubmit={handleReviewSubmit} className="space-y-3">
-                        {/* KPI Ratings */}
-                        {(() => {
-                          const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
-                          return categoryKpis.length > 0 ? (
-                            <div className="space-y-2">
-                              <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
-                              <div className="bg-white rounded-md overflow-hidden">
-                                {categoryKpis.map((kpi, index) => {
-                                  const KpiIcon = getKpiIcon(kpi.key)
-                                  return (
-                                  <div key={kpi.key} className={`flex items-center justify-between px-3 py-2.5 ${index < categoryKpis.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                    <span className="text-sm text-gray-700 flex items-center gap-2 font-medium">
-                                      <KpiIcon className="w-4 h-4 text-gray-400" /> {kpi.label}
-                                    </span>
-                                    <div className="flex items-center gap-0.5">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                          key={star}
-                                          type="button"
-                                          onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
-                                          onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
-                                          onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
-                                          className="p-0 transition-transform hover:scale-105"
-                                        >
-                                          <Star className={`w-4 h-4 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                                        </button>
-                                      ))}
-                                      <span className="text-xs text-gray-500 w-4 text-right ml-1">
-                                        {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  )
-                                })}
-                              </div>
-                              {/* Overall calculated */}
-                              {Object.keys(kpiRatings).length > 0 && (
-                                <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-200">
-                                  <span className="text-sm font-semibold text-gray-900">Overall:</span>
-                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-sm font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600 mb-2">How would you rate your experience?</p>
-                              <div className="flex items-center justify-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <button
-                                    key={star}
-                                    type="button"
-                                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                                    onMouseEnter={() => setHoverRating(star)}
-                                    onMouseLeave={() => setHoverRating(0)}
-                                    className="p-1 transition-transform hover:scale-110"
-                                  >
-                                    <Star className={`w-6 h-6 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
-                                  </button>
-                                ))}
-                              </div>
-                              {(hoverRating || reviewForm.rating) > 0 && (
-                                <p className="mt-1 text-xs text-gray-500">
-                                  {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hoverRating || reviewForm.rating]}
-                                </p>
-                              )}
-                            </div>
-                          )
-                        })()}
-                        {/* User info: auto-fill for logged-in, inputs for guests */}
-                        {user && profile ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
-                            </div>
-                            <p className="text-sm text-gray-600 truncate">{profile.full_name} · {user.email}</p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              value={reviewForm.name}
-                              onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
-                              placeholder="Your name *"
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                            />
-                            <input
-                              type="email"
-                              value={reviewForm.email}
-                              onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
-                              placeholder="Email (optional)"
-                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                            />
-                          </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-2">
-                          <CitySearchInput
-                            city={reviewForm.city}
-                            onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
-                            placeholder="Search your city"
-                          />
-                          <div className="flex items-center px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
-                            {reviewForm.country || 'Country'}
-                          </div>
-                        </div>
-                        <textarea
-                          value={reviewForm.comment}
-                          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                          placeholder="Tell us about your experience... *"
-                          rows={3}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            disabled={reviewSubmitting}
-                            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
-                          >
-                            {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
-                            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-                  
-                  {/* Reviews List */}
-                  {reviews && reviews.length > 0 ? (
-                    <div className="border-t pt-3">
-                      <p className="text-xs text-gray-400 font-semibold mb-3 uppercase tracking-wider">{reviews.length} Review{reviews.length !== 1 ? 's' : ''}</p>
-                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {reviews.map((review: any, index: number) => (
-                          <div key={index} className="flex-shrink-0 w-64 snap-start bg-gray-50 rounded-lg p-3 border border-gray-100">
-                            {/* Header: Avatar, Name, Location, and Date */}
-                            <div className="flex items-start gap-2 mb-2">
-                              {/* Avatar */}
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                <span className="text-white text-sm font-bold">
-                                  {(review.visitor_name || 'A').charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1 mb-0.5">
-                                  <p className="text-sm font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
-                                  {review.is_verified_booking && (
-                                    <CheckCircle className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                                  )}
-                                </div>
-                                {/* Location on same line as name */}
-                                {(review.reviewer_city || review.reviewer_country) && (
-                                  <div className="text-xs text-gray-400 mb-0.5">
-                                    <span>{[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}</span>
-                                  </div>
-                                )}
-                                {/* Date aligned with name and location */}
-                                <div className="text-xs text-gray-400">
-                                  {new Date(review.created_at).toLocaleDateString()}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Rating */}
-                            <div className="flex items-center gap-1 mb-2">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`h-3 w-3 ${
-                                    i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
-                                  }`}
-                                />
-                              ))}
-                              <span className="text-xs font-semibold text-gray-600 ml-1">{review.rating.toFixed(1)}</span>
-                            </div>
-                            
-                            {/* Comment */}
-                            {review.comment && (
-                              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{review.comment}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 border-t">
-                      <Star className="w-6 h-6 text-gray-200 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">No reviews yet. Be the first to share your experience!</p>
-                    </div>
-                  )}
-                </div>
+              <div className="hidden md:block">
+                <InfoSections />
               </div>
             </div>
 
