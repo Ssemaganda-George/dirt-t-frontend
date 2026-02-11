@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Users, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Calendar, MapPin, Users, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { Booking } from '../lib/database'
@@ -113,6 +113,13 @@ export default function Bookings() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
+          <Link
+            to="/profile"
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
           <p className="text-gray-600 mt-2">Manage your travel bookings and reservations</p>
         </div>

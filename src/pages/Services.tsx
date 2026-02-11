@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
-import { getServiceCategories } from '../lib/database'
+import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion } from '../lib/utils'
@@ -287,7 +287,25 @@ interface ServiceCardProps {
 }
 function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const [rating, setRating] = useState<number>(0)
+  const [reviewCount, setReviewCount] = useState<number>(0)
   const { selectedCurrency, selectedLanguage } = usePreferences()
+  
+  // Fetch service rating and review count
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        const ratingData = await getServiceAverageRating(service.id)
+        setRating(ratingData.average || 0)
+        setReviewCount(ratingData.count || 0)
+      } catch (error) {
+        console.error('Error fetching service rating:', error)
+        setRating(0)
+        setReviewCount(0)
+      }
+    }
+    fetchRating()
+  }, [service.id])
   
   // Provide fallback image if no images exist
   const displayImage = service.images && service.images.length > 0 
@@ -339,9 +357,12 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
               <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
               <span className="truncate">{service.location || 'Location TBA'}</span>
             </div>
-            <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg ml-2">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg ml-2">
               <Star className="h-4 w-4 text-emerald-600 fill-current flex-shrink-0" />
-              <span className="text-sm font-bold text-emerald-700">4.5</span>
+              <span className="text-sm font-bold text-emerald-700">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && (
+                <span className="text-sm text-gray-600 ml-0.5">({reviewCount})</span>
+              )}
             </div>
           </div>
 

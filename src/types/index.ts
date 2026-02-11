@@ -382,13 +382,17 @@ export interface Flight {
 export interface UserPreferences {
   id: string;
   user_id: string;
-  email_bookings: boolean;
-  email_promotions: boolean;
-  push_bookings: boolean;
-  push_promotions: boolean;
-  language: string;
-  timezone: string;
+  // Region/currency/language are stored in the DB (see db/004_user_preferences.sql)
+  region?: string;
   currency: string;
+  language: string;
+  // Legacy/optional notification fields (not present in current DB schema)
+  email_bookings?: boolean;
+  email_promotions?: boolean;
+  push_bookings?: boolean;
+  push_promotions?: boolean;
+  // Optional timezone kept for compatibility with older UI
+  timezone?: string;
   created_at: string;
   updated_at: string;
 }

@@ -164,7 +164,7 @@ export function useAdminTransactions() {
   return { transactions, loading, error, refetch: fetchTransactions };
 }
 
-export function useServices(vendorId?: string) {
+export function useServices(vendorId?: string, options?: { skipInitialFetch?: boolean }) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -273,6 +273,19 @@ export function useServices(vendorId?: string) {
         scan_enabled: updated?.scan_enabled,
         title: updated?.title
       });
+      // Detect if DB did not apply expected changes
+      try {
+        const changedKeys: string[] = [];
+        if (updates.title !== undefined && updated?.title !== updates.title) changedKeys.push('title');
+        if (updates.description !== undefined && updated?.description !== updates.description) changedKeys.push('description');
+        if (updates.price !== undefined && Number(updated?.price) !== Number(updates.price)) changedKeys.push('price');
+        if (updates.currency !== undefined && updated?.currency !== updates.currency) changedKeys.push('currency');
+        if (changedKeys.length > 0) {
+          console.warn('HOOK: updateExistingService detected mismatched fields after update:', { serviceId, changedKeys, sent: updates, returned: updated });
+        }
+      } catch (e) {
+        console.warn('HOOK: error while validating update result:', e);
+      }
       
       setServices(prevServices => {
         const newServices = prevServices.map(service => 
@@ -301,8 +314,13 @@ export function useServices(vendorId?: string) {
   };
 
   useEffect(() => {
+    // If requested to skip initial fetch and vendorId is undefined, do nothing.
+    // This allows callers (like vendor pages) to wait until vendor status is resolved
+    // before triggering the service fetch to avoid returning global results.
+    if (options?.skipInitialFetch && vendorId === undefined) return;
+
     fetchServices();
-  }, [vendorId]);
+  }, [vendorId, options?.skipInitialFetch]);
 
   return { 
     services, 

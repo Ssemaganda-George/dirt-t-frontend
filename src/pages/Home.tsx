@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, Check, Filter } from 'lucide-react'
-import { getServiceCategories } from '../lib/database'
+import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion } from '../lib/utils'
@@ -614,9 +614,27 @@ interface ServiceCardProps {
 
 function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const [rating, setRating] = useState<number>(0)
+  const [reviewCount, setReviewCount] = useState<number>(0)
 
   // Preferences for currency/language (used for displaying prices on cards)
   const { selectedCurrency, selectedLanguage, t } = usePreferences()
+
+  // Fetch service rating and review count
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        const ratingData = await getServiceAverageRating(service.id)
+        setRating(ratingData.average || 0)
+        setReviewCount(ratingData.count || 0)
+      } catch (error) {
+        console.error('Error fetching service rating:', error)
+        setRating(0)
+        setReviewCount(0)
+      }
+    }
+    fetchRating()
+  }, [service.id])
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
@@ -755,9 +773,12 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                 </span>
               </h3>
             </div>
-            <div className="flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded flex-shrink-0">
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded flex-shrink-0">
               <Star className="h-2.5 w-2.5 text-emerald-600 fill-current" />
-              <span className="text-xs font-medium text-emerald-700">4.5</span>
+              <span className="text-xs font-medium text-emerald-700">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && (
+                <span className="text-xs text-gray-500 ml-0.5">({reviewCount})</span>
+              )}
             </div>
           </div>
 

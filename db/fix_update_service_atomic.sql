@@ -177,3 +177,86 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION create_service_atomic(uuid, text, text, text, numeric, text, text[], text, numeric, integer, text[], text) TO authenticated;
 GRANT EXECUTE ON FUNCTION create_service_atomic(uuid, text, text, text, numeric, text, text[], text, numeric, integer, text[], text) TO service_role;
 COMMENT ON FUNCTION create_service_atomic(uuid, text, text, text, numeric, text, text[], text, numeric, integer, text[], text) IS 'Atomically creates a new service';
+
+-- =============================================
+-- PART 3: Fix create_transaction_atomic overload ambiguity
+-- Some environments may have multiple overloaded versions of
+-- create_transaction_atomic which causes PostgREST (PGRST203)
+-- errors when calling the RPC. Drop all overloads and recreate
+-- a single canonical implementation matching the rest of the codebase.
+-- =============================================
+
+DROP FUNCTION IF EXISTS create_transaction_atomic(uuid, uuid, uuid, numeric, text, text, text, text, text);
+
+DO $$
+DECLARE
+  func_oid oid;
+BEGIN
+  FOR func_oid IN
+    SELECT p.oid
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'create_transaction_atomic'
+      AND n.nspname = 'public'
+  LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || func_oid::regprocedure || ' CASCADE';
+  END LOOP;
+END $$;
+
+CREATE OR REPLACE FUNCTION create_transaction_atomic(
+  p_booking_id uuid DEFAULT NULL,
+  p_vendor_id uuid DEFAULT NULL,
+  p_tourist_id uuid DEFAULT NULL,
+  p_amount numeric DEFAULT NULL,
+  p_currency text DEFAULT 'UGX',
+  p_transaction_type text DEFAULT 'payment',
+  p_status text DEFAULT 'pending',
+  p_payment_method text DEFAULT 'card',
+  p_reference text DEFAULT NULL
+) RETURNS jsonb AS $$
+DECLARE
+  v_transaction record;
+  v_result jsonb;
+BEGIN
+  -- Generate reference if not provided
+  IF p_reference IS NULL THEN
+    p_reference := UPPER(p_transaction_type || '_' || encode(gen_random_bytes(4), 'hex') || '_' || EXTRACT(epoch FROM now())::text);
+  END IF;
+
+  -- Insert transaction atomically
+  INSERT INTO public.transactions (
+    booking_id,
+    vendor_id,
+    tourist_id,
+    amount,
+    currency,
+    transaction_type,
+    status,
+    payment_method,
+    reference,
+    created_at
+  ) VALUES (
+    p_booking_id,
+    p_vendor_id,
+    p_tourist_id,
+    p_amount,
+    p_currency,
+    p_transaction_type,
+    p_status,
+    p_payment_method,
+    p_reference,
+    now()
+  )
+  RETURNING id INTO v_transaction;
+
+  RETURN jsonb_build_object('success', true, 'transaction_id', v_transaction.id, 'reference', p_reference);
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION create_transaction_atomic(uuid, uuid, uuid, numeric, text, text, text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION create_transaction_atomic(uuid, uuid, uuid, numeric, text, text, text, text, text) TO service_role;
+COMMENT ON FUNCTION create_transaction_atomic(uuid, uuid, uuid, numeric, text, text, text, text, text) IS 'Atomically creates a transaction record';

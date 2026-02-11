@@ -27,8 +27,6 @@ export default function ScanEventPage() {
 
   // Manual verification state
   const [manualCode, setManualCode] = useState('')
-  const [manualResult, setManualResult] = useState<any>(null)
-  const [manualError, setManualError] = useState<string | null>(null)
   const [isManualProcessing, setIsManualProcessing] = useState(false)
 
   const formatTimestamp = (timestamp: string) => {
@@ -221,7 +219,27 @@ export default function ScanEventPage() {
     setScanResult(null)
 
     try {
-      const result = await verifyTicketByCode(qrData, id)
+      // Extract ticket code from URL if it's a service URL with ticket parameter
+      let ticketCode = qrData
+      if (qrData.startsWith('https://bookings.dirt-trails.com/service/')) {
+        // Extract ticket code from query parameter: /service/{slug}?ticket={ticketCode}
+        const url = new URL(qrData)
+        const ticketParam = url.searchParams.get('ticket')
+        if (ticketParam) {
+          ticketCode = ticketParam
+          console.log('Extracted ticket code from service URL:', ticketCode)
+        }
+      } else if (qrData.startsWith('https://bookings.dirt-trails.com/verify-ticket/')) {
+        // Fallback for old verification URLs
+        const url = new URL(qrData)
+        const pathParts = url.pathname.split('/')
+        if (pathParts.length >= 3 && pathParts[1] === 'verify-ticket') {
+          ticketCode = pathParts[2]
+          console.log('Extracted ticket code from verification URL:', ticketCode)
+        }
+      }
+
+      const result = await verifyTicketByCode(ticketCode, id)
       
       if (result.valid) {
         const wasAlreadyUsed = (result as any).already_used || false
@@ -271,38 +289,45 @@ export default function ScanEventPage() {
     e.preventDefault()
     if (!manualCode.trim() || !id) return
 
-    console.log('Verifying manual ticket code:', manualCode)
+    console.log('Verifying manual ticket code:', `TKT-${manualCode}`)
     setIsManualProcessing(true)
-    setManualError(null)
-    setManualResult(null)
 
     try {
-      // Convert to uppercase for case-insensitive verification
-      const result = await verifyTicketByCode(manualCode.trim().toUpperCase(), id)
+      // Prepend TKT- prefix for verification
+      const fullCode = `TKT-${manualCode.trim().toUpperCase()}`
+      const result = await verifyTicketByCode(fullCode, id)
       
       if (result.valid) {
         const wasAlreadyUsed = (result as any).already_used || false
         
-        // Ticket is valid - show appropriate message based on previous usage
-        setManualResult({
+        // Ticket is valid - show dialog for successful scan
+        setScanResult({
           success: true,
           message: wasAlreadyUsed ? 'Ticket verified (previously used)!' : 'Ticket verified successfully!',
-          ticket: result.ticket
+          ticket: result.ticket,
+          ticketStatus: wasAlreadyUsed ? 'used' : 'new'
         })
+        setShowScanDialog(true)
+        
         console.log('Ticket verified successfully')
       } else {
-        setManualResult({
+        setScanResult({
           success: false,
-          message: result.message
+          message: result.message,
+          ticketStatus: 'invalid'
         })
+        setShowScanDialog(true)
+        
         console.log('Ticket verification failed:', result.message)
       }
     } catch (err: any) {
       console.error('Error verifying ticket:', err)
-      setManualResult({
+      setScanResult({
         success: false,
-        message: err.message || 'Error verifying ticket'
+        message: err.message || 'Error verifying ticket',
+        ticketStatus: 'invalid'
       })
+      setShowScanDialog(true)
     } finally {
       setIsManualProcessing(false)
     }
@@ -340,17 +365,17 @@ export default function ScanEventPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h1 className="text-lg md:text-xl font-semibold mb-1">Event Verification</h1>
-              <p className="text-lg md:text-xl font-bold mb-2">{service.title}</p>
+              <h1 className="text-lg md:text-xl font-semibold mb-1">Dirt Trails Verification</h1>
+              <p className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-lg">{service.title}</p>
 
               {/* Event Details */}
               <div className="flex flex-row items-center justify-center gap-3 text-xs text-white/90">
-                {service.event_date ? (
+                {service.event_datetime ? (
                   <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
                     <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span className="font-medium text-xs">{new Date(service.event_date).toLocaleDateString('en-US', {
+                    <span className="font-medium text-xs">{new Date(service.event_datetime).toLocaleDateString('en-US', {
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric'
@@ -473,14 +498,19 @@ export default function ScanEventPage() {
 
               <div className="p-4">
                 <form onSubmit={verifyManualCode} className="space-y-3">
-                  <input
-                    type="text"
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    placeholder="TKT-ABC123"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-sm"
-                    disabled={isManualProcessing}
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
+                      <span className="text-gray-500 font-mono text-sm">TKT-</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                      placeholder="ABC123"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-sm"
+                      disabled={isManualProcessing}
+                    />
+                  </div>
 
                   <button
                     type="submit"
@@ -512,48 +542,6 @@ export default function ScanEventPage() {
             playsInline
             muted
           />
-
-          {/* Results Section - Only for manual verification */}
-          {manualResult && (
-            <div className="mt-4">
-              <div className="p-4 rounded-lg border bg-white border-gray-200">
-                <div className="flex items-start">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    manualResult?.success ? 'bg-green-500' : 'bg-red-500'
-                  }`}>
-                    <span className="text-white font-bold text-xs">
-                      {manualResult?.success ? '✓' : '✗'}
-                    </span>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className={`font-medium text-sm ${
-                      manualResult?.success ? 'text-gray-900' : 'text-gray-900'
-                    }`}>
-                      {manualResult?.message}
-                    </p>
-                    {manualResult?.ticket && (
-                      <div className="mt-3 bg-gray-50 rounded-lg p-3 space-y-1 border border-gray-100">
-                        <div className="flex items-center text-gray-700">
-                          <span className="font-medium text-xs">Ticket:</span>
-                          <span className="ml-2 font-mono text-xs text-gray-900">{manualResult?.ticket?.code}</span>
-                        </div>
-                        <div className="flex items-center text-gray-700">
-                          <span className="font-medium text-xs">Type:</span>
-                          <span className="ml-2 text-xs text-gray-900">{manualResult?.ticket?.ticket_types?.title}</span>
-                        </div>
-                        {manualResult?.ticket?.used_at && (
-                          <div className="flex items-center text-gray-700">
-                            <span className="font-medium text-xs">Verified:</span>
-                            <span className="ml-2 text-xs text-gray-900">{formatTimestamp(manualResult?.ticket?.used_at)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Scan Result Dialog */}
           {showScanDialog && scanResult && (
@@ -619,13 +607,13 @@ export default function ScanEventPage() {
           )}
 
           {/* Error Messages */}
-          {(scanError || manualError) && (
+          {scanError && (
             <div className="mt-4 p-3 bg-white border border-gray-200 rounded-lg">
               <div className="flex items-start">
                 <svg className="w-4 h-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
-                <p className="text-gray-900 text-sm">{scanError || manualError}</p>
+                <p className="text-gray-900 text-sm">{scanError}</p>
               </div>
             </div>
           )}

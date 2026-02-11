@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
+import CitySearchInput from '../components/CitySearchInput'
 
 export default function Login() {
   const [showEmailForm, setShowEmailForm] = useState(false)
@@ -10,6 +11,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [homeCity, setHomeCity] = useState('')
+  const [homeCountry, setHomeCountry] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +50,12 @@ export default function Login() {
     }
 
     try {
-      await signUp(email, password, fullName, 'tourist')
+      // Split full name into first and last name
+      const nameParts = fullName.trim().split(' ')
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity, homeCountry)
       navigate('/', { replace: true })
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
@@ -176,6 +184,17 @@ export default function Login() {
                     className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
                     placeholder="you@example.com"
                     value={email} onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Home city <span className="text-gray-400">(optional)</span></label>
+                  <CitySearchInput
+                    city={homeCity}
+                    onSelect={(city, country) => {
+                      setHomeCity(city)
+                      setHomeCountry(country)
+                    }}
+                    placeholder="Search your city..."
                   />
                 </div>
                 <div>

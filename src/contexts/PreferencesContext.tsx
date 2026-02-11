@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { useAuth } from './AuthContext'
-import { getUserPreferences, saveUserPreferences, UserPreferences } from '../lib/database'
+import { getUserPreferences, saveUserPreferences } from '../lib/database'
+import type { UserPreferences } from '../types'
 import { translate, SupportedLang } from '../i18n/translations'
 
 // Types
@@ -45,7 +46,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
 
     try {
       setLoading(true)
-      const userPrefs = await getUserPreferences(user.id)
+      const userPrefs = await getUserPreferences()
       setPreferences(userPrefs)
     } catch (error) {
       console.error('Error loading preferences:', error)

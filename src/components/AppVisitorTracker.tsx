@@ -22,17 +22,10 @@ export function AppVisitorTracker() {
         const ipData = await ipResponse.json()
         const ipAddress = ipData.ip
 
-        // Get geolocation
+        // Skip geolocation to avoid CORS issues
         let country: string | undefined
         let city: string | undefined
-        try {
-          const geoResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`)
-          const geoData = await geoResponse.json()
-          country = geoData.country_name
-          city = geoData.city
-        } catch (geoErr) {
-          // Geolocation is optional
-        }
+        // Geolocation disabled due to CORS policy
 
         // Log the visit to app_visits table
         const { error } = await supabase

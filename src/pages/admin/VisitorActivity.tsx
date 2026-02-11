@@ -2,13 +2,6 @@ import { useEffect, useState } from 'react'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { getVisitorActivityStats, getAllVendorsWithActivity } from '../../lib/database'
 import {
-  Users,
-  Heart,
-  Star,
-  MapPin,
-  Calendar,
-  TrendingUp,
-  Percent,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
@@ -64,11 +57,10 @@ interface VisitorStats {
 interface StatCardProps {
   title: string
   value: string | number
-  icon: React.ReactNode
   color: 'blue' | 'green' | 'purple' | 'orange'
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, color }) => {
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
     blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-l-4 border-blue-600' },
     green: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-l-4 border-green-600' },
@@ -97,11 +89,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
         </div>
         <div className="w-full flex-1 flex flex-col justify-center">
           <p className={`${valueFontSize} font-bold text-gray-900 break-words line-clamp-2`}>{value}</p>
-        </div>
-        <div className="w-full flex items-end justify-end">
-          <div className={`p-2.5 rounded-lg ${colorConfig.bg} ${colorConfig.text}`}>
-            {icon}
-          </div>
         </div>
       </div>
     </div>
@@ -169,25 +156,21 @@ export const VisitorActivity = () => {
         <StatCard
           title="Total Visitors"
           value={stats.totalVisitors.toLocaleString()}
-          icon={<Users className="h-5 w-5" />}
           color="blue"
         />
         <StatCard
           title="Unique Visitors"
           value={stats.uniqueVisitors.toLocaleString()}
-          icon={<TrendingUp className="h-5 w-5" />}
           color="green"
         />
         <StatCard
           title="Avg Session Duration"
           value={`${stats.avgSessionDuration} min`}
-          icon={<Calendar className="h-5 w-5" />}
           color="purple"
         />
         <StatCard
           title="Bounce Rate"
           value={`${stats.bounceRate}%`}
-          icon={<Percent className="h-5 w-5" />}
           color="orange"
         />
       </div>
@@ -197,7 +180,6 @@ export const VisitorActivity = () => {
         {/* Top Countries */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
-            <MapPin className="h-5 w-5 text-blue-600" />
             <h2 className="text-sm font-semibold text-gray-900">Top Countries</h2>
           </div>
           <div className="space-y-4">
@@ -224,7 +206,6 @@ export const VisitorActivity = () => {
         {/* Age Groups */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
-            <Users className="h-5 w-5 text-green-600" />
             <h2 className="text-sm font-semibold text-gray-900">Age Distribution</h2>
           </div>
           <div className="space-y-4">
@@ -274,7 +255,6 @@ export const VisitorActivity = () => {
       {/* Top Liked Services */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
-          <Heart className="h-5 w-5 text-red-600" />
           <h2 className="text-sm font-semibold text-gray-900">Top Liked Services</h2>
         </div>
         <div className="overflow-x-auto">
@@ -294,7 +274,6 @@ export const VisitorActivity = () => {
                   <td className="py-3 px-4 text-sm text-gray-600">{service.category}</td>
                   <td className="py-3 px-4 text-sm font-bold text-red-600 text-right">{service.totalLikes.toLocaleString()}</td>
                   <td className="py-3 px-4 text-sm font-bold text-yellow-600 text-right flex items-center justify-end gap-1">
-                    <Star className="h-4 w-4 fill-yellow-600" />
                     {service.avgRating.toFixed(1)}
                   </td>
                 </tr>
@@ -307,7 +286,6 @@ export const VisitorActivity = () => {
       {/* Recent Reviews */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-6 pb-4 border-b border-gray-200">
-          <Star className="h-5 w-5 text-yellow-600" />
           <div>
             <h2 className="text-sm font-semibold text-gray-900">Recent Reviews</h2>
             <p className="text-xs text-gray-500 mt-1">{stats.reviewsThisMonth} reviews this month • Average rating: {stats.avgRating}/5</p>
@@ -323,16 +301,17 @@ export const VisitorActivity = () => {
                 </div>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, idx) => (
-                    <Star
+                    <span
                       key={idx}
-                      className={`h-4 w-4 ${idx < review.rating ? 'fill-yellow-600 text-yellow-600' : 'text-gray-300'}`}
-                    />
+                      className={`text-sm ${idx < review.rating ? 'text-yellow-600' : 'text-gray-300'}`}
+                    >
+                      ★
+                    </span>
                   ))}
                 </div>
               </div>
               <p className="text-sm text-gray-700 mb-3">{review.comment}</p>
               <p className="text-xs text-gray-500 flex items-center gap-1">
-                <Heart className="h-3 w-3" />
                 {review.helpful} people found this helpful
               </p>
             </div>
@@ -393,7 +372,6 @@ export const VisitorActivity = () => {
                       {/* Top Countries for Vendor */}
                       <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-blue-600" />
                           Top Countries
                         </h4>
                         <div className="space-y-3">
@@ -413,7 +391,6 @@ export const VisitorActivity = () => {
                       {/* Age Distribution for Vendor */}
                       <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                          <Users className="h-4 w-4 text-green-600" />
                           Age Distribution
                         </h4>
                         <div className="space-y-3">
@@ -454,7 +431,6 @@ export const VisitorActivity = () => {
                     {vendor.topServices && vendor.topServices.length > 0 && (
                       <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                          <Heart className="h-4 w-4 text-red-600" />
                           Top Services
                         </h4>
                         <div className="space-y-2">
@@ -478,7 +454,6 @@ export const VisitorActivity = () => {
                     {vendor.recentReviews && vendor.recentReviews.length > 0 && (
                       <div className="bg-white rounded-xl p-4 border border-gray-200">
                         <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                          <Star className="h-4 w-4 text-yellow-600" />
                           Recent Reviews ({vendor.reviewsThisMonth} this month)
                         </h4>
                         <div className="space-y-3">
@@ -491,10 +466,12 @@ export const VisitorActivity = () => {
                                 </div>
                                 <div className="flex gap-1">
                                   {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star
+                                    <span
                                       key={i}
-                                      className={`h-3 w-3 ${i < review.rating ? 'fill-yellow-600 text-yellow-600' : 'text-gray-300'}`}
-                                    />
+                                      className={`text-xs ${i < review.rating ? 'text-yellow-600' : 'text-gray-300'}`}
+                                    >
+                                      ★
+                                    </span>
                                   ))}
                                 </div>
                               </div>
@@ -510,7 +487,6 @@ export const VisitorActivity = () => {
             ))
           ) : (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No vendors found</p>
             </div>
           )}

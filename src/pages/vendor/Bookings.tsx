@@ -86,8 +86,21 @@ export default function VendorBookings() {
 
   const handleStatusChange = async (bookingId: string, status: Booking['status']) => {
     try {
-      await updateBooking(bookingId, { status })
+      const updatedBooking = await updateBooking(bookingId, { status })
       // Real-time subscription will update the UI automatically
+      
+      // Show review link notification when booking is completed
+      if (status === 'completed') {
+        // The review token was auto-generated in updateBooking
+        // Show a notification to the vendor
+        const guestName = updatedBooking.guest_name || (updatedBooking as any).profiles?.full_name || 'the guest'
+        const guestEmail = updatedBooking.guest_email || (updatedBooking as any).profiles?.email
+        if (guestEmail) {
+          alert(`✅ Booking marked as completed!\n\nA review request has been sent to ${guestName} (${guestEmail}). They will receive an email link to rate and review your service.`)
+        } else {
+          alert(`✅ Booking marked as completed!\n\nNote: No email was found for this guest, so a review request could not be sent automatically.`)
+        }
+      }
     } catch (error) {
       console.error('Error updating booking status:', error)
       // Revert local state on error

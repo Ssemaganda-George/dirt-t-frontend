@@ -3,6 +3,16 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
 import * as QRCode from 'qrcode'
+import html2canvas from 'html2canvas'
+
+// Helper function to calculate dynamic font size based on email length
+const getEmailFontSize = (email: string) => {
+  const length = email?.length || 0
+  if (length <= 20) return '11px' // Normal size for short emails
+  if (length <= 30) return '10px' // Slightly smaller for medium emails
+  if (length <= 40) return '9px'  // Smaller for longer emails
+  return '8px' // Smallest for very long emails
+}
 
 export default function TicketReceiptPage() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -20,6 +30,7 @@ export default function TicketReceiptPage() {
           ticket_types(*),
           services(
             id,
+            slug,
             title,
             description,
             location,
@@ -28,16 +39,63 @@ export default function TicketReceiptPage() {
             images,
             vendors(business_name, business_phone, business_email)
           ),
-          orders(currency, created_at)
+          orders(currency, created_at, user_id, guest_name, guest_email, guest_phone)
         `).eq('order_id', orderId)
         const tix = data || []
-        setTickets(tix)
+
+        // Fetch profiles for ticket buyers
+        let profilesMap: Record<string, { full_name: string; email: string }> = {}
+        if (tix && tix.length > 0) {
+          const userIds = [...new Set(tix.map(t => t.orders?.user_id).filter(Boolean))]
+          if (userIds.length > 0) {
+            const { data: profilesData, error: profilesError } = await supabase
+              .from('profiles')
+              .select('id, full_name, email')
+              .in('id', userIds)
+
+            if (!profilesError && profilesData) {
+              profilesMap = profilesData.reduce((acc, profile) => {
+                acc[profile.id] = { full_name: profile.full_name, email: profile.email }
+                return acc
+              }, {} as Record<string, { full_name: string; email: string }>)
+            }
+          }
+        }
+
+        // Attach profile or guest information to tickets
+        const ticketsWithProfiles = tix.map(ticket => {
+          let buyerInfo = null
+          
+          // First try to get logged-in user profile
+          if (ticket.orders?.user_id && profilesMap[ticket.orders.user_id]) {
+            buyerInfo = profilesMap[ticket.orders.user_id]
+          }
+          // If no profile, try guest information
+          else if (ticket.orders?.guest_name || ticket.orders?.guest_email) {
+            buyerInfo = {
+              full_name: ticket.orders.guest_name || 'N/A',
+              email: ticket.orders.guest_email || 'N/A'
+            }
+          }
+          
+          return {
+            ...ticket,
+            buyer_profile: buyerInfo
+          }
+        })
+
+        setTickets(ticketsWithProfiles)
 
         // generate QR data URLs
         const map: { [key: string]: string } = {}
         for (const t of tix) {
           try {
-            const url = await QRCode.toDataURL(t.qr_data || t.code || `${t.id}`)
+            const ticketCode = t.code || t.qr_data || t.id
+            const serviceSlug = t.services?.slug
+            const qrData = serviceSlug
+              ? `https://bookings.dirt-trails.com/service/${serviceSlug}?ticket=${ticketCode}`
+              : ticketCode
+            const url = await QRCode.toDataURL(qrData)
             map[t.id] = url
           } catch (err) {
             console.error('Failed to generate QR for ticket', t.id, err)
@@ -55,112 +113,120 @@ export default function TicketReceiptPage() {
   }, [orderId])
 
   const downloadAllTickets = async () => {
-    // Create a simple HTML page with all tickets for printing/downloading
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i]
+      const ticketElement = document.querySelector(`[data-ticket-id="${ticket.id}"]`) as HTMLElement
 
-    const ticketHtml = tickets.map(t => `
-      <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin: 10px 0; overflow: hidden; max-width: 800px;">
-        <!-- Ticket Header -->
-        <div style="background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 12px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              ${t.services?.images?.[0] ? `<img src="${t.services.images[0]}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb;" />` : '<div style="width: 48px; height: 48px; background: #f3f4f6; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #9ca3af;">IMG</div>'}
-              <div>
-                <h3 style="font-weight: 400; font-size: 14px; margin: 0; color: #1f2937;">${t.services?.title || 'Event'}</h3>
-                <p style="color: #6b7280; margin: 2px 0 0 0; font-size: 12px; font-weight: 400;">${t.ticket_types?.title || 'Ticket'}</p>
-              </div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 10px; color: #6b7280; font-weight: 400;">Ticket Code</div>
-              <div style="font-family: monospace; font-weight: 500; font-size: 13px; color: #1f2937;">${t.code}</div>
-            </div>
-          </div>
-        </div>
+      if (ticketElement) {
+        try {
+          // Temporarily modify styles for better capture
+          const originalOverflow = ticketElement.style.overflow
+          const originalMaxHeight = ticketElement.style.maxHeight
+          ticketElement.style.overflow = 'visible'
+          ticketElement.style.maxHeight = 'none'
 
-        <!-- Main ticket content - Horizontal Layout -->
-        <div style="display: flex;">
-          <!-- Left side - QR and basic info -->
-          <div style="flex: 1; padding: 16px; border-right: 1px solid #e5e7eb;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-              <div style="text-align: center;">
-                ${qrMap[t.id] ? `<img src="${qrMap[t.id]}" style="width: 80px; height: 80px; border: 1px solid #e5e7eb; border-radius: 4px;" />` : '<div style="width: 80px; height: 80px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #9ca3af;">No QR</div>'}
-              </div>
-              <div style="flex: 1;">
-                ${t.services?.event_datetime ? `
-                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; font-weight: 400;">
-                    <span style="color: #6b7280;">Date</span>
-                    <span style="color: #374151;">${new Date(t.services.event_datetime).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}</span>
-                  </div>
-                ` : ''}
-                <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; margin-bottom: 6px; font-weight: 400;">
-                  <span style="color: #6b7280;">Location</span>
-                  <span style="color: #374151;">${t.services?.event_location || t.services?.location || 'Venue TBA'}</span>
-                </div>
-                <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; margin-bottom: 6px; font-weight: 400;">
-                  <span style="color: #6b7280;">Provider</span>
-                  <span style="color: #374151;">${t.services?.vendors?.business_name || 'Service Provider'}</span>
-                </div>
-                <div style="font-size: 11px; color: #9ca3af; font-weight: 400;">
-                  Issued: ${new Date(t.issued_at).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </div>
+          // Remove truncation classes temporarily
+          const truncatedElements = ticketElement.querySelectorAll('.truncate, .line-clamp-1, .line-clamp-2')
+          const originalClasses: string[] = []
+          truncatedElements.forEach((el, index) => {
+            originalClasses[index] = el.className
+            el.className = el.className.replace(/\b(truncate|line-clamp-\d+)\b/g, '')
+          })
 
-          <!-- Right side - Details -->
-          <div style="flex: 1; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-            <div>
-              <div style="font-size: 12px; margin-bottom: 4px; font-weight: 400;">
-                <span style="color: #6b7280;">Price </span>
-                <span style="font-weight: 500; color: #1f2937;">${formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</span>
-              </div>
-              <div style="font-size: 12px; margin-bottom: 8px; font-weight: 400;">
-                <span style="color: #6b7280;">Status </span>
-                <span style="font-weight: 500; color: ${t.status === 'issued' ? '#10b981' : t.status === 'used' ? '#3b82f6' : '#6b7280'};">${t.status?.charAt(0).toUpperCase() + t.status?.slice(1)}</span>
-              </div>
-              <div style="font-size: 11px; color: #9ca3af; font-weight: 400;">
-                Valid for entry
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `).join('')
+          // Wait for images to load
+          await new Promise(resolve => setTimeout(resolve, 500))
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>All Tickets - ${tickets[0]?.services?.title || 'Event'}</title>
-          <style>
-            body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f9fafb; }
-            @media print { body { padding: 0; } }
-          </style>
-        </head>
-        <body>
-          <div style="max-width: 900px; margin: 0 auto;">
-            <h1 style="text-align: center; color: #1f2937; margin-bottom: 20px; font-weight: 400;">Your Tickets</h1>
-            ${ticketHtml}
-          </div>
-        </body>
-      </html>
-    `)
+          // Capture the ticket as an image
+          const canvas = await html2canvas(ticketElement, {
+            scale: 2, // Higher resolution
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: ticketElement.scrollWidth,
+            height: ticketElement.scrollHeight,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: ticketElement.scrollWidth,
+            windowHeight: ticketElement.scrollHeight,
+            logging: false,
+            imageTimeout: 0,
+            removeContainer: true
+          })
 
-    printWindow.document.close()
-    printWindow.focus()
+          // Restore original styles and classes
+          ticketElement.style.overflow = originalOverflow
+          ticketElement.style.maxHeight = originalMaxHeight
+          truncatedElements.forEach((el, index) => {
+            el.className = originalClasses[index]
+          })
 
-    // Auto-print after a short delay to ensure images load
-    setTimeout(() => {
-      printWindow.print()
-    }, 1000)
+          // Convert to blob and download
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob)
+
+              // Check if device is mobile
+              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+              const supportsDownload = 'download' in document.createElement('a')
+
+              // Try to download first (works on most modern mobile browsers)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = `ticket-${ticket.code}.png`
+
+              if (supportsDownload) {
+                // Try download approach first
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+
+                // For mobile, also try Web Share API as backup
+                if (isMobile && navigator.share) {
+                  try {
+                    const file = new File([blob], `ticket-${ticket.code}.png`, { type: 'image/png' })
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                      navigator.share({
+                        title: `Ticket ${ticket.code}`,
+                        files: [file]
+                      })
+                    }
+                  } catch (shareError) {
+                    // Web Share failed, but download might have worked
+                    console.log('Web Share failed, but download attempted')
+                  }
+                }
+              } else {
+                // Fallback for browsers that don't support download
+                if (isMobile && navigator.share) {
+                  try {
+                    const file = new File([blob], `ticket-${ticket.code}.png`, { type: 'image/png' })
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                      navigator.share({
+                        title: `Ticket ${ticket.code}`,
+                        files: [file]
+                      })
+                    } else {
+                      // Open in new tab as last resort
+                      window.open(url, '_blank')
+                    }
+                  } catch (shareError) {
+                    // Open in new tab as last resort
+                    window.open(url, '_blank')
+                  }
+                } else {
+                  // Open in new tab for manual saving
+                  window.open(url, '_blank')
+                }
+              }
+
+              URL.revokeObjectURL(url)
+            }
+          }, 'image/png')
+        } catch (error) {
+          console.error('Failed to capture ticket as image:', error)
+        }
+      }
+    }
   }
 
   if (loading) return <div className="p-4">Loading tickets…</div>
@@ -171,22 +237,21 @@ export default function TicketReceiptPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-light text-gray-900">Your Tickets</h2>
-          {tickets.length > 1 && (
-            <button
-              onClick={downloadAllTickets}
-              style={{ backgroundColor: '#3B82F6' }}
-              className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
-            >
-              Download All
-            </button>
-          )}
+          <button
+            onClick={downloadAllTickets}
+            style={{ backgroundColor: '#3B82F6' }}
+            className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
+          >
+            {tickets.length > 1 ? 'Download All' : 'Download Ticket'}
+          </button>
         </div>
         
         <div className="space-y-2">
           {tickets.map(t => (
             <div
               key={t.id}
-              className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden"
+              data-ticket-id={t.id}
+              className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden md:overflow-x-visible overflow-x-auto"
             >
               {/* Ticket Header */}
               <div className="border-b border-gray-200 p-2.5">
@@ -204,7 +269,7 @@ export default function TicketReceiptPage() {
                       </div>
                     )}
                     <div className="min-w-0">
-                      <h3 className="font-light text-xs text-gray-900 truncate">{t.services?.title || 'Event'}</h3>
+                      <h3 className="font-light text-sm text-gray-900 truncate">{t.services?.title || 'Event'}</h3>
                       <p className="text-gray-600 text-xs font-light truncate">{t.ticket_types?.title || 'Ticket'}</p>
                     </div>
                   </div>
@@ -215,76 +280,120 @@ export default function TicketReceiptPage() {
                 </div>
               </div>
 
-              {/* Main ticket content */}
-              <div className="flex flex-col md:flex-row">
-                {/* Left side - QR and basic info */}
-                <div className="flex-1 p-2.5 border-b md:border-b-0 md:border-r border-gray-200">
-                  <div className="flex items-start gap-2.5">
-                    <div className="flex-shrink-0">
-                      {qrMap[t.id] ? (
-                        <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-14 h-14 border border-gray-200 rounded" />
-                      ) : (
-                        <div className="w-14 h-14 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
-                      )}
+              {/* Main ticket content - 4 Column Layout */}
+              <div className="grid grid-cols-4 gap-2.5 p-2.5 divide-x divide-gray-200 min-w-[600px] md:min-w-0">
+                {/* Column 1 - Event Details */}
+                <div className="space-y-1 pr-2.5">
+                  {t.services?.event_datetime && (
+                    <div>
+                      <span className="text-xs text-gray-500 font-light">Happening on</span>
+                      <p className="text-gray-900 font-light text-xs">
+                        {new Date(t.services.event_datetime).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
                     </div>
-                    <div className="flex-1 space-y-1">
-                      {t.services?.event_datetime && (
-                        <div>
-                          <span className="text-xs text-gray-500 font-light">Date</span>
-                          <p className="text-gray-900 font-light text-xs">
-                            {new Date(t.services.event_datetime).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-xs text-gray-500 font-light">Location</span>
-                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.event_location || t.services?.location || 'Venue TBA'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-500 font-light">Provider</span>
-                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.vendors?.business_name || 'Service Provider'}</p>
-                      </div>
-                      <div className="text-xs text-gray-500 font-light pt-1">
-                        Issued: {new Date(t.issued_at).toLocaleDateString()}
-                      </div>
-                    </div>
+                  )}
+                  <div>
+                    <span className="text-xs text-gray-500 font-light">At </span>
+                    <p className="text-gray-900 font-light text-xs line-clamp-2">{t.services?.event_location || t.services?.location || 'Venue TBA'}</p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 font-light">Organised by : </span>
+                    <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.vendors?.business_name || 'Service Provider'}</p>
                   </div>
                 </div>
 
-                {/* Right side - Details */}
-                <div className="flex-1 p-2.5 flex items-center justify-between md:justify-start md:flex-col md:space-y-1.5">
-                  <div>
-                    <div className="text-xs">
-                      <span className="text-gray-500 font-light">Price</span>
-                      <p className="text-gray-900 font-light text-xs">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</p>
+                {/* Column 2 - Buyer Info */}
+                <div className="space-y-1 px-2.5">
+                  {t.buyer_profile ? (
+                    <>
+                      <div>
+                        <span className="text-xs text-gray-500 font-light">Owner</span>
+                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.buyer_profile.full_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500 font-light">Email</span>
+                        <p 
+                          className="text-gray-900 font-light line-clamp-1" 
+                          style={{ fontSize: getEmailFontSize(t.buyer_profile?.email || 'N/A') }}
+                        >
+                          {t.buyer_profile.email || 'N/A'}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <span className="text-xs text-gray-500 font-light">Owner</span>
+                      <p className="text-gray-900 font-light text-xs">N/A</p>
                     </div>
+                  )}
+                </div>
+
+                {/* Column 3 - Ticket Details */}
+                <div className="space-y-1 px-2.5">
+                  <div>
+                    <span className="text-xs text-gray-500 font-light">Price</span>
+                    <p className="text-gray-900 font-light text-xs">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</p>
                   </div>
                   <div>
-                    <div className="text-xs">
-                      <span className="text-gray-500 font-light">Status</span>
-                      <p className={`font-light text-xs ${
-                        t.status === 'issued' ? 'text-green-600' :
-                        t.status === 'used' ? 'text-blue-600' :
-                        'text-gray-600'
-                      }`}>
-                        {t.status?.charAt(0).toUpperCase() + t.status?.slice(1)}
-                      </p>
-                    </div>
+                    <span className="text-xs text-gray-500 font-light">Status</span>
+                    <p className={`font-light text-xs ${
+                      t.status === 'issued' ? 'text-green-600' :
+                      t.status === 'used' ? 'text-blue-600' :
+                      'text-gray-600'
+                    }`}>
+                      {t.status?.charAt(0).toUpperCase() + t.status?.slice(1)}
+                    </p>
                   </div>
                   <div className="text-xs text-gray-500 font-light">
-                    Valid for entry
+                    Issued: {new Date(t.issued_at).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {/* Column 4 - QR Code */}
+                <div className="flex flex-col items-center justify-center pl-2.5">
+                  <div className="flex-shrink-0 mb-1">
+                    {qrMap[t.id] ? (
+                      <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-16 h-16 border border-gray-200 rounded" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 font-light text-center">Scan for Entry</div>
+                  <div className="text-[10px] text-gray-400 font-light text-center mt-1.5 md:mt-3">
+                    Powered by : <br />
+                    <a 
+                      href="https://bookings.dirt-trails.com" 
+                      className="text-blue-500 hover:text-blue-700 font-normal" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      bookings.dirt-trails.com
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Thank you note and platform link */}
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-center border border-gray-200">
+          <div className="text-sm font-medium text-gray-900 mb-2">Thank you for choosing{' '}
+            <a
+              href="https://dirttrails.com"
+              className="text-blue-600 hover:text-blue-800 font-medium"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              DirtTrails!
+            </a>{' '}</div>
+          <div className="text-xs text-gray-600 mb-3">We hope you have an amazing experience at {tickets[0]?.services?.title || 'the event'}. See You!</div>
         </div>
       </div>
     </div>

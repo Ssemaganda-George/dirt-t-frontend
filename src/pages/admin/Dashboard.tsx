@@ -9,9 +9,6 @@ import {
   Store,
   ShoppingBag,
   Activity,
-  Package,
-  DollarSign,
-  MessageSquare,
   ChevronRight
 } from 'lucide-react'
 
@@ -35,7 +32,6 @@ interface DashboardStats {
 interface StatCardProps {
   title: string
   value: string | number
-  icon: React.ReactNode
   trend?: string
   color: string
   onClick?: () => void
@@ -49,7 +45,7 @@ interface RecentItemProps {
   onClick?: () => void
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color, onClick }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, onClick }) => {
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
     blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-l-4 border-blue-600' },
     green: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-l-4 border-green-600' },
@@ -89,9 +85,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color, o
                 {trend}
               </p>
             )}
-          </div>
-          <div className={`p-2 rounded-lg ${colorConfig.bg} ${colorConfig.text} flex-shrink-0`}>
-            {icon}
           </div>
         </div>
       </div>
@@ -198,7 +191,6 @@ export default function Dashboard() {
         <StatCard
           title="Total Vendors"
           value={stats.totalVendors}
-          icon={<Store className="h-4 w-4" />}
           trend={stats.pendingVendors > 0 ? `${stats.pendingVendors} pending approval` : 'All approved'}
           color="blue"
           onClick={() => navigate('/admin/vendors')}
@@ -207,7 +199,6 @@ export default function Dashboard() {
         <StatCard
           title="Active Tourists"
           value={stats.totalTourists}
-          icon={<Users className="h-4 w-4" />}
           trend="Registered users"
           color="orange"
           onClick={() => navigate('/admin/tourists')}
@@ -216,7 +207,6 @@ export default function Dashboard() {
         <StatCard
           title="Total Services"
           value={stats.totalServices}
-          icon={<Package className="h-4 w-4" />}
           trend={stats.pendingServices > 0 ? `${stats.pendingServices} under review` : 'All published'}
           color="green"
           onClick={() => navigate('/admin/services')}
@@ -225,7 +215,6 @@ export default function Dashboard() {
         <StatCard
           title="Total Bookings"
           value={stats.totalBookings}
-          icon={<Activity className="h-4 w-4" />}
           trend="Across all services"
           color="purple"
           onClick={() => navigate('/admin/bookings')}
@@ -234,7 +223,6 @@ export default function Dashboard() {
         <StatCard
           title="Platform Revenue"
           value={formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-          icon={<DollarSign className="h-4 w-4" />}
           trend="All earnings"
           color="blue"
           onClick={() => navigate('/admin/dirt-trails-wallet')}
@@ -243,7 +231,6 @@ export default function Dashboard() {
         <StatCard
           title="Messages"
           value={stats.totalMessages}
-          icon={<MessageSquare className="h-4 w-4" />}
           trend="Customer support"
           color="orange"
           onClick={() => navigate('/admin/messages')}

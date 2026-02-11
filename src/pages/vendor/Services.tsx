@@ -1,27 +1,71 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { Plus, X, Search } from 'lucide-react'
+import { Plus, X, Search, Map } from 'lucide-react'
+import SearchMap from '../../components/SearchMap'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
 import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
 
+
+  // Normalize a value from an HTML datetime-local input (e.g. "2026-02-11T21:29")
+  // to an ISO UTC string (timestamptz-friendly). If parsing fails, return the
+  // original value so the DB-side fallback still has a chance to handle it.
+  const normalizeDateTimeLocalToISO = (val?: string | null) => {
+    if (!val) return null
+    const d = new Date(val)
+    if (Number.isNaN(d.getTime())) return val
+    return d.toISOString()
+  }
+
+  // Convert an ISO/timestamptz string to a value suitable for an
+  // <input type="datetime-local" /> (format: "yyyy-MM-ddTHH:mm").
+  const formatISOToDatetimeLocal = (iso?: string | null) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const year = d.getFullYear()
+    const month = pad(d.getMonth() + 1)
+    const day = pad(d.getDate())
+    const hours = pad(d.getHours())
+    const minutes = pad(d.getMinutes())
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
 export default function VendorServices() {
-  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { user } = useAuth()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const [vendorId, setVendorId] = useState<string | null>(null)
   const [vendorLoading, setVendorLoading] = useState(true)
 
-  const { services, loading, error, createService, updateService, deleteService } = useServices(vendorId || undefined)
+  const { services, loading, error, createService, updateService, deleteService } = useServices(vendorId || undefined, { skipInitialFetch: vendorLoading })
   const { categories } = useServiceCategories()
   const { deleteRequests, createDeleteRequest } = useServiceDeleteRequests(vendorId || undefined)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [ticketTypes, setTicketTypes] = useState<{ [serviceId: string]: any[] }>({})
+  const itemsPerPage = 10
+
+  // Debounce search query for better performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, debouncedSearchQuery])
 
   // Check if user is a vendor and set vendorId accordingly
   useEffect(() => {
@@ -119,6 +163,32 @@ export default function VendorServices() {
     checkVendorStatus()
   }, [user?.id])
 
+  // Load ticket types for services when services change
+  useEffect(() => {
+    const loadTicketTypes = async () => {
+      if (!services.length) return
+
+      const ticketData: { [serviceId: string]: any[] } = {}
+      
+      // Load ticket types for activities only
+      const activityServices = services.filter(s => s.category_id === 'cat_activities')
+      
+      for (const service of activityServices) {
+        try {
+          const types = await getTicketTypes(service.id)
+          ticketData[service.id] = types || []
+        } catch (err) {
+          console.error(`Failed to load ticket types for service ${service.id}:`, err)
+          ticketData[service.id] = []
+        }
+      }
+      
+      setTicketTypes(ticketData)
+    }
+
+    loadTicketTypes()
+  }, [services])
+
   const onCreate = async (data: Partial<Service>) => {
     if (!vendorId) {
       alert('Vendor account not found. Please contact support.')
@@ -130,7 +200,7 @@ export default function VendorServices() {
         vendor_id: vendorId!,
         category_id: data.category_id || 'cat_activities',
         title: data.title || '',
-        description: data.description || '',
+        description: data.category_id === 'cat_activities' ? ((data as any).event_description || data.description || '') : (data.description || ''),
         price: Number(data.price) || 0,
         currency: (data.currency as string) || 'UGX',
         images: (data.images as string[]) || [],
@@ -187,6 +257,27 @@ export default function VendorServices() {
         shop_policies: data.shop_policies || '',
         shop_notes: data.shop_notes || '',
 
+        // Event fields
+        event_description: (data as any).event_description || '',
+        event_type: data.event_type || '',
+  // store as ISO UTC string so DB timestamptz parsing is deterministic
+  event_datetime: normalizeDateTimeLocalToISO(data.event_datetime) || null,
+        event_location: data.event_location || '',
+        max_participants: data.max_participants || undefined,
+        registration_deadline: data.registration_deadline || '',
+        internal_ticketing: (data as any).internal_ticketing ?? true,
+        ticket_types: (data as any).ticket_types || [],
+        event_highlights: data.event_highlights || [],
+        event_inclusions: data.event_inclusions || [],
+        event_prerequisites: data.event_prerequisites || [],
+        photography_allowed: data.photography_allowed || false,
+        recording_allowed: data.recording_allowed || false,
+        group_discounts: data.group_discounts || false,
+        transportation_included: data.transportation_included || false,
+        meals_included: data.meals_included || false,
+        certificates_provided: data.certificates_provided || false,
+        event_cancellation_policy: data.event_cancellation_policy || '',
+
         // General fields
         tags: data.tags || [],
         contact_info: data.contact_info || {},
@@ -206,8 +297,8 @@ export default function VendorServices() {
             price: Number(tt.price || 0),
             quantity: Number(tt.quantity || 0),
             metadata,
-            sale_start: tt.sale_start || null,
-            sale_end: tt.sale_end || null
+            sale_start: normalizeDateTimeLocalToISO(tt.sale_start) ?? undefined,
+            sale_end: normalizeDateTimeLocalToISO(tt.sale_end) ?? undefined
           })
         }
       } catch (ticketErr) {
@@ -300,19 +391,25 @@ export default function VendorServices() {
       if (updates.cancellation_policy !== undefined) validUpdates.cancellation_policy = updates.cancellation_policy
 
       // Event fields
-      if (updates.event_type !== undefined) validUpdates.event_type = updates.event_type
-      if (updates.event_datetime !== undefined) validUpdates.event_datetime = updates.event_datetime
+      if ((updates as any).event_description !== undefined) validUpdates.event_description = (updates as any).event_description
+  if (updates.event_type !== undefined) validUpdates.event_type = updates.event_type
+  if (updates.event_datetime !== undefined) validUpdates.event_datetime = normalizeDateTimeLocalToISO((updates as any).event_datetime) ?? updates.event_datetime
       if (updates.registration_deadline !== undefined) validUpdates.registration_deadline = updates.registration_deadline
       if (updates.event_location !== undefined) validUpdates.event_location = updates.event_location
+      if (updates.max_participants !== undefined) validUpdates.max_participants = updates.max_participants
       if (updates.event_status !== undefined) validUpdates.event_status = updates.event_status
       if (updates.event_highlights !== undefined) validUpdates.event_highlights = updates.event_highlights
+      if (updates.event_inclusions !== undefined) validUpdates.event_inclusions = updates.event_inclusions
       if (updates.event_prerequisites !== undefined) validUpdates.event_prerequisites = updates.event_prerequisites
+      if (updates.event_cancellation_policy !== undefined) validUpdates.event_cancellation_policy = updates.event_cancellation_policy
       if (updates.certificates_provided !== undefined) validUpdates.certificates_provided = updates.certificates_provided
       if (updates.refreshments_included !== undefined) validUpdates.refreshments_included = updates.refreshments_included
       if (updates.take_home_materials !== undefined) validUpdates.take_home_materials = updates.take_home_materials
       if (updates.photography_allowed !== undefined) validUpdates.photography_allowed = updates.photography_allowed
       if (updates.recording_allowed !== undefined) validUpdates.recording_allowed = updates.recording_allowed
       if (updates.group_discounts !== undefined) validUpdates.group_discounts = updates.group_discounts
+      if (updates.transportation_included !== undefined) validUpdates.transportation_included = updates.transportation_included
+      if (updates.meals_included !== undefined) validUpdates.meals_included = updates.meals_included
       if (updates.internal_ticketing !== undefined) validUpdates.internal_ticketing = updates.internal_ticketing
 
       console.log('Valid updates:', validUpdates)
@@ -342,8 +439,8 @@ export default function VendorServices() {
                 price: Number(tt.price || 0),
                 quantity: Number(tt.quantity || 0),
                 metadata,
-                sale_start: tt.sale_start || null,
-                sale_end: tt.sale_end || null
+                sale_start: normalizeDateTimeLocalToISO(tt.sale_start) ?? undefined,
+                sale_end: normalizeDateTimeLocalToISO(tt.sale_end) ?? undefined
               }
             if (!tt.id || String(tt.id).startsWith('temp-')) {
               try {
@@ -378,6 +475,26 @@ export default function VendorServices() {
     } catch (err) {
       console.error('Failed to update service:', err)
       alert('Failed to update service. Please try again.')
+    }
+  }
+
+  // Load ticket types for a service and open the edit form
+  const handleOpenEdit = async (s: Service) => {
+    try {
+      // try to fetch ticket types from DB (if any) so the form is fully populated
+      const types = await getTicketTypes(s.id)
+      // Convert ISO/timestamptz values to datetime-local format for the inputs
+      const mapped = (types || []).map((t: any) => ({
+        ...t,
+        sale_start: formatISOToDatetimeLocal(t.sale_start),
+        sale_end: formatISOToDatetimeLocal(t.sale_end)
+      }))
+      setEditing({ ...s, ticket_types: mapped })
+    } catch (err) {
+      console.warn('Failed to load ticket types for edit, falling back to service object:', err)
+      setEditing(s)
+    } finally {
+      setShowForm(true)
     }
   }
 
@@ -420,6 +537,46 @@ export default function VendorServices() {
     }
   }
 
+  // Filter services based on selected category and search query (memoized for performance)
+  const categoryFilteredServices = useMemo(() => 
+    selectedCategory === 'all' 
+      ? services 
+      : services.filter(service => service.category_id === selectedCategory),
+    [services, selectedCategory]
+  )
+
+  const filteredServices = useMemo(() =>
+    debouncedSearchQuery.trim() === ''
+      ? categoryFilteredServices
+      : categoryFilteredServices.filter(service =>
+          service.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          service.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          service.service_categories?.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+        ),
+    [categoryFilteredServices, debouncedSearchQuery]
+  )
+
+  // Pagination (memoized for performance)
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(filteredServices.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage)
+    return { totalPages, startIndex, paginatedServices }
+  }, [filteredServices, currentPage, itemsPerPage])
+
+  const { totalPages, startIndex, paginatedServices } = paginationData
+
+  // Memoize category counts for performance
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: services.length }
+    categories.forEach(category => {
+      counts[category.id] = services.filter(service => service.category_id === category.id).length
+    })
+    return counts
+  }, [services, categories])
+
+  const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending')
+
   if (vendorLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -439,128 +596,178 @@ export default function VendorServices() {
     )
   }
 
-  // Filter services based on selected category and search query
-  const categoryFilteredServices = selectedCategory === 'all' 
-    ? services 
-    : services.filter(service => service.category_id === selectedCategory)
-
-  const filteredServices = searchQuery.trim() === ''
-    ? categoryFilteredServices
-    : categoryFilteredServices.filter(service =>
-        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-
-  const pendingDeleteRequests = deleteRequests.filter(request => request.status === 'pending')
-
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Services</h1>
-          <p className="text-sm text-gray-500 mt-1">{services.length} total{pendingDeleteRequests.length > 0 ? ` · ${pendingDeleteRequests.length} pending deletion` : ''}</p>
-        </div>
-        <button
-          onClick={() => { setEditing(null); setShowForm(true) }}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Service
-        </button>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 mb-6">
-        <div className="p-4 border-b border-gray-100">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search services..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
-            />
+    <div className="min-h-screen bg-slate-50 animate-in fade-in duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in slide-in-from-top duration-500">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-8 backdrop-blur-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                    <Plus className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold text-slate-900">
+                      Services
+                    </h1>
+                    <p className="text-slate-600 text-sm font-medium">
+                      {services.length} total services
+                      {pendingDeleteRequests.length > 0 && (
+                        <span className="ml-2 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
+                          {pendingDeleteRequests.length} pending deletion
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-slate-500 text-sm leading-relaxed max-w-md">
+                  Manage your service offerings, track performance, and engage with your customers.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
+                <button
+                  onClick={() => { setEditing(null); setShowForm(true) }}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Plus className="h-5 w-5" />
+                  Create New Service
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="px-4">
-          <nav className="flex gap-1 overflow-x-auto py-2" aria-label="Category tabs">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
-                selectedCategory === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              All ({services.length})
-            </button>
-            {categories
-              .filter(category => services.filter(service => service.category_id === category.id).length > 0)
-              .map((category) => {
-                const count = services.filter(service => service.category_id === category.id).length
-                return (
+
+        {/* Search & Filters */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 backdrop-blur-sm">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Search */}
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Search Services</label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by title, description, or category..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50/50 placeholder:text-slate-400 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Category Filters */}
+              <div className="lg:w-96">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Filter by Category</label>
+                <nav className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
-                      selectedCategory === category.id
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
+                      selectedCategory === 'all'
+                        ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
                     }`}
                   >
-                    {category.name} ({count})
+                    All ({categoryCounts.all})
                   </button>
-                )
-              })}
-          </nav>
+                  {categories
+                    .filter(category => categoryCounts[category.id] > 0)
+                    .map((category) => {
+                      const count = categoryCounts[category.id]
+                      return (
+                        <button
+                          key={category.id}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
+                            selectedCategory === category.id
+                              ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
+                          }`}
+                        >
+                          {category.name} ({count})
+                        </button>
+                      )
+                    })}
+                </nav>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
       {/* Services List */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden backdrop-blur-sm">
         {/* Mobile Card View */}
-        <div className="block md:hidden">
+        <div className="block lg:hidden">
           {loading ? (
-            <div className="px-6 py-16 text-center text-sm text-gray-500">Loading services...</div>
+            <div className="px-8 py-16 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-sm text-slate-500">Loading services...</p>
+            </div>
           ) : error ? (
-            <div className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</div>
+            <div className="px-8 py-16 text-center">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <X className="h-6 w-6 text-red-600" />
+              </div>
+              <p className="text-sm text-red-600 font-medium">Error loading services</p>
+              <p className="text-xs text-slate-500 mt-1">{error}</p>
+            </div>
           ) : filteredServices.length === 0 ? (
-            <div className="px-6 py-16 text-center">
-              <p className="text-sm text-gray-500">No services found.</p>
-              <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-3 text-sm font-medium text-gray-900 hover:underline">Create your first service →</button>
+            <div className="px-8 py-16 text-center">
+              <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
+                <Search className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">No services found</h3>
+              <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">Get started by creating your first service offering.</p>
+              <button
+                onClick={() => { setEditing(null); setShowForm(true) }}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Plus className="h-5 w-5" />
+                Create Your First Service
+              </button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {filteredServices.map(s => (
-                <div key={s.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="divide-y divide-slate-100">
+              {paginatedServices.map(s => (
+                <div key={s.id} className="p-6 hover:bg-slate-50/50 transition-colors duration-200 group">
+                  <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">{s.title}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{s.description}</p>
+                      <h3 className="text-base font-semibold text-slate-900 truncate mb-1 group-hover:text-blue-600 transition-colors">
+                        {s.title}
+                      </h3>
+                      <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">{s.description}</p>
                     </div>
-                    <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      s.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : s.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                    <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                      s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
                       {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-xs text-gray-500">{s.service_categories?.name || s.category_id}</span>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-sm font-semibold text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
+                  <div className="flex items-center gap-4 mb-4 text-sm">
+                    <span className="text-slate-500">{s.service_categories?.name || s.category_id}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="font-semibold text-slate-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
                   </div>
 
                   {s.category_id === 'cat_activities' && (
-                    <div className="mb-3">
+                    <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                       {s.scan_enabled ? (
-                        <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">View scan link ↗</a>
+                        <a
+                          href={`${window.location.origin}/scan/${s.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
+                        >
+                          View scan link ↗
+                        </a>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-400">Scan link inactive</span>
+                          <span className="text-sm text-slate-500">Scan link inactive</span>
                           <button
                             onClick={async () => {
                               try {
@@ -571,7 +778,7 @@ export default function VendorServices() {
                                 alert('Failed to submit request.')
                               }
                             }}
-                            className="text-xs font-medium text-gray-900 hover:underline"
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
                           >
                             Request activation
                           </button>
@@ -580,19 +787,19 @@ export default function VendorServices() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-50">
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                     <button
-                      onClick={() => { setEditing(s); setShowForm(true) }}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                      onClick={() => { handleOpenEdit(s) }}
+                      className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => onDelete(s)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-sm border ${
                         s.status === 'approved'
-                          ? 'text-amber-700 hover:bg-amber-50'
-                          : 'text-red-600 hover:bg-red-50'
+                          ? 'text-amber-700 hover:bg-amber-50 border-amber-200'
+                          : 'text-red-600 hover:bg-red-50 border-red-200'
                       }`}
                     >
                       {s.status === 'approved' ? 'Request Delete' : 'Delete'}
@@ -605,42 +812,42 @@ export default function VendorServices() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            <thead className="bg-slate-50/50">
+              <tr className="border-b border-slate-200">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-gray-500">Loading services...</td></tr>
+                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500">Loading services...</td></tr>
               ) : error ? (
                 <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
-                    <p className="text-sm text-gray-500">No services found.</p>
-                    <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-gray-900 hover:underline">Create your first service →</button>
+                    <p className="text-sm text-slate-500">No services found.</p>
+                    <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-slate-900 hover:underline">Create your first service →</button>
                   </td>
                 </tr>
               ) : (
-                filteredServices.map(s => (
-                  <tr key={s.id} className="group hover:bg-gray-50/50 transition-colors">
+                paginatedServices.map(s => (
+                  <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-900">{s.title}</p>
-                      <p className="text-xs text-gray-500 truncate max-w-xs mt-0.5">{s.description}</p>
+                      <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{s.title}</p>
+                      <p className="text-xs text-slate-500 truncate max-w-xs mt-0.5">{s.description}</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">{s.service_categories?.name || s.category_id}</span>
+                      <span className="text-sm text-slate-600">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
                         <div className="mt-1">
                           {s.scan_enabled ? (
-                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">Scan link ↗</a>
+                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">Scan link ↗</a>
                           ) : (
                             <button
                               onClick={async () => {
@@ -652,7 +859,7 @@ export default function VendorServices() {
                                   alert('Failed to submit request.')
                                 }
                               }}
-                              className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+                              className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
                             >
                               Request scan activation
                             </button>
@@ -661,29 +868,40 @@ export default function VendorServices() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {formatCurrencyWithConversion(
+                          s.category_id === 'cat_activities' && ticketTypes[s.id]?.length > 0
+                            ? Math.min(...ticketTypes[s.id].map((t: any) => Number(t.price || 0)))
+                            : s.price,
+                          s.currency,
+                          selectedCurrency,
+                          selectedLanguage
+                        )}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        s.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : s.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                        s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
                       }`}>
                         {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
-                          onClick={() => { setEditing(s); setShowForm(true) }}
-                          className="px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                          onClick={() => { handleOpenEdit(s) }}
+                          className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => onDelete(s)}
-                          className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 hover:shadow-sm border ${
                             s.status === 'approved'
-                              ? 'text-amber-700 hover:bg-amber-50'
-                              : 'text-red-600 hover:bg-red-50'
+                              ? 'text-amber-700 hover:bg-amber-50 border-amber-200'
+                              : 'text-red-600 hover:bg-red-50 border-red-200'
                           }`}
                         >
                           {s.status === 'approved' ? 'Request Delete' : 'Delete'}
@@ -700,23 +918,72 @@ export default function VendorServices() {
 
       {/* Pending Delete Requests */}
       {pendingDeleteRequests.length > 0 && (
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900">Pending Delete Requests</h2>
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden backdrop-blur-sm">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+            <h2 className="text-base font-semibold text-slate-900">Pending Delete Requests</h2>
+            <p className="text-sm text-slate-600 mt-1">These services are awaiting admin approval for deletion.</p>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-slate-100">
             {pendingDeleteRequests.map((request) => (
-              <div key={request.id} className="px-6 py-4 flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{request.service?.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 truncate max-w-md">{request.reason}</p>
+              <div key={request.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors duration-200">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{request.service?.title}</p>
+                  <p className="text-sm text-slate-600 mt-1 truncate max-w-md">{request.reason}</p>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">Pending</span>
-                  <span className="text-xs text-gray-400">{new Date(request.requested_at).toLocaleDateString()}</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    Pending Review
+                  </span>
+                  <span className="text-xs text-slate-500">{new Date(request.requested_at).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between">
+          <div className="text-sm text-slate-600">
+            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredServices.length)} of {filteredServices.length} services
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i
+                if (pageNum > totalPages) return null
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                      currentPage === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-700 bg-white border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
@@ -736,6 +1003,7 @@ export default function VendorServices() {
           }}
         />
       )}
+      </div>
     </div>
   )
 }
@@ -836,12 +1104,14 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     repair_service: initial?.repair_service || false,
 
     // Event fields
-    event_datetime: initial?.event_datetime || '',
-    registration_deadline: initial?.registration_deadline || '',
+  event_description: (initial as any)?.event_description || '',
+  event_datetime: formatISOToDatetimeLocal(initial?.event_datetime || ''),
+  registration_deadline: formatISOToDatetimeLocal(initial?.registration_deadline || ''),
     event_location: initial?.event_location || '',
     event_status: initial?.event_status || 'upcoming',
     event_type: initial?.event_type || '',
     event_highlights: initial?.event_highlights || [],
+    event_inclusions: initial?.event_inclusions || [],
     event_prerequisites: initial?.event_prerequisites || [],
     certificates_provided: initial?.certificates_provided || false,
     refreshments_included: initial?.refreshments_included || false,
@@ -856,8 +1126,8 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
       { id: 'temp-vip', title: 'VIP', description: '', price: (initial?.ticket_price ? (initial.ticket_price * 2) : (initial?.ticket_price || 0)), quantity: 5 }
     ]).map((tt: any) => ({
       ...tt,
-      sale_start: tt.sale_start || initial?.event_datetime || '',
-      sale_end: tt.sale_end || initial?.registration_deadline || ''
+  sale_start: tt.sale_start || formatISOToDatetimeLocal(initial?.event_datetime || ''),
+  sale_end: tt.sale_end || formatISOToDatetimeLocal(initial?.registration_deadline || '')
     })),
 
     // Travel agency fields
@@ -883,6 +1153,8 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
+  const [showMapModal, setShowMapModal] = useState(false)
+  const [mapModalInitialCoords, setMapModalInitialCoords] = useState<{ lat: number; lon: number } | null>(null)
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -1678,260 +1950,429 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
       case 'activities':
         return (
-          <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-gray-900">Event & Activity Details</h4>
+          <div className="space-y-6 border-t pt-6">
+            <h4 className="font-semibold text-slate-900 text-lg">Event & Activity Details</h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Event Type</label>
-                <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
-                  <option value="">Select event type</option>
-                  <option value="adventure_activity">Adventure Activity</option>
-                  <option value="cultural_experience">Cultural Experience</option>
-                  <option value="nature_tour">Nature Tour</option>
-                  <option value="sports_event">Sports Event</option>
-                  <option value="festival">Festival</option>
-                  <option value="workshop">Workshop</option>
-                  <option value="concert">Concert/Performance</option>
-                  <option value="exhibition">Exhibition</option>
-                  <option value="other">Other Event</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Event Status</label>
-                <select value={form.event_status || 'upcoming'} onChange={(e) => update('event_status', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
-                  <option value="upcoming">Upcoming</option>
-                  <option value="ongoing">Ongoing</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
+            {/* Basic Event Information */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Basic Information</h5>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Event Type</label>
+                  <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Select event type</option>
+                    <option value="adventure_activity">Adventure Activity</option>
+                    <option value="cultural_experience">Cultural Experience</option>
+                    <option value="nature_tour">Nature Tour</option>
+                    <option value="sports_event">Sports Event</option>
+                    <option value="festival">Festival</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="concert">Concert/Performance</option>
+                    <option value="exhibition">Exhibition</option>
+                    <option value="other">Other Event</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Event Date & Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={form.event_datetime || ''}
+                    onChange={(e) => update('event_datetime', e.target.value)}
+                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Event Date & Time <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-slate-700">
+                  Event Location <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="datetime-local" 
-                  value={form.event_datetime || ''} 
-                  onChange={(e) => update('event_datetime', e.target.value)} 
-                  className="mt-1 w-full border rounded-md px-3 py-2" 
-                  required 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Registration Deadline</label>
-                <input type="datetime-local" value={form.registration_deadline || ''} onChange={(e) => update('registration_deadline', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
+                <div className="flex gap-2 mt-1">
+                  <input
+                    value={form.event_location || ''}
+                    onChange={(e) => update('event_location', e.target.value)}
+                    placeholder="Specific venue or meeting point"
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if ((form as any).event_lat && (form as any).event_lon) {
+                        // If coordinates exist, open in view/edit mode
+                        setMapModalInitialCoords({ lat: (form as any).event_lat, lon: (form as any).event_lon })
+                      } else {
+                        // If no coordinates, open in selection mode
+                        setMapModalInitialCoords(null)
+                      }
+                      setShowMapModal(true)
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors border border-blue-600"
+                  >
+                    <Map size={16} />
+                    {(form as any).event_lat && (form as any).event_lon ? 'Edit Location' : 'Select on Map'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Maximum Participants</label>
-                <input type="number" value={form.max_participants || ''} onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 50" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Minimum Age</label>
-                <input type="number" value={form.minimum_age || ''} onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 8" className="mt-1 w-full border rounded-md px-3 py-2" />
+            {/* Capacity & Requirements */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Capacity & Requirements</h5>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Maximum Participants</label>
+                  <input
+                    type="number"
+                    value={form.max_participants || ''}
+                    onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="e.g., 50"
+                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Minimum Age</label>
+                  <input
+                    type="number"
+                    value={form.minimum_age || ''}
+                    onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="e.g., 8"
+                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Registration Deadline</label>
+                  <input
+                    type="datetime-local"
+                    value={form.registration_deadline || ''}
+                    onChange={(e) => update('registration_deadline', e.target.value)}
+                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Ticket price fields removed — use internal ticket-types editor below for all ticket pricing and availability */}
+            {/* Ticketing & Pricing */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Ticketing & Pricing</h5>
 
-            {/* External ticket purchase links removed — payments are handled internally after event creation */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <label className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={(form as any).internal_ticketing || false}
+                    onChange={(e) => update('internal_ticketing', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Enable internal ticketing</span>
+                </label>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Event Location <span className="text-red-500">*</span>
-              </label>
-              <input 
-                value={form.event_location || ''} 
-                onChange={(e) => update('event_location', e.target.value)} 
-                placeholder="Specific venue or meeting point" 
-                className="mt-1 w-full border rounded-md px-3 py-2" 
-                required 
-              />
-            </div>
-
-            <div className="mt-4 border-t pt-4">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={(form as any).internal_ticketing || false} onChange={(e) => update('internal_ticketing', e.target.checked)} className="mr-2" />
-                <span className="text-sm font-medium text-gray-700">Enable internal ticketing</span>
-              </label>
-
-              {(form as any).internal_ticketing && (
-                <div className="mt-3 space-y-3">
-                  {/* Ticket types list */}
-                  {(form as any).ticket_types?.map((tt: any, idx: number) => (
-                    <div key={tt.id || idx} className="p-3 border rounded-md bg-white">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div>
-                          <div className="text-xs text-gray-600 mb-1">Title</div>
-                          <input className="border rounded px-2 py-1" value={tt.title || ''} onChange={(e) => updateTicketTypeInForm(idx, 'title', e.target.value)} placeholder="e.g., General Admission" />
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-600 mb-1">Price (UGX)</div>
-                          <div className="flex items-center gap-2">
+                {(form as any).internal_ticketing && (
+                  <div className="space-y-3">
+                    {/* Ticket types list */}
+                    {(form as any).ticket_types?.map((tt: any, idx: number) => (
+                      <div key={tt.id || idx} className="p-4 border border-slate-200 rounded-lg bg-white">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
                             <input
-                              className="border rounded px-2 py-1"
-                              type="number"
-                              value={(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) ? 0 : (tt.price ?? '')}
-                              onChange={(e) => {
-                                if (Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) return
-                                updateTicketTypeInForm(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))
-                              }}
-                              placeholder="Price"
-                              disabled={Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))}
+                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              value={tt.title || ''}
+                              onChange={(e) => updateTicketTypeInForm(idx, 'title', e.target.value)}
+                              placeholder="e.g., General Admission"
                             />
-                            {(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) && <div className="text-xs text-green-700">Free — price locked</div>}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Price (UGX)</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                className="flex-1 border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                type="number"
+                                value={(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) ? 0 : (tt.price ?? '')}
+                                onChange={(e) => {
+                                  if (Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) return
+                                  updateTicketTypeInForm(idx, 'price', e.target.value === '' ? '' : Number(e.target.value))
+                                }}
+                                placeholder="Price"
+                                disabled={Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))}
+                              />
+                              {(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) && <div className="text-xs text-green-700 font-medium">Free — price locked</div>}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Available Tickets</label>
+                            <input
+                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              type="number"
+                              value={tt.quantity ?? ''}
+                              onChange={(e) => updateTicketTypeInForm(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
+                              placeholder="Ticket count"
+                            />
                           </div>
                         </div>
-                        <div>
-                          <div className="text-xs text-gray-600 mb-1">Available Tickets</div>
-                          <input className="border rounded px-2 py-1" type="number" value={tt.quantity ?? ''} onChange={(e) => updateTicketTypeInForm(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))} placeholder="Ticket count" />
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Description (optional)</label>
+                          <input
+                            className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={tt.description || ''}
+                            onChange={(e) => updateTicketTypeInForm(idx, 'description', e.target.value)}
+                            placeholder="Description (optional)"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Sale starts</label>
+                            <input
+                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              type="datetime-local"
+                              value={tt.sale_start || ''}
+                              onChange={(e) => updateTicketTypeInForm(idx, 'sale_start', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 mb-1">Sale ends (deadline)</label>
+                            <input
+                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              type="datetime-local"
+                              value={tt.sale_end || ''}
+                              onChange={(e) => updateTicketTypeInForm(idx, 'sale_end', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => removeTicketTypeFromForm(idx)}
+                            className="px-3 py-1.5 text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            Remove
+                          </button>
                         </div>
                       </div>
-                      <div className="mt-2">
-                        <input className="w-full border rounded px-2 py-1" value={tt.description || ''} onChange={(e) => updateTicketTypeInForm(idx, 'description', e.target.value)} placeholder="Description (optional)" />
-                      </div>
-                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <label className="text-xs text-gray-600">Sale starts</label>
-                        <label className="text-xs text-gray-600">Sale ends (deadline)</label>
-                        <input className="border rounded px-2 py-1" type="datetime-local" value={tt.sale_start || ''} onChange={(e) => updateTicketTypeInForm(idx, 'sale_start', e.target.value)} />
-                        <input className="border rounded px-2 py-1" type="datetime-local" value={tt.sale_end || ''} onChange={(e) => updateTicketTypeInForm(idx, 'sale_end', e.target.value)} />
-                      </div>
-                      <div className="mt-2 flex justify-end gap-2">
-                        <button type="button" onClick={() => removeTicketTypeFromForm(idx)} className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded">Remove</button>
-                      </div>
+                    ))}
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <select
+                        value={ticketPreset}
+                        onChange={(e) => setTicketPreset(e.target.value as any)}
+                        className="border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="general">General</option>
+                        <option value="vip">VIP</option>
+                        <option value="free">Free</option>
+                        <option value="early_general">Early Bird - General</option>
+                        <option value="early_vip">Early Bird - VIP</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={addTicketTypeToForm}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Plus size={16} /> Add Ticket Type
+                      </button>
                     </div>
-                  ))}
-
-                  <div className="flex items-center gap-2">
-                    <select value={ticketPreset} onChange={(e) => setTicketPreset(e.target.value as any)} className="border rounded px-2 py-1">
-                      <option value="general">General</option>
-                      <option value="vip">VIP</option>
-                      <option value="free">Free</option>
-                      <option value="early_general">Early Bird - General</option>
-                      <option value="early_vip">Early Bird - VIP</option>
-                      <option value="custom">Custom</option>
-                    </select>
-                    <button type="button" onClick={addTicketTypeToForm} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition inline-flex items-center gap-2">
-                      <Plus size={16} /> Add Ticket Type
-                    </button>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Event Details */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Event Details</h5>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Event Highlights</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    value={arrayInputs.event_highlights || ''}
+                    onChange={(e) => setArrayInputs(prev => ({ ...prev, event_highlights: e.target.value }))}
+                    placeholder="e.g., Live music performance, Traditional dance, Wildlife viewing, Cultural demonstrations"
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_highlights', arrayInputs.event_highlights || ''))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addToArray('event_highlights', arrayInputs.event_highlights || '')}
+                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add
+                  </button>
                 </div>
-              )}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(form.event_highlights || []).map((highlight, idx) => (
+                    <span key={idx} className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-green-100 text-green-800 font-medium">
+                      {highlight}
+                      <button
+                        type="button"
+                        onClick={() => removeFromArray('event_highlights', idx)}
+                        className="ml-2 text-green-600 hover:text-green-800 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700">What's Included</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    value={arrayInputs.event_inclusions || ''}
+                    onChange={(e) => setArrayInputs(prev => ({ ...prev, event_inclusions: e.target.value }))}
+                    placeholder="e.g., Entry ticket, Refreshments, Transportation, Guide, Equipment"
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_inclusions', arrayInputs.event_inclusions || ''))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addToArray('event_inclusions', arrayInputs.event_inclusions || '')}
+                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(form.event_inclusions || []).map((inclusion, idx) => (
+                    <span key={idx} className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">
+                      {inclusion}
+                      <button
+                        type="button"
+                        onClick={() => removeFromArray('event_inclusions', idx)}
+                        className="ml-2 text-blue-600 hover:text-blue-800 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Prerequisites</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    value={arrayInputs.event_prerequisites || ''}
+                    onChange={(e) => setArrayInputs(prev => ({ ...prev, event_prerequisites: e.target.value }))}
+                    placeholder="e.g., Valid ID, Medical certificate, Fitness level, Age restrictions"
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_prerequisites', arrayInputs.event_prerequisites || ''))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addToArray('event_prerequisites', arrayInputs.event_prerequisites || '')}
+                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(form.event_prerequisites || []).map((prereq, idx) => (
+                    <span key={idx} className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-red-100 text-red-800 font-medium">
+                      {prereq}
+                      <button
+                        type="button"
+                        onClick={() => removeFromArray('event_prerequisites', idx)}
+                        className="ml-2 text-red-600 hover:text-red-800 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Event Highlights</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrayInputs.event_highlights || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, event_highlights: e.target.value }))}
-                  placeholder="e.g., Live music performance, Traditional dance, Wildlife viewing, Cultural demonstrations"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_highlights', arrayInputs.event_highlights || ''))}
+            {/* Event Features */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Event Features</h5>
+
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.group_discounts || false}
+                      onChange={(e) => update('group_discounts', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Group Discounts</span>
+                  </label>
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.photography_allowed || false}
+                      onChange={(e) => update('photography_allowed', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Photography Allowed</span>
+                  </label>
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.recording_allowed || false}
+                      onChange={(e) => update('recording_allowed', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Recording Allowed</span>
+                  </label>
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.transportation_included || false}
+                      onChange={(e) => update('transportation_included', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Transportation Included</span>
+                  </label>
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(form.meals_included && form.meals_included.length > 0)}
+                      onChange={(e) => {
+                        if (e.target.checked && (!form.meals_included || form.meals_included.length === 0)) {
+                          update('meals_included', ['Meals included']);
+                        } else if (!e.target.checked) {
+                          update('meals_included', []);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Meals Included</span>
+                  </label>
+                  <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.certificates_provided || false}
+                      onChange={(e) => update('certificates_provided', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Certificates Provided</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Policies */}
+            <div className="space-y-4">
+              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Policies</h5>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Cancellation Policy</label>
+                <textarea
+                  value={form.event_cancellation_policy || ''}
+                  onChange={(e) => update('event_cancellation_policy', e.target.value)}
+                  placeholder="Refund policy and cancellation terms for the event"
+                  rows={3}
+                  className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
-                <button type="button" onClick={() => addToArray('event_highlights', arrayInputs.event_highlights || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.event_highlights || []).map((highlight, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                    {highlight}
-                    <button type="button" onClick={() => removeFromArray('event_highlights', idx)} className="ml-1 text-green-600 hover:text-green-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">What's Included</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrayInputs.event_inclusions || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, event_inclusions: e.target.value }))}
-                  placeholder="e.g., Entry ticket, Refreshments, Transportation, Guide, Equipment"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_inclusions', arrayInputs.event_inclusions || ''))}
-                />
-                <button type="button" onClick={() => addToArray('event_inclusions', arrayInputs.event_inclusions || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.event_inclusions || []).map((inclusion, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                    {inclusion}
-                    <button type="button" onClick={() => removeFromArray('event_inclusions', idx)} className="ml-1 text-blue-600 hover:text-blue-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Prerequisites</label>
-              <div className="flex gap-2">
-                <input
-                  value={arrayInputs.event_prerequisites || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, event_prerequisites: e.target.value }))}
-                  placeholder="e.g., Valid ID, Medical certificate, Fitness level, Age restrictions"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_prerequisites', arrayInputs.event_prerequisites || ''))}
-                />
-                <button type="button" onClick={() => addToArray('event_prerequisites', arrayInputs.event_prerequisites || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.event_prerequisites || []).map((prereq, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-                    {prereq}
-                    <button type="button" onClick={() => removeFromArray('event_prerequisites', idx)} className="ml-1 text-red-600 hover:text-red-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Event Features</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-                <label className="flex items-center">
-                  <input type="checkbox" checked={form.group_discounts || false} onChange={(e) => update('group_discounts', e.target.checked)} className="mr-2" />
-                  Group Discounts
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" checked={form.photography_allowed || false} onChange={(e) => update('photography_allowed', e.target.checked)} className="mr-2" />
-                  Photography Allowed
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" checked={form.recording_allowed || false} onChange={(e) => update('recording_allowed', e.target.checked)} className="mr-2" />
-                  Recording Allowed
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" checked={form.transportation_included || false} onChange={(e) => update('transportation_included', e.target.checked)} className="mr-2" />
-                  Transportation Included
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" checked={(form.meals_included && form.meals_included.length > 0)} onChange={(e) => {
-                    if (e.target.checked && (!form.meals_included || form.meals_included.length === 0)) {
-                      update('meals_included', ['Meals included']);
-                    } else if (!e.target.checked) {
-                      update('meals_included', []);
-                    }
-                  }} className="mr-2" />
-                  Meals Included
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" checked={form.certificates_provided || false} onChange={(e) => update('certificates_provided', e.target.checked)} className="mr-2" />
-                  Certificates Provided
-                </label>
-              </div>
-            </div>
-
-            {/* Event Description moved to top-level Description when category is Events */}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
-              <textarea value={form.event_cancellation_policy || ''} onChange={(e) => update('event_cancellation_policy', e.target.value)} placeholder="Refund policy and cancellation terms for the event" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
         )
@@ -3065,14 +3506,27 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h3 className="text-base font-semibold text-gray-900">{initial?.id ? 'Edit Service' : 'New Service'}</h3>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"><X className="h-4 w-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
+        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+              <Plus className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">{initial?.id ? 'Edit Service' : 'Create New Service'}</h3>
+              <p className="text-sm text-slate-600">Fill in the details to add your service to the platform</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <form
-          className="px-6 py-5 space-y-5"
+          className="flex-1 px-8 py-6 space-y-8 overflow-y-auto"
           onSubmit={(e) => { 
             e.preventDefault(); 
             
@@ -3181,12 +3635,68 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
           {renderCategorySpecificFields()}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">{initial?.id ? 'Save Changes' : 'Create Service'}</button>
+          <div className="flex justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-8 px-8 py-6 rounded-b-2xl">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-8 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              {initial?.id ? 'Save Changes' : 'Create Service'}
+            </button>
           </div>
         </form>
       </div>
+
+      {/* Map Location Modal */}
+      {showMapModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
+            <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                  <Map className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Select Event Location</h3>
+                  <p className="text-sm text-slate-600">Search for and select the event location on the map (OpenStreetMap)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowMapModal(false)
+                  setMapModalInitialCoords(null)
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-8">
+              <SearchMap
+                initialCoords={mapModalInitialCoords}
+                onLocationSelect={(location) => {
+                  update('event_location', location.display_name as any)
+                  update('event_lat' as any, location.lat)
+                  update('event_lon' as any, location.lon)
+                  setShowMapModal(false)
+                  setMapModalInitialCoords(null)
+                }}
+                height="500px"
+                showSearch={true}
+                showLocationEdit={true}
+                viewOnly={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

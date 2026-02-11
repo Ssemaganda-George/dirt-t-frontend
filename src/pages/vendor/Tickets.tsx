@@ -22,6 +22,7 @@ interface TicketData {
   }
   services: {
     title: string
+    slug?: string
     event_location?: string
     location?: string
     primary_image_url?: string
@@ -76,7 +77,7 @@ export default function VendorTickets() {
         .select(`
           *,
           ticket_types(title, price),
-          services!inner(title, event_location, location, primary_image_url, vendor_id),
+          services!inner(title, slug, event_location, location, primary_image_url, vendor_id),
           orders(currency, created_at, user_id)
         `)
         .eq('services.vendor_id', vendorId)
@@ -152,26 +153,31 @@ export default function VendorTickets() {
 
   const downloadTicket = async (ticket: TicketData) => {
     // Generate QR code
-    const qrCodeDataUrl = await QRCode.toDataURL(ticket.code)
+    const ticketCode = ticket.code || ticket.qr_data || ticket.id
+    const serviceSlug = ticket.services?.slug
+    const qrData = serviceSlug
+      ? `https://bookings.dirt-trails.com/service/${serviceSlug}?ticket=${ticketCode}`
+      : ticketCode
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData)
 
     // Create a simple HTML page for the ticket
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
     const ticketHtml = `
-      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 2px solid #61B82C;">
+      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 20px auto; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 2px solid #000000;">
         <!-- Ticket Header -->
-        <div style="background: linear-gradient(135deg, #61B82C 0%, #4a8f23 100%); color: white; padding: 16px 20px;">
+        <div style="background: linear-gradient(135deg, #000000 0%, #333333 100%); color: white; padding: 16px 20px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 12px;">
               ${(() => {
                 const eventImage = ticket.services?.primary_image_url;
                 return eventImage ? `
-                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                     <img src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
                   </div>
                 ` : `
-                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
+                  <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
                 `;
               })()}
               <div>
@@ -213,7 +219,7 @@ export default function VendorTickets() {
                 <div>${ticket.buyer_profile?.email || 'N/A'}</div>
               </div>
               <div style="margin-top: 6px;">
-                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; background: ${ticket.status === 'issued' ? '#dcfce7' : ticket.status === 'used' ? '#dbeafe' : '#fef3c7'}; color: ${ticket.status === 'issued' ? '#166534' : ticket.status === 'used' ? '#1e40af' : '#92400e'};">
+                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 5px; font-size: 9px; font-weight: 600; background: ${ticket.status === 'issued' ? '#dcfce7' : ticket.status === 'used' ? '#dbeafe' : '#fef3c7'}; color: ${ticket.status === 'issued' ? '#166534' : ticket.status === 'used' ? '#1e40af' : '#92400e'};">
                   <span>${ticket.status?.toUpperCase()}</span>
                 </div>
               </div>
@@ -221,7 +227,7 @@ export default function VendorTickets() {
 
             <!-- Right Section - QR Code & Price -->
             <div style="flex-shrink: 0; text-align: center;">
-              <div style="background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; margin-bottom: 4px; display: inline-block;">
+              <div style="background: #f8fafc; border: 1px solid #e5e7eb; padding: 6px; margin-bottom: 4px; display: inline-block;">
                 <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
               </div>
               <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
@@ -267,7 +273,7 @@ export default function VendorTickets() {
           ${ticketHtml}
 
           <div class="no-print" style="text-align: center; margin-top: 20px;">
-            <button onclick="window.print()" style="background: #61B82C; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Print Ticket</button>
+            <button onclick="window.print()" style="background: #000000; color: white; border: none; padding: 12px 24px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Print Ticket</button>
           </div>
         </body>
       </html>

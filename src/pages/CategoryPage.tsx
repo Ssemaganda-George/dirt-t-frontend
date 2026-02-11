@@ -5,6 +5,7 @@ import { formatCurrency } from '../lib/utils'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { Link } from 'react-router-dom'
 import { useServices } from '../hooks/hook'
+import { getServiceAverageRating } from '../lib/database'
 import type { Service } from '../types'
 
 export default function CategoryPage() {
@@ -344,7 +345,25 @@ interface ServiceCardProps {
 }
 
 function ServiceCard({ service }: ServiceCardProps) {
+  const [rating, setRating] = useState<number>(0)
+  const [reviewCount, setReviewCount] = useState<number>(0)
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+
+  // Fetch service rating and review count
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        const ratingData = await getServiceAverageRating(service.id)
+        setRating(ratingData.average || 0)
+        setReviewCount(ratingData.count || 0)
+      } catch (error) {
+        console.error('Error fetching service rating:', error)
+        setRating(0)
+        setReviewCount(0)
+      }
+    }
+    fetchRating()
+  }, [service.id])
 
   // Helper function to render icons (handles both string and component icons)
   const renderIcon = (icon: any, className: string = "h-4 w-4") => {
@@ -440,9 +459,12 @@ function ServiceCard({ service }: ServiceCardProps) {
 
           {/* Rating Badge */}
           <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-              <Star className="h-3 w-3 fill-current" />
-              <span>4.5</span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium">
+              <Star className="h-3 w-3 fill-current text-yellow-400" />
+              <span className="text-gray-900">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && (
+                <span className="text-gray-600 ml-0.5">({reviewCount})</span>
+              )}
             </div>
           </div>
         </div>

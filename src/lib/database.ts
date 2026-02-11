@@ -3,42 +3,16 @@ import { supabase } from './supabaseClient';
 import { formatCurrency } from './utils';
 import { creditWallet } from './creditWallet';
 import { executeWithCircuitBreaker } from './concurrency';
-
-// Simple in-memory cache for IP -> country lookups to avoid repeated external calls
-const ipCountryCache = new Map<string, string | null>()
+import type { UserPreferences } from '../types'
 
 /**
  * Lookup country name for an IP address using ipapi.co with a short timeout.
  * Caches results in-memory. Returns null if lookup fails or no country found.
  */
-async function lookupCountryByIp(ip: string): Promise<string | null> {
-  if (!ip) return null
-  if (ipCountryCache.has(ip)) return ipCountryCache.get(ip) || null
-
-  // small timeout for third-party call
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 3000)
-
-  try {
-    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, { signal: controller.signal, headers: { 'Accept': 'application/json' } })
-    clearTimeout(timeout)
-    if (!res.ok) {
-      ipCountryCache.set(ip, null)
-      return null
-    }
-
-    const data = await res.json()
-    // ipapi returns country_name or country
-    const country = data?.country_name || data?.country || null
-    if (country) ipCountryCache.set(ip, country)
-    else ipCountryCache.set(ip, null)
-    return country
-  } catch (err) {
-    clearTimeout(timeout)
-    // Network error / timeout — cache negative result briefly
-    ipCountryCache.set(ip, null)
-    return null
-  }
+async function lookupCountryByIp(_ip: string): Promise<string | null> {
+  // Temporarily disable IP geolocation to avoid CORS issues
+  // TODO: Implement a server-side solution for IP geolocation
+  return null
 }
 
 // Visitor Activity Types
@@ -77,6 +51,7 @@ export interface ServiceReview {
   visitor_name: string;
   visitor_email?: string;
   rating: number;
+  kpi_ratings?: Record<string, number> | null;
   comment?: string;
   helpful_count: number;
   unhelpful_count: number;
@@ -84,6 +59,8 @@ export interface ServiceReview {
   status: 'pending' | 'approved' | 'rejected';
   approved_by?: string;
   rejection_reason?: string;
+  reviewer_city?: string;
+  reviewer_country?: string;
   created_at: string;
   updated_at: string;
   approved_at?: string;
@@ -150,15 +127,7 @@ export interface Partner {
 }
 
 // User Preferences types
-export interface UserPreferences {
-  id: string;
-  user_id: string;
-  region: string; // e.g., 'UG', 'US', 'GB'
-  currency: string; // e.g., 'UGX', 'USD', 'EUR'
-  language: string; // e.g., 'en', 'fr', 'de'
-  created_at: string;
-  updated_at: string;
-}
+// UserPreferences type is imported from src/types
 
 // Service Delete Request types
 export interface ServiceDeleteRequest {
@@ -176,12 +145,23 @@ export interface ServiceDeleteRequest {
 }
 
 // User Preferences API
-export async function getUserPreferences(userId: string): Promise<UserPreferences | null> {
+export async function getUserPreferences(): Promise<UserPreferences | null> {
   try {
+    // Check if user is authenticated
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      return null
+    }
+    if (!session) {
+      console.warn('No active session for user preferences query')
+      return null
+    }
+
+    // Don't manually filter by user_id since RLS will handle it
     const { data, error } = await supabase
       .from('user_preferences')
       .select('*')
-      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -189,6 +169,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
       if (error.code === 'PGRST116') {
         return null;
       }
+      console.error('Supabase error fetching user preferences:', error)
       throw error;
     }
 
@@ -387,8 +368,12 @@ export interface Tourist {
   first_name?: string
   last_name?: string
   phone?: string
+  country_code?: string
+  tourist_home_city?: string
+  tourist_home_country?: string
   emergency_contact?: string
   emergency_phone?: string
+  emergency_country_code?: string
   emergency_relationship?: string
   emergency_email?: string
   emergency_address?: string
@@ -403,10 +388,14 @@ export interface Tourist {
 export interface Vendor {
   id: string
   user_id: string
+  first_name?: string
+  last_name?: string
   business_name: string
   business_description?: string
   business_address?: string
+  business_city?: string
   business_phone?: string
+  business_phones?: string[]
   business_email?: string
   business_website?: string
   business_type?: string
@@ -720,11 +709,26 @@ export async function getServices(vendorId?: string) {
         id,
         name,
         icon
+      ),
+      ticket_types (
+        id,
+        title,
+        description,
+        price,
+        quantity,
+        sold,
+        metadata,
+        sale_start,
+        sale_end
       )
     `)
 
   if (vendorId) {
+    // Vendor wants to see their own services (including pending)
     query = query.eq('vendor_id', vendorId)
+  } else {
+    // Public listings should only include approved/active services
+    query = query.in('status', ['approved', 'active'])
   }
 
   const { data, error } = await query.order('created_at', { ascending: false })
@@ -751,7 +755,7 @@ export async function getServiceCategories() {
   return data || []
 }
 
-export async function getServiceById(serviceId: string) {
+export async function getServiceById(serviceId: string, options?: { vendorId?: string; includeUnapproved?: boolean }) {
   const { data, error } = await supabase
     .from('services')
     .select(`
@@ -767,10 +771,21 @@ export async function getServiceById(serviceId: string) {
     throw error
   }
 
+  if (!data) return data
+
+  // If caller didn't request unapproved services, hide them from public consumers
+  if (!options?.includeUnapproved) {
+    const status = data.status
+    const isOwner = options?.vendorId && data.vendor_id === options.vendorId
+    if (!isOwner && status !== 'approved' && status !== 'active') {
+      return null
+    }
+  }
+
   return data
 }
 
-export async function getServiceBySlug(serviceSlug: string) {
+export async function getServiceBySlug(serviceSlug: string, options?: { vendorId?: string; includeUnapproved?: boolean }) {
   const { data, error } = await supabase
     .from('services')
     .select(`
@@ -784,6 +799,17 @@ export async function getServiceBySlug(serviceSlug: string) {
   if (error) {
     console.error('Error fetching service by slug:', error)
     throw error
+  }
+
+  if (!data) return data
+
+  // Hide unapproved services from public consumers unless caller is the owner or explicitly included
+  if (!options?.includeUnapproved) {
+    const status = data.status
+    const isOwner = options?.vendorId && data.vendor_id === options.vendorId
+    if (!isOwner && status !== 'approved' && status !== 'active') {
+      return null
+    }
   }
 
   return data
@@ -1090,13 +1116,15 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       p_vendor_id: vendorId
     });
 
+    console.log('updateService: RPC result:', result);
+
     if (result.error) throw result.error;
 
     if (!result.data?.success) {
       throw new Error(result.data?.error || 'Failed to update service');
     }
   } catch (rpcError: any) {
-    console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message);
+    console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message, rpcError);
     
     // Fallback: direct table update
     const updateQuery = supabase
@@ -1109,8 +1137,18 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       updateQuery.eq('vendor_id', vendorId);
     }
 
-    const { error: directError } = await updateQuery;
-    if (directError) throw directError;
+    // Use select().single() so we get the updated row back and detect zero-row updates
+    const { data: directUpdated, error: directError } = await updateQuery.select().single();
+    if (directError) {
+      console.error('updateService: direct update error (no rows updated?):', directError);
+      throw directError;
+    }
+    if (!directUpdated) {
+      const msg = `updateService: direct update did not return an updated row for ${serviceId}`;
+      console.error(msg);
+      throw new Error(msg);
+    }
+    console.log('updateService: direct update succeeded for', serviceId);
   }
 
   // Fetch the updated service with relations
@@ -1135,6 +1173,44 @@ export async function updateService(serviceId: string, vendorId: string | undefi
     .single();
 
   if (error) throw error;
+  console.log('updateService: fetched updated service:', { id: data?.id, title: data?.title });
+  // Compare filteredUpdates to returned data for quick mismatch detection
+  try {
+    const mismatches: string[] = [];
+    Object.keys(filteredUpdates).forEach(k => {
+      try {
+        const sent = filteredUpdates[k as keyof typeof filteredUpdates];
+        const got = (data as any)?.[k];
+        if (typeof sent === 'object') {
+          if (JSON.stringify(sent) !== JSON.stringify(got)) mismatches.push(k);
+        } else {
+          if (String(sent) !== String(got)) mismatches.push(k);
+        }
+      } catch (e) {
+        mismatches.push(k);
+      }
+    });
+    if (mismatches.length > 0) {
+      console.warn('updateService: mismatch between sent updates and DB for keys:', mismatches, { sent: filteredUpdates, got: data });
+      // Retry with direct update to ensure changes are applied
+      try {
+        console.warn('updateService: attempting direct update retry due to mismatch...');
+        const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
+        if (vendorId) directQuery.eq('vendor_id', vendorId);
+        const { data: retryData, error: retryError } = await directQuery.select().single();
+        if (retryError) {
+          console.error('updateService: direct retry error:', retryError);
+        } else {
+          console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
+          return retryData;
+        }
+      } catch (retryErr) {
+        console.error('updateService: error during direct retry:', retryErr);
+      }
+    }
+  } catch (e) {
+    console.warn('updateService: error while comparing updates to DB result', e);
+  }
   return data;
 
   } catch (error) {
@@ -1808,23 +1884,54 @@ export async function verifyTicketByCode(code: string, serviceId?: string) {
     }
 
     // Fetch full ticket details for the response
-    const { data: ticketDetails, error: fetchError } = await supabase
-      .from('tickets')
-      .select(`
-        *,
-        ticket_types(*),
-        orders(*),
-        services(id, title, vendor_id)
-      `)
-      .eq('id', result.ticket_id)
-      .single()
+    let ticketDetails = null;
+    let fetchError = null;
+
+    if (result.ticket_id) {
+      // Try to fetch by ticket_id (preferred for new verifications)
+      const ticketResult = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(*),
+          orders(*),
+          services(id, title, vendor_id)
+        `)
+        .eq('id', result.ticket_id)
+        .single();
+      ticketDetails = ticketResult.data;
+      fetchError = ticketResult.error;
+    }
+
+    if (!ticketDetails && !fetchError) {
+      // Fallback: try to fetch by code (for already used tickets where ticket_id might not be returned)
+      console.log('Fetching ticket details by code as fallback');
+      const ticketResult = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(*),
+          orders(*),
+          services(id, title, vendor_id)
+        `)
+        .eq('code', code)
+        .single();
+      ticketDetails = ticketResult.data;
+      fetchError = ticketResult.error;
+    }
 
     if (fetchError) {
       console.error('Error fetching ticket details:', fetchError)
-      // Still return success but with limited info
+      // Still return success but with minimal info using the code that was verified
       return {
         valid: true,
-        ticket: { id: result.ticket_id, status: 'used', used_at: new Date().toISOString() },
+        ticket: { 
+          id: result.ticket_id || 'unknown', 
+          code: code, // Use the code that was successfully verified
+          status: 'used', 
+          used_at: result.used_at || new Date().toISOString(),
+          ticket_types: { title: 'Ticket' } // Default type
+        },
         already_used: result.already_used,
         message: result.already_used ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
       }
@@ -2042,6 +2149,29 @@ export async function deleteUser(userId: string): Promise<void> {
     if (profileError) {
       console.error('Error fetching user profile:', profileError)
       throw profileError
+    }
+
+    // Delete visitor sessions for this user
+    // We need to do this before deleting the user to avoid foreign key constraint issues
+    const { error: visitorSessionsError } = await supabase
+      .from('visitor_sessions')
+      .delete()
+      .eq('user_id', userId)
+
+    if (visitorSessionsError) {
+      console.error('Error deleting visitor sessions:', visitorSessionsError)
+      throw visitorSessionsError
+    }
+
+    // Delete service likes for this user
+    const { error: serviceLikesError } = await supabase
+      .from('service_likes')
+      .delete()
+      .eq('user_id', userId)
+
+    if (serviceLikesError) {
+      console.error('Error deleting service likes:', serviceLikesError)
+      throw serviceLikesError
     }
 
     // Delete related data based on user role
@@ -2457,6 +2587,29 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
             }
           }
         }
+      }
+    }
+
+    // When booking is completed, generate a review token and send review request email
+    if (data.status === 'completed') {
+      try {
+        const reviewToken = await generateReviewToken(id);
+        if (reviewToken) {
+          const serviceName = data.services?.title || 'the service';
+          const vendorName = data.services?.vendors?.business_name || 'the provider';
+          const result = await sendReviewRequestEmail(
+            id,
+            reviewToken.token,
+            reviewToken.guest_email,
+            reviewToken.guest_name,
+            serviceName,
+            vendorName
+          );
+          console.log('Review request generated for booking:', id, 'Review URL:', result.reviewUrl, 'Email sent:', result.sent);
+        }
+      } catch (reviewError) {
+        console.error('Error generating review request (non-blocking):', reviewError);
+        // Don't throw - this is non-critical
       }
     }
 
@@ -3706,16 +3859,20 @@ export async function addTransaction(transaction: {
       p_reference: transaction.reference || null
     });
 
+    // Log raw RPC response for easier debugging in browser console
+    console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
+
     if (error) {
       // If table doesn't exist, throw a more helpful error
       if (error.message?.includes('relation "transactions" does not exist')) {
         throw new Error('Transactions table does not exist. Please run the database migrations first.')
       }
-      console.error('Error adding transaction:', error)
+      console.error('Error adding transaction (RPC error):', JSON.stringify(error, Object.getOwnPropertyNames(error)))
       throw error
     }
 
     if (!data?.success) {
+      console.error('Error adding transaction (RPC returned failure):', data)
       throw new Error(data.error || 'Failed to create transaction');
     }
 
@@ -4164,9 +4321,10 @@ export async function getVendorActivityStats(vendorId: string) {
     // Get reviews for this vendor's services
     let vendorReviews: any[] = []
     const { data: reviewsData, error: reviewsError } = await supabase
-      .from('reviews')
-      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, profiles(full_name), services(title)')
+      .from('service_reviews')
+      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, visitor_name, services(title)')
       .in('service_id', vendorServices?.map((s: any) => s.id) || [])
+      .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(50)
     
@@ -4197,7 +4355,7 @@ export async function getVendorActivityStats(vendorId: string) {
     // Count countries for sessions that viewed this vendor's services
     serviceViewLogs.forEach((log: any) => {
       const sess = sessionById[log.visitor_session_id]
-      const country = sess?.country || sess?.country_code || null
+      const country = sess?.country || null
       if (country) {
         countryCounts[country] = (countryCounts[country] || 0) + 1
       }
@@ -4266,7 +4424,7 @@ export async function getVendorActivityStats(vendorId: string) {
         serviceName: r.services?.title || 'Unknown Service',
         rating: r.rating || 0,
         comment: r.comment || '',
-        visitorName: r.profiles?.full_name || 'Anonymous',
+        visitorName: r.visitor_name || 'Anonymous',
         date: r.created_at || new Date().toISOString(),
         helpful: r.helpful_count || 0
       })) || []
@@ -4609,27 +4767,30 @@ export async function createServiceReview(
     visitorName: string;
     visitorEmail?: string;
     rating: number;
+    kpiRatings?: Record<string, number>;
     comment?: string;
     isVerifiedBooking?: boolean;
+    reviewerCity?: string;
+    reviewerCountry?: string;
   }
 ): Promise<ServiceReview> {
   try {
-    const { data, error } = await supabase
-      .from('service_reviews')
-      .insert([{
-        service_id: serviceId,
-        visitor_session_id: review.visitorSessionId,
-        user_id: review.userId,
-        ip_address: review.ipAddress,
-        visitor_name: review.visitorName,
-        visitor_email: review.visitorEmail,
-        rating: review.rating,
-        comment: review.comment,
-        is_verified_booking: review.isVerifiedBooking || false,
-        status: 'pending', // Reviews start as pending
-      }])
-      .select('*')
-      .single();
+    // Use the SECURITY DEFINER RPC function to bypass RLS for both
+    // guest and logged-in review inserts
+    const { data, error } = await supabase.rpc('create_service_review', {
+      p_service_id: serviceId,
+      p_user_id: review.userId || null,
+      p_visitor_session_id: review.visitorSessionId || null,
+      p_ip_address: review.ipAddress || null,
+      p_visitor_name: review.visitorName,
+      p_visitor_email: review.visitorEmail || null,
+      p_rating: review.rating,
+      p_kpi_ratings: review.kpiRatings || null,
+      p_comment: review.comment || null,
+      p_is_verified_booking: review.isVerifiedBooking || false,
+      p_reviewer_city: review.reviewerCity || null,
+      p_reviewer_country: review.reviewerCountry || null,
+    });
 
     if (error) throw error;
     return data;
@@ -5077,5 +5238,355 @@ export async function getVisitorJourney(visitorSessionId: string) {
   } catch (err) {
     console.error('Error fetching visitor journey:', err);
     throw err;
+  }
+}
+
+// =====================================================
+// REVIEW TOKEN & REVIEW REQUEST SYSTEM
+// =====================================================
+
+export interface ReviewToken {
+  id: string;
+  booking_id: string;
+  service_id: string;
+  token: string;
+  guest_name: string;
+  guest_email: string;
+  is_used: boolean;
+  expires_at: string;
+  created_at: string;
+}
+
+/**
+ * Generate a unique review token for a completed booking
+ */
+export async function generateReviewToken(bookingId: string): Promise<ReviewToken | null> {
+  try {
+    // Fetch the booking with service details
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        services (id, title, slug, vendor_id, vendors (id, business_name)),
+        profiles (id, full_name, email)
+      `)
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError) throw bookingError;
+    if (!booking) throw new Error('Booking not found');
+
+    const guestName = booking.guest_name || booking.profiles?.full_name || 'Guest';
+    const guestEmail = booking.guest_email || booking.profiles?.email || '';
+
+    if (!guestEmail) {
+      console.warn('No email available for booking', bookingId);
+      return null;
+    }
+
+    // Generate a random token
+    const token = crypto.randomUUID ? crypto.randomUUID() : 
+      `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+    // Set expiry to 30 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const { data, error } = await supabase
+      .from('review_tokens')
+      .insert({
+        booking_id: bookingId,
+        service_id: booking.service_id,
+        token,
+        guest_name: guestName,
+        guest_email: guestEmail,
+        is_used: false,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error generating review token:', err);
+    return null;
+  }
+}
+
+/**
+ * Validate a review token and return associated data
+ */
+export async function validateReviewToken(token: string): Promise<{
+  valid: boolean;
+  tokenData?: ReviewToken;
+  booking?: any;
+  service?: any;
+} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('review_tokens')
+      .select('*')
+      .eq('token', token)
+      .single();
+
+    if (error || !data) {
+      return { valid: false };
+    }
+
+    // Check if already used
+    if (data.is_used) {
+      return { valid: false, tokenData: data };
+    }
+
+    // Check if expired
+    if (new Date(data.expires_at) < new Date()) {
+      return { valid: false, tokenData: data };
+    }
+
+    // Fetch service details
+    const { data: service } = await supabase
+      .from('services')
+      .select(`
+        id, title, slug, images, location, price, currency,
+        vendors (id, business_name),
+        service_categories (id, name)
+      `)
+      .eq('id', data.service_id)
+      .single();
+
+    // Fetch booking details
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', data.booking_id)
+      .single();
+
+    return {
+      valid: true,
+      tokenData: data,
+      booking,
+      service,
+    };
+  } catch (err) {
+    console.error('Error validating review token:', err);
+    return null;
+  }
+}
+
+/**
+ * Submit a review using a review token (verified booking review)
+ */
+export async function submitReviewWithToken(
+  token: string,
+  review: {
+    rating: number;
+    comment: string;
+    visitorName?: string;
+    kpiRatings?: Record<string, number>;
+  }
+): Promise<ServiceReview | null> {
+  try {
+    // Validate token first
+    const validation = await validateReviewToken(token);
+    if (!validation?.valid || !validation.tokenData) {
+      throw new Error('Invalid or expired review token');
+    }
+
+    const tokenData = validation.tokenData;
+
+    // Create the review as a verified booking review
+    const { data: reviewData, error: reviewError } = await supabase
+      .from('service_reviews')
+      .insert({
+        service_id: tokenData.service_id,
+        visitor_name: review.visitorName || tokenData.guest_name,
+        visitor_email: tokenData.guest_email,
+        rating: review.rating,
+        kpi_ratings: review.kpiRatings || null,
+        comment: review.comment,
+        is_verified_booking: true,
+        status: 'approved', // Auto-approve verified booking reviews
+      })
+      .select('*')
+      .single();
+
+    if (reviewError) throw reviewError;
+
+    // Mark token as used
+    await supabase
+      .from('review_tokens')
+      .update({ is_used: true })
+      .eq('id', tokenData.id);
+
+    return reviewData;
+  } catch (err) {
+    console.error('Error submitting review with token:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get all pending reviews for admin moderation
+ * Uses the admin RPC and filters client-side for pending status
+ */
+export async function getAllPendingReviews(): Promise<(ServiceReview & { service_title?: string; vendor_name?: string })[]> {
+  try {
+    const allReviews = await getAllReviewsForAdmin();
+    return allReviews.filter(r => r.status === 'pending');
+  } catch (err) {
+    console.error('Error fetching pending reviews:', err);
+    return [];
+  }
+}
+
+/**
+ * Get all reviews for admin (all statuses)
+ * Uses SECURITY DEFINER RPC to bypass RLS and ensure all reviews are returned
+ */
+export async function getAllReviewsForAdmin(): Promise<(ServiceReview & { service_title?: string; vendor_name?: string })[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_all_reviews_admin');
+
+    if (error) throw error;
+
+    // RPC returns a JSON array or null
+    const reviews = data || [];
+    return reviews.map((r: any) => ({
+      ...r,
+      service_title: r.service_title || 'Unknown Service',
+      vendor_name: r.vendor_name || 'Unknown Vendor',
+    }));
+  } catch (err) {
+    console.error('Error fetching all reviews:', err);
+    return [];
+  }
+}
+
+/**
+ * Approve a review (uses SECURITY DEFINER RPC to bypass RLS)
+ */
+export async function approveReview(reviewId: string, approvedBy?: string): Promise<ServiceReview> {
+  try {
+    const { data, error } = await supabase.rpc('admin_approve_review', {
+      p_review_id: reviewId,
+      p_approved_by: approvedBy || null,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error approving review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Reject a review (uses SECURITY DEFINER RPC to bypass RLS)
+ */
+export async function rejectReview(reviewId: string, reason?: string): Promise<ServiceReview> {
+  try {
+    const { data, error } = await supabase.rpc('admin_reject_review', {
+      p_review_id: reviewId,
+      p_reason: reason || 'Review does not meet guidelines',
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error rejecting review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get average rating for a service from approved reviews
+ */
+export async function getServiceAverageRating(serviceId: string): Promise<{ average: number; count: number; kpiAverages?: Record<string, { average: number; count: number }> }> {
+  try {
+    const { data, error } = await supabase
+      .from('service_reviews')
+      .select('rating, kpi_ratings')
+      .eq('service_id', serviceId)
+      .eq('status', 'approved');
+
+    if (error) throw error;
+
+    const reviews = data || [];
+    if (reviews.length === 0) return { average: 0, count: 0 };
+
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+
+    // Calculate KPI averages from all reviews that have kpi_ratings
+    const kpiTotals: Record<string, { total: number; count: number }> = {};
+    for (const review of reviews) {
+      if (review.kpi_ratings && typeof review.kpi_ratings === 'object') {
+        for (const [key, value] of Object.entries(review.kpi_ratings as Record<string, number>)) {
+          if (value && value > 0) {
+            if (!kpiTotals[key]) kpiTotals[key] = { total: 0, count: 0 };
+            kpiTotals[key].total += value;
+            kpiTotals[key].count += 1;
+          }
+        }
+      }
+    }
+
+    const kpiAverages: Record<string, { average: number; count: number }> = {};
+    for (const [key, { total: kpiTotal, count: kpiCount }] of Object.entries(kpiTotals)) {
+      kpiAverages[key] = {
+        average: Math.round((kpiTotal / kpiCount) * 10) / 10,
+        count: kpiCount,
+      };
+    }
+
+    return {
+      average: Math.round((total / reviews.length) * 10) / 10,
+      count: reviews.length,
+      kpiAverages: Object.keys(kpiAverages).length > 0 ? kpiAverages : undefined,
+    };
+  } catch (err) {
+    console.error('Error fetching average rating:', err);
+    return { average: 0, count: 0 };
+  }
+}
+
+/**
+ * Send review request email when booking is completed.
+ * Uses Supabase Edge Function or a simple fetch to your email API.
+ * Falls back to generating a review link the vendor can share manually.
+ */
+export async function sendReviewRequestEmail(
+  bookingId: string,
+  reviewToken: string,
+  guestEmail: string,
+  guestName: string,
+  serviceName: string,
+  vendorName: string
+): Promise<{ sent: boolean; reviewUrl: string }> {
+  const baseUrl = window.location.origin;
+  const reviewUrl = `${baseUrl}/review/${reviewToken}`;
+
+  try {
+    // Try to use Supabase Edge Function for email
+    const { error } = await supabase.functions.invoke('send-review-email', {
+      body: {
+        to: guestEmail,
+        guestName,
+        serviceName,
+        vendorName,
+        reviewUrl,
+        bookingId,
+      },
+    });
+
+    if (error) {
+      console.warn('Edge function email not available, review link generated:', reviewUrl);
+      return { sent: false, reviewUrl };
+    }
+
+    return { sent: true, reviewUrl };
+  } catch (err) {
+    console.warn('Email sending failed, review link generated:', reviewUrl);
+    return { sent: false, reviewUrl };
   }
 }

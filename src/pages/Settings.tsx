@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings as SettingsIcon, Bell, Shield, Globe, CreditCard, HelpCircle, LogOut, CheckCircle } from 'lucide-react'
+import { Settings as SettingsIcon, Bell, Shield, Globe, CreditCard, HelpCircle, LogOut, CheckCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { getUserPreferences } from '../lib/database'
 import type { UserPreferences } from '../types'
 
 export default function Settings() {
@@ -23,25 +24,19 @@ export default function Settings() {
       if (!user) return
 
       try {
-        const { data, error } = await supabase
-          .from('user_preferences')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-          console.error('Error loading preferences:', error)
-        } else if (data) {
+        const data = await getUserPreferences()
+        if (data) {
           setPreferences(data)
+          // Coerce possibly-undefined fields from UserPreferences to booleans for the UI
           setNotifications({
-            emailBookings: data.email_bookings,
-            emailPromotions: data.email_promotions,
-            pushBookings: data.push_bookings,
-            pushPromotions: data.push_promotions,
+            emailBookings: data.email_bookings ?? false,
+            emailPromotions: data.email_promotions ?? false,
+            pushBookings: data.push_bookings ?? false,
+            pushPromotions: data.push_promotions ?? false,
           })
         }
       } catch (error) {
-        console.error('Error loading preferences:', error)
+        console.error('Error loading preferences via helper:', error)
       }
     }
 
@@ -121,6 +116,13 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
+          <Link
+            to="/profile"
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-2">Manage your account preferences and settings</p>
         </div>
@@ -317,21 +319,22 @@ export default function Settings() {
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Are you sure you want to sign out?</h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Log out?</h3>
+            <p className="text-sm text-gray-500 mb-5">Are you sure you want to log out of your account?</p>
             <div className="flex space-x-3">
               <button
                 onClick={cancelSignOut}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmSignOut}
-                className="flex-1 px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                className="flex-1 px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
-                Sign Out
+                Log out
               </button>
             </div>
           </div>

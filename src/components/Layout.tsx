@@ -18,7 +18,8 @@ import {
   Search,
   Globe,
   ChevronRight,
-  Eye
+  Eye,
+  Star
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -77,6 +78,7 @@ const navigation = [
   {
     category: 'Content',
     items: [
+      { labelKey: 'reviews', href: '/admin/reviews', icon: Star },
       { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 }
     ]
   },
@@ -400,19 +402,20 @@ export default function Layout() {
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logout_confirm')}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Log out?</h3>
+            <p className="text-sm text-gray-500 mb-5">Are you sure you want to log out of your account?</p>
             <div className="flex space-x-3">
               <button
                 onClick={cancelSignOut}
                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                {t('cancel')}
+                Cancel
               </button>
               <button
                 onClick={confirmSignOut}
                 className="flex-1 px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
               >
-                {t('log_out')}
+                Log out
               </button>
             </div>
           </div>

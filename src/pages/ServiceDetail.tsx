@@ -15,10 +15,13 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews } from '../lib/database'
+import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews, createServiceReview, getServiceAverageRating } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
+import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib/reviewKpis'
+import type { KpiRatings } from '../lib/reviewKpis'
+import CitySearchInput from '../components/CitySearchInput'
 
 interface ServiceDetail {
   id: string
@@ -152,8 +155,20 @@ export default function ServiceDetail() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [reviews, setReviews] = useState<any[]>([])
+  const [averageRating, setAverageRating] = useState(0)
+  const [reviewCount, setReviewCount] = useState(0)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSuccess, setReviewSuccess] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
+  
+  const [hoverRating, setHoverRating] = useState(0)
+  const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
+  const [kpiHoverRatings, setKpiHoverRatings] = useState<KpiRatings>({})
+  const [kpiAverages, setKpiAverages] = useState<Record<string, { average: number; count: number }>>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { addToCart } = useCart()
   const { selectedCurrency, selectedLanguage } = usePreferences()
 
@@ -297,6 +312,11 @@ export default function ServiceDetail() {
         try {
           const serviceReviews = await getServiceReviews(serviceData.id)
           setReviews(serviceReviews || [])
+          // Get real average rating
+          const ratingData = await getServiceAverageRating(serviceData.id)
+          setAverageRating(ratingData.average)
+          setReviewCount(ratingData.count)
+          if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
         } catch (error) {
           console.error('Error fetching reviews:', error)
           setReviews([])
@@ -307,6 +327,69 @@ export default function ServiceDetail() {
       console.error('Error fetching service:', error)
       setService(null) // Explicitly set to null on error
       setLoading(false)
+    }
+  }
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!service) return
+    
+    // Get category KPIs
+    const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+    
+    // Check if all KPIs are rated
+    const hasKpis = categoryKpis.length > 0
+    if (hasKpis) {
+      const unrated = categoryKpis.filter(kpi => !kpiRatings[kpi.key] || kpiRatings[kpi.key] === 0)
+      if (unrated.length > 0) {
+        setReviewError(`Please rate all categories: ${unrated.map(k => k.label).join(', ')}`)
+        return
+      }
+    }
+    
+    // Calculate overall rating from KPIs if KPIs are provided
+    const overallRating = hasKpis ? calculateOverallFromKpis(kpiRatings) : reviewForm.rating
+    if (overallRating === 0) { setReviewError('Please select a rating'); return }
+
+    // Use profile data for logged-in users, form data for guests
+    const isLoggedIn = !!(user && profile)
+    const reviewerName = isLoggedIn ? profile.full_name : reviewForm.name.trim()
+    const reviewerEmail = isLoggedIn ? (user.email || profile.email) : (reviewForm.email.trim() || undefined)
+
+    if (!reviewerName) { setReviewError('Please enter your name'); return }
+    if (!reviewForm.comment.trim()) { setReviewError('Please share your experience'); return }
+
+    setReviewSubmitting(true)
+    setReviewError(null)
+
+    try {
+      await createServiceReview(service.id, {
+        userId: user?.id,
+        visitorName: reviewerName,
+        visitorEmail: reviewerEmail,
+        rating: overallRating,
+        kpiRatings: hasKpis ? kpiRatings : undefined,
+        comment: reviewForm.comment.trim(),
+        isVerifiedBooking: false,
+        reviewerCity: reviewForm.city.trim() || undefined,
+        reviewerCountry: reviewForm.country.trim() || undefined,
+      })
+      setReviewSuccess(true)
+      setShowReviewForm(false)
+      setReviewForm({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
+      setKpiRatings({})
+      setTimeout(() => setReviewSuccess(false), 5000)
+      // Refresh reviews
+      const updatedReviews = await getServiceReviews(service.id)
+      setReviews(updatedReviews || [])
+      const ratingData = await getServiceAverageRating(service.id)
+      setAverageRating(ratingData.average)
+      setReviewCount(ratingData.count)
+      if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Failed to submit review')
+    } finally {
+      setReviewSubmitting(false)
     }
   }
 
@@ -1267,66 +1350,64 @@ export default function ServiceDetail() {
 
       {/* Mobile - Centered Info Block Near Image */}
       <div className="md:hidden bg-white border-b">
-        <div className="max-w-md mx-auto px-4 py-3 text-center">
+        <div className="px-4 py-2.5">
           {/* Title */}
-          <h1 className="text-lg font-bold text-gray-900 mb-2">{service.title}</h1>
+          <h1 className="text-base font-bold text-gray-900 mb-1">{service.title}</h1>
 
-          {/* Description */}
-          <p className="text-gray-700 text-xs leading-relaxed mb-1">
+          {/* Location + Rating inline */}
+          <div className="flex items-center justify-between">
+            <p className="text-gray-500 text-[11px]">
+              <MapPin className="inline h-3 w-3 mr-0.5 -mt-0.5" />{service.location}
+            </p>
+            <div className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-yellow-400 fill-current" />
+              <span className="text-[11px] font-bold text-gray-900">{averageRating || '0'}</span>
+              <span className="text-[11px] text-gray-400">({reviewCount})</span>
+            </div>
+          </div>
+
+          {/* Description - collapsed */}
+          <p className="text-gray-600 text-[11px] leading-relaxed mt-1.5 line-clamp-2">
             {service.description}
           </p>
-
-          {/* Location */}
-          <p className="text-gray-600 text-xs mb-2">
-            in {service.location}
-          </p>
-
-          {/* Rating & Reviews */}
-          <div className="flex items-center justify-center">
-            <div className="flex items-center">
-              <Star className="h-3 w-3 text-yellow-400 fill-current" />
-              <span className="ml-1 text-xs font-medium text-gray-900">4.5</span>
-            </div>
-            <span className="text-xs text-gray-500 ml-2">(24 reviews)</span>
-          </div>
         </div>
       </div>
 
       {/* Mobile Information Section - Organized & Logical Flow */}
       <div className="md:hidden bg-gray-50 pb-20">
-        <div className="px-4 py-6 space-y-6">
+        <div className="px-3 py-3 space-y-3">
           {/* 2. Quick Info - All Details Consolidated */}
-          <div className="bg-white rounded-lg p-4">
-            <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Quick Info</p>
-            <div className="space-y-2">
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
+            <div className="space-y-1.5">
               {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                <div className="flex items-center text-xs text-gray-700">
-                  <Clock className="h-4 w-4 text-gray-400 mr-2" />
+                <div className="flex items-center text-[11px] text-gray-700">
+                  <Clock className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
                   Duration: {service.duration_hours} hours
                 </div>
               )}
               {service.max_capacity && (
-                <div className="flex items-center text-xs text-gray-700">
-                  <Users className="h-4 w-4 text-gray-400 mr-2" />
+                <div className="flex items-center text-[11px] text-gray-700">
+                  <Users className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
                   Up to {service.max_capacity} guests
                 </div>
               )}
-              <div className="flex items-center text-xs text-gray-700">
-                <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+              <div className="flex items-center text-[11px] text-gray-700">
+                <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1.5" />
                 Instant confirmation
               </div>
               
               {/* Amenities in Quick Info */}
               {service.amenities && service.amenities.length > 0 && (
                 <>
-                  <div className="border-t pt-2 mt-2">
-                    <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
-                    <div className="space-y-1">
+                  <div className="border-t pt-1.5 mt-1.5">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
+                    <div className="flex flex-wrap gap-1">
                       {service.amenities.map((amenity, index) => (
-                        <div key={index} className="flex items-center text-xs text-gray-700">
-                          <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                        <span key={index} className="inline-flex items-center text-[10px] text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
+                          <CheckCircle className="h-2.5 w-2.5 text-green-500 mr-1 flex-shrink-0" />
                           {amenity}
-                        </div>
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -1336,19 +1417,19 @@ export default function ServiceDetail() {
               {/* Hotel-specific details in Quick Info */}
               {service.service_categories?.name?.toLowerCase() === 'hotels' && (
                 <>
-                  <div className="border-t pt-2 mt-2">
-                    <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
-                    <div className="space-y-1 text-xs">
+                  <div className="border-t pt-1.5 mt-1.5">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
                       {service.star_rating && (
-                        <div className="flex items-center">
-                          <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
-                          <span className="text-gray-700">{service.star_rating} Star</span>
+                        <div className="flex items-center text-gray-700">
+                          <Star className="h-2.5 w-2.5 text-yellow-400 fill-current mr-1" />
+                          {service.star_rating} Star
                         </div>
                       )}
                       {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
-                      {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
-                      {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
-                      {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
+                      {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay}n</span></div>}
+                      {service.check_in_time && <div className="text-gray-700">In: <span className="font-medium">{service.check_in_time}</span></div>}
+                      {service.check_out_time && <div className="text-gray-700">Out: <span className="font-medium">{service.check_out_time}</span></div>}
                     </div>
                   </div>
                 </>
@@ -1356,17 +1437,17 @@ export default function ServiceDetail() {
               
               {/* Provider info in Quick Info */}
               {service.vendors && (
-                <div className="border-t pt-2 mt-2">
-                  <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
-                  <div className="flex items-start space-x-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-blue-600">
+                <div className="border-t pt-1.5 mt-1.5">
+                  <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-blue-600">
                         {service.vendors.business_name?.charAt(0) || 'V'}
                       </span>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 text-xs">{service.vendors.business_name || 'Service Provider'}</h4>
-                      <p className="text-gray-600 text-xs mt-0.5 line-clamp-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-[11px]">{service.vendors.business_name || 'Service Provider'}</h4>
+                      <p className="text-gray-500 text-[10px] truncate">
                         {service.vendors.business_description || 'No description available'}
                       </p>
                     </div>
@@ -1377,45 +1458,239 @@ export default function ServiceDetail() {
           </div>
 
           {/* Reviews Summary */}
-          <div className="bg-white rounded-lg p-4 border-t-4 border-yellow-400">
-            <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Reviews</p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="ml-1 text-lg font-bold text-gray-900">4.5</span>
+          <div className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
+              <button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium"
+              >
+                Write a Review
+              </button>
+            </div>
+            <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg p-2.5">
+              <div className="text-center flex-shrink-0">
+                <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-2.5 w-2.5 ${
+                        i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <p className="text-xs text-gray-600">({reviews.length} reviews)</p>
-                </div>
+                <p className="text-[9px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
               </div>
+              {/* All KPI bars */}
+              {Object.keys(kpiAverages).length > 0 && (
+                <div className="flex-1 border-l border-gray-200 pl-2.5 space-y-0.5">
+                  {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                    const avg = kpiAverages[kpi.key]?.average || 0
+                    return (
+                      <div key={kpi.key} className="flex items-center gap-1">
+                        <span className="text-[9px] text-gray-500 w-16 truncate">{kpi.label}</span>
+                        <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{ width: `${(avg / 5) * 100}%` }} />
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-700 w-4 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* User Reviews Messages */}
-          {reviews.length > 0 && (
-            <div className="bg-white rounded-lg p-4">
-              <p className="text-xs text-gray-500 font-medium mb-3 uppercase">Recent Reviews</p>
-              <div className="space-y-3">
-                {reviews.slice(0, 5).map((review, index) => (
-                  <div key={index} className="border-b pb-3 last:border-b-0">
-                    <div className="flex items-start justify-between mb-1">
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900">{review.visitor_name || 'Anonymous'}</p>
-                        <div className="flex items-center mt-0.5">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3 w-3 ${
-                                i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
+          {/* Review Success Message */}
+          {reviewSuccess && (
+            <div className="flex items-center gap-2 py-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <p className="text-gray-700 text-xs">Review submitted — it will appear once approved.</p>
+            </div>
+          )}
+
+          {/* Mobile Review Form */}
+          {showReviewForm && (
+            <div className="bg-white rounded-lg p-3 border border-emerald-200">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Share Your Experience</h4>
+              {reviewError && (
+                <p className="mb-2 text-xs text-red-600">{reviewError}</p>
+              )}
+              <form onSubmit={handleReviewSubmit} className="space-y-2">
+                {/* KPI Ratings */}
+                {(() => {
+                  const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+                  return categoryKpis.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
+                      <div className="space-y-1">
+                        {categoryKpis.map((kpi) => {
+                          const KpiIcon = getKpiIcon(kpi.key)
+                          return (
+                          <div key={kpi.key} className="flex items-center justify-between px-2 py-2">
+                            <span className="text-xs text-gray-700 flex items-center gap-1 w-20 flex-shrink-0 font-medium">
+                              <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                  onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                  onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
+                                  className="p-0"
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                </button>
+                              ))}
+                              <span className="text-xs text-gray-500 w-4 text-right ml-0.5">
+                                {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
+                              </span>
+                            </div>
+                          </div>
+                          )
+                        })}
+                      </div>
+                      {/* Overall calculated from KPIs */}
+                      {Object.keys(kpiRatings).length > 0 && (
+                        <div className="flex items-center justify-center gap-1 pt-1.5 border-t border-gray-100">
+                          <span className="text-xs font-semibold text-gray-900">Overall:</span>
+                          <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
                         </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 mb-1">Tap to rate</p>
+                      <div className="flex items-center justify-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                            onMouseEnter={() => setHoverRating(star)}
+                            onMouseLeave={() => setHoverRating(0)}
+                            className="p-0.5"
+                          >
+                            <Star className={`w-5 h-5 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                          </button>
+                        ))}
                       </div>
                     </div>
+                  )
+                })()}
+                {/* User info: auto-fill for logged-in, inputs for guests */}
+                {user && profile ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate">{profile.full_name} · {user.email}</p>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={reviewForm.name}
+                      onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                      placeholder="Your name *"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <input
+                      type="email"
+                      value={reviewForm.email}
+                      onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
+                      placeholder="Email (optional)"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <CitySearchInput
+                    city={reviewForm.city}
+                    onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
+                    placeholder="Your city"
+                    compact
+                  />
+                  <div className="flex items-center px-2.5 py-1.5 text-xs border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
+                    {reviewForm.country || 'Country'}
+                  </div>
+                </div>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Share your experience... *"
+                  rows={2}
+                  className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting}
+                    className="flex-1 py-1.5 bg-emerald-600 text-white text-xs rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
+                  >
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* User Reviews Messages */}
+          {reviews.length > 0 && (
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">Recent Reviews</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {reviews.slice(0, 10).map((review, index) => (
+                  <div key={index} className="flex-shrink-0 w-52 snap-start bg-gray-50 rounded-lg p-2.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {/* Avatar */}
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs font-bold">
+                          {(review.visitor_name || 'A').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
+                          {review.is_verified_booking && (
+                            <CheckCircle className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-[9px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
+                        {(review.reviewer_city || review.reviewer_country) && (
+                          <span className="text-[9px] text-gray-400 flex items-center gap-0.5">
+                            <MapPin className="w-2 h-2" />
+                            {[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-2.5 w-2.5 ${
+                            i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                          }`}
+                        />
+                      ))}
+                      <span className="text-[9px] font-semibold text-gray-500 ml-0.5">{review.rating.toFixed(1)}</span>
+                    </div>
+                    {/* Comment */}
                     {review.comment && (
-                      <p className="text-xs text-gray-600 line-clamp-3 mt-1">{review.comment}</p>
+                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{review.comment}</p>
                     )}
                   </div>
                 ))}
@@ -1549,9 +1824,9 @@ export default function ServiceDetail() {
                 <div className="flex items-center justify-center mt-4">
                   <div className="flex items-center">
                     <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="ml-1 text-sm font-medium text-gray-900">4.5</span>
+                    <span className="ml-1 text-sm font-medium text-gray-900">{averageRating || '0'}</span>
                   </div>
-                  <span className="text-sm text-gray-500 ml-2">({reviews.length} reviews)</span>
+                  <span className="text-sm text-gray-500 ml-2">({reviewCount} reviews)</span>
                 </div>
               </div>
 
@@ -1639,48 +1914,274 @@ export default function ServiceDetail() {
                 </div>
 
                 {/* Reviews Summary */}
-                <div className="bg-white rounded-lg p-6 shadow-sm border-t-4 border-yellow-400">
-                  <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Reviews</p>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center">
-                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                        <span className="ml-1 text-2xl font-bold text-gray-900">4.5</span>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">({reviews.length} reviews)</p>
+                <div className="bg-white rounded-lg p-4 shadow-sm border-t-4 border-yellow-400">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-base font-bold text-gray-900">Guest Reviews</p>
+                      <p className="text-xs text-gray-500">Real feedback from verified guests</p>
+                    </div>
+                    <button
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
+                    >
+                      Write a Review
+                    </button>
+                  </div>
+
+                  {/* Overall rating + KPI breakdown */}
+                  <div className="flex flex-col sm:flex-row gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                    {/* Overall Score */}
+                    <div className="flex items-center gap-2 sm:border-r sm:border-gray-200 sm:pr-4">
+                      <div className="text-center">
+                        <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+                        <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
+
+                    {/* KPI Averages Breakdown — single vertical list */}
+                    {Object.keys(kpiAverages).length > 0 && (
+                      <div className="flex-1 flex flex-col gap-1">
+                        {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                          const avg = kpiAverages[kpi.key]?.average || 0
+                          const KpiIcon = getKpiIcon(kpi.key)
+                          return (
+                            <div key={kpi.key} className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-gray-500 w-20 flex-shrink-0 flex items-center gap-1">
+                                <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
+                              </span>
+                              <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden min-w-[30px]">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full transition-all duration-500"
+                                  style={{ width: `${(avg / 5) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-gray-700 w-5 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Review Success Message */}
+                  {reviewSuccess && (
+                    <div className="mb-4 flex items-center gap-2 py-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <p className="text-gray-700 text-sm">Review submitted — it will appear once approved.</p>
+                    </div>
+                  )}
+
+                  {/* Desktop Review Form */}
+                  {showReviewForm && (
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Share Your Experience</h4>
+                      {reviewError && (
+                        <p className="mb-2 text-xs text-red-600">{reviewError}</p>
+                      )}
+                      <form onSubmit={handleReviewSubmit} className="space-y-3">
+                        {/* KPI Ratings */}
+                        {(() => {
+                          const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+                          return categoryKpis.length > 0 ? (
+                            <div className="space-y-2">
+                              <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
+                              <div className="bg-white rounded-md overflow-hidden">
+                                {categoryKpis.map((kpi, index) => {
+                                  const KpiIcon = getKpiIcon(kpi.key)
+                                  return (
+                                  <div key={kpi.key} className={`flex items-center justify-between px-3 py-2.5 ${index < categoryKpis.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                    <span className="text-sm text-gray-700 flex items-center gap-2 font-medium">
+                                      <KpiIcon className="w-4 h-4 text-gray-400" /> {kpi.label}
+                                    </span>
+                                    <div className="flex items-center gap-0.5">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                          key={star}
+                                          type="button"
+                                          onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                          onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                          onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
+                                          className="p-0 transition-transform hover:scale-105"
+                                        >
+                                          <Star className={`w-4 h-4 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                        </button>
+                                      ))}
+                                      <span className="text-xs text-gray-500 w-4 text-right ml-1">
+                                        {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  )
+                                })}
+                              </div>
+                              {/* Overall calculated */}
+                              {Object.keys(kpiRatings).length > 0 && (
+                                <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-200">
+                                  <span className="text-sm font-semibold text-gray-900">Overall:</span>
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600 mb-2">How would you rate your experience?</p>
+                              <div className="flex items-center justify-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    className="p-1 transition-transform hover:scale-110"
+                                  >
+                                    <Star className={`w-6 h-6 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                  </button>
+                                ))}
+                              </div>
+                              {(hoverRating || reviewForm.rating) > 0 && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hoverRating || reviewForm.rating]}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })()}
+                        {/* User info: auto-fill for logged-in, inputs for guests */}
+                        {user && profile ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 truncate">{profile.full_name} · {user.email}</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={reviewForm.name}
+                              onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                              placeholder="Your name *"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
+                            <input
+                              type="email"
+                              value={reviewForm.email}
+                              onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
+                              placeholder="Email (optional)"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <CitySearchInput
+                            city={reviewForm.city}
+                            onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
+                            placeholder="Search your city"
+                          />
+                          <div className="flex items-center px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
+                            {reviewForm.country || 'Country'}
+                          </div>
+                        </div>
+                        <textarea
+                          value={reviewForm.comment}
+                          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                          placeholder="Tell us about your experience... *"
+                          rows={3}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={reviewSubmitting}
+                            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
+                          >
+                            {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                   
                   {/* Reviews List */}
                   {reviews && reviews.length > 0 ? (
-                    <div className="space-y-4 border-t pt-4">
-                      {reviews.map((review, index) => (
-                        <div key={index} className="border-b pb-4 last:border-b-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">{review.visitor_name || 'Anonymous'}</p>
-                              <div className="flex items-center mt-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-3 w-3 ${
-                                      i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-gray-400 font-semibold mb-3 uppercase tracking-wider">{reviews.length} Review{reviews.length !== 1 ? 's' : ''}</p>
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {reviews.map((review, index) => (
+                          <div key={index} className="flex-shrink-0 w-64 snap-start bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            {/* Header: Avatar, Name, Location, and Date */}
+                            <div className="flex items-start gap-2 mb-2">
+                              {/* Avatar */}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <span className="text-white text-sm font-bold">
+                                  {(review.visitor_name || 'A').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
+                                  {review.is_verified_booking && (
+                                    <CheckCircle className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                                {/* Location on same line as name */}
+                                {(review.reviewer_city || review.reviewer_country) && (
+                                  <div className="text-xs text-gray-400 mb-0.5">
+                                    <span>{[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}</span>
+                                  </div>
+                                )}
+                                {/* Date aligned with name and location */}
+                                <div className="text-xs text-gray-400">
+                                  {new Date(review.created_at).toLocaleDateString()}
+                                </div>
                               </div>
                             </div>
+                            
+                            {/* Rating */}
+                            <div className="flex items-center gap-1 mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-xs font-semibold text-gray-600 ml-1">{review.rating.toFixed(1)}</span>
+                            </div>
+                            
+                            {/* Comment */}
+                            {review.comment && (
+                              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{review.comment}</p>
+                            )}
                           </div>
-                          {review.comment && (
-                            <p className="text-sm text-gray-600">{review.comment}</p>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 pt-4 border-t">No reviews yet. Be the first to share your experience!</p>
+                    <div className="text-center py-6 border-t">
+                      <Star className="w-6 h-6 text-gray-200 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No reviews yet. Be the first to share your experience!</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1927,6 +2428,7 @@ export default function ServiceDetail() {
           )}
         </div>
       )}
+
     </div>
   )
 }

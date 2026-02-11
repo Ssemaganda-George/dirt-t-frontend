@@ -19,9 +19,15 @@ interface Profile {
   id: string
   email: string
   full_name: string
+  first_name?: string
+  last_name?: string
+  phone?: string
+  phone_country_code?: string
   avatar_url?: string
   role: 'admin' | 'vendor' | 'tourist'
   status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
+  home_city?: string
+  home_country?: string
   created_at: string
   updated_at: string
 }
@@ -42,7 +48,7 @@ interface AuthContextType {
   loading: boolean
   loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
-  signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
+  signUp: (email: string, password: string, firstName: string, lastName: string, role?: string, homeCity?: string, homeCountry?: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   confirmSignOut: () => Promise<void>
@@ -243,7 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   /** -------------------- Sign Up -------------------- */
-  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist') => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, role: string = 'tourist', homeCity?: string, homeCountry?: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
 
@@ -259,8 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileResult = await serviceClient.rpc('create_user_profile_atomic', {
         p_user_id: u.id,
         p_email: email,
-        p_full_name: fullName,
-        p_role: role
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_role: role,
+        p_home_city: homeCity || null,
+        p_home_country: homeCountry || null
       });
 
       if (!profileResult.data?.success) {
@@ -268,6 +277,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Unexpected error creating profile during sign up:', err);
+    }
+
+    if (role === 'tourist') {
+      try {
+        // Tourist record will be created automatically by database trigger
+        // No need to manually create it here
+        console.log('Tourist record will be created by database trigger');
+      } catch (err) {
+        console.error('Unexpected error during tourist signup:', err);
+      }
     }
 
     if (role === 'vendor') {
@@ -285,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Unexpected error creating vendor during sign up:', err);
       }
-      sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
+      sendVendorSignupEmail({ userId: u.id, email, fullName: `${firstName} ${lastName}` }).catch(console.error)
     }
 
     // Fetch profile in background (non-blocking)

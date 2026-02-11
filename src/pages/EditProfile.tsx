@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, User, Phone, Camera, X } from 'lucide-react'
+import { ArrowLeft, Save, User, Camera, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import type { Tourist } from '../lib/database'
+import CitySearchInput from '../components/CitySearchInput'
+import PhoneModal from '../components/PhoneModal'
 
 export default function EditProfile() {
   const { user, profile, updateProfile } = useAuth()
@@ -15,15 +17,22 @@ export default function EditProfile() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
     full_name: '',
     phone: '',
+    country_code: '+256', // Default to Uganda
+    tourist_home_city: '',
+    tourist_home_country: '',
     emergency_contact: '',
     emergency_phone: '',
+    emergency_country_code: '+256', // Default to Uganda
     emergency_relationship: '',
     emergency_email: '',
     emergency_address: '',
-    travel_preferences: '',
+    travel_preferences: [] as string[],
     dietary_restrictions: '',
     medical_conditions: ''
   })
@@ -54,15 +63,34 @@ export default function EditProfile() {
 
   useEffect(() => {
     if (profile || touristData) {
+      const fullName = profile?.full_name || ''
+      const nameParts = fullName.split(' ')
+      const firstName = touristData?.first_name || nameParts[0] || ''
+      const lastName = touristData?.last_name || nameParts.slice(1).join(' ') || ''
+
+      // Handle travel preferences - convert from string to array if needed
+      const travelPrefs = touristData?.travel_preferences
+      const travelPreferencesArray = Array.isArray(travelPrefs) 
+        ? travelPrefs 
+        : (typeof travelPrefs === 'string' && travelPrefs.trim() 
+            ? travelPrefs.split(',').map(pref => pref.trim()) 
+            : [])
+
       setFormData({
+        first_name: firstName,
+        last_name: lastName,
         full_name: profile?.full_name || '',
         phone: touristData?.phone || '',
+        country_code: touristData?.country_code || '+256',
+        tourist_home_city: touristData?.tourist_home_city || '',
+        tourist_home_country: touristData?.tourist_home_country || '',
         emergency_contact: touristData?.emergency_contact || '',
         emergency_phone: touristData?.emergency_phone || '',
+        emergency_country_code: touristData?.emergency_country_code || '+256',
         emergency_relationship: touristData?.emergency_relationship || '',
         emergency_email: touristData?.emergency_email || '',
         emergency_address: touristData?.emergency_address || '',
-        travel_preferences: touristData?.travel_preferences || '',
+        travel_preferences: travelPreferencesArray,
         dietary_restrictions: touristData?.dietary_restrictions || '',
         medical_conditions: touristData?.medical_conditions || ''
       })
@@ -74,6 +102,15 @@ export default function EditProfile() {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+  }
+
+  const handleTravelPreferenceChange = (preference: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      travel_preferences: checked
+        ? [...prev.travel_preferences, preference]
+        : prev.travel_preferences.filter(pref => pref !== preference)
     }))
   }
 
@@ -168,19 +205,25 @@ export default function EditProfile() {
 
       // Update basic profile fields
       await updateProfile({
-        full_name: formData.full_name
+        full_name: `${formData.first_name} ${formData.last_name}`.trim()
       })
 
       // Update or create tourist record
       const touristUpdates = {
         user_id: user.id,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         phone: formData.phone,
+        country_code: formData.country_code,
+        tourist_home_city: formData.tourist_home_city,
+        tourist_home_country: formData.tourist_home_country,
         emergency_contact: formData.emergency_contact,
         emergency_phone: formData.emergency_phone,
+        emergency_country_code: formData.emergency_country_code,
         emergency_relationship: formData.emergency_relationship,
         emergency_email: formData.emergency_email,
         emergency_address: formData.emergency_address,
-        travel_preferences: formData.travel_preferences,
+        travel_preferences: formData.travel_preferences.join(', '),
         dietary_restrictions: formData.dietary_restrictions,
         medical_conditions: formData.medical_conditions,
         updated_at: new Date().toISOString()
@@ -321,40 +364,65 @@ export default function EditProfile() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
+                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name *
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    id="full_name"
-                    name="full_name"
+                    id="first_name"
+                    name="first_name"
                     required
-                    value={formData.full_name}
+                    value={formData.first_name}
                     onChange={handleInputChange}
                     className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your full name"
+                    placeholder="Enter your first name"
                   />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
+                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name *
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    required
+                    value={formData.last_name}
                     onChange={handleInputChange}
                     className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter your phone number"
+                    placeholder="Enter your last name"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <PhoneModal
+                  phone={formData.phone}
+                  countryCode={formData.country_code}
+                  onPhoneChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+                  onCountryCodeChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
+                  placeholder="700 000 000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Home City
+                </label>
+                <CitySearchInput
+                  city={formData.tourist_home_city}
+                  onSelect={(city, country) => setFormData(prev => ({ ...prev, tourist_home_city: city, tourist_home_country: country }))}
+                  placeholder="Search your city..."
+                />
               </div>
             </div>
           </div>
@@ -403,17 +471,15 @@ export default function EditProfile() {
               </div>
 
               <div>
-                <label htmlFor="emergency_phone" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number *
                 </label>
-                <input
-                  type="tel"
-                  id="emergency_phone"
-                  name="emergency_phone"
-                  value={formData.emergency_phone}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter phone number"
+                <PhoneModal
+                  phone={formData.emergency_phone}
+                  countryCode={formData.emergency_country_code}
+                  onPhoneChange={(phone) => setFormData(prev => ({ ...prev, emergency_phone: phone }))}
+                  onCountryCodeChange={(countryCode) => setFormData(prev => ({ ...prev, emergency_country_code: countryCode }))}
+                  placeholder="700 000 000"
                 />
               </div>
 
@@ -454,18 +520,33 @@ export default function EditProfile() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Travel Preferences</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="travel_preferences" className="block text-sm font-medium text-gray-700 mb-2">
-                  Travel Preferences
-                </label>
-                <textarea
-                  id="travel_preferences"
-                  name="travel_preferences"
-                  rows={3}
-                  value={formData.travel_preferences}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Describe your travel preferences (e.g., adventure, relaxation, cultural experiences)"
-                />
+                <p className="text-sm text-gray-600 mb-4">Select all that apply to describe your travel preferences</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    'Adventure',
+                    'Relaxation',
+                    'Cultural Experiences',
+                    'Nature & Wildlife',
+                    'Beach & Resort',
+                    'City Exploration',
+                    'Food & Cuisine',
+                    'History & Heritage',
+                    'Shopping',
+                    'Nightlife',
+                    'Sports & Activities',
+                    'Luxury Travel'
+                  ].map((preference) => (
+                    <label key={preference} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.travel_preferences.includes(preference)}
+                        onChange={(e) => handleTravelPreferenceChange(preference, e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">{preference}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>

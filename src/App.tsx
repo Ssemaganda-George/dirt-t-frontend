@@ -19,7 +19,7 @@ const BookingFlow = lazy(() => import('./pages/BookingFlow'))
 const ServiceInquiry = lazy(() => import('./pages/ServiceInquiry'))
 const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const ServiceCategories = lazy(() => import('./pages/Services'))
-const Profile = lazy(() => import('./pages/Profile'))
+const UserDashboard = lazy(() => import('./pages/Dashboard'))
 const Login = lazy(() => import('./pages/Login'))
 const VendorLogin = lazy(() => import('./pages/VendorLogin'))
 const VendorPending = lazy(() => import('./pages/VendorPending'))
@@ -52,6 +52,7 @@ const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
 const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
+const VerifyTicket = lazy(() => import('./pages/VerifyTicket'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const Payment = lazy(() => import('./pages/Payment'))
 const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
@@ -71,12 +72,14 @@ const ShopsBookings = lazy(() => import('./pages/admin/ShopsBookings').then(modu
 const ToursBookings = lazy(() => import('./pages/admin/ToursBookings').then(module => ({ default: module.ToursBookings })))
 const TransportBookings = lazy(() => import('./pages/admin/TransportBookings').then(module => ({ default: module.TransportBookings })))
 const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(module => ({ default: module.VisitorActivity })))
+const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => ({ default: module.Reviews })))
+const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
   // Preload login and common pages that users might visit
   import('./pages/Login')
-  import('./pages/Profile')
+  import('./pages/Dashboard')
   import('./pages/ServiceDetail')
   import('./pages/CategoryPage')
 }
@@ -128,18 +131,20 @@ function App() {
               <Routes>
           {/* Public Routes */}
           <Route path="/connection-test" element={<ConnectionTest />} />
+          <Route path="/review/:token" element={<ReviewFromEmail />} />
           <Route path="/" element={<PublicLayout />}>
             <Route path="booking/:id" element={<BookingDetail />} />
             <Route index element={<Home />} />
             <Route path="scan/:id" element={<ScanEvent />} />
             <Route path="tickets/:orderId" element={<TicketReceipt />} />
+            <Route path="verify-ticket/:ticketCode" element={<VerifyTicket />} />
             <Route path="checkout/:orderId" element={<Checkout />} />
             <Route path="checkout/:orderId/payment" element={<Payment />} />
             <Route path="service/:slug" element={<ServiceDetail />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
             <Route path="services" element={<ServiceCategories />} />
-            <Route path="profile" element={<Profile />} />
+            <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
@@ -268,6 +273,7 @@ function App() {
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
             <Route path="visitor-activity" element={<VisitorActivity />} />
+            <Route path="reviews" element={<AdminReviews />} />
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">

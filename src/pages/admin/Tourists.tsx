@@ -17,6 +17,8 @@ interface Profile {
   suspended_at?: string
   suspension_period?: string
   suspension_end_at?: string
+  home_city?: string
+  home_country?: string
   created_at: string
   updated_at: string
 }
@@ -50,6 +52,9 @@ interface Tourist {
   travel_preferences?: string
   dietary_restrictions?: string
   medical_conditions?: string
+  location?: string
+  tourist_home_city?: string
+  tourist_home_country?: string
   created_at: string
   updated_at: string
   profiles?: Profile
@@ -86,6 +91,35 @@ export default function Tourists() {
     fetchUsers()
   }, [])
 
+  // Fetch tourist data when user details modal is opened
+  useEffect(() => {
+    const fetchTouristData = async () => {
+      if (!selectedUser || selectedUser.profile.role !== 'tourist') return
+
+      try {
+        const { data: touristData, error } = await supabase
+          .from('tourists')
+          .select('*')
+          .eq('user_id', selectedUser.profile.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error('Error fetching tourist data:', error)
+        } else if (touristData) {
+          // Update the selectedUser with tourist data
+          setSelectedUser({
+            ...selectedUser,
+            tourist: touristData
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching tourist data:', error)
+      }
+    }
+
+    fetchTouristData()
+  }, [selectedUser?.profile.id])
+
   const fetchUsers = async () => {
     try {
       setLoading(true)
@@ -105,16 +139,16 @@ export default function Tourists() {
       // Create user details using only profile data
       const usersWithDetails: UserWithDetails[] = profiles.map(profile => {
         // Use profile status directly
-        const profileStatus = profile.status || (profile.role === 'vendor' ? 'pending' : 'active')
+        const profileStatus = profile.status || 'active'
 
         return {
           profile: {
             ...profile,
             status: profileStatus
           },
-          vendor: undefined, // Not fetching vendor data
-          tourist: undefined, // Not fetching tourist data
-          isVerified: (profile.role === 'vendor' && profileStatus === 'approved') || profile.role === 'tourist' || profile.role === 'admin'
+          vendor: undefined, // Not applicable for tourists
+          tourist: undefined, // Will be loaded on demand
+          isVerified: profile.role === 'tourist' || profile.role === 'admin'
         }
       })
 
@@ -682,10 +716,16 @@ export default function Tourists() {
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedUser.profile.full_name || 'Not provided'}</p>
                     <p><span className="font-medium">Email:</span> {selectedUser.profile.email}</p>
-                    <p><span className="font-medium">Phone:</span> {selectedUser.profile.phone || 'Not provided'}</p>
+                    <p><span className="font-medium">Phone:</span> {selectedUser.tourist?.phone || selectedUser.profile.phone || 'Not provided'}</p>
                     <p><span className="font-medium">Role:</span> <span className="capitalize">{selectedUser.profile.role}</span></p>
                     <p><span className="font-medium">Status:</span> <span className={`capitalize ${selectedUser.profile.status === 'suspended' ? 'text-orange-600 font-semibold' : 'text-green-600'}`}>{selectedUser.profile.status || 'active'}</span></p>
                     <p><span className="font-medium">Joined:</span> {formatDate(selectedUser.profile.created_at)}</p>
+                    {selectedUser.profile.role === 'tourist' && (
+                      <>
+                        <p><span className="font-medium">Home City:</span> {selectedUser.tourist?.tourist_home_city || selectedUser.profile.home_city || 'Not provided'}</p>
+                        <p><span className="font-medium">Home Country:</span> {selectedUser.tourist?.tourist_home_country || selectedUser.profile.home_country || 'Not provided'}</p>
+                      </>
+                    )}
                     {selectedUser.profile.status === 'suspended' && (
                       <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                         <p className="text-orange-800 text-sm">

@@ -173,7 +173,7 @@ BEGIN
 
   -- Check ticket status
   IF v_ticket.status = 'used' THEN
-    RETURN jsonb_build_object('success', true, 'already_used', true, 'used_at', v_ticket.used_at, 'status', 'used');
+    RETURN jsonb_build_object('success', true, 'already_used', true, 'ticket_id', v_ticket.id, 'used_at', v_ticket.used_at, 'status', 'used');
   ELSIF v_ticket.status NOT IN ('issued', 'confirmed', 'paid') THEN
     RETURN jsonb_build_object('success', false, 'error', format('Ticket status is %s', v_ticket.status), 'status', v_ticket.status);
   END IF;
