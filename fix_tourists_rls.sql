@@ -5,9 +5,11 @@
 ALTER TABLE tourists ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view their own tourist records" ON tourists;
+DROP POLICY IF EXISTS "Admins can view all tourist records" ON tourists;
+DROP POLICY IF EXISTS "Authenticated users can view tourist records" ON tourists;
 DROP POLICY IF EXISTS "Users can insert their own tourist records" ON tourists;
 DROP POLICY IF EXISTS "Users can update their own tourist records" ON tourists;
+DROP POLICY IF EXISTS "Users can view their own tourist records" ON tourists;
 DROP POLICY IF EXISTS "Admins can manage all tourist records" ON tourists;
 
 -- Create policy for users to view their own tourist records
@@ -31,3 +33,4 @@ CREATE POLICY "Admins can manage all tourist records" ON tourists
       AND profiles.role = 'admin'
     )
   );
+

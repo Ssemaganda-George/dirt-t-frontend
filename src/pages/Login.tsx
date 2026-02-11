@@ -17,7 +17,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -50,13 +50,9 @@ export default function Login() {
     }
 
     try {
-      // Split full name into first and last name
-      const nameParts = fullName.trim().split(' ')
-      const firstName = nameParts[0] || ''
-      const lastName = nameParts.slice(1).join(' ') || ''
-
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity, homeCountry)
-      navigate('/', { replace: true })
+      await signUp(email, password, fullName, 'tourist')
+      // After creating the account, sign the user out so they must verify email before logging in
+      await signOut()
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
