@@ -112,41 +112,6 @@ export default function TicketReceiptPage() {
     load()
   }, [orderId])
 
-  const testPdfGeneration = async () => {
-    console.log('Testing PDF generation...')
-    console.log('html2pdf available:', typeof html2pdf)
-
-    if (typeof html2pdf === 'undefined') {
-      alert('html2pdf library not loaded')
-      return
-    }
-
-    try {
-      // Create a simple test element
-      const testElement = document.createElement('div')
-      testElement.innerHTML = '<h1>Test PDF</h1><p>This is a test PDF generation.</p>'
-      testElement.style.padding = '20px'
-      testElement.style.backgroundColor = 'white'
-      document.body.appendChild(testElement)
-
-      const options = {
-        margin: 0.5,
-        filename: 'test.pdf',
-        image: { type: 'jpeg' as const, quality: 0.95 },
-        html2canvas: { scale: 1 },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
-      }
-
-      await html2pdf().set(options).from(testElement).save()
-      document.body.removeChild(testElement)
-      console.log('Test PDF generated successfully')
-      alert('Test PDF generated successfully!')
-    } catch (error) {
-      console.error('Test PDF failed:', error)
-      alert('Test PDF failed: ' + error)
-    }
-  }
-
   const downloadAllTickets = async () => {
 
     if (typeof html2pdf === 'undefined') {
@@ -280,12 +245,6 @@ export default function TicketReceiptPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-light text-gray-900">Your Tickets</h2>
           <div className="flex gap-2">
-            <button
-              onClick={testPdfGeneration}
-              className="bg-gray-500 text-white px-3 py-1.5 rounded text-xs font-light hover:opacity-90 transition-opacity"
-            >
-              Test PDF
-            </button>
             <button
               onClick={downloadAllTickets}
               style={{ backgroundColor: '#3B82F6' }}
@@ -443,7 +402,7 @@ export default function TicketReceiptPage() {
             >
               DirtTrails!
             </a>{' '}</div>
-          <div className="text-xs text-gray-600 mb-3">We hope you have an amazing experience at {tickets[0]?.services?.title || 'the event'}. See You!</div>
+          <div className="text-xs text-gray-600 mb-3">We hope you have an amazing experience at <span className="text-blue-600 font-semibold">{tickets[0]?.services?.title || 'the event'}</span>. See You!</div>
         </div>
       </div>
     </div>
