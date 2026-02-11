@@ -160,7 +160,7 @@ export default function ServiceDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const queryClient = useServiceDetailQueryClient()
-  const { data, isLoading, isSuccess } = useServiceDetailQuery(slug)
+  const { data, isLoading } = useServiceDetailQuery(slug)
 
   const service = (data?.service ?? null) as ServiceDetail | null
   const reviews = data?.reviews ?? []
