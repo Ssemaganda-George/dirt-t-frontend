@@ -469,7 +469,7 @@ export default function CheckoutPage() {
         {/* Progress Header - Fixed at top */}
         <div className="px-4 md:px-6 py-3 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg md:text-xl font-light">Checkout</h2>
+            <h2 className="text-lg md:text-xl font-bold">Checkout</h2>
             <div>
               <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
             </div>
@@ -496,7 +496,7 @@ export default function CheckoutPage() {
             {/* Left: Buyer Information (span 1 col on md) */}
             <div className="md:col-span-1 space-y-4">
               <div className="bg-white p-4 rounded border border-gray-200">
-                <h3 className="font-light text-base">Buyer Information</h3>
+                <h3 className="font-bold text-base">Buyer Information</h3>
                 <div className="grid grid-cols-1 gap-3 mt-4">
                   <div className="grid grid-cols-1 gap-3">
                     <div>
@@ -513,7 +513,7 @@ export default function CheckoutPage() {
                     <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="block text-xs font-light text-gray-700 mb-2">Cellphone</label>
+                    <label className="block text-xs font-light text-gray-700 mb-2">Mobile</label>
                     <div className="flex gap-2">
                       <div className="relative country-dropdown flex-shrink-0">
                         <button
@@ -580,7 +580,7 @@ export default function CheckoutPage() {
             <div className="md:col-span-2">
               <div className="sticky top-6 space-y-3">
                 <div className="bg-white p-4 rounded border border-gray-200">
-                  <h3 className="font-light text-sm mb-3">Order Summary</h3>
+                  <h3 className="font-bold text-sm mb-3">Order Summary</h3>
                   <div>
                     {/* Event info */}
                     <div className="flex items-center gap-3 mb-4">

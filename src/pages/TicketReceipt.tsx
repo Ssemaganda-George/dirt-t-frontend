@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
 import * as QRCode from 'qrcode'
-import html2canvas from 'html2canvas'
+import html2pdf from 'html2pdf.js'
 
 // Helper function to calculate dynamic font size based on email length
 const getEmailFontSize = (email: string) => {
@@ -112,22 +112,82 @@ export default function TicketReceiptPage() {
     load()
   }, [orderId])
 
+  const testPdfGeneration = async () => {
+    console.log('Testing PDF generation...')
+    console.log('html2pdf available:', typeof html2pdf)
+
+    if (typeof html2pdf === 'undefined') {
+      alert('html2pdf library not loaded')
+      return
+    }
+
+    try {
+      // Create a simple test element
+      const testElement = document.createElement('div')
+      testElement.innerHTML = '<h1>Test PDF</h1><p>This is a test PDF generation.</p>'
+      testElement.style.padding = '20px'
+      testElement.style.backgroundColor = 'white'
+      document.body.appendChild(testElement)
+
+      const options = {
+        margin: 0.5,
+        filename: 'test.pdf',
+        image: { type: 'jpeg' as const, quality: 0.95 },
+        html2canvas: { scale: 1 },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
+      }
+
+      await html2pdf().set(options).from(testElement).save()
+      document.body.removeChild(testElement)
+      console.log('Test PDF generated successfully')
+      alert('Test PDF generated successfully!')
+    } catch (error) {
+      console.error('Test PDF failed:', error)
+      alert('Test PDF failed: ' + error)
+    }
+  }
+
   const downloadAllTickets = async () => {
+
+    if (typeof html2pdf === 'undefined') {
+      console.error('html2pdf is not available')
+      alert('PDF library not loaded. Please refresh the page and try again.')
+      return
+    }
+
     for (let i = 0; i < tickets.length; i++) {
       const ticket = tickets[i]
+      console.log('Processing ticket:', ticket.code, ticket.id)
+
       const ticketElement = document.querySelector(`[data-ticket-id="${ticket.id}"]`) as HTMLElement
+      console.log('Found ticket element:', ticketElement)
 
       if (ticketElement) {
+        // Declare variables outside try block for error handling
+        let originalOverflow = ''
+        let originalMaxHeight = ''
+        let originalWidth = ''
+        let originalMaxWidth = ''
+        let truncatedElements: NodeListOf<Element> = ticketElement.querySelectorAll('.nonexistent-class')
+        let originalClasses: string[] = []
+
         try {
+          console.log('Starting PDF generation for ticket:', ticket.code)
+
           // Temporarily modify styles for better capture
-          const originalOverflow = ticketElement.style.overflow
-          const originalMaxHeight = ticketElement.style.maxHeight
+          originalOverflow = ticketElement.style.overflow
+          originalMaxHeight = ticketElement.style.maxHeight
+          originalWidth = ticketElement.style.width
+          originalMaxWidth = ticketElement.style.maxWidth
+
           ticketElement.style.overflow = 'visible'
           ticketElement.style.maxHeight = 'none'
+          ticketElement.style.width = '650px' // Force width to fit A4
+          ticketElement.style.maxWidth = '650px'
 
           // Remove truncation classes temporarily
-          const truncatedElements = ticketElement.querySelectorAll('.truncate, .line-clamp-1, .line-clamp-2')
-          const originalClasses: string[] = []
+          truncatedElements = ticketElement.querySelectorAll('.truncate, .line-clamp-1, .line-clamp-2')
+          originalClasses = []
           truncatedElements.forEach((el, index) => {
             originalClasses[index] = el.className
             el.className = el.className.replace(/\b(truncate|line-clamp-\d+)\b/g, '')
@@ -136,97 +196,79 @@ export default function TicketReceiptPage() {
           // Wait for images to load
           await new Promise(resolve => setTimeout(resolve, 500))
 
-          // Capture the ticket as an image
-          const canvas = await html2canvas(ticketElement, {
-            scale: 2, // Higher resolution
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            width: ticketElement.scrollWidth,
-            height: ticketElement.scrollHeight,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: ticketElement.scrollWidth,
-            windowHeight: ticketElement.scrollHeight,
-            logging: false,
-            imageTimeout: 0,
-            removeContainer: true
-          })
+          // Configure PDF options - high quality for clear, clean output
+          const options = {
+            margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number], // top, right, bottom, left margins
+            filename: `ticket-${ticket.code}.pdf`,
+            image: { type: 'jpeg' as const, quality: 1.0 }, // Maximum quality
+            html2canvas: {
+              scale: 2.5, // Higher scale for crisp, clear rendering
+              useCORS: true,
+              allowTaint: false,
+              backgroundColor: '#ffffff',
+              logging: false, // Disable logging for cleaner output
+              letterRendering: true,
+              width: 650, // Fixed width to fit A4 (8.27in - 1in margins = ~6.27in at 96 DPI)
+              height: ticketElement.scrollHeight, // Use scroll height for full content
+              scrollX: 0,
+              scrollY: 0,
+              windowWidth: 650,
+              windowHeight: ticketElement.scrollHeight,
+              imageTimeout: 0,
+              removeContainer: true,
+              foreignObjectRendering: true // Better rendering for complex elements
+            },
+            jsPDF: {
+              unit: 'in',
+              format: 'a4',
+              orientation: 'portrait' as const,
+              compress: false // Disable compression for better quality
+            }
+          }
+
+          console.log('PDF options configured, calling html2pdf')
+
+          // Generate and download PDF
+          await html2pdf().set(options).from(ticketElement).save()
+
+          console.log('PDF generated successfully for ticket:', ticket.code)
 
           // Restore original styles and classes
           ticketElement.style.overflow = originalOverflow
           ticketElement.style.maxHeight = originalMaxHeight
+          ticketElement.style.width = originalWidth
+          ticketElement.style.maxWidth = originalMaxWidth
           truncatedElements.forEach((el, index) => {
             el.className = originalClasses[index]
           })
 
-          // Convert to blob and download
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const url = URL.createObjectURL(blob)
+          // Add delay between downloads to prevent browser issues
+          if (i < tickets.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
 
-              // Check if device is mobile
-              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-              const supportsDownload = 'download' in document.createElement('a')
-
-              // Try to download first (works on most modern mobile browsers)
-              const link = document.createElement('a')
-              link.href = url
-              link.download = `ticket-${ticket.code}.png`
-
-              if (supportsDownload) {
-                // Try download approach first
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-
-                // For mobile, also try Web Share API as backup
-                if (isMobile && navigator.share) {
-                  try {
-                    const file = new File([blob], `ticket-${ticket.code}.png`, { type: 'image/png' })
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                      navigator.share({
-                        title: `Ticket ${ticket.code}`,
-                        files: [file]
-                      })
-                    }
-                  } catch (shareError) {
-                    // Web Share failed, but download might have worked
-                    console.log('Web Share failed, but download attempted')
-                  }
-                }
-              } else {
-                // Fallback for browsers that don't support download
-                if (isMobile && navigator.share) {
-                  try {
-                    const file = new File([blob], `ticket-${ticket.code}.png`, { type: 'image/png' })
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                      navigator.share({
-                        title: `Ticket ${ticket.code}`,
-                        files: [file]
-                      })
-                    } else {
-                      // Open in new tab as last resort
-                      window.open(url, '_blank')
-                    }
-                  } catch (shareError) {
-                    // Open in new tab as last resort
-                    window.open(url, '_blank')
-                  }
-                } else {
-                  // Open in new tab for manual saving
-                  window.open(url, '_blank')
-                }
-              }
-
-              URL.revokeObjectURL(url)
-            }
-          }, 'image/png')
         } catch (error) {
-          console.error('Failed to capture ticket as image:', error)
+          console.error('Error generating PDF for ticket:', ticket.code, error)
+
+          // Restore original styles and classes on error
+          ticketElement.style.overflow = originalOverflow
+          ticketElement.style.maxHeight = originalMaxHeight
+          ticketElement.style.width = originalWidth
+          ticketElement.style.maxWidth = originalMaxWidth
+          truncatedElements.forEach((el, index) => {
+            el.className = originalClasses[index]
+          })
+
+          // Show user-friendly error message
+          alert(`Failed to download ticket ${ticket.code}. Please try again.`)
         }
+      } else {
+        console.error('Ticket element not found for ticket:', ticket.code, ticket.id)
+        alert(`Ticket element not found for ${ticket.code}. Please refresh the page.`)
       }
     }
+
+    console.log('Download process completed')
   }
 
   if (loading) return <div className="p-4">Loading tickets…</div>
@@ -237,13 +279,21 @@ export default function TicketReceiptPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-light text-gray-900">Your Tickets</h2>
-          <button
-            onClick={downloadAllTickets}
-            style={{ backgroundColor: '#3B82F6' }}
-            className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
-          >
-            {tickets.length > 1 ? 'Download All' : 'Download Ticket'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={testPdfGeneration}
+              className="bg-gray-500 text-white px-3 py-1.5 rounded text-xs font-light hover:opacity-90 transition-opacity"
+            >
+              Test PDF
+            </button>
+            <button
+              onClick={downloadAllTickets}
+              style={{ backgroundColor: '#3B82F6' }}
+              className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
+            >
+              {tickets.length > 1 ? 'Download All' : 'Download Ticket'}
+            </button>
+          </div>
         </div>
         
         <div className="space-y-2">
