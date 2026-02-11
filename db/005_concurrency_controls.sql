@@ -604,9 +604,27 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Unauthorized: Service does not belong to this vendor');
   END IF;
 
-  -- Delete service atomically
-  DELETE FROM public.services
-  WHERE id = p_service_id;
+  -- Delete related records in correct order to handle foreign key constraints
+  -- 1. Delete tickets that reference this service
+  DELETE FROM public.tickets WHERE service_id = p_service_id;
+
+  -- 2. Delete order_items that reference ticket_types of this service
+  DELETE FROM public.order_items
+  WHERE ticket_type_id IN (
+    SELECT id FROM public.ticket_types WHERE service_id = p_service_id
+  );
+
+  -- 3. Delete orders that have no more order_items (optional cleanup)
+  DELETE FROM public.orders
+  WHERE id NOT IN (
+    SELECT DISTINCT order_id FROM public.order_items
+  );
+
+  -- 4. Delete ticket_types for this service (now safe since order_items are deleted)
+  DELETE FROM public.ticket_types WHERE service_id = p_service_id;
+
+  -- 5. Delete the service (other CASCADE relationships will handle the rest)
+  DELETE FROM public.services WHERE id = p_service_id;
 
   RETURN jsonb_build_object('success', true, 'service_id', p_service_id);
 

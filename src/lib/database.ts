@@ -727,8 +727,25 @@ export async function getServices(vendorId?: string) {
     // Vendor wants to see their own services (including pending)
     query = query.eq('vendor_id', vendorId)
   } else {
-    // Public listings should only include approved/active services
-    query = query.in('status', ['approved', 'active'])
+    // Check if current user is admin
+    const { data: { user } } = await supabase.auth.getUser();
+    let isAdmin = false;
+    
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      isAdmin = profile?.role === 'admin';
+    }
+
+    if (!isAdmin) {
+      // Public listings should only include approved/active services
+      query = query.in('status', ['approved', 'active'])
+    }
+    // If admin, don't filter by status - show all services
   }
 
   const { data, error } = await query.order('created_at', { ascending: false })

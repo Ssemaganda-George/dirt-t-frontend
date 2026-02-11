@@ -133,7 +133,19 @@ export function ShopsServices() {
   const approveDeleteRequest = async (requestId: string) => {
     setUpdatingStatus(requestId);
     try {
+      // Find the request to get the service ID
+      const request = deleteRequests.find(r => r.id === requestId);
+      if (!request) {
+        throw new Error('Delete request not found');
+      }
+
+      // Approve the delete request
       await updateDeleteRequestStatus(requestId, 'approved');
+      
+      // Delete the actual service
+      await deleteService(request.service_id);
+      
+      console.log('Successfully approved delete request and deleted service:', request.service_id);
     } catch (err) {
       console.error('Failed to approve delete request:', err);
     } finally {
