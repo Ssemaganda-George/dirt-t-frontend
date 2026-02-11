@@ -26,6 +26,7 @@ export default function PaymentPage() {
 
   useEffect(() => {
     return () => {
+      console.log('[Payment] unmount cleanup')
       if (paymentChannelRef.current) {
         paymentChannelRef.current.unsubscribe()
         paymentChannelRef.current = null
@@ -112,6 +113,7 @@ export default function PaymentPage() {
       setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
       const cleanup = () => {
+        console.log('[Payment] cleanup', { ref })
         if (paymentChannelRef.current) {
           paymentChannelRef.current.unsubscribe()
           paymentChannelRef.current = null
@@ -123,12 +125,14 @@ export default function PaymentPage() {
       }
 
       const handleCompleted = () => {
+        console.log('[Payment] handleCompleted called', { orderId, ref })
         cleanup()
         setPollingMessage('Payment confirmed! Redirecting…')
         navigate(`/tickets/${orderId}`)
       }
 
       const handleFailed = () => {
+        console.log('[Payment] handleFailed called', { ref })
         cleanup()
         setPollingMessage('')
         setPaymentReference(null)
@@ -138,16 +142,25 @@ export default function PaymentPage() {
 
       const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
         try {
-          const res = await fetch(
-            `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
-            { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
-          )
-          if (!res.ok) return null
-          const data = (await res.json()) as { status?: string }
+          const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`
+          console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+          })
+          const raw = await res.text()
+          console.log('[Payment] checkStatus: response', {
+            ok: res.ok,
+            status: res.status,
+            body: raw?.slice(0, 300),
+          })
+          const data = (JSON.parse(raw || '{}') as { status?: string; error?: string })
+          const result = data?.status === 'completed' ? 'completed' : data?.status === 'failed' ? 'failed' : null
+          console.log('[Payment] checkStatus: parsed', { 'data.status': data?.status, result })
           if (data?.status === 'completed') return 'completed'
           if (data?.status === 'failed') return 'failed'
           return null
-        } catch {
+        } catch (e) {
+          console.error('[Payment] checkStatus: error', e)
           return null
         }
       }
@@ -164,15 +177,19 @@ export default function PaymentPage() {
           },
           (payload) => {
             const row = payload.new as { status: string }
+            console.log('[Payment] Realtime UPDATE received', { ref, status: row?.status, payload: payload.new })
             if (row.status === 'completed') handleCompleted()
             else if (row.status === 'failed') handleFailed()
           }
         )
         .subscribe()
       paymentChannelRef.current = channel
+      console.log('[Payment] Realtime channel subscribed', { ref })
 
       const statusOnce = await checkStatus()
+      console.log('[Payment] statusOnce (immediate)', { statusOnce, ref })
       if (statusOnce === 'completed') {
+        console.log('[Payment] handleCompleted from immediate check')
         handleCompleted()
         return
       }
@@ -183,9 +200,13 @@ export default function PaymentPage() {
 
       backupPollRef.current = setInterval(async () => {
         const status = await checkStatus()
-        if (status === 'completed') handleCompleted()
-        else if (status === 'failed') handleFailed()
+        console.log('[Payment] poll tick', { status, ref, now: new Date().toISOString() })
+        if (status === 'completed') {
+          console.log('[Payment] handleCompleted from poll')
+          handleCompleted()
+        } else if (status === 'failed') handleFailed()
       }, 4000)
+      console.log('[Payment] backup poll started every 4s, will stop after 120s')
       setTimeout(() => {
         if (backupPollRef.current) {
           clearInterval(backupPollRef.current)

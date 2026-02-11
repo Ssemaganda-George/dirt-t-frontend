@@ -48,12 +48,18 @@ serve(async (req) => {
 
     const p = rows?.[0]
     if (!p) {
+      console.log("[marzpay-payment-status] not found", { reference })
       return new Response(JSON.stringify({ error: "Payment not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
+    console.log("[marzpay-payment-status] found", {
+      reference: p.reference,
+      status: p.status,
+      order_id: p.order_id,
+    })
     return new Response(
       JSON.stringify({
         reference: p.reference,
