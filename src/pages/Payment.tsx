@@ -1,8 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { confirmOrderAndIssueTickets } from '../lib/database'
 import { formatCurrency } from '../lib/utils'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+async function getPaymentStatus(reference: string): Promise<{ status: string; order_id?: string }> {
+  const res = await fetch(
+    `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(reference)}`,
+    { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as any).error || 'Failed to get payment status')
+  }
+  return res.json()
+}
 
 export default function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -15,6 +29,9 @@ export default function PaymentPage() {
   const [mobileProvider, setMobileProvider] = useState('')
   const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
   const [ticketEmail, setTicketEmail] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [paymentReference, setPaymentReference] = useState<string | null>(null)
+  const [pollingMessage, setPollingMessage] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -23,8 +40,11 @@ export default function PaymentPage() {
       try {
         const { data: o } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle()
         setOrder(o)
+        if (o?.guest_phone) {
+          const p = String(o.guest_phone).replace(/^\+256/, '')
+          setPhoneNumber(p.startsWith('0') ? p : p)
+        }
 
-        // Load order items
         const { data: its } = await supabase.from('order_items').select('*').eq('order_id', orderId)
         setItems(its || [])
       } catch (err) {
@@ -36,30 +56,88 @@ export default function PaymentPage() {
     load()
   }, [orderId])
 
-  const handlePayment = async () => {
+  const handlePayment = useCallback(async () => {
     if (!orderId || !order) return
+    const totalWithFee = Number(order.total_amount) + Math.max(1000, Math.round(Number(order.total_amount) * 0.01))
+    const rawPhone = (phoneNumber || order?.guest_phone || '').trim().replace(/^\+256/, '')
+    const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+
+    if (!phone || phone.length < 10) {
+      alert('Please enter a valid mobile money phone number (e.g. 0712345678 or +256712345678).')
+      return
+    }
+
     setProcessing(true)
+    setPollingMessage('')
+    setPaymentReference(null)
     try {
-      // Update order with buyer information (assuming it's already saved from checkout)
-      const payment = {
-        vendor_id: order.vendor_id,
-        tourist_id: order.user_id || undefined,
-        amount: order.total_amount,
-        currency: order.currency,
-        payment_method: paymentMethod,
-        reference: `PAY_${orderId}_${Date.now()}`
+      const { data: session } = await supabase.auth.getSession()
+      const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          amount: Math.round(totalWithFee),
+          phone_number: phone,
+          order_id: orderId,
+          description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
+          user_id: session?.session?.user?.id || undefined,
+        }),
+      })
+
+      const result = (await collectRes.json().catch(() => ({}))) as {
+        success?: boolean
+        error?: string
+        details?: unknown
+        data?: { reference: string; status: string }
       }
 
-      await confirmOrderAndIssueTickets(orderId, payment)
-      // After issuance, go to receipt/tickets page
-      navigate(`/tickets/${orderId}`)
-    } catch (err) {
-      console.error('Payment/issuance failed:', err)
-      alert('Payment failed or ticket issuance failed. See console for details.')
-    } finally {
+      if (!collectRes.ok) {
+        const msg = result?.error || `Payment initiation failed (${collectRes.status})`
+        if (result?.details) console.warn('Payment error details:', result.details)
+        throw new Error(msg)
+      }
+      if (!result?.success || !result?.data?.reference) {
+        throw new Error(result?.error || 'Payment initiation failed')
+      }
+
+      const ref = result.data.reference
+      setPaymentReference(ref)
+      setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+      const pollInterval = 2500
+      const maxAttempts = 120
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((r) => setTimeout(r, pollInterval))
+        const statusRes = await getPaymentStatus(ref)
+        if (statusRes.status === 'completed') {
+          setPollingMessage('Payment confirmed! Redirecting…')
+          navigate(`/tickets/${orderId}`)
+          return
+        }
+        if (statusRes.status === 'failed') {
+          setPollingMessage('')
+          setPaymentReference(null)
+          setProcessing(false)
+          alert('Payment was not completed or was declined. Please try again.')
+          return
+        }
+      }
+
+      setPollingMessage('')
+      setPaymentReference(null)
       setProcessing(false)
+      alert('Payment is taking longer than expected. You can check your tickets page later if the payment went through.')
+    } catch (err) {
+      console.error('Payment error:', err)
+      setPollingMessage('')
+      setPaymentReference(null)
+      setProcessing(false)
+      alert((err as Error).message || 'Payment failed. Please try again.')
     }
-  }
+  }, [orderId, order, phoneNumber, navigate])
 
   if (loading) return <div className="p-6">Loading order…</div>
   if (!order) return <div className="p-6">Order not found</div>
@@ -160,38 +238,51 @@ export default function PaymentPage() {
                 </div>
               </label>
 
-              {/* Mobile Money Provider Selection */}
+              {/* Mobile Money: Provider + Phone */}
               {paymentMethod === 'mobile_money' && (
-                <div className="ml-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <label className="block text-sm font-light text-gray-900 mb-3">Select Provider</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'MTN' ? '#3B82F6' : '#e5e7eb' }}>
-                      <input
-                        type="radio"
-                        name="provider"
-                        value="MTN"
-                        checked={mobileProvider === 'MTN'}
-                        onChange={(e) => setMobileProvider(e.target.value)}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-light text-gray-900">MTN Mobile Money</div>
-                      </div>
-                    </label>
+                <div className="ml-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
+                  <div>
+                    <label className="block text-sm font-light text-gray-900 mb-2">Mobile Money phone number *</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="0712345678 or +256712345678"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 font-light text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1 font-light">UG only: 07xx or 03xx (10 digits)</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-light text-gray-900 mb-3">Select Provider</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'MTN' ? '#3B82F6' : '#e5e7eb' }}>
+                        <input
+                          type="radio"
+                          name="provider"
+                          value="MTN"
+                          checked={mobileProvider === 'MTN'}
+                          onChange={(e) => setMobileProvider(e.target.value)}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-light text-gray-900">MTN Mobile Money</div>
+                        </div>
+                      </label>
 
-                    <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'Airtel' ? '#3B82F6' : '#e5e7eb' }}>
-                      <input
-                        type="radio"
-                        name="provider"
-                        value="Airtel"
-                        checked={mobileProvider === 'Airtel'}
-                        onChange={(e) => setMobileProvider(e.target.value)}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-light text-gray-900">Airtel Money</div>
-                      </div>
-                    </label>
+                      <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'Airtel' ? '#3B82F6' : '#e5e7eb' }}>
+                        <input
+                          type="radio"
+                          name="provider"
+                          value="Airtel"
+                          checked={mobileProvider === 'Airtel'}
+                          onChange={(e) => setMobileProvider(e.target.value)}
+                          className="mr-3"
+                        />
+                        <div>
+                          <div className="font-light text-gray-900">Airtel Money</div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -221,6 +312,12 @@ export default function PaymentPage() {
                 </p>
               </div>
             )}
+            {paymentReference && pollingMessage && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 font-light">{pollingMessage}</p>
+                <p className="text-xs text-blue-600 mt-2 font-mono">Ref: {paymentReference}</p>
+              </div>
+            )}
           </div>
 
           {/* Email for Tickets */}
@@ -245,16 +342,29 @@ export default function PaymentPage() {
             </button>
             <button
               onClick={handlePayment}
-              disabled={processing || (paymentMethod === 'card') || (paymentMethod === 'mobile_money' && !mobileProvider)}
-              style={{ backgroundColor: processing || !mobileProvider || paymentMethod === 'card' ? '#d1d5db' : '#3B82F6' }}
+              disabled={
+                processing ||
+                paymentMethod === 'card' ||
+                (paymentMethod === 'mobile_money' && (!mobileProvider || !phoneNumber.trim()))
+              }
+              style={{
+                backgroundColor:
+                  processing ||
+                  paymentMethod === 'card' ||
+                  !mobileProvider ||
+                  !phoneNumber.trim()
+                    ? '#d1d5db'
+                    : '#3B82F6',
+              }}
               className="flex-1 text-white font-light text-sm py-2 px-4 rounded-lg transition-all hover:shadow-lg disabled:cursor-not-allowed"
             >
               {processing ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⏳</span> Processing...
+                  <span className="animate-spin">⏳</span>
+                  {pollingMessage || 'Processing...'}
                 </span>
               ) : (
-                'Complete Payment'
+                'Pay with Mobile Money'
               )}
             </button>
           </div>
