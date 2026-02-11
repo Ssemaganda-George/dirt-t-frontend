@@ -12,7 +12,6 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [homeCity, setHomeCity] = useState('')
-  const [homeCountry, setHomeCountry] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -186,9 +185,8 @@ export default function Login() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Home city <span className="text-gray-400">(optional)</span></label>
                   <CitySearchInput
                     city={homeCity}
-                    onSelect={(city, country) => {
+                    onSelect={(city) => {
                       setHomeCity(city)
-                      setHomeCountry(country)
                     }}
                     placeholder="Search your city..."
                   />

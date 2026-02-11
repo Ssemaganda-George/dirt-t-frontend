@@ -297,6 +297,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = data.user
     if (!u) return
 
+    const fullName = `${firstName} ${lastName}`.trim()
+
     // Do not treat the user as logged in yet; they must verify their email first.
     await delay(100) // ensure user is created before service operations
 

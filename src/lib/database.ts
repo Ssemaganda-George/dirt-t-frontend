@@ -2611,7 +2611,7 @@ async function sendBookingEmails(bookingId: string): Promise<void> {
   }
 }
 
-export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>>): Promise<Booking> {
+export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status' | 'rejection_reason'>>): Promise<Booking> {
   try {
     console.log('DB: updateBooking called with id:', id, 'updates:', updates)
 
