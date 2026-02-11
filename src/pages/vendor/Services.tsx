@@ -10,6 +10,28 @@ import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
 import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
 
+function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]: any[] }, selectedCurrency: string, selectedLanguage: string) {
+  // For events/activities with ticket types, show ticket prices
+  if (service.category_id === 'cat_activities' && ticketTypes[service.id]?.length > 0) {
+    const ticketPrices = ticketTypes[service.id]
+      .map((ticket: any) => ticket.price)
+      .filter((price: number) => price > 0);
+    
+    if (ticketPrices.length > 0) {
+      const minPrice = Math.min(...ticketPrices);
+      const maxPrice = Math.max(...ticketPrices);
+      
+      if (minPrice === maxPrice) {
+        return formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage);
+      } else {
+        return `${formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(maxPrice, service.currency, selectedCurrency, selectedLanguage)}`;
+      }
+    }
+  }
+  
+  // Fallback to service price
+  return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage);
+}
 
   // Normalize a value from an HTML datetime-local input (e.g. "2026-02-11T21:29")
   // to an ISO UTC string (timestamptz-friendly). If parsing fails, return the
@@ -751,7 +773,7 @@ export default function VendorServices() {
                   <div className="flex items-center gap-4 mb-4 text-sm">
                     <span className="text-slate-500">{s.service_categories?.name || s.category_id}</span>
                     <span className="text-slate-300">·</span>
-                    <span className="font-semibold text-slate-900">{formatCurrencyWithConversion(s.price, s.currency, selectedCurrency, selectedLanguage)}</span>
+                    <span className="font-semibold text-slate-900">{formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}</span>
                   </div>
 
                   {s.category_id === 'cat_activities' && (
@@ -869,14 +891,7 @@ export default function VendorServices() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-semibold text-slate-900">
-                        {formatCurrencyWithConversion(
-                          s.category_id === 'cat_activities' && ticketTypes[s.id]?.length > 0
-                            ? Math.min(...ticketTypes[s.id].map((t: any) => Number(t.price || 0)))
-                            : s.price,
-                          s.currency,
-                          selectedCurrency,
-                          selectedLanguage
-                        )}
+                        {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
