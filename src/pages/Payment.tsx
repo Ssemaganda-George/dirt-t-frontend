@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { useOrderQuery } from '../hooks/useOrderQuery'
+import { PageSkeleton } from '../components/SkeletonLoader'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -10,9 +12,9 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export default function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const [order, setOrder] = useState<any | null>(null)
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading, error } = useOrderQuery(orderId)
+  const order = data?.order ?? null
+  const items = data?.items ?? []
   const [processing, setProcessing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('mobile_money')
   const [mobileProvider, setMobileProvider] = useState('')
@@ -38,28 +40,12 @@ export default function PaymentPage() {
     }
   }, [])
 
+  // Prefill phone from order when order data is ready
   useEffect(() => {
-    const load = async () => {
-      if (!orderId) return
-      setLoading(true)
-      try {
-        const { data: o } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle()
-        setOrder(o)
-        if (o?.guest_phone) {
-          const p = String(o.guest_phone).replace(/^\+256/, '')
-          setPhoneNumber(p.startsWith('0') ? p : p)
-        }
-
-        const { data: its } = await supabase.from('order_items').select('*').eq('order_id', orderId)
-        setItems(its || [])
-      } catch (err) {
-        console.error('Failed to load order:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [orderId])
+    if (!order?.guest_phone) return
+    const p = String(order.guest_phone).replace(/^\+256/, '')
+    setPhoneNumber(p.startsWith('+') ? p : p)
+  }, [order?.guest_phone])
 
   const handlePayment = useCallback(async () => {
     if (!orderId || !order) return
@@ -222,8 +208,8 @@ export default function PaymentPage() {
     }
   }, [orderId, order, phoneNumber, navigate])
 
-  if (loading) return <div className="p-6">Loading order…</div>
-  if (!order) return <div className="p-6">Order not found</div>
+  if (isLoading) return <PageSkeleton type="payment" />
+  if (error || !order) return <div className="p-6">Order not found</div>
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">

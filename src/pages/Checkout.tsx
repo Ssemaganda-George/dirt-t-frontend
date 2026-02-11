@@ -3,14 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
+import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
+import { PageSkeleton } from '../components/SkeletonLoader'
 
 export default function CheckoutPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
-  const [order, setOrder] = useState<any | null>(null)
-  const [items, setItems] = useState<any[]>([])
-  const [allTicketTypes, setAllTicketTypes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useOrderQueryClient()
+  const { data, isLoading, error } = useOrderQuery(orderId)
+  const order = data?.order ?? null
+  const items = data?.items ?? []
+  const allTicketTypes = data?.allTicketTypes ?? []
   const [buyer, setBuyer] = useState({ name: '', surname: '', email: '', phone: '', countryCode: '+256', emailCopy: false })
   const [showAllTickets, setShowAllTickets] = useState(false)
 
@@ -310,104 +313,41 @@ export default function CheckoutPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [countryDropdownOpen])
 
+  // Prefill buyer from profile when order data is ready
   useEffect(() => {
-    const load = async () => {
-      if (!orderId) return
-      setLoading(true)
-      try {
-        const { data: o } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle()
-        setOrder(o)
-
-        // Load order items
-        const { data: its } = await supabase.from('order_items').select('*').eq('order_id', orderId)
-        const itemsData = its || []
-
-        // Fetch ALL ticket_type records for this service so we can show available tickets
-        let allTicketTypes: any[] = []
-        let serviceForOrder: any = null
-        if (itemsData.length > 0) {
-          const ticketTypeIds = itemsData.map((it: any) => it.ticket_type_id)
-          const { data: tts } = await supabase.from('ticket_types').select('*').in('id', ticketTypeIds)
-          const ttMap: any = {};
-          (tts || []).forEach((t: any) => { ttMap[t.id] = t })
-
-          // attach ticket_type objects to items for display
-          itemsData.forEach((it: any) => { it.ticket_type = ttMap[it.ticket_type_id] || null })
-
-          // choose representative service from the first ticket_type that has a service_id
-          const firstWithService = (tts || []).find((t: any) => t && t.service_id)
-          if (firstWithService && firstWithService.service_id) {
-            const { data: svc } = await supabase.from('services').select('*').eq('id', firstWithService.service_id).maybeSingle()
-            serviceForOrder = svc || null
-
-            // Fetch ALL ticket types for this service
-            const { data: allTts } = await supabase.from('ticket_types').select('*').eq('service_id', firstWithService.service_id)
-            allTicketTypes = allTts || []
-          }
-        }
-
-        setItems(itemsData)
-        setAllTicketTypes(allTicketTypes)
-        // Prefill buyer information from logged-in profile if available and buyer fields are empty
-        if (profile) {
-          setBuyer(b => ({
-            name: b.name || profile.full_name || '',
-            surname: b.surname || '',
-            email: b.email || profile.email || '',
-            phone: b.phone || (profile as any).phone || '',
-            countryCode: b.countryCode || '+256',
-            emailCopy: b.emailCopy || false
-          }))
-        }
-
-        // attach representative service to order object for quick access in the UI
-        if (o) setOrder({ ...o, _service: serviceForOrder })
-      } catch (err) {
-        console.error('Failed to load order:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [orderId, profile])
+    if (!data?.order || !profile) return
+    setBuyer(b => ({
+      name: b.name || profile.full_name || '',
+      surname: b.surname || '',
+      email: b.email || profile.email || '',
+      phone: b.phone || (profile as any).phone || '',
+      countryCode: b.countryCode || '+256',
+      emailCopy: b.emailCopy || false
+    }))
+  }, [data?.order, profile])
 
   const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
     if (newQuantity < 0 || !orderId) return
     
     try {
-      // Find existing order item for this ticket type
       const existingItem = items.find(item => item.ticket_type_id === ticketTypeId)
       
       if (existingItem) {
-        // Update existing item
         if (newQuantity === 0) {
-          // Remove item if quantity is 0
           const { error } = await supabase
             .from('order_items')
             .delete()
             .eq('id', existingItem.id)
-
           if (error) throw error
-
-          // Update local state
-          setItems(prev => prev.filter(item => item.id !== existingItem.id))
         } else {
-          // Update quantity
           const { error } = await supabase
             .from('order_items')
             .update({ quantity: newQuantity })
             .eq('id', existingItem.id)
-
           if (error) throw error
-
-          // Update local state
-          setItems(prev => prev.map(item => 
-            item.id === existingItem.id ? { ...item, quantity: newQuantity } : item
-          ))
         }
       } else if (newQuantity > 0) {
-        // Add new item
-        const { data: newItem, error } = await supabase
+        const { error } = await supabase
           .from('order_items')
           .insert({
             order_id: orderId,
@@ -417,50 +357,18 @@ export default function CheckoutPage() {
           })
           .select()
           .single()
-
         if (error) throw error
-
-        // Add ticket_type info to the new item
-        const ticketType = allTicketTypes.find(tt => tt.id === ticketTypeId)
-        const itemWithType = { ...newItem, ticket_type: ticketType }
-
-        // Update local state
-        setItems(prev => [...prev, itemWithType])
       }
 
-      // Recalculate order total
-      const updatedItems = items
-        .filter(item => item.ticket_type_id !== ticketTypeId || (existingItem && item.id === existingItem.id))
-        .map(item => {
-          if (item.ticket_type_id === ticketTypeId) {
-            return { ...item, quantity: newQuantity }
-          }
-          return item
-        })
-        .filter(item => item.quantity > 0)
-      
-      // Add new item if it was just created
-      if (!existingItem && newQuantity > 0) {
-        const ticketType = allTicketTypes.find(tt => tt.id === ticketTypeId)
-        updatedItems.push({
-          ticket_type_id: ticketTypeId,
-          quantity: newQuantity,
-          unit_price: ticketType?.price || 0,
-          ticket_type: ticketType
-        })
-      }
-      
-      const newTotal = updatedItems.reduce((sum, item) => sum + (Number(item.unit_price) * item.quantity), 0)
-      
-      setOrder((prev: any) => prev ? { ...prev, total_amount: newTotal } : null)
+      await queryClient.invalidateQueries({ queryKey: orderQueryKey(orderId) })
     } catch (err) {
       console.error('Failed to update ticket quantity:', err)
       alert('Failed to update ticket quantity. Please try again.')
     }
   }
 
-  if (loading) return <div className="p-6">Loading order…</div>
-  if (!order) return <div className="p-6">Order not found</div>
+  if (isLoading) return <PageSkeleton type="checkout" />
+  if (error || !order) return <div className="p-6">Order not found</div>
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-4">
