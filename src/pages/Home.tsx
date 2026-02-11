@@ -386,7 +386,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative min-h-[200px] md:min-h-[300px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
+      <div className="relative min-h-[280px] md:min-h-[400px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
         <div className="absolute inset-0 bg-black/30"></div>
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -422,11 +422,11 @@ export default function Home() {
           ))
         )}
         
-        <div className="absolute inset-0 flex flex-col items-center justify-end px-4 py-8 z-20">
-          <h1 className="text-3xl md:text-6xl font-bold text-white mb-2 md:mb-4 text-center text-heading">
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20">
+          <h1 className="text-3xl md:text-6xl font-bold text-white mb-4 md:mb-6 text-center text-heading leading-tight">
             {t('hero_title')}
           </h1>
-          <p className="text-base md:text-xl text-white/90 mb-8 md:mb-12 text-center max-w-2xl text-elegant line-clamp-2 md:line-clamp-none">
+          <p className="text-base md:text-xl text-white/90 mb-0 text-center max-w-3xl text-elegant leading-relaxed">
             {t('hero_subtitle')}
           </p>
         </div>
@@ -434,8 +434,8 @@ export default function Home() {
 
       {/* Fixed Search Bar - Always Visible */}
       <div className="fixed top-20 left-0 right-0 z-[60] w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 md:py-2">
-          <div className="w-full max-w-3xl mx-auto bg-white rounded-full shadow-lg p-1.5 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
+          <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-lg p-2 relative">
             <div className="flex items-center gap-1">
               <div className="flex-1 flex items-center px-3">
                 <Search className="h-4 w-4 text-gray-400 mr-2" />
@@ -556,14 +556,14 @@ export default function Home() {
       </div>
 
       {/* Spacer to prevent content from being hidden behind fixed search bar */}
-      <div className="h-2"></div>
+      <div className="h-8"></div>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-1 pb-12 md:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16 md:pb-20">
 
         {/* Results Header */}
-        <div className="mb-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-light text-black">
+        <div className="mb-4">
+          <div className="mb-3">
+            <h2 className="text-2xl font-bold text-black">
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategories.includes('all')
@@ -576,10 +576,10 @@ export default function Home() {
 
           {/* Category Filters Section */}
           {!searchQuery && (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide pb-2">
               <button
                 onClick={() => handleCategorySelect('all')}
-                className={`text-sm font-light transition-all duration-200 whitespace-nowrap ${
+                className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                   selectedCategories.includes('all')
                     ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
                     : 'text-gray-600 hover:text-gray-900'
@@ -587,12 +587,12 @@ export default function Home() {
               >
                 All ({allServices.length})
               </button>
-              <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
                 {categories.slice(1).map((category) => (
                   <button
                     key={category.id}
                     onClick={() => handleCategorySelect(category.id)}
-                    className={`text-sm font-light transition-all duration-200 whitespace-nowrap ${
+                    className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                       selectedCategories.includes(category.id) && !selectedCategories.includes('all')
                         ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
                         : 'text-gray-600 hover:text-gray-900'
@@ -612,7 +612,7 @@ export default function Home() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {currentItems.map((service: Service) => (
               <ServiceCard 
                 key={service.id} 
@@ -624,10 +624,10 @@ export default function Home() {
         )}
 
         {!isLoading && currentItemCount === 0 && (
-          <div className="text-center py-16">
-            <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('no_results')}</h3>
-            <p className="text-gray-500">{t('adjust_search')}</p>
+          <div className="text-center py-20">
+            <Search className="h-20 w-20 mx-auto text-gray-300 mb-6" />
+            <h3 className="text-2xl font-semibold text-gray-900 mb-3">{t('no_results')}</h3>
+            <p className="text-gray-500 text-lg">{t('adjust_search')}</p>
           </div>
         )}
       </div>
@@ -789,9 +789,9 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-2.5 py-1.5 flex flex-col justify-between">
+        <div className="flex-1 px-4 py-4 flex flex-col justify-between">
           {/* Title with Location and Rating */}
-          <div className="flex items-start justify-between gap-1 mb-1.5">
+          <div className="flex items-start justify-between gap-2 mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-medium text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-2 text-sm leading-snug">
                 {service.title}
@@ -801,8 +801,8 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                 </span>
               </h3>
             </div>
-            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded flex-shrink-0">
-              <Star className="h-2.5 w-2.5 text-emerald-600 fill-current" />
+            <div className="flex items-center gap-0.5 px-2 py-1 rounded-lg flex-shrink-0">
+              <Star className="h-3 w-3 text-emerald-600 fill-current" />
               <span className="text-xs font-medium text-emerald-700">{rating > 0 ? rating.toFixed(1) : '0'}</span>
               {reviewCount > 0 && (
                 <span className="text-xs text-gray-500 ml-0.5">({reviewCount})</span>
@@ -811,14 +811,14 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           </div>
 
           {/* Vendor Name */}
-          <div className="text-xs text-gray-500 mb-1 line-clamp-1 font-normal">
+          <div className="text-xs text-gray-500 mb-3 line-clamp-1 font-normal">
             By {service.vendors?.business_name || 'Service Provider'}
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-1 pt-1 border-t border-gray-100 mt-auto">
+          <div className="flex items-baseline gap-1.5 pt-3 border-t border-gray-100 mt-auto">
             <span className="text-xs text-gray-500 font-light">{t('from')}</span>
-            <span className="text-xs font-medium text-gray-900">
+            <span className="text-sm font-semibold text-gray-900">
               {formatCurrencyWithConversion(
                 service.ticket_types && service.ticket_types.length > 0
                   ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0)))
