@@ -10,6 +10,29 @@ import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
 import type { Service } from '../../types';
 
+function formatServicePrice(service: Service, selectedCurrency: string, selectedLanguage: string) {
+  // For events/activities with ticket types, show ticket prices
+  if (service.ticket_types && service.ticket_types.length > 0) {
+    const ticketPrices = service.ticket_types
+      .map((ticket: any) => ticket.price)
+      .filter((price: number) => price > 0);
+    
+    if (ticketPrices.length > 0) {
+      const minPrice = Math.min(...ticketPrices);
+      const maxPrice = Math.max(...ticketPrices);
+      
+      if (minPrice === maxPrice) {
+        return formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage);
+      } else {
+        return `${formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(maxPrice, service.currency, selectedCurrency, selectedLanguage)}`;
+      }
+    }
+  }
+  
+  // Fallback to service price
+  return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage);
+}
+
 export function Services() {
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
@@ -388,7 +411,7 @@ export function Services() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
+                      {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={service.status} variant="small" />
@@ -500,7 +523,7 @@ export function Services() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
+                        {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
