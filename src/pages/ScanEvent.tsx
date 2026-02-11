@@ -28,6 +28,7 @@ export default function ScanEventPage() {
   // Manual verification state
   const [manualCode, setManualCode] = useState('')
   const [isManualProcessing, setIsManualProcessing] = useState(false)
+  const [showManualEntry, setShowManualEntry] = useState(false)
 
   const formatTimestamp = (timestamp: string) => {
     if (!timestamp) return null
@@ -43,11 +44,16 @@ export default function ScanEventPage() {
   }
 
   const handleCloseScanDialog = () => {
+    // Clear all dialog states to return to the 2 icons view
     setShowScanDialog(false)
+    setShowManualEntry(false)
     setScanResult(null)
     setScanError(null)
-    setIsProcessing(false) // Allow new scans after dialog is closed
+    setManualCode('')
+    setIsProcessing(false)
+    setIsManualProcessing(false)
     isProcessingRef.current = false
+    setLastScannedCode(null)
   }
 
   useEffect(() => {
@@ -348,8 +354,10 @@ export default function ScanEventPage() {
   if (verified) {
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Event Banner Header */}
-        <div className="fixed top-16 left-0 right-0 z-10 h-48 md:h-56 bg-gray-900 overflow-hidden">
+        {/* Event Banner Header - Compact when scanning */}
+        <div className={`fixed top-16 left-0 right-0 z-10 bg-gray-900 overflow-hidden transition-all duration-300 ${
+          isScanning ? 'h-20 md:h-24' : 'h-48 md:h-56'
+        }`}>
           {service.images && service.images.length > 0 && (
             <img
               src={service.images[0]}
@@ -359,176 +367,236 @@ export default function ScanEventPage() {
           )}
           <div className="absolute inset-0 bg-black/40"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-white px-4">
-              <h1 className="text-lg md:text-xl font-semibold mb-1">Event Verification</h1>
-              <p className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-lg">{service.title}</p>
+            <div className={`text-center text-white px-4 transition-all duration-300 ${
+              isScanning ? 'scale-90' : 'scale-100'
+            }`}>
+              <h1 className={`font-semibold mb-1 transition-all duration-300 ${
+                isScanning ? 'text-sm md:text-base' : 'text-lg md:text-xl'
+              }`}>Event Verification</h1>
+              <p className={`font-bold mb-2 text-white drop-shadow-lg transition-all duration-300 ${
+                isScanning ? 'text-lg md:text-xl' : 'text-2xl md:text-3xl'
+              }`}>{service.title}</p>
 
-              {/* Event Details */}
-              <div className="flex flex-row items-center justify-center gap-3 text-xs text-white/90">
-                {service.event_datetime ? (
-                  <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium text-xs">{new Date(service.event_datetime).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-medium text-xs">Date not set</span>
-                  </div>
-                )}
-                {(service.location || service.event_location) ? (
-                  <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-medium text-xs">{service.event_location || service.location}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="font-medium text-xs">Location not set</span>
-                  </div>
-                )}
-              </div>
+              {/* Event Details - Hidden when scanning for cleaner interface */}
+              {!isScanning && (
+                <div className="flex flex-row items-center justify-center gap-3 text-xs text-white/90">
+                  {service.event_datetime ? (
+                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="font-medium text-xs">{new Date(service.event_datetime).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="font-medium text-xs">Date not set</span>
+                    </div>
+                  )}
+                  {(service.location || service.event_location) ? (
+                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="font-medium text-xs">{service.event_location || service.location}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center bg-white/15 backdrop-blur-sm rounded-md px-2 py-1">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="font-medium text-xs">Location not set</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Compact event info when scanning */}
+              {isScanning && (
+                <div className="flex flex-row items-center justify-center gap-2 text-xs text-white/90 mt-1">
+                  {service.event_datetime && (
+                    <span className="font-medium">
+                      {new Date(service.event_datetime).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  )}
+                  {(service.location || service.event_location) && (
+                    <>
+                      <span className="text-white/60">•</span>
+                      <span className="font-medium truncate max-w-32">
+                        {service.event_location || service.location}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-6 max-w-2xl pt-64 md:pt-72 h-screen md:h-auto md:min-h-screen pb-20 md:pb-6 overflow-y-auto md:overflow-visible">
-          <div className="space-y-4">
-            {/* QR Scanning Card */}
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01" />
-                  </svg>
-                  Scan QR Code
-                </h2>
-              </div>
-
-              <div className="p-4">
-                <button
-                  onClick={isScanning ? stopScanning : startScanning}
-                  className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
-                    isScanning
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-center">
-                    {isScanning ? (
-                      <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Stop Scanning
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01" />
-                        </svg>
-                        Start Scanning
-                      </>
-                    )}
-                  </div>
-                </button>
-
-                {!isScanning && (
-                  <p className="mt-3 text-xs text-gray-500 text-center">
-                    Camera requires HTTPS
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Scanning Interface */}
-            {isScanning && (
-              <div className="bg-gray-900 rounded-lg p-3">
-                <div className="relative bg-black rounded-lg overflow-hidden">
+        {/* Scanning Interface - positioned below header when active */}
+        {isScanning && (
+          <div className="fixed top-64 md:top-72 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
+            {/* Camera Container with Professional Styling - Constrained to viewport */}
+            <div className="h-full max-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700 overflow-hidden backdrop-blur-sm flex flex-col">
+              {/* Camera Viewfinder - Takes most of the space */}
+              <div className="flex-1 relative p-4 min-h-0">
+                <div className="relative bg-black rounded-xl overflow-hidden shadow-inner h-full max-h-full">
                   <video
                     ref={videoRef}
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-full h-full object-cover"
                     playsInline
                     muted
                   />
-                  <div className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none"></div>
+
+                  {/* Professional Viewfinder Overlay */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Corner brackets - hidden on mobile for cleaner look */}
+                    <div className="hidden md:block absolute top-3 left-3 w-8 h-8 border-l-3 border-t-3 border-white/80 rounded-tl-lg"></div>
+                    <div className="hidden md:block absolute top-3 right-3 w-8 h-8 border-r-3 border-t-3 border-white/80 rounded-tr-lg"></div>
+                    <div className="hidden md:block absolute bottom-3 left-3 w-8 h-8 border-l-3 border-b-3 border-white/80 rounded-bl-lg"></div>
+                    <div className="hidden md:block absolute bottom-3 right-3 w-8 h-8 border-r-3 border-b-3 border-white/80 rounded-br-lg"></div>
+
+                    {/* Center scanning line */}
+                    <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-60 animate-pulse"></div>
+                  </div>
                 </div>
-                <div className="mt-3 text-center">
-                  <p className="text-white text-xs">
+              </div>
+
+              {/* Status and Controls - Fixed at bottom */}
+              <div className="px-4 md:px-6 py-3 md:py-4 bg-gradient-to-r from-gray-800/50 to-gray-900/50 border-t border-gray-700/50">
+                {/* Status Text */}
+                <div className="text-center mb-3 md:mb-4">
+                  <p className="text-white text-sm font-medium tracking-wide">
                     {isProcessing ? 'Verifying ticket...' : 'Point camera at QR code'}
                   </p>
-                  {isProcessing && (
-                    <div className="mt-2 flex justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    </div>
+                  {!isProcessing && (
+                    <p className="text-gray-400 text-xs mt-1 hidden md:block">Position the code within the frame</p>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* Manual Verification Card */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Manual Entry
-                </h2>
-              </div>
-
-              <div className="p-4">
-                <form onSubmit={verifyManualCode} className="space-y-3">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
-                      <span className="text-gray-500 font-mono text-sm">TKT-</span>
-                    </div>
-                    <input
-                      type="text"
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                      placeholder="ABC123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-sm"
-                      disabled={isManualProcessing}
-                    />
+                {/* Stop Scanning Button */}
+                <button
+                  onClick={stopScanning}
+                  className="w-full py-2.5 md:py-3 px-4 md:px-6 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] border border-red-500/20"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10l6 6m0-6l-6 6" />
+                    </svg>
+                    Stop Scanning
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={!manualCode.trim() || isManualProcessing}
-                    className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
-                      !manualCode.trim() || isManualProcessing
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
-                  >
-                    {isManualProcessing ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                        Verifying...
-                      </div>
-                    ) : (
-                      'Verify'
-                    )}
-                  </button>
-                </form>
+                </button>
               </div>
             </div>
           </div>
+        )}
+
+        <div className={`container mx-auto px-4 py-6 max-w-2xl ${isScanning ? 'hidden' : 'fixed left-0 right-0 top-64 md:top-72 bottom-0 flex items-center justify-center'}`}>
+
+          {/* Simplified Icon Interface */}
+          <div className="flex items-center justify-center space-x-8">
+            {/* Scan Icon */}
+            <button
+              onClick={startScanning}
+              className="group flex flex-col items-center justify-center w-32 h-32 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+            >
+              <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01" />
+              </svg>
+              <span className="text-sm font-medium">Scan</span>
+            </button>
+
+            {/* Write Icon */}
+            <button
+              onClick={() => setShowManualEntry(true)}
+              className="group flex flex-col items-center justify-center w-32 h-32 bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+            >
+              <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span className="text-sm font-medium">Write</span>
+            </button>
+          </div>
+
+          {/* Manual Entry Modal */}
+          {showManualEntry && (
+            <div className="fixed left-0 right-0 top-64 md:top-72 bottom-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Manual Entry</h3>
+                    <button
+                      onClick={() => {
+                        // Clear all dialog states to return to the 2 icons view
+                        setShowScanDialog(false)
+                        setShowManualEntry(false)
+                        setScanResult(null)
+                        setScanError(null)
+                        setManualCode('')
+                        setIsProcessing(false)
+                        setIsManualProcessing(false)
+                        isProcessingRef.current = false
+                        setLastScannedCode(null)
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <form onSubmit={verifyManualCode} className="space-y-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
+                        <span className="text-gray-500 font-mono text-sm">TKT-</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                        placeholder="ABC123"
+                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-lg"
+                        disabled={isManualProcessing}
+                        autoFocus
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!manualCode.trim() || isManualProcessing}
+                      className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors ${
+                        !manualCode.trim() || isManualProcessing
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {isManualProcessing ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                          Verifying...
+                        </div>
+                      ) : (
+                        'Verify Ticket'
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Hidden video element for QR scanner */}
           <video 
@@ -540,7 +608,7 @@ export default function ScanEventPage() {
 
           {/* Scan Result Dialog */}
           {showScanDialog && scanResult && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="fixed left-0 right-0 top-64 md:top-72 bottom-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
                 <div className="p-6">
                   <div className="flex items-center mb-4">
