@@ -22,12 +22,17 @@ export default function PaymentPage() {
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
   const paymentChannelRef = useRef<RealtimeChannel | null>(null)
+  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     return () => {
       if (paymentChannelRef.current) {
         paymentChannelRef.current.unsubscribe()
         paymentChannelRef.current = null
+      }
+      if (backupPollRef.current) {
+        clearInterval(backupPollRef.current)
+        backupPollRef.current = null
       }
     }
   }, [])
@@ -111,6 +116,10 @@ export default function PaymentPage() {
           paymentChannelRef.current.unsubscribe()
           paymentChannelRef.current = null
         }
+        if (backupPollRef.current) {
+          clearInterval(backupPollRef.current)
+          backupPollRef.current = null
+        }
       }
 
       const handleCompleted = () => {
@@ -125,6 +134,22 @@ export default function PaymentPage() {
         setPaymentReference(null)
         setProcessing(false)
         alert('Payment was not completed or was declined. Please try again.')
+      }
+
+      const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
+        try {
+          const res = await fetch(
+            `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
+            { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+          )
+          if (!res.ok) return null
+          const data = (await res.json()) as { status?: string }
+          if (data?.status === 'completed') return 'completed'
+          if (data?.status === 'failed') return 'failed'
+          return null
+        } catch {
+          return null
+        }
       }
 
       const channel = supabase
@@ -145,6 +170,28 @@ export default function PaymentPage() {
         )
         .subscribe()
       paymentChannelRef.current = channel
+
+      const statusOnce = await checkStatus()
+      if (statusOnce === 'completed') {
+        handleCompleted()
+        return
+      }
+      if (statusOnce === 'failed') {
+        handleFailed()
+        return
+      }
+
+      backupPollRef.current = setInterval(async () => {
+        const status = await checkStatus()
+        if (status === 'completed') handleCompleted()
+        else if (status === 'failed') handleFailed()
+      }, 4000)
+      setTimeout(() => {
+        if (backupPollRef.current) {
+          clearInterval(backupPollRef.current)
+          backupPollRef.current = null
+        }
+      }, 120000)
     } catch (err) {
       console.error('Payment error:', err)
       setPollingMessage('')
