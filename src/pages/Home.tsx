@@ -225,15 +225,15 @@ export default function Home() {
       const dbCategories = await getServiceCategories()
       // Filter out flights category
       const filteredCategories = dbCategories.filter(cat => cat.id !== 'cat_flights')
-      // Sort categories in custom order: Accommodation, Transport, Tours, Restaurants, Shops, Events
+      // Sort categories in custom order: Accommodation, Transport, Events, Tours, Restaurants, Shops
       const sortedCategories = filteredCategories.sort((a, b) => {
         const order: { [key: string]: number } = {
           'cat_hotels': 0,        // Accommodation
           'cat_transport': 1,     // Transport
-          'cat_tour_packages': 2, // Tours
-          'cat_restaurants': 3,   // Restaurants
-          'cat_shops': 4,         // Shops
-          'cat_activities': 5     // Events
+          'cat_activities': 2,    // Events
+          'cat_tour_packages': 3, // Tours
+          'cat_restaurants': 4,   // Restaurants
+          'cat_shops': 5          // Shops
         }
         const aPriority = order[a.id] ?? 6
         const bPriority = order[b.id] ?? 6
@@ -245,7 +245,7 @@ export default function Home() {
         { id: 'all', name: t('all_listings'), icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
-          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Accommodation' : cat.name,
+          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Stays' : cat.name,
           icon: cat.icon || MapPinIcon
         }))
       ]
@@ -255,11 +255,11 @@ export default function Home() {
       // Fallback to basic categories if database fetch fails (also filter out flights)
       setCategories([
         { id: 'all', name: t('all_listings'), icon: Map },
-        { id: 'cat_hotels', name: 'Accommodation', icon: Hotel },
-        { id: 'cat_tour_packages', name: 'Tours', icon: Map },
+        { id: 'cat_hotels', name: 'Stays', icon: Hotel },
         { id: 'cat_transport', name: 'Transport', icon: Car },
-        { id: 'cat_restaurants', name: 'Food', icon: Utensils },
         { id: 'cat_activities', name: 'Events', icon: Target },
+        { id: 'cat_tour_packages', name: 'Tours', icon: Map },
+        { id: 'cat_restaurants', name: 'Food', icon: Utensils },
         { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])
     }
@@ -556,14 +556,14 @@ export default function Home() {
       </div>
 
       {/* Spacer to prevent content from being hidden behind fixed search bar */}
-      <div className="h-4"></div>
+      <div className="h-2"></div>
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-12 md:pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-1 pb-12 md:pb-12">
 
         {/* Results Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-light text-black mb-1">
+        <div className="mb-6">
+          <div className="mb-4">
+            <h2 className="text-2xl font-light text-black">
               {searchQuery
                 ? `Search results for "${searchQuery}"`
                 : selectedCategories.includes('all')
@@ -572,10 +572,38 @@ export default function Home() {
                     ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
                     : `${selectedCategories.length} categories selected`}
             </h2>
-            <p className="text-gray-600 font-light text-sm">
-              {currentItemCount} {searchQuery ? 'result' : t('listings').toLowerCase()}{currentItemCount === 1 ? '' : 's'}
-            </p>
           </div>
+
+          {/* Category Filters Section */}
+          {!searchQuery && (
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => handleCategorySelect('all')}
+                className={`text-sm font-light transition-all duration-200 whitespace-nowrap ${
+                  selectedCategories.includes('all')
+                    ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All ({allServices.length})
+              </button>
+              <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
+                {categories.slice(1).map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategorySelect(category.id)}
+                    className={`text-sm font-light transition-all duration-200 whitespace-nowrap ${
+                      selectedCategories.includes(category.id) && !selectedCategories.includes('all')
+                        ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {category.name} ({categoryCounts[category.id] || 0})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Grid */}

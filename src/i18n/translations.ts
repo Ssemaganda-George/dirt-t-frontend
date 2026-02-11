@@ -61,7 +61,7 @@ export const translations: Record<SupportedLang, Record<string, string>> = {
     // Home / listings
     hero_title: 'Xplore Uganda',
     hero_subtitle: 'Holiday Your Way ...',
-    all_listings: 'All Listings',
+    all_listings: 'Travel Listings',
     listings: 'Listings',
     no_results: 'No results found',
     adjust_search: 'Try adjusting your search or filters',
@@ -159,7 +159,7 @@ export const translations: Record<SupportedLang, Record<string, string>> = {
     // Home / listings
     hero_title: 'Explore Uganda',
     hero_subtitle: 'Férias do seu jeito ...',
-    all_listings: 'Todas as listagens',
+    all_listings: 'Listagens de Viagem',
     listings: 'Listagens',
     no_results: 'Nenhum resultado encontrado',
     adjust_search: 'Tente ajustar sua pesquisa ou filtros',
@@ -254,7 +254,7 @@ export const translations: Record<SupportedLang, Record<string, string>> = {
     // Home / listings
     hero_title: 'Explorez l\'Ouganda',
     hero_subtitle: 'Vacances à votre façon ...',
-    all_listings: 'Toutes les annonces',
+    all_listings: 'Annonces de Voyage',
     listings: 'Annonces',
     no_results: 'Aucun résultat trouvé',
     adjust_search: 'Essayez d\'ajuster votre recherche ou vos filtres',
