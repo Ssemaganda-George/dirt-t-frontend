@@ -446,7 +446,7 @@ export default function ScanEventPage() {
 
         {/* Scanning Interface - positioned below header when active */}
         {isScanning && (
-          <div className="fixed top-64 md:top-72 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
+          <div className="fixed top-36 md:top-40 left-0 right-0 bottom-0 z-10 max-h-screen overflow-hidden">
             {/* Camera Container with Professional Styling - Constrained to viewport */}
             <div className="h-full max-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-gray-700 overflow-hidden backdrop-blur-sm flex flex-col">
               {/* Camera Viewfinder - Takes most of the space */}
