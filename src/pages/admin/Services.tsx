@@ -3,12 +3,15 @@ import { useServices, useServiceCategories, useServiceDeleteRequests } from '../
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EditServiceModal } from '../../components/EditServiceModal';
-import { formatCurrency } from '../../lib/utils';
+import SearchBar from '../../components/SearchBar';
+import { formatCurrencyWithConversion } from '../../lib/utils';
+import { usePreferences } from '../../contexts/PreferencesContext';
 import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
 import type { Service } from '../../types';
 
 export function Services() {
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
   const { categories } = useServiceCategories();
   const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
@@ -19,6 +22,7 @@ export function Services() {
   const [selectedVendor, setSelectedVendor] = useState<string>('all');
   const [vendors, setVendors] = useState<any[]>([]);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -47,14 +51,16 @@ export function Services() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error loading services: {error}</p>
         </div>
         {/* Still show the services management interface even if delete requests fail */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Services Management</h3>
-            <p className="text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">Services Management</h3>
+          </div>
+          <div className="p-5">
+            <p className="text-sm text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
           </div>
         </div>
       </div>
@@ -70,22 +76,42 @@ export function Services() {
   const approvedServices = services.filter(service => service.status === 'approved');
   const rejectedServices = services.filter(service => service.status === 'rejected');
 
-  // Filter services based on selected category and vendor
+  // Filter services based on selected category, vendor, and search query
   const categoryFilteredServices = selectedCategory === 'all' 
     ? services 
     : services.filter(service => service.category_id === selectedCategory);
 
-  const filteredServices = selectedVendor === 'all'
+  const vendorFilteredServices = selectedVendor === 'all'
     ? categoryFilteredServices
     : categoryFilteredServices.filter(service => service.vendor_id === selectedVendor);
+
+  const filteredServices = searchQuery.trim() === ''
+    ? vendorFilteredServices
+    : vendorFilteredServices.filter(service =>
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   const categoryFilteredPendingServices = selectedCategory === 'all'
     ? pendingServices
     : pendingServices.filter(service => service.category_id === selectedCategory);
 
-  const filteredPendingServices = selectedVendor === 'all'
+  const vendorFilteredPendingServices = selectedVendor === 'all'
     ? categoryFilteredPendingServices
     : categoryFilteredPendingServices.filter(service => service.vendor_id === selectedVendor);
+
+  const filteredPendingServices = searchQuery.trim() === ''
+    ? vendorFilteredPendingServices
+    : vendorFilteredPendingServices.filter(service =>
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.service_categories?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.vendors?.business_email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   const approveService = async (serviceId: string) => {
     setUpdatingStatus(serviceId);
@@ -199,51 +225,71 @@ export function Services() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Service Management</h1>
-        <div className="flex space-x-4 text-sm">
-          <span className="text-yellow-600">Pending: {selectedCategory === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
-          <span className="text-green-600">Approved: {selectedCategory === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}</span>
-          <span className="text-red-600">Rejected: {selectedCategory === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}</span>
-          <span className="text-orange-600">Delete Requests: {deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length}</span>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Service Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Review, approve, and manage all platform services</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            Pending: {selectedCategory === 'all' ? pendingServices.length : filteredPendingServices.length}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Approved: {selectedCategory === 'all' ? approvedServices.length : filteredServices.filter(s => s.status === 'approved').length}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            Rejected: {selectedCategory === 'all' ? rejectedServices.length : filteredServices.filter(s => s.status === 'rejected').length}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+            Delete: {deleteRequestsError ? '—' : pendingDeleteRequests.length}
+          </span>
         </div>
       </div>
 
-      {/* Vendor Filter */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex items-center space-x-4">
-          <label htmlFor="vendor-filter" className="text-sm font-medium text-gray-700">
-            Filter by Vendor:
-          </label>
-          <select
-            id="vendor-filter"
-            value={selectedVendor}
-            onChange={(e) => setSelectedVendor(e.target.value)}
-            className="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-          >
-            <option value="all">All Vendors</option>
-            {vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.business_name}
-              </option>
-            ))}
-          </select>
+      {/* Search & Vendor Filter */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="p-4 border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <SearchBar
+                placeholder="Search services by title, description, category, or vendor..."
+                onSearch={setSearchQuery}
+                initialValue={searchQuery}
+                className="max-w-md"
+              />
+            </div>
+            <select
+              id="vendor-filter"
+              value={selectedVendor}
+              onChange={(e) => setSelectedVendor(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Vendors</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.business_name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
 
-      {/* Category Tabs */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+        {/* Category Tabs */}
+        <div className="px-4">
+          <nav className="flex gap-1 overflow-x-auto py-2" aria-label="Category tabs">
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                 selectedCategory === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              All Services ({selectedVendor === 'all' ? services.length : services.filter(s => s.vendor_id === selectedVendor).length})
+              All ({selectedVendor === 'all' ? services.length : services.filter(s => s.vendor_id === selectedVendor).length})
             </button>
             {categories.map((category) => {
               const categoryServices = services.filter(service => service.category_id === category.id);
@@ -254,10 +300,10 @@ export function Services() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                     selectedCategory === category.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   {category.name} ({filteredCategoryServices.length})
@@ -266,7 +312,15 @@ export function Services() {
             })}
           </nav>
         </div>
-        <div className="px-4 py-5 sm:p-6">
+      </div>
+
+      {/* All Services Table */}
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Services</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{filteredServices.length} services found</p>
+        </div>
+        <div className="p-5">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -288,6 +342,9 @@ export function Services() {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Availability
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Event Link
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -319,7 +376,7 @@ export function Services() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(service.price, service.currency)}
+                      {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={service.status} variant="small" />
@@ -330,6 +387,18 @@ export function Services() {
                         variant="small" 
                       />
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {/* Show event scan link status for activities */}
+                      {service.category_id === 'cat_activities' ? (
+                        service.scan_enabled ? (
+                          <a href={`${window.location.origin}/scan/${service.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View scan link</a>
+                        ) : (
+                          <span className="text-sm text-gray-500">Scan link inactive</span>
+                        )
+                      ) : (
+                        <span className="text-sm text-gray-500">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => handleEditService(service)}
@@ -338,6 +407,26 @@ export function Services() {
                       >
                         Edit
                       </button>
+                      {/* Admin toggle for enabling scan link for events */}
+                      {service.category_id === 'cat_activities' && (
+                        <button
+                          onClick={async () => {
+                            setUpdatingStatus(service.id);
+                            try {
+                              await updateService(service.id, { scan_enabled: !service.scan_enabled } as any);
+                            } catch (err) {
+                              console.error('Failed to toggle scan_enabled:', err);
+                              alert('Failed to update event link activation.');
+                            } finally {
+                              setUpdatingStatus(null);
+                            }
+                          }}
+                          disabled={updatingStatus === service.id}
+                          className="ml-3 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {service.scan_enabled ? 'Disable Link' : 'Enable Link'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteService(service.id, service.title)}
                         disabled={updatingStatus === service.id}
@@ -355,11 +444,14 @@ export function Services() {
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Pending Approval ({filteredPendingServices.length})
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">
+              Pending Approval
             </h3>
+            <p className="text-xs text-gray-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
+          </div>
+          <div className="p-5">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -396,7 +488,7 @@ export function Services() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(service.price, service.currency)}
+                        {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
@@ -426,13 +518,16 @@ export function Services() {
       )}
 
       {/* Delete Requests Section */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Delete Requests ({deleteRequestsError ? 'Unavailable' : pendingDeleteRequests.length})
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">
+            Delete Requests
           </h3>
+          <p className="text-xs text-gray-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
+        </div>
+        <div className="p-5">
           {deleteRequestsError ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-yellow-800">
                 Delete requests are temporarily unavailable due to a permissions issue. 
                 Please contact support or run the database migration to fix RLS policies.

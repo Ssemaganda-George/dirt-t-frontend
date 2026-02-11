@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
   MapPin, 
@@ -9,10 +9,19 @@ import {
   ArrowLeft,
   Heart,
   Share2,
-  CheckCircle
+  ShoppingCart,
+  CheckCircle,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
-import { formatCurrency } from '../lib/utils'
-import { getServiceBySlug, getServiceById } from '../lib/database'
+import { getServiceBySlug, getServiceById, getTicketTypes, createOrder, getServiceReviews, createServiceReview, getServiceAverageRating } from '../lib/database'
+import { useAuth } from '../contexts/AuthContext'
+import { useCart } from '../contexts/CartContext'
+import { usePreferences } from '../contexts/PreferencesContext'
+import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib/reviewKpis'
+import type { KpiRatings } from '../lib/reviewKpis'
+import CitySearchInput from '../components/CitySearchInput'
 
 interface ServiceDetail {
   id: string
@@ -32,7 +41,11 @@ interface ServiceDetail {
     business_phone: string
     business_email: string
     business_address: string
+    id?: string
+    user_id?: string
   } | null
+  vendor_id?: string
+  scan_enabled?: boolean
   service_categories: {
     name: string
   }
@@ -112,6 +125,16 @@ interface ServiceDetail {
   certifications?: string[]
   years_experience?: number
   service_area?: string
+
+  // Event-specific fields
+  event_datetime?: string
+  event_location?: string
+  event_status?: string
+  registration_deadline?: string
+  max_participants?: number
+  event_highlights?: string[]
+  event_inclusions?: string[]
+  event_prerequisites?: string[]
 }
 
 export default function ServiceDetail() {
@@ -122,11 +145,94 @@ export default function ServiceDetail() {
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [checkInDate, setCheckInDate] = useState('')
+  const [checkOutDate, setCheckOutDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [reviews, setReviews] = useState<any[]>([])
+  const [averageRating, setAverageRating] = useState(0)
+  const [reviewCount, setReviewCount] = useState(0)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewSuccess, setReviewSuccess] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
+  
+  const [hoverRating, setHoverRating] = useState(0)
+  const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
+  const [kpiHoverRatings, setKpiHoverRatings] = useState<KpiRatings>({})
+  const [kpiAverages, setKpiAverages] = useState<Record<string, { average: number; count: number }>>({})
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const { user, profile } = useAuth()
+  const { addToCart } = useCart()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
+
+  // Currency conversion functions
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) => {
+    const exchangeRates: { [key: string]: number } = {
+      'UGX': 1,
+      'USD': 0.00027,
+      'EUR': 0.00025,
+      'GBP': 0.00021,
+      'KES': 0.0023,
+      'TZS': 0.00064,
+      'BRL': 0.0014,
+      'MXN': 0.0054,
+      'EGP': 0.0084,
+      'MAD': 0.0025,
+      'TRY': 0.0089,
+      'THB': 0.0077,
+      'KRW': 0.33,
+      'RUB': 0.019,
+      'INR': 0.022,
+      'CNY': 0.0019,
+      'JPY': 0.039,
+      'CAD': 0.00036,
+      'AUD': 0.00037,
+      'CHF': 0.00024,
+      'SEK': 0.0024,
+      'NOK': 0.0024,
+      'DKK': 0.0017,
+      'PLN': 0.0011,
+      'CZK': 0.0064,
+      'HUF': 0.088,
+      'ZAR': 0.0048,
+      'NGN': 0.11,
+      'GHS': 0.0037,
+      'XAF': 0.16,
+      'XOF': 0.16
+    }
+
+    if (fromCurrency === toCurrency) return amount
+    const amountInUGX = fromCurrency === 'UGX' ? amount : amount / exchangeRates[fromCurrency]
+    return amountInUGX * (exchangeRates[toCurrency] || 1)
+  }
+
+  const formatAmount = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(selectedLanguage || 'en-US', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(amount)
+    } catch (error) {
+      return `${currency} ${amount.toLocaleString()}`
+    }
+  }
+
+  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
+    const convertedAmount = convertCurrency(amount, serviceCurrency, selectedCurrency || 'UGX')
+    return formatAmount(convertedAmount, selectedCurrency || 'UGX')
+  }
+  const [ticketTypes, setTicketTypes] = useState<any[]>([])
+  const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
+  const ticketsTotal = ticketTypes.reduce((sum, t) => sum + (t.price * (ticketQuantities[t.id] || 0)), 0)
 
   useEffect(() => {
     if (slug) {
@@ -135,31 +241,45 @@ export default function ServiceDetail() {
   }, [slug])
 
   useEffect(() => {
+    const loadTickets = async () => {
+      if (!service) return
+      try {
+  if ((service.service_categories?.name?.toLowerCase() === 'activities') || (service.service_categories?.name?.toLowerCase() === 'events')) {
+          const types = await getTicketTypes(service.id)
+          setTicketTypes(types || [])
+          const initial: { [key: string]: number } = {}
+          ;(types || []).forEach((t: any) => { initial[t.id] = 0 })
+          setTicketQuantities(initial)
+        }
+      } catch (err) {
+        console.error('Failed to load ticket types:', err)
+      }
+    }
+    loadTickets()
+  }, [service])
+
+  useEffect(() => {
     if (service?.images && service.images.length > 0) {
       setSelectedImage(service.images[0])
     }
   }, [service])
 
-  const handleImageClick = (imageUrl: string, index: number) => {
-    setSelectedImage(imageUrl)
-    setCurrentImageIndex(index)
-  }
-
-  const nextImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const nextIndex = (currentImageIndex + 1) % service.images.length
-      setCurrentImageIndex(nextIndex)
-      setSelectedImage(service.images[nextIndex])
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollLeft = scrollContainerRef.current.scrollLeft
+        const width = scrollContainerRef.current.clientWidth
+        const index = Math.round(scrollLeft / width)
+        setCurrentImageIndex(Math.min(index, (service?.images?.length || 1) - 1))
+      }
     }
-  }
 
-  const prevImage = () => {
-    if (service?.images && service.images.length > 0) {
-      const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
-      setCurrentImageIndex(prevIndex)
-      setSelectedImage(service.images[prevIndex])
+    const container = scrollContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
     }
-  }
+  }, [service?.images?.length])
 
   const fetchService = async () => {
     try {
@@ -188,12 +308,88 @@ export default function ServiceDetail() {
         setService(null)
       } else {
         setService(serviceData)
+        // Fetch reviews for this service
+        try {
+          const serviceReviews = await getServiceReviews(serviceData.id)
+          setReviews(serviceReviews || [])
+          // Get real average rating
+          const ratingData = await getServiceAverageRating(serviceData.id)
+          setAverageRating(ratingData.average)
+          setReviewCount(ratingData.count)
+          if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
+        } catch (error) {
+          console.error('Error fetching reviews:', error)
+          setReviews([])
+        }
       }
       setLoading(false)
     } catch (error) {
       console.error('Error fetching service:', error)
       setService(null) // Explicitly set to null on error
       setLoading(false)
+    }
+  }
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!service) return
+    
+    // Get category KPIs
+    const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+    
+    // Check if all KPIs are rated
+    const hasKpis = categoryKpis.length > 0
+    if (hasKpis) {
+      const unrated = categoryKpis.filter(kpi => !kpiRatings[kpi.key] || kpiRatings[kpi.key] === 0)
+      if (unrated.length > 0) {
+        setReviewError(`Please rate all categories: ${unrated.map(k => k.label).join(', ')}`)
+        return
+      }
+    }
+    
+    // Calculate overall rating from KPIs if KPIs are provided
+    const overallRating = hasKpis ? calculateOverallFromKpis(kpiRatings) : reviewForm.rating
+    if (overallRating === 0) { setReviewError('Please select a rating'); return }
+
+    // Use profile data for logged-in users, form data for guests
+    const isLoggedIn = !!(user && profile)
+    const reviewerName = isLoggedIn ? profile.full_name : reviewForm.name.trim()
+    const reviewerEmail = isLoggedIn ? (user.email || profile.email) : (reviewForm.email.trim() || undefined)
+
+    if (!reviewerName) { setReviewError('Please enter your name'); return }
+    if (!reviewForm.comment.trim()) { setReviewError('Please share your experience'); return }
+
+    setReviewSubmitting(true)
+    setReviewError(null)
+
+    try {
+      await createServiceReview(service.id, {
+        userId: user?.id,
+        visitorName: reviewerName,
+        visitorEmail: reviewerEmail,
+        rating: overallRating,
+        kpiRatings: hasKpis ? kpiRatings : undefined,
+        comment: reviewForm.comment.trim(),
+        isVerifiedBooking: false,
+        reviewerCity: reviewForm.city.trim() || undefined,
+        reviewerCountry: reviewForm.country.trim() || undefined,
+      })
+      setReviewSuccess(true)
+      setShowReviewForm(false)
+      setReviewForm({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
+      setKpiRatings({})
+      setTimeout(() => setReviewSuccess(false), 5000)
+      // Refresh reviews
+      const updatedReviews = await getServiceReviews(service.id)
+      setReviews(updatedReviews || [])
+      const ratingData = await getServiceAverageRating(service.id)
+      setAverageRating(ratingData.average)
+      setReviewCount(ratingData.count)
+      if (ratingData.kpiAverages) setKpiAverages(ratingData.kpiAverages)
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : 'Failed to submit review')
+    } finally {
+      setReviewSubmitting(false)
     }
   }
 
@@ -212,9 +408,12 @@ export default function ServiceDetail() {
       'restaurants': 'restaurants',
       'restaurant': 'restaurants',
       'dining': 'restaurants',
-      'activities': 'activities',
-      'activity': 'activities',
-      'experience': 'activities',
+  'activities': 'activities',
+  'activity': 'activities',
+  'experience': 'activities',
+  // Accept public-facing 'events' and 'event' names and normalize to internal 'activities'
+  'events': 'activities',
+  'event': 'activities',
       'flights': 'flights',
       'flight': 'flights',
       'air travel': 'flights'
@@ -229,6 +428,8 @@ export default function ServiceDetail() {
     // For transport services, check for date range
     if (service.service_categories?.name?.toLowerCase() === 'transport') {
       if (!startDate || !endDate) return
+    } else if (['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')) {
+      if (!checkInDate || !checkOutDate) return
     } else {
       if (!selectedDate) return
     }
@@ -238,10 +439,12 @@ export default function ServiceDetail() {
     // Navigate to clean booking URL without query parameters
     const bookingUrl = `/service/${service.slug}/book/${bookingCategory}`
     
-    // Pass selected dates via navigation state
+    // Pass selected dates and guests via navigation state
     const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
-      ? { startDate, endDate }
-      : { selectedDate }
+      ? { startDate, endDate, guests }
+      : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+      ? { checkInDate, checkOutDate, guests, rooms: 1 }
+      : { selectedDate, guests }
     
     // Use React Router navigation with state
     navigate(bookingUrl, { state: navigationState })
@@ -253,33 +456,55 @@ export default function ServiceDetail() {
     navigate(`/service/${service.slug}/inquiry`)
   }
 
+  const handleSaveToCart = () => {
+    if (!service) return
+    
+    // Determine booking data based on service category
+    const isAccommodation = ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+    const isTransport = service.service_categories?.name?.toLowerCase() === 'transport'
+    
+    const bookingData = {
+      date: isTransport ? startDate : isAccommodation ? checkInDate : selectedDate,
+      checkInDate: isAccommodation ? checkInDate : '',
+      checkOutDate: isAccommodation ? checkOutDate : '',
+      guests: guests,
+      rooms: 1,
+      roomType: '',
+      pickupLocation: '',
+      dropoffLocation: '',
+      returnTrip: false,
+      specialRequests: '',
+      contactName: '',
+      contactEmail: '',
+      contactPhone: '',
+      paymentMethod: 'mobile'
+    }
+    
+    // Add to cart with basic service info
+    addToCart({
+      serviceId: service.id,
+      service,
+      bookingData,
+      category: service.service_categories.name.toLowerCase(),
+      totalPrice: totalPrice,
+      currency: service.currency
+    })
+    // Could add a toast notification here
+  }
+
   // Get appropriate button text based on category
   const getBookingButtonText = (categoryName: string): string => {
     const categoryTexts: { [key: string]: string } = {
-      'hotels': 'Check Availability',
-      'transport': 'Check Availability',
-      'tours': 'Check Availability',
-      'restaurants': 'Check Availability',
-      'activities': 'Check Availability',
-      'flights': 'Check Availability'
+      'hotels': 'Check Availability & Book',
+      'transport': 'Check Availability & Book',
+      'tours': 'Check Availability & Book',
+      'restaurants': 'Check Availability & Book',
+      'activities': 'Check Availability & Book',
+      'flights': 'Check Availability & Book'
     }
     
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
-    return categoryTexts[mappedCategory] || 'Check Availability'
-  }
-
-  const getInquiryButtonText = (categoryName: string): string => {
-    const categoryTexts: { [key: string]: string } = {
-      'hotels': 'Contact Vendor',
-      'transport': 'Contact Vendor',
-      'tours': 'Contact Vendor',
-      'restaurants': 'Contact Vendor',
-      'activities': 'Contact Vendor',
-      'flights': 'Contact Vendor'
-    }
-    
-    const mappedCategory = mapCategoryToBookingFlow(categoryName)
-    return categoryTexts[mappedCategory] || 'Contact Vendor'
+    return categoryTexts[mappedCategory] || 'Check Availability & Book'
   }
 
   // Render category-specific information
@@ -413,16 +638,22 @@ export default function ServiceDetail() {
               )}
             </div>
 
-            {service.hotel_policies && service.hotel_policies.length > 0 && (
-              <div className="mt-4">
-                <span className="text-sm font-medium text-gray-700">Hotel Policies:</span>
-                <ul className="text-sm text-gray-600 mt-1 list-disc list-inside">
-                  {service.hotel_policies.map((policy, index) => (
-                    <li key={index}>{policy}</li>
-                  ))}
-                </ul>
+            {/* Hotel Policies */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-3">Hotel Policies</h4>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>• <span className="font-medium">Check-in:</span> {service.check_in_time || '2:00 PM'}</p>
+                <p>• <span className="font-medium">Check-out:</span> {service.check_out_time || '11:00 AM'}</p>
+                <p>• Free cancellation up to 24 hours before check-in</p>
+                {service.hotel_policies && service.hotel_policies.length > 0 && (
+                  <>
+                    {service.hotel_policies.map((policy, index) => (
+                      <p key={index}>• {policy}</p>
+                    ))}
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )
 
@@ -692,6 +923,18 @@ export default function ServiceDetail() {
                 <p className="text-sm text-gray-600 mt-1">{service.transport_terms}</p>
               </div>
             )}
+
+            {/* Fuel Policy */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-1">Fuel Policy</h4>
+              {service.fuel_included ? (
+                <p className="text-sm text-gray-600">Fuel is included in your rental — no extra charges for fuel.</p>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  Fuel costs are your responsibility. You'll be charged for fuel used during your rental.
+                </p>
+              )}
+            </div>
           </div>
         )
 
@@ -736,7 +979,7 @@ export default function ServiceDetail() {
               )}
               {service.average_cost_per_person && (
                 <div className="text-sm text-gray-600">
-                  <span className="font-medium">Average Cost:</span> {formatCurrency(service.average_cost_per_person, service.currency)} per person
+                  <span className="font-medium">Average Cost:</span> {formatCurrencyWithConversion(service.average_cost_per_person, service.currency)} per person
                 </div>
               )}
               {service.outdoor_seating && (
@@ -823,6 +1066,47 @@ export default function ServiceDetail() {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Event Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.event_datetime && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Date & Time:</span>{' '}
+                  {new Date(service.event_datetime).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+              {service.event_location && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Event Location:</span> {service.event_location}
+                </div>
+              )}
+              {service.registration_deadline && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Registration Deadline:</span>{' '}
+                  {new Date(service.registration_deadline).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              )}
+              {service.max_participants && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Maximum Participants:</span> {service.max_participants}
+                </div>
+              )}
+              {service.minimum_age && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Minimum Age:</span> {service.minimum_age} years
+                </div>
+              )}
               {service.activity_type && (
                 <div className="text-sm text-gray-600">
                   <span className="font-medium">Activity Type:</span> {service.activity_type}
@@ -943,77 +1227,566 @@ export default function ServiceDetail() {
     return Math.ceil(diffHours / 24) || 1
   }
 
+  // Calculate number of nights for accommodation services
+  const calculateNights = (checkInDate: string, checkOutDate: string): number => {
+    if (!checkInDate || !checkOutDate) return 1
+    
+    const checkIn = new Date(checkInDate)
+    const checkOut = new Date(checkOutDate)
+    
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return diffDays || 1
+  }
+
   const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
     ? service.price * calculateDays(startDate, startTime, endDate, endTime)
+    : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+    ? service.price * calculateNights(checkInDate, checkOutDate)
     : service.price * guests
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center text-gray-600 hover:text-gray-900">
+
+      {/* Mobile Image with Header Overlay */}
+      <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
+        <div className="relative h-[60vh]">
+          {/* Scrollable Image Container */}
+          <div 
+            ref={scrollContainerRef}
+            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" 
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            <div className="flex w-full h-full">
+              {service.images && service.images.length > 0 ? (
+                service.images.map((image, index) => (
+                  <div key={index} className="flex-shrink-0 w-full snap-center">
+                    <img
+                      src={image}
+                      alt={`${service.title} ${index + 1}`}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="flex-shrink-0 w-full snap-center">
+                  <img
+                    src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
+                    alt={service.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Mobile Header Overlay */}
+          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+            <Link to="/" className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 px-3 py-2 rounded-lg drop-shadow-lg transition-all">
               <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to search
+              <span className="text-sm">Back</span>
             </Link>
-            <div className="flex items-center space-x-4">
-              <button className="flex items-center text-gray-600 hover:text-red-600">
-                <Heart className="h-5 w-5 mr-1" />
-                Save
+            <div className="flex items-center space-x-2">
+              <button className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all">
+                <Heart className="h-5 w-5" />
               </button>
-              <button className="flex items-center text-gray-600 hover:text-gray-900">
-                <Share2 className="h-5 w-5 mr-1" />
-                Share
+              <button className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all">
+                <Share2 className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={handleSaveToCart}
+                className="flex items-center text-white bg-black bg-opacity-50 hover:bg-opacity-70 p-2 rounded-lg drop-shadow-lg transition-all"
+              >
+                <ShoppingCart className="h-5 w-5" />
               </button>
             </div>
           </div>
+
+          {/* Image Counter */}
+          {service.images && service.images.length > 0 && (
+            <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
+              {currentImageIndex + 1} / {service.images.length}
+            </div>
+          )}
+
+          {/* Event hero overlay for Activities to mimic Quicket-style layout */}
+          {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
+            <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
+              <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
+              <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
+              <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
+                {service.duration_hours && (
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span>{service.duration_hours} hours</span>
+                  </div>
+                )}
+                {service.location && (
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span>{service.location}</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-300">From</div>
+                  <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                </div>
+                <div>
+                  <button onClick={() => {
+                    // scroll to tickets sidebar
+                    const el = document.querySelector('[data-tickets-section]')
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Buy Tickets</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Mobile - Centered Info Block Near Image */}
+      <div className="md:hidden bg-white border-b">
+        <div className="px-4 py-2.5">
+          {/* Title */}
+          <h1 className="text-base font-bold text-gray-900 mb-1">{service.title}</h1>
+
+          {/* Location + Rating inline */}
+          <div className="flex items-center justify-between">
+            <p className="text-gray-500 text-[11px]">
+              <MapPin className="inline h-3 w-3 mr-0.5 -mt-0.5" />{service.location}
+            </p>
+            <div className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-yellow-400 fill-current" />
+              <span className="text-[11px] font-bold text-gray-900">{averageRating || '0'}</span>
+              <span className="text-[11px] text-gray-400">({reviewCount})</span>
+            </div>
+          </div>
+
+          {/* Description - collapsed */}
+          <p className="text-gray-600 text-[11px] leading-relaxed mt-1.5 line-clamp-2">
+            {service.description}
+          </p>
+        </div>
+      </div>
+
+      {/* Mobile Information Section - Organized & Logical Flow */}
+      <div className="md:hidden bg-gray-50 pb-20">
+        <div className="px-3 py-3 space-y-3">
+          {/* 2. Quick Info - All Details Consolidated */}
+          <div className="bg-white rounded-lg p-3">
+            <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">Quick Info</p>
+            <div className="space-y-1.5">
+              {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                <div className="flex items-center text-[11px] text-gray-700">
+                  <Clock className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
+                  Duration: {service.duration_hours} hours
+                </div>
+              )}
+              {service.max_capacity && (
+                <div className="flex items-center text-[11px] text-gray-700">
+                  <Users className="h-3.5 w-3.5 text-gray-400 mr-1.5" />
+                  Up to {service.max_capacity} guests
+                </div>
+              )}
+              <div className="flex items-center text-[11px] text-gray-700">
+                <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1.5" />
+                Instant confirmation
+              </div>
+              
+              {/* Amenities in Quick Info */}
+              {service.amenities && service.amenities.length > 0 && (
+                <>
+                  <div className="border-t pt-1.5 mt-1.5">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">What's Included</p>
+                    <div className="flex flex-wrap gap-1">
+                      {service.amenities.map((amenity, index) => (
+                        <span key={index} className="inline-flex items-center text-[10px] text-gray-600 bg-gray-50 rounded-full px-2 py-0.5">
+                          <CheckCircle className="h-2.5 w-2.5 text-green-500 mr-1 flex-shrink-0" />
+                          {amenity}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Hotel-specific details in Quick Info */}
+              {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                <>
+                  <div className="border-t pt-1.5 mt-1.5">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Accommodation</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px]">
+                      {service.star_rating && (
+                        <div className="flex items-center text-gray-700">
+                          <Star className="h-2.5 w-2.5 text-yellow-400 fill-current mr-1" />
+                          {service.star_rating} Star
+                        </div>
+                      )}
+                      {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                      {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay}n</span></div>}
+                      {service.check_in_time && <div className="text-gray-700">In: <span className="font-medium">{service.check_in_time}</span></div>}
+                      {service.check_out_time && <div className="text-gray-700">Out: <span className="font-medium">{service.check_out_time}</span></div>}
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Provider info in Quick Info */}
+              {service.vendors && (
+                <div className="border-t pt-1.5 mt-1.5">
+                  <p className="text-[10px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">Provider</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-blue-600">
+                        {service.vendors.business_name?.charAt(0) || 'V'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-[11px]">{service.vendors.business_name || 'Service Provider'}</h4>
+                      <p className="text-gray-500 text-[10px] truncate">
+                        {service.vendors.business_description || 'No description available'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Reviews Summary */}
+          <div className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
+              <button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium"
+              >
+                Write a Review
+              </button>
+            </div>
+            <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg p-2.5">
+              <div className="text-center flex-shrink-0">
+                <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-2.5 w-2.5 ${
+                        i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-[9px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
+              </div>
+              {/* All KPI bars */}
+              {Object.keys(kpiAverages).length > 0 && (
+                <div className="flex-1 border-l border-gray-200 pl-2.5 space-y-0.5">
+                  {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                    const avg = kpiAverages[kpi.key]?.average || 0
+                    return (
+                      <div key={kpi.key} className="flex items-center gap-1">
+                        <span className="text-[9px] text-gray-500 w-16 truncate">{kpi.label}</span>
+                        <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full" style={{ width: `${(avg / 5) * 100}%` }} />
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-700 w-4 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Review Success Message */}
+          {reviewSuccess && (
+            <div className="flex items-center gap-2 py-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <p className="text-gray-700 text-xs">Review submitted — it will appear once approved.</p>
+            </div>
+          )}
+
+          {/* Mobile Review Form */}
+          {showReviewForm && (
+            <div className="bg-white rounded-lg p-3 border border-emerald-200">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Share Your Experience</h4>
+              {reviewError && (
+                <p className="mb-2 text-xs text-red-600">{reviewError}</p>
+              )}
+              <form onSubmit={handleReviewSubmit} className="space-y-2">
+                {/* KPI Ratings */}
+                {(() => {
+                  const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+                  return categoryKpis.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
+                      <div className="space-y-1">
+                        {categoryKpis.map((kpi) => {
+                          const KpiIcon = getKpiIcon(kpi.key)
+                          return (
+                          <div key={kpi.key} className="flex items-center justify-between px-2 py-2">
+                            <span className="text-xs text-gray-700 flex items-center gap-1 w-20 flex-shrink-0 font-medium">
+                              <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
+                            </span>
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                  onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                  onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
+                                  className="p-0"
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                </button>
+                              ))}
+                              <span className="text-xs text-gray-500 w-4 text-right ml-0.5">
+                                {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
+                              </span>
+                            </div>
+                          </div>
+                          )
+                        })}
+                      </div>
+                      {/* Overall calculated from KPIs */}
+                      {Object.keys(kpiRatings).length > 0 && (
+                        <div className="flex items-center justify-center gap-1 pt-1.5 border-t border-gray-100">
+                          <span className="text-xs font-semibold text-gray-900">Overall:</span>
+                          <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                          <span className="text-xs font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 mb-1">Tap to rate</p>
+                      <div className="flex items-center justify-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                            onMouseEnter={() => setHoverRating(star)}
+                            onMouseLeave={() => setHoverRating(0)}
+                            className="p-0.5"
+                          >
+                            <Star className={`w-5 h-5 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+                {/* User info: auto-fill for logged-in, inputs for guests */}
+                {user && profile ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate">{profile.full_name} · {user.email}</p>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={reviewForm.name}
+                      onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                      placeholder="Your name *"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                    <input
+                      type="email"
+                      value={reviewForm.email}
+                      onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
+                      placeholder="Email (optional)"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <CitySearchInput
+                    city={reviewForm.city}
+                    onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
+                    placeholder="Your city"
+                    compact
+                  />
+                  <div className="flex items-center px-2.5 py-1.5 text-xs border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
+                    {reviewForm.country || 'Country'}
+                  </div>
+                </div>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Share your experience... *"
+                  rows={2}
+                  className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting}
+                    className="flex-1 py-1.5 bg-emerald-600 text-white text-xs rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
+                  >
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* User Reviews Messages */}
+          {reviews.length > 0 && (
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">Recent Reviews</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {reviews.slice(0, 10).map((review, index) => (
+                  <div key={index} className="flex-shrink-0 w-52 snap-start bg-gray-50 rounded-lg p-2.5">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {/* Avatar */}
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs font-bold">
+                          {(review.visitor_name || 'A').charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
+                          {review.is_verified_booking && (
+                            <CheckCircle className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-[9px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
+                        {(review.reviewer_city || review.reviewer_country) && (
+                          <span className="text-[9px] text-gray-400 flex items-center gap-0.5">
+                            <MapPin className="w-2 h-2" />
+                            {[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-2.5 w-2.5 ${
+                            i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                          }`}
+                        />
+                      ))}
+                      <span className="text-[9px] font-semibold text-gray-500 ml-0.5">{review.rating.toFixed(1)}</span>
+                    </div>
+                    {/* Comment */}
+                    {review.comment && (
+                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{review.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Image Gallery */}
-            <div className="mb-8">
+            {/* Image Gallery - Desktop */}
+            <div className="mb-8 hidden md:block">
               {/* Main Image Display */}
               <div className="relative mb-4">
                 <img
                   src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                   alt={service.title}
-                  className="w-full h-[500px] object-cover rounded-lg shadow-lg"
+                  className="w-full h-[520px] object-cover rounded-lg shadow-lg cursor-pointer"
+                  onClick={() => {
+                    const idx = service.images?.indexOf(selectedImage || service.images?.[0] || '') ?? 0
+                    setLightboxIndex(Math.max(0, idx))
+                    setLightboxOpen(true)
+                  }}
                 />
-                {service.images && service.images.length > 1 && (
-                  <>
-                    {/* Navigation Arrows */}
-                    <button
-                      onClick={prevImage}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
-                    >
-                      <ArrowLeft className="h-5 w-5" />
+
+                {/* Desktop Header Overlay – inside image */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+                  <Link to="/" className="flex items-center gap-2 text-white bg-black/50 hover:bg-black/70 px-3 py-2 rounded-lg backdrop-blur-sm transition-colors">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="text-sm font-medium">Back</span>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <button className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <Heart className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={nextImage}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all"
-                    >
-                      <ArrowLeft className="h-5 w-5 rotate-180" />
+                    <button className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <Share2 className="h-4 w-4" />
                     </button>
-                    {/* Image Counter */}
-                    <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-                      {currentImageIndex + 1} / {service.images.length}
+                    <button onClick={handleSaveToCart} className="flex items-center text-white bg-black/50 hover:bg-black/70 p-2 rounded-lg backdrop-blur-sm transition-colors">
+                      <ShoppingCart className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Event hero overlay for Activities to mimic Quicket-style layout */}
+                {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
+                  <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
+                    <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
+                    <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
+                      {service.duration_hours && (
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{service.duration_hours} hours</span>
+                        </div>
+                      )}
+                      {service.location && (
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          <span>{service.location}</span>
+                        </div>
+                      )}
                     </div>
-                  </>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-300">From</div>
+                        <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                      </div>
+                      <div>
+                        <button onClick={() => {
+                          // scroll to tickets sidebar
+                          const el = document.querySelector('[data-tickets-section]')
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }} className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Buy Tickets</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {service.images && service.images.length > 1 && (
+                  <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                    {(service.images.indexOf(selectedImage || service.images[0]) + 1) || 1}/{service.images.length}
+                  </div>
                 )}
               </div>
 
-              {/* Thumbnail Gallery */}
+              {/* Thumbnail Gallery - Desktop */}
               {service.images && service.images.length > 1 && (
                 <div className="flex space-x-2 overflow-x-auto pb-2">
                   {service.images.map((image, index) => (
                     <button
                       key={index}
-                      onClick={() => handleImageClick(image, index)}
+                      onClick={() => setSelectedImage(image)}
                       className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                         selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -1027,266 +1800,635 @@ export default function ServiceDetail() {
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Service Info */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  {service.service_categories?.name || 'Service'}
-                </span>
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="ml-1 text-sm font-medium">4.5</span>
-                  <span className="ml-1 text-sm text-gray-500">(24 reviews)</span>
+              {/* Desktop - Centered Info Block Near Image (matches mobile) */}
+              <div className="hidden md:block bg-white border-b mb-8 px-4 py-6">
+                {/* Title */}
+                <h1 className="text-2xl font-bold text-gray-900 mb-4 text-center">{service.title}</h1>
+
+                {/* Description + Location in one line */}
+                <div className="text-center">
+                  {service.description && (
+                    <p className="text-gray-700 text-sm leading-relaxed mb-2">
+                      {service.description}
+                    </p>
+                  )}
+                  {service.location && (
+                    <p className="text-gray-600 text-sm">
+                      {['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in'} <span className="font-medium">{service.location}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Rating & Reviews */}
+                <div className="flex items-center justify-center mt-4">
+                  <div className="flex items-center">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="ml-1 text-sm font-medium text-gray-900">{averageRating || '0'}</span>
+                  </div>
+                  <span className="text-sm text-gray-500 ml-2">({reviewCount} reviews)</span>
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{service.title}</h1>
-              
-              <div className="flex items-center text-gray-600 mb-6">
-                <MapPin className="h-5 w-5 mr-2" />
-                {service.location}
-              </div>
-
-              <p className="text-gray-700 leading-relaxed mb-6 text-elegant">
-                {service.description}
-              </p>
-
-              {/* Service Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      {service.duration_hours} hours
-                    </span>
-                  </div>
-                )}
-                {service.max_capacity && (
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">
-                      Up to {service.max_capacity} guests
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  <span className="text-sm text-gray-600">Instant confirmation</span>
-                </div>
-              </div>
-
-              {/* Amenities */}
-              {service.amenities && service.amenities.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">What's included</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {service.amenities.map((amenity, index) => (
-                      <div key={index} className="flex items-center">
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                        <span className="text-sm text-gray-600">{amenity}</span>
+              {/* Description, Location, and Reviews - Top Priority Sections */}
+              <div className="mt-8 space-y-6">
+                {/* Quick Info - Consolidated Details */}
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <p className="text-sm font-semibold text-gray-900 mb-4 uppercase">Quick Info</p>
+                  <div className="space-y-3">
+                    {service.duration_hours && service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Clock className="h-4 w-4 text-gray-400 mr-3" />
+                        Duration: {service.duration_hours} hours
                       </div>
-                    ))}
+                    )}
+                    {service.max_capacity && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Users className="h-4 w-4 text-gray-400 mr-3" />
+                        Up to {service.max_capacity} guests
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-gray-700">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-3" />
+                      Instant confirmation
+                    </div>
+                    
+                    {/* Amenities in Quick Info */}
+                    {service.amenities && service.amenities.length > 0 && (
+                      <>
+                        <div className="border-t pt-3 mt-3">
+                          <p className="text-xs text-gray-500 font-medium mb-2">What's Included</p>
+                          <div className="space-y-1">
+                            {service.amenities.map((amenity, index) => (
+                              <div key={index} className="flex items-center text-sm text-gray-700">
+                                <CheckCircle className="h-3 w-3 text-green-500 mr-2 flex-shrink-0" />
+                                {amenity}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Hotel-specific details in Quick Info */}
+                    {service.service_categories?.name?.toLowerCase() === 'hotels' && (
+                      <>
+                        <div className="border-t pt-3 mt-3">
+                          <p className="text-xs text-gray-500 font-medium mb-2">Accommodation Details</p>
+                          <div className="space-y-1 text-sm">
+                            {service.star_rating && (
+                              <div className="flex items-center">
+                                <Star className="h-3 w-3 text-yellow-400 fill-current mr-2" />
+                                <span className="text-gray-700">{service.star_rating} Star</span>
+                              </div>
+                            )}
+                            {service.total_rooms && <div className="text-gray-700">Rooms: <span className="font-medium">{service.total_rooms}</span></div>}
+                            {service.minimum_stay && <div className="text-gray-700">Min. Stay: <span className="font-medium">{service.minimum_stay} nights</span></div>}
+                            {service.check_in_time && <div className="text-gray-700">Check-in: <span className="font-medium">{service.check_in_time}</span></div>}
+                            {service.check_out_time && <div className="text-gray-700">Check-out: <span className="font-medium">{service.check_out_time}</span></div>}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Provider info in Quick Info */}
+                    {service.vendors && (
+                      <div className="border-t pt-3 mt-3">
+                        <p className="text-xs text-gray-500 font-medium mb-2">Provider</p>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-bold text-blue-600">
+                              {service.vendors.business_name?.charAt(0) || 'V'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 text-sm">{service.vendors.business_name || 'Service Provider'}</h4>
+                            <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">
+                              {service.vendors.business_description || 'No description available'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Reviews Summary */}
+                <div className="bg-white rounded-lg p-4 shadow-sm border-t-4 border-yellow-400">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-base font-bold text-gray-900">Guest Reviews</p>
+                      <p className="text-xs text-gray-500">Real feedback from verified guests</p>
+                    </div>
+                    <button
+                      onClick={() => setShowReviewForm(!showReviewForm)}
+                      className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition-all font-medium shadow-sm hover:shadow-md"
+                    >
+                      Write a Review
+                    </button>
+                  </div>
+
+                  {/* Overall rating + KPI breakdown */}
+                  <div className="flex flex-col sm:flex-row gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                    {/* Overall Score */}
+                    <div className="flex items-center gap-2 sm:border-r sm:border-gray-200 sm:pr-4">
+                      <div className="text-center">
+                        <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+                        <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{reviewCount} review{reviewCount !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+
+                    {/* KPI Averages Breakdown — single vertical list */}
+                    {Object.keys(kpiAverages).length > 0 && (
+                      <div className="flex-1 flex flex-col gap-1">
+                        {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                          const avg = kpiAverages[kpi.key]?.average || 0
+                          const KpiIcon = getKpiIcon(kpi.key)
+                          return (
+                            <div key={kpi.key} className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-gray-500 w-20 flex-shrink-0 flex items-center gap-1">
+                                <KpiIcon className="w-3 h-3 text-gray-400" /> {kpi.label}
+                              </span>
+                              <div className="flex-1 bg-gray-200/60 rounded-full h-1 overflow-hidden min-w-[30px]">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-yellow-400 to-amber-400 rounded-full transition-all duration-500"
+                                  style={{ width: `${(avg / 5) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-[11px] font-bold text-gray-700 w-5 text-right">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Review Success Message */}
+                  {reviewSuccess && (
+                    <div className="mb-4 flex items-center gap-2 py-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <p className="text-gray-700 text-sm">Review submitted — it will appear once approved.</p>
+                    </div>
+                  )}
+
+                  {/* Desktop Review Form */}
+                  {showReviewForm && (
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Share Your Experience</h4>
+                      {reviewError && (
+                        <p className="mb-2 text-xs text-red-600">{reviewError}</p>
+                      )}
+                      <form onSubmit={handleReviewSubmit} className="space-y-3">
+                        {/* KPI Ratings */}
+                        {(() => {
+                          const categoryKpis = getKpisForCategory(service.service_categories?.name || '')
+                          return categoryKpis.length > 0 ? (
+                            <div className="space-y-2">
+                              <p className="text-xs text-gray-500 font-medium tracking-wide uppercase">Rate each aspect</p>
+                              <div className="bg-white rounded-md overflow-hidden">
+                                {categoryKpis.map((kpi, index) => {
+                                  const KpiIcon = getKpiIcon(kpi.key)
+                                  return (
+                                  <div key={kpi.key} className={`flex items-center justify-between px-3 py-2.5 ${index < categoryKpis.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                    <span className="text-sm text-gray-700 flex items-center gap-2 font-medium">
+                                      <KpiIcon className="w-4 h-4 text-gray-400" /> {kpi.label}
+                                    </span>
+                                    <div className="flex items-center gap-0.5">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                          key={star}
+                                          type="button"
+                                          onClick={() => setKpiRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                          onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: star }))}
+                                          onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
+                                          className="p-0 transition-transform hover:scale-105"
+                                        >
+                                          <Star className={`w-4 h-4 ${star <= (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                        </button>
+                                      ))}
+                                      <span className="text-xs text-gray-500 w-4 text-right ml-1">
+                                        {kpiRatings[kpi.key] ? kpiRatings[kpi.key] : ''}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  )
+                                })}
+                              </div>
+                              {/* Overall calculated */}
+                              {Object.keys(kpiRatings).length > 0 && (
+                                <div className="flex items-center justify-center gap-2 pt-2 border-t border-gray-200">
+                                  <span className="text-sm font-semibold text-gray-900">Overall:</span>
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-sm font-bold text-gray-900">{calculateOverallFromKpis(kpiRatings).toFixed(1)}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600 mb-2">How would you rate your experience?</p>
+                              <div className="flex items-center justify-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    className="p-1 transition-transform hover:scale-110"
+                                  >
+                                    <Star className={`w-6 h-6 ${star <= (hoverRating || reviewForm.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                                  </button>
+                                ))}
+                              </div>
+                              {(hoverRating || reviewForm.rating) > 0 && (
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hoverRating || reviewForm.rating]}
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })()}
+                        {/* User info: auto-fill for logged-in, inputs for guests */}
+                        {user && profile ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white text-xs font-bold">{profile.full_name?.charAt(0)?.toUpperCase()}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 truncate">{profile.full_name} · {user.email}</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={reviewForm.name}
+                              onChange={(e) => setReviewForm({ ...reviewForm, name: e.target.value })}
+                              placeholder="Your name *"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
+                            <input
+                              type="email"
+                              value={reviewForm.email}
+                              onChange={(e) => setReviewForm({ ...reviewForm, email: e.target.value })}
+                              placeholder="Email (optional)"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <CitySearchInput
+                            city={reviewForm.city}
+                            onSelect={(city, country) => setReviewForm({ ...reviewForm, city, country })}
+                            placeholder="Search your city"
+                          />
+                          <div className="flex items-center px-3 py-2 text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-500 truncate">
+                            {reviewForm.country || 'Country'}
+                          </div>
+                        </div>
+                        <textarea
+                          value={reviewForm.comment}
+                          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                          placeholder="Tell us about your experience... *"
+                          rows={3}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={reviewSubmitting}
+                            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 disabled:opacity-50 transition-colors font-medium"
+                          >
+                            {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowReviewForm(false); setReviewError(null); setKpiRatings({}); setKpiHoverRatings({}) }}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                  
+                  {/* Reviews List */}
+                  {reviews && reviews.length > 0 ? (
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-gray-400 font-semibold mb-3 uppercase tracking-wider">{reviews.length} Review{reviews.length !== 1 ? 's' : ''}</p>
+                      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {reviews.map((review, index) => (
+                          <div key={index} className="flex-shrink-0 w-64 snap-start bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            {/* Header: Avatar, Name, Location, and Date */}
+                            <div className="flex items-start gap-2 mb-2">
+                              {/* Avatar */}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <span className="text-white text-sm font-bold">
+                                  {(review.visitor_name || 'A').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">{review.visitor_name || 'Anonymous'}</p>
+                                  {review.is_verified_booking && (
+                                    <CheckCircle className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                                {/* Location on same line as name */}
+                                {(review.reviewer_city || review.reviewer_country) && (
+                                  <div className="text-xs text-gray-400 mb-0.5">
+                                    <span>{[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}</span>
+                                  </div>
+                                )}
+                                {/* Date aligned with name and location */}
+                                <div className="text-xs text-gray-400">
+                                  {new Date(review.created_at).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Rating */}
+                            <div className="flex items-center gap-1 mb-2">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-200'
+                                  }`}
+                                />
+                              ))}
+                              <span className="text-xs font-semibold text-gray-600 ml-1">{review.rating.toFixed(1)}</span>
+                            </div>
+                            
+                            {/* Comment */}
+                            {review.comment && (
+                              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{review.comment}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 border-t">
+                      <Star className="w-6 h-6 text-gray-200 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No reviews yet. Be the first to share your experience!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Category-Specific Information */}
             {renderCategorySpecificInfo(service)}
-
-            {/* Vendor Info */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">About the provider</h3>
-              {service.vendors ? (
-                <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-xl font-bold text-blue-600">
-                      {service.vendors.business_name?.charAt(0) || 'V'}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{service.vendors.business_name || 'Vendor'}</h4>
-                    <p className="text-gray-600 text-sm mb-3 text-elegant">
-                      {service.vendors.business_description || 'No description available'}
-                    </p>
-                    {/* Contact information hidden until payment confirmed */}
-                    {/* 
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      {service.vendors.business_phone && (
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-1" />
-                          {service.vendors.business_phone}
-                        </div>
-                      )}
-                      {service.vendors.business_email && (
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-1" />
-                          {service.vendors.business_email}
-                        </div>
-                      )}
-                    </div>
-                    */}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  <p>Vendor information not available</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-              <div className="text-center mb-6">
-                <div className="text-3xl font-bold text-gray-900">
-                  {formatCurrency(service.price, service.currency)}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
-                </div>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pick-up date & time
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <input
-                            type="date"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <input
-                          type="time"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Drop-off date & time
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                          <input
-                            type="date"
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            min={startDate || new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <input
-                          type="time"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select date
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <input
-                        type="date"
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Number of guests
-                    </label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <select
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        value={guests}
-                        onChange={(e) => setGuests(Number(e.target.value))}
-                      >
-                        {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                          <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-4 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">
-                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                      `${formatCurrency(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
-                    ) : (
-                      `${formatCurrency(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`
+              {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
+                  <div className="space-y-3 mb-4">
+                    {ticketTypes.length === 0 && (
+                      <div className="text-sm text-gray-500">No ticket types configured for this event.</div>
                     )}
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(totalPrice, service.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total</span>
-                  <span>{formatCurrency(totalPrice, service.currency)}</span>
-                </div>
-              </div>
+                    {ticketTypes.map((t) => {
+                      const remaining = (t.quantity || 0) - (t.sold || 0)
+                      const soldOut = remaining <= 0
+                      const saleStart = t.sale_start || (t.metadata && t.metadata.sale_start)
+                      const saleEnd = t.sale_end || (t.metadata && t.metadata.sale_end)
+                      const now = new Date()
+                      const startOk = !saleStart || new Date(saleStart) <= now
+                      const endOk = !saleEnd || new Date(saleEnd) >= now
+                      const saleOpen = startOk && endOk
 
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleBooking}
-                  disabled={
-                    service?.service_categories?.name?.toLowerCase() === 'transport'
-                      ? !startDate || !endDate
-                      : !selectedDate
-                  }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
-                >
-                  {service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability'}
-                </button>
-                <button
-                  onClick={handleInquiry}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300"
-                >
-                  {service ? getInquiryButtonText(service.service_categories?.name || 'Service') : 'Contact Vendor'}
-                </button>
-              </div>
+                      return (
+                        <div key={t.id} className={`border p-3 rounded-lg ${(soldOut || !saleOpen) ? 'opacity-60' : ''}`}>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium text-gray-900">{t.title}</div>
+                              {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
+                              <div className="text-sm text-gray-600 mt-1">{formatCurrencyWithConversion(t.price, service.currency)} · {remaining} left</div>
+                              {!saleOpen && (
+                                <div className="text-xs text-yellow-700 mt-1">
+                                  {saleStart && new Date(saleStart) > now && `Sales open from ${new Date(saleStart).toLocaleString()}`}
+                                  {saleEnd && new Date(saleEnd) < now && `Sales closed (deadline ${new Date(saleEnd).toLocaleString()})`}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button disabled={soldOut || !saleOpen} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.max(0, (q[t.id] || 0) - 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">-</button>
+                              <input type="number" min={0} max={t.quantity} value={ticketQuantities[t.id] || 0} onChange={(e) => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, Math.max(0, Number(e.target.value || 0))) }))} className="w-16 text-center border rounded px-2 py-1" disabled={!saleOpen} />
+                              <button disabled={soldOut || !saleOpen} onClick={() => setTicketQuantities(q => ({ ...q, [t.id]: Math.min(t.quantity, (q[t.id] || 0) + 1) }))} className="px-2 py-1 bg-gray-100 rounded disabled:opacity-50">+</button>
+                            </div>
+                          </div>
+                          {soldOut && <div className="text-xs text-red-600 mt-2">Sold out</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
 
-              <p className="text-xs text-gray-500 text-center mt-3">
-                You won't be charged yet
-              </p>
+                  <div className="border-t pt-4 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-600">Total</span>
+                      <span className="font-medium">{formatCurrencyWithConversion(ticketsTotal, service.currency)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button onClick={async () => {
+                      try {
+                        const items = Object.entries(ticketQuantities).filter(([, qty]) => qty > 0).map(([ticket_type_id, qty]) => ({ ticket_type_id, quantity: qty as number, unit_price: ticketTypes.find(tt => tt.id === ticket_type_id)?.price || 0 }))
+                        if (items.length === 0) return alert('Select at least one ticket')
+                        const vendorId = service.vendor_id || service.vendors?.id || null
+                          const order = await createOrder(user?.id || null, vendorId, items, service.currency)
+                          // Navigate to checkout to collect buyer info and complete payment
+                          navigate(`/checkout/${order.id}`)
+                      } catch (err) {
+                        console.error('Failed to create order:', err)
+                        alert('Failed to create order. Try again later.')
+                      }
+                    }} disabled={ticketsTotal <= 0} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">Buy Tickets</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">Contact Provider</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-center mb-6">
+                    <div className="text-3xl font-bold text-gray-900">{formatCurrencyWithConversion(service.price, service.currency)}</div>
+                    <div className="text-sm text-gray-500">
+                      {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
+                       ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
+                       service.service_categories?.name?.toLowerCase() === 'shops' ? 'per item' :
+                       service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
+                    </div>
+                  </div>
+
+                  {/* Date & Guest Selection Form */}
+                  <div className="space-y-3 mb-6">
+                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                            </div>
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Drop-off</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                            </div>
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                          </div>
+                        </div>
+                      </>
+                    ) : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-in</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-out</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Date</label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                        </div>
+                      </div>
+                    )}
+
+                    {service.service_categories?.name?.toLowerCase() !== 'transport' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Guests</label>
+                        <div className="relative">
+                          <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <select className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
+                            {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (<option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price Calculation */}
+                  <div className="bg-gray-50 rounded-lg p-3 mb-6">
+                    <div className="flex justify-between items-center mb-2 text-xs">
+                      <span className="text-gray-600">
+                        {service.service_categories?.name?.toLowerCase() === 'transport' 
+                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                          : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                          : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                      </span>
+                      <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center font-bold text-sm">
+                      <span>Total</span>
+                      <span className="text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mb-3">
+                    <button onClick={handleBooking} disabled={
+                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
+                      ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
+                      !selectedDate
+                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 text-center">No charge yet</p>
+                </div>
+              )}
+
+              {/* show scan link to vendor/admin when enabled */}
+              {service.scan_enabled && (user?.id === service.vendors?.user_id) && (
+                <div className="mt-4 text-sm text-center">
+                  <a href={`/scan/${service.id}`} className="text-blue-600 underline">Open Event Scan Portal</a>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Booking Modal - Removed, replaced with direct navigation */}
+
+      {/* Fullscreen Image Lightbox */}
+      {lightboxOpen && service.images && service.images.length > 0 && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
+          {/* Close */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Counter */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+            {lightboxIndex + 1} / {service.images.length}
+          </div>
+
+          {/* Prev */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + service.images.length) % service.images.length) }}
+              className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          )}
+
+          {/* Image */}
+          <img
+            src={service.images[lightboxIndex]}
+            alt={`${service.title} ${lightboxIndex + 1}`}
+            className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next */}
+          {service.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % service.images.length) }}
+              className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }

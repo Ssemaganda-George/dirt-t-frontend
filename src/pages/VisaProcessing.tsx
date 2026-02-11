@@ -26,7 +26,7 @@ export default function VisaProcessing() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="border border-gray-200 p-8">
               <div className="flex items-center mb-6">
-                <Globe className="h-8 w-8 text-black mr-4" />
+                <Globe className="h-4 w-4 md:h-5 md:w-5 text-black mr-4" />
                 <h3 className="text-xl font-bold text-black tracking-tight antialiased">Uganda Tourist Visa</h3>
               </div>
               <ul className="space-y-3 text-gray-700 mb-6 leading-snug antialiased">

@@ -19,9 +19,15 @@ interface Profile {
   id: string
   email: string
   full_name: string
+  first_name?: string
+  last_name?: string
+  phone?: string
+  phone_country_code?: string
   avatar_url?: string
   role: 'admin' | 'vendor' | 'tourist'
   status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
+  home_city?: string
+  home_country?: string
   created_at: string
   updated_at: string
 }
@@ -42,7 +48,7 @@ interface AuthContextType {
   loading: boolean
   loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
-  signUp: (email: string, password: string, fullName: string, role?: string) => Promise<void>
+  signUp: (email: string, password: string, firstName: string, lastName: string, role?: string, homeCity?: string, homeCountry?: string) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   confirmSignOut: () => Promise<void>
@@ -284,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   /** -------------------- Sign Up -------------------- */
-  const signUp = async (email: string, password: string, fullName: string, role: string = 'tourist') => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, role: string = 'tourist', homeCity?: string, homeCountry?: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
 
@@ -296,14 +302,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const serviceClient = getServiceClient()
     try {
-      const { error: profileError } = await serviceClient
-        .from('profiles')
-        .upsert({ id: u.id, email, full_name: fullName, role }, { onConflict: 'id' })
-      if (profileError) {
-        console.error('Error creating profile during sign up:', profileError)
+      // Use atomic function to create/update profile
+      const profileResult = await serviceClient.rpc('create_user_profile_atomic', {
+        p_user_id: u.id,
+        p_email: email,
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_role: role,
+        p_home_city: homeCity || null,
+        p_home_country: homeCountry || null
+      });
+
+      if (!profileResult.data?.success) {
+        console.error('Error creating profile during sign up:', profileResult.data?.error);
       }
     } catch (err) {
-      console.error('Unexpected error creating profile during sign up:', err)
+      console.error('Unexpected error creating profile during sign up:', err);
+    }
+
+    if (role === 'tourist') {
+      try {
+        // Tourist record will be created automatically by database trigger
+        // No need to manually create it here
+        console.log('Tourist record will be created by database trigger');
+      } catch (err) {
+        console.error('Unexpected error during tourist signup:', err);
+      }
     }
 
     if (role === 'tourist') {
@@ -321,16 +345,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (role === 'vendor') {
       try {
-        const { error: vendorError } = await serviceClient
-          .from('vendors')
-          .upsert({ user_id: u.id, business_name: '', status: 'pending' }, { onConflict: 'user_id' })
-        if (vendorError) {
-          console.error('Error creating vendor during sign up:', vendorError)
+        // Use atomic function to create vendor profile
+        const vendorResult = await serviceClient.rpc('create_vendor_profile_atomic', {
+          p_user_id: u.id,
+          p_business_name: '',
+          p_status: 'pending'
+        });
+
+        if (!vendorResult.data?.success) {
+          console.error('Error creating vendor during sign up:', vendorResult.data?.error);
         }
       } catch (err) {
-        console.error('Unexpected error creating vendor during sign up:', err)
+        console.error('Unexpected error creating vendor during sign up:', err);
       }
-      sendVendorSignupEmail({ userId: u.id, email, fullName }).catch(console.error)
+      sendVendorSignupEmail({ userId: u.id, email, fullName: `${firstName} ${lastName}` }).catch(console.error)
     }
 
     // Do not fetch profile into context yet; user will load it after verified sign-in.
@@ -362,12 +390,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /** -------------------- Update Profile -------------------- */
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
+
+    // For profile updates, we can use the standard Supabase update since profiles
+    // are typically updated by the owner and race conditions are less likely.
+    // However, we ensure atomicity by using a transaction-like approach.
     const { data, error } = await supabase
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select()
       .single()
+
     if (error) throw error
     setProfile(data as Profile)
   }

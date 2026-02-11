@@ -1,4 +1,100 @@
 // Partnership types
+import { supabase } from './supabaseClient';
+import { formatCurrency } from './utils';
+import { creditWallet } from './creditWallet';
+import { executeWithCircuitBreaker } from './concurrency';
+import type { UserPreferences } from '../types'
+
+/**
+ * Lookup country name for an IP address using ipapi.co with a short timeout.
+ * Caches results in-memory. Returns null if lookup fails or no country found.
+ */
+async function lookupCountryByIp(_ip: string): Promise<string | null> {
+  // Temporarily disable IP geolocation to avoid CORS issues
+  // TODO: Implement a server-side solution for IP geolocation
+  return null
+}
+
+// Visitor Activity Types
+export interface VisitorSession {
+  id: string;
+  ip_address: string;
+  user_id?: string;
+  country?: string;
+  city?: string;
+  device_type?: string;
+  browser_info?: string;
+  user_agent?: string;
+  first_visit_at: string;
+  last_visit_at: string;
+  visit_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceLike {
+  id: string;
+  service_id: string;
+  visitor_session_id: string;
+  user_id?: string;
+  ip_address: string;
+  liked_at: string;
+  created_at: string;
+}
+
+export interface ServiceReview {
+  id: string;
+  service_id: string;
+  visitor_session_id?: string;
+  user_id?: string;
+  ip_address?: string;
+  visitor_name: string;
+  visitor_email?: string;
+  rating: number;
+  kpi_ratings?: Record<string, number> | null;
+  comment?: string;
+  helpful_count: number;
+  unhelpful_count: number;
+  is_verified_booking: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_by?: string;
+  rejection_reason?: string;
+  reviewer_city?: string;
+  reviewer_country?: string;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string;
+}
+
+export interface VisitorActivity {
+  id: string;
+  service_id: string;
+  vendor_id: string;
+  total_views: number;
+  unique_visitors: number;
+  total_likes: number;
+  total_reviews: number;
+  approved_reviews: number;
+  average_rating: number;
+  total_helpful_count: number;
+  views_this_month: number;
+  likes_this_month: number;
+  reviews_this_month: number;
+  last_activity_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceViewLog {
+  id: string;
+  service_id: string;
+  visitor_session_id: string;
+  user_id?: string;
+  ip_address: string;
+  referrer?: string;
+  viewed_at: string;
+}
+
 export interface PartnerRequest {
   id: string;
   name: string;
@@ -28,6 +124,95 @@ export interface Partner {
   status: string;
   created_at: string;
   updated_at: string;
+}
+
+// User Preferences types
+// UserPreferences type is imported from src/types
+
+// Service Delete Request types
+export interface ServiceDeleteRequest {
+  id: string;
+  service_id: string;
+  vendor_id: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requested_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  admin_notes?: string;
+  service?: any; // Service with category info
+  vendor?: any; // Vendor info
+}
+
+// User Preferences API
+export async function getUserPreferences(): Promise<UserPreferences | null> {
+  try {
+    // Check if user is authenticated
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) {
+      console.error('Session error:', sessionError)
+      return null
+    }
+    if (!session) {
+      console.warn('No active session for user preferences query')
+      return null
+    }
+
+    // Don't manually filter by user_id since RLS will handle it
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .single();
+
+    if (error) {
+      // If no preferences found, return null (not an error)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Supabase error fetching user preferences:', error)
+      throw error;
+    }
+
+    return data as UserPreferences;
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+    throw error;
+  }
+}
+
+export async function saveUserPreferences(userId: string, preferences: {
+  region: string;
+  currency: string;
+  language: string;
+}): Promise<UserPreferences> {
+  try {
+    // Use atomic function to prevent race conditions
+    const { data, error } = await supabase.rpc('save_user_preferences_atomic', {
+      p_user_id: userId,
+      p_region: preferences.region,
+      p_currency: preferences.currency,
+      p_language: preferences.language
+    });
+
+    if (error) throw error;
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to save user preferences');
+    }
+
+    // Fetch the updated preferences to return
+    const { data: updatedPrefs, error: fetchError } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return updatedPrefs as UserPreferences;
+  } catch (error) {
+    console.error('Error saving user preferences:', error);
+    throw error;
+  }
 }
 
 // Partner Requests API
@@ -165,10 +350,6 @@ export type TransactionType = 'payment' | 'withdrawal' | 'refund'
 export type TransactionStatus = 'pending' | 'approved' | 'completed' | 'failed' | 'rejected'
 export type ServiceDeleteRequestStatus = 'pending' | 'approved' | 'rejected'
 
-import type { Flight } from '../types'
-import { formatCurrency } from './utils'
-import { creditWallet } from './creditWallet'
-
 export interface Profile {
   id: string
   email: string
@@ -187,8 +368,12 @@ export interface Tourist {
   first_name?: string
   last_name?: string
   phone?: string
+  country_code?: string
+  tourist_home_city?: string
+  tourist_home_country?: string
   emergency_contact?: string
   emergency_phone?: string
+  emergency_country_code?: string
   emergency_relationship?: string
   emergency_email?: string
   emergency_address?: string
@@ -203,10 +388,14 @@ export interface Tourist {
 export interface Vendor {
   id: string
   user_id: string
+  first_name?: string
+  last_name?: string
   business_name: string
   business_description?: string
   business_address?: string
+  business_city?: string
   business_phone?: string
+  business_phones?: string[]
   business_email?: string
   business_website?: string
   business_type?: string
@@ -390,23 +579,30 @@ export interface Service {
   service_categories?: ServiceCategory
 }
 
-export interface ServiceDeleteRequest {
+export interface Flight {
   id: string
-  service_id: string
-  vendor_id: string
-  reason: string
-  status: ServiceDeleteRequestStatus
-  admin_notes?: string
-  requested_at: string
-  reviewed_at?: string
-  reviewed_by?: string
+  flight_number: string
+  airline: string
+  departure_airport: string
+  arrival_airport: string
+  departure_city: string
+  arrival_city: string
+  departure_time: string
+  arrival_time: string
+  duration_minutes: number
+  aircraft_type?: string
+  economy_price: number
+  business_price?: number
+  first_class_price?: number
+  currency: string
+  total_seats: number
+  available_seats: number
+  status: 'active' | 'cancelled' | 'delayed' | 'completed'
+  flight_class: 'economy' | 'business' | 'first_class'
+  amenities: string[]
+  baggage_allowance?: string
   created_at: string
   updated_at: string
-
-  // Relations
-  service?: Service
-  vendor?: Vendor
-  reviewer?: Profile
 }
 
 export interface Booking {
@@ -424,6 +620,7 @@ export interface Booking {
   payment_status: 'pending' | 'paid' | 'refunded'
   special_requests?: string
   payment_reference?: string
+  rejection_reason?: string // Reason for rejecting a booking
   created_at: string
   updated_at: string
   services?: Service
@@ -495,9 +692,6 @@ export interface Inquiry {
   vendors?: Vendor
 }
 
-// Database functions
-import { supabase } from './supabaseClient'
-
 // Service CRUD operations
 export async function getServices(vendorId?: string) {
   let query = supabase
@@ -515,11 +709,26 @@ export async function getServices(vendorId?: string) {
         id,
         name,
         icon
+      ),
+      ticket_types (
+        id,
+        title,
+        description,
+        price,
+        quantity,
+        sold,
+        metadata,
+        sale_start,
+        sale_end
       )
     `)
 
   if (vendorId) {
+    // Vendor wants to see their own services (including pending)
     query = query.eq('vendor_id', vendorId)
+  } else {
+    // Public listings should only include approved/active services
+    query = query.in('status', ['approved', 'active'])
   }
 
   const { data, error } = await query.order('created_at', { ascending: false })
@@ -532,7 +741,21 @@ export async function getServices(vendorId?: string) {
   return data || []
 }
 
-export async function getServiceById(serviceId: string) {
+export async function getServiceCategories() {
+  const { data, error } = await supabase
+    .from('service_categories')
+    .select('*')
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching service categories:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function getServiceById(serviceId: string, options?: { vendorId?: string; includeUnapproved?: boolean }) {
   const { data, error } = await supabase
     .from('services')
     .select(`
@@ -548,10 +771,21 @@ export async function getServiceById(serviceId: string) {
     throw error
   }
 
+  if (!data) return data
+
+  // If caller didn't request unapproved services, hide them from public consumers
+  if (!options?.includeUnapproved) {
+    const status = data.status
+    const isOwner = options?.vendorId && data.vendor_id === options.vendorId
+    if (!isOwner && status !== 'approved' && status !== 'active') {
+      return null
+    }
+  }
+
   return data
 }
 
-export async function getServiceBySlug(serviceSlug: string) {
+export async function getServiceBySlug(serviceSlug: string, options?: { vendorId?: string; includeUnapproved?: boolean }) {
   const { data, error } = await supabase
     .from('services')
     .select(`
@@ -565,6 +799,17 @@ export async function getServiceBySlug(serviceSlug: string) {
   if (error) {
     console.error('Error fetching service by slug:', error)
     throw error
+  }
+
+  if (!data) return data
+
+  // Hide unapproved services from public consumers unless caller is the owner or explicitly included
+  if (!options?.includeUnapproved) {
+    const status = data.status
+    const isOwner = options?.vendorId && data.vendor_id === options.vendorId
+    if (!isOwner && status !== 'approved' && status !== 'active') {
+      return null
+    }
   }
 
   return data
@@ -627,80 +872,106 @@ export async function createService(serviceData: {
 
   status?: string
 }) {
-  // Only insert fields that exist in the basic services table schema
-  const basicServiceData = {
-    vendor_id: serviceData.vendor_id,
-    category_id: serviceData.category_id,
-    title: serviceData.title,
-    description: serviceData.description,
-    price: serviceData.price,
-    currency: serviceData.currency || 'UGX',
-    images: serviceData.images || [],
-    location: serviceData.location,
-    duration_hours: serviceData.duration_hours,
-    max_capacity: serviceData.max_capacity,
-    amenities: serviceData.amenities || [],
-    status: serviceData.status || 'pending'
-  }
-
-  const { data, error } = await supabase
-    .from('services')
-    .insert([basicServiceData])
-    .select(`
-      *,
-      vendors (
-        id,
-        business_name,
-        business_description,
-        business_email,
-        status
-      ),
-      service_categories (
-        id,
-        name,
-        icon
-      )
-    `)
-    .single()
-
-  if (error) {
-    console.error('Error creating service:', error)
-    throw error
-  }
-
-  // If the service was created successfully and there are additional fields,
-  // update the service with the additional fields (this will work if the migration has been run)
-  if (data && Object.keys(serviceData).some(key => !Object.keys(basicServiceData).includes(key))) {
+  try {
+    // Try atomic RPC first, fall back to direct insert if RPC fails
+    let serviceId: string;
     try {
-      // Extract additional fields that aren't in the basic schema
-      const additionalFields: any = {}
+      const result = await supabase.rpc('create_service_atomic', {
+        p_vendor_id: serviceData.vendor_id,
+        p_category_id: serviceData.category_id,
+        p_title: serviceData.title,
+        p_description: serviceData.description,
+        p_price: serviceData.price,
+        p_currency: serviceData.currency || 'UGX',
+        p_images: serviceData.images || [],
+        p_location: serviceData.location,
+        p_duration_hours: serviceData.duration_hours,
+        p_max_capacity: serviceData.max_capacity,
+        p_amenities: serviceData.amenities || [],
+        p_status: serviceData.status || 'pending'
+      });
+
+      if (result.error) throw result.error;
+
+      if (!result.data?.success) {
+        throw new Error(result.data?.error || 'Failed to create service');
+      }
+
+      serviceId = result.data.service_id;
+    } catch (rpcError: any) {
+      console.warn('RPC create_service_atomic failed, falling back to direct insert:', rpcError?.code || rpcError?.message);
+
+      // Fallback: direct table insert
+      const { data: inserted, error: insertError } = await supabase
+        .from('services')
+        .insert({
+          vendor_id: serviceData.vendor_id,
+          category_id: serviceData.category_id,
+          title: serviceData.title,
+          description: serviceData.description,
+          price: serviceData.price,
+          currency: serviceData.currency || 'UGX',
+          images: serviceData.images || [],
+          location: serviceData.location || null,
+          duration_hours: serviceData.duration_hours || null,
+          max_capacity: serviceData.max_capacity || null,
+          amenities: serviceData.amenities || [],
+          status: serviceData.status || 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (insertError) throw insertError;
+      serviceId = inserted.id;
+    }
+
+    const basicFields = ['vendor_id', 'category_id', 'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours', 'max_capacity', 'amenities', 'status'];
+
+    // If there are additional fields, update the service with them
+    if (Object.keys(serviceData).some(key => !basicFields.includes(key))) {
+      // Extract additional fields
+      const additionalFields: any = {};
       Object.keys(serviceData).forEach(key => {
-        if (!Object.keys(basicServiceData).includes(key) && serviceData[key as keyof typeof serviceData] !== undefined) {
-          additionalFields[key] = serviceData[key as keyof typeof serviceData]
+        if (!basicFields.includes(key) && serviceData[key as keyof typeof serviceData] !== undefined) {
+          const value = serviceData[key as keyof typeof serviceData];
+          if (value === '') return; // Skip empty strings
+          additionalFields[key] = value;
         }
-      })
+      });
 
       if (Object.keys(additionalFields).length > 0) {
-        await updateService(data.id, data.vendor_id, additionalFields)
-        // Re-fetch the service with updated data
-        const { data: updatedData, error: updateError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('id', data.id)
-          .single()
-
-        if (!updateError) {
-          return updatedData
-        }
+        await updateService(serviceId, serviceData.vendor_id, additionalFields);
       }
-    } catch (updateError) {
-      // If updating additional fields fails, just return the basic service
-      // This allows service creation to work even without the comprehensive migration
-      console.warn('Failed to update additional service fields:', updateError)
     }
-  }
 
-  return data
+    // Fetch the complete service with relations
+    const { data: service, error: fetchError } = await supabase
+      .from('services')
+      .select(`
+        *,
+        vendors (
+          id,
+          business_name,
+          business_description,
+          business_email,
+          status
+        ),
+        service_categories (
+          id,
+          name,
+          icon
+        )
+      `)
+      .eq('id', serviceId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return service;
+
+  } catch (error) {
+    console.error('Error creating service:', error);
+    throw error;
+  }
 }
 
 export async function updateService(serviceId: string, vendorId: string | undefined, updates: Partial<{
@@ -758,51 +1029,54 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   booking_requirements?: string
   cancellation_policy?: string
 }>): Promise<any> {
-  // Whitelist of columns that actually exist in the database
-  const validColumns = new Set([
-    'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours',
-    'max_capacity', 'amenities', 'status', 'category_id', 'updated_at',
-    // Enhanced general fields
-    'duration_days', 'group_size_min', 'group_size_max', 'best_time_to_visit', 'what_to_bring',
-    'age_restrictions', 'health_requirements', 'accessibility_features', 'sustainability_certified', 'eco_friendly',
-    // Hotel fields (note: check_in_time and check_out_time don't exist, but check_in_process does)
-    'total_rooms', 'room_amenities', 'nearby_attractions', 'parking_available', 'pet_friendly',
-    'breakfast_included', 'star_rating', 'property_type', 'facilities', 'wifi_available',
-    'minimum_stay', 'maximum_guests', 'common_facilities', 'generator_backup', 'smoking_allowed',
-    'children_allowed', 'disabled_access', 'concierge_service', 'house_rules', 'local_recommendations',
-    'check_in_process',
-    // Tour fields
-    'itinerary', 'included_items', 'excluded_items', 'difficulty_level', 'minimum_age', 'languages_offered',
-    'tour_highlights', 'meeting_point', 'end_point', 'transportation_included', 'meals_included',
-    'guide_included', 'accommodation_included',
-    // Transport fields
-    'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
-    'license_required', 'booking_notice_hours', 'usb_charging', 'child_seat', 'roof_rack',
-    'towing_capacity', 'four_wheel_drive', 'automatic_transmission', 'transport_terms',
-    'driver_included', 'air_conditioning', 'gps_tracking', 'fuel_included', 'tolls_included',
-    'insurance_included', 'reservations_required',
-    // Restaurant fields
-    'cuisine_type', 'opening_hours', 'menu_items', 'dietary_options', 'average_cost_per_person',
-    'price_range', 'advance_booking_days', 'dress_code', 'menu_highlights', 'restaurant_atmosphere',
-    'restaurant_notes', 'outdoor_seating', 'live_music', 'private_dining', 'alcohol_served',
-    // Guide fields
-    'languages_spoken', 'specialties', 'certifications', 'years_experience', 'service_area',
-    'first_aid_certified', 'emergency_contact',
-    // Activity fields
-    'activity_type', 'skill_level_required', 'equipment_provided', 'safety_briefing_required',
-    'weather_dependent', 'seasonal_availability',
-    // Equipment rental fields
-    'rental_items', 'rental_duration', 'deposit_required', 'insurance_required', 'delivery_available',
-    'maintenance_included', 'replacement_value', 'delivery_radius', 'usage_instructions',
-    'maintenance_requirements', 'training_provided', 'cleaning_included', 'repair_service',
-    'equipment_condition', 'rental_terms',
-    // Event fields
-    'event_type', 'event_date', 'event_duration_hours', 'max_participants', 'materials_included',
-    'prerequisites', 'learning_outcomes', 'instructor_credentials', 'certificates_provided',
-    'refreshments_included', 'take_home_materials', 'photography_allowed', 'recording_allowed',
-    'group_discounts', 'event_status', 'event_datetime', 'registration_deadline', 'ticket_price',
+  try {
+    // Whitelist of columns that actually exist in the database
+    const validColumns = new Set([
+      'title', 'description', 'price', 'currency', 'images', 'location', 'duration_hours',
+      'max_capacity', 'amenities', 'status', 'category_id', 'updated_at',
+      // Enhanced general fields
+      'duration_days', 'group_size_min', 'group_size_max', 'best_time_to_visit', 'what_to_bring',
+      'age_restrictions', 'health_requirements', 'accessibility_features', 'sustainability_certified', 'eco_friendly',
+      // Hotel fields (note: check_in_time and check_out_time don't exist, but check_in_process does)
+      'total_rooms', 'room_amenities', 'nearby_attractions', 'parking_available', 'pet_friendly',
+      'breakfast_included', 'star_rating', 'property_type', 'facilities', 'wifi_available',
+      'minimum_stay', 'maximum_guests', 'common_facilities', 'generator_backup', 'smoking_allowed',
+      'children_allowed', 'disabled_access', 'concierge_service', 'house_rules', 'local_recommendations',
+      'check_in_process',
+      // Tour fields
+      'itinerary', 'included_items', 'excluded_items', 'difficulty_level', 'minimum_age', 'languages_offered',
+      'tour_highlights', 'meeting_point', 'end_point', 'transportation_included', 'meals_included',
+      'guide_included', 'accommodation_included',
+      // Transport fields
+      'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
+      'license_required', 'booking_notice_hours', 'usb_charging', 'child_seat', 'roof_rack',
+      'towing_capacity', 'four_wheel_drive', 'automatic_transmission', 'transport_terms',
+      'driver_included', 'air_conditioning', 'gps_tracking', 'fuel_included', 'tolls_included',
+      'insurance_included', 'reservations_required',
+      // Restaurant fields
+      'cuisine_type', 'opening_hours', 'menu_items', 'dietary_options', 'average_cost_per_person',
+      'price_range', 'advance_booking_days', 'dress_code', 'menu_highlights', 'restaurant_atmosphere',
+      'restaurant_notes', 'outdoor_seating', 'live_music', 'private_dining', 'alcohol_served',
+      // Guide fields
+      'languages_spoken', 'specialties', 'certifications', 'years_experience', 'service_area',
+      'first_aid_certified', 'emergency_contact',
+      // Activity fields
+      'activity_type', 'skill_level_required', 'equipment_provided', 'safety_briefing_required',
+      'weather_dependent', 'seasonal_availability',
+      // Equipment rental fields
+      'rental_items', 'rental_duration', 'deposit_required', 'insurance_required', 'delivery_available',
+      'maintenance_included', 'replacement_value', 'delivery_radius', 'usage_instructions',
+      'maintenance_requirements', 'training_provided', 'cleaning_included', 'repair_service',
+      'equipment_condition', 'rental_terms',
+      // Event fields
+      'event_type', 'event_date', 'event_duration_hours', 'max_participants', 'materials_included',
+      'prerequisites', 'learning_outcomes', 'instructor_credentials', 'certificates_provided',
+      'refreshments_included', 'take_home_materials', 'photography_allowed', 'recording_allowed',
+  'group_discounts', 'event_status', 'event_datetime', 'registration_deadline', 'ticket_price',
     'early_bird_price', 'ticket_purchase_link', 'event_location', 'event_highlights',
     'event_inclusions', 'event_prerequisites', 'event_description', 'event_cancellation_policy',
+  // Admin-controlled scan/link activation for events
+  'scan_enabled',
     // Travel agency fields
     'services_offered', 'destinations_covered', 'booking_fee', 'customization_available',
     'emergency_support', 'website_url', 'social_media', 'emergency_phone', 'booking_deadline_hours',
@@ -822,7 +1096,10 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   const filteredUpdates: any = {};
   Object.keys(updates).forEach(key => {
     if (validColumns.has(key) && updates[key as keyof typeof updates] !== undefined) {
-      filteredUpdates[key] = updates[key as keyof typeof updates];
+      const value = updates[key as keyof typeof updates];
+      // Skip empty strings — they cause DB errors on typed columns (timestamps, numerics, etc.)
+      if (value === '') return;
+      filteredUpdates[key] = value;
     }
   });
 
@@ -831,141 +1108,195 @@ export async function updateService(serviceId: string, vendorId: string | undefi
 
   console.log('Valid updates:', filteredUpdates);
 
+  // Try atomic RPC first, fall back to direct update if RPC fails (e.g. PGRST203 overload issue)
   try {
-    // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
-    if (vendorId) {
-      const { data: serviceCheck, error: checkError } = await supabase
-        .from('services')
-        .select('vendor_id')
-        .eq('id', serviceId)
-        .single()
+    const result = await supabase.rpc('update_service_atomic', {
+      p_service_id: serviceId,
+      p_updates: filteredUpdates,
+      p_vendor_id: vendorId
+    });
 
-      if (checkError || !serviceCheck) {
-        throw new Error('Service not found')
-      }
+    console.log('updateService: RPC result:', result);
 
-      if (serviceCheck.vendor_id !== vendorId) {
-        throw new Error('Unauthorized: Service does not belong to this vendor')
-      }
+    if (result.error) throw result.error;
+
+    if (!result.data?.success) {
+      throw new Error(result.data?.error || 'Failed to update service');
     }
-
-    console.log('All updates being sent:', filteredUpdates)
-
-    const { data, error } = await supabase
+  } catch (rpcError: any) {
+    console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message, rpcError);
+    
+    // Fallback: direct table update
+    const updateQuery = supabase
       .from('services')
       .update(filteredUpdates)
-      .eq('id', serviceId)
-      .select(`
-        *,
-        vendors (
-          id,
-          business_name,
-          business_description,
-          business_email,
-          status
-        ),
-        service_categories (
-          id,
-          name,
-          icon
-        )
-      `)
-      .single()
+      .eq('id', serviceId);
 
-    if (error) {
-      console.error('Error updating service:', error)
-      console.error('Update data that failed:', filteredUpdates)
-      throw error
+    // If vendorId is provided, also filter by it for authorization
+    if (vendorId) {
+      updateQuery.eq('vendor_id', vendorId);
     }
 
-    return data
+    // Use select().single() so we get the updated row back and detect zero-row updates
+    const { data: directUpdated, error: directError } = await updateQuery.select().single();
+    if (directError) {
+      console.error('updateService: direct update error (no rows updated?):', directError);
+      throw directError;
+    }
+    if (!directUpdated) {
+      const msg = `updateService: direct update did not return an updated row for ${serviceId}`;
+      console.error(msg);
+      throw new Error(msg);
+    }
+    console.log('updateService: direct update succeeded for', serviceId);
+  }
+
+  // Fetch the updated service with relations
+  const { data, error } = await supabase
+    .from('services')
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      )
+    `)
+    .eq('id', serviceId)
+    .single();
+
+  if (error) throw error;
+  console.log('updateService: fetched updated service:', { id: data?.id, title: data?.title });
+  // Compare filteredUpdates to returned data for quick mismatch detection
+  try {
+    const mismatches: string[] = [];
+    Object.keys(filteredUpdates).forEach(k => {
+      try {
+        const sent = filteredUpdates[k as keyof typeof filteredUpdates];
+        const got = (data as any)?.[k];
+        if (typeof sent === 'object') {
+          if (JSON.stringify(sent) !== JSON.stringify(got)) mismatches.push(k);
+        } else {
+          if (String(sent) !== String(got)) mismatches.push(k);
+        }
+      } catch (e) {
+        mismatches.push(k);
+      }
+    });
+    if (mismatches.length > 0) {
+      console.warn('updateService: mismatch between sent updates and DB for keys:', mismatches, { sent: filteredUpdates, got: data });
+      // Retry with direct update to ensure changes are applied
+      try {
+        console.warn('updateService: attempting direct update retry due to mismatch...');
+        const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
+        if (vendorId) directQuery.eq('vendor_id', vendorId);
+        const { data: retryData, error: retryError } = await directQuery.select().single();
+        if (retryError) {
+          console.error('updateService: direct retry error:', retryError);
+        } else {
+          console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
+          return retryData;
+        }
+      } catch (retryErr) {
+        console.error('updateService: error during direct retry:', retryErr);
+      }
+    }
+  } catch (e) {
+    console.warn('updateService: error while comparing updates to DB result', e);
+  }
+  return data;
+
   } catch (error) {
-    console.error('Error updating service:', error)
-    throw error
+    console.error('Error updating service:', error);
+    throw error;
   }
 }
 
 export async function deleteService(serviceId: string, vendorId?: string) {
   console.log('deleteService called with:', { serviceId, vendorId });
 
-  // Authorization check: ensure the service belongs to the specified vendor (if vendorId provided)
-  // OR allow admins to delete any service
-  if (vendorId) {
-    console.log('Checking vendor authorization...');
-    const { data: serviceCheck, error: checkError } = await supabase
-      .from('services')
-      .select('vendor_id')
-      .eq('id', serviceId)
-      .single()
+  try {
+    // Determine if user is admin
+    let isAdmin = false;
+    if (!vendorId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Unauthorized: User not authenticated');
+      }
 
-    if (checkError || !serviceCheck) {
-      console.error('Service not found:', checkError);
-      throw new Error('Service not found')
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Unauthorized: Profile not found');
+      }
+
+      isAdmin = profile.role === 'admin';
+      if (!isAdmin) {
+        throw new Error('Unauthorized: Only admins can delete services without vendor context');
+      }
     }
 
-    if (serviceCheck.vendor_id !== vendorId) {
-      console.error('Unauthorized: Service does not belong to this vendor');
-      throw new Error('Unauthorized: Service does not belong to this vendor')
-    }
-  } else {
-    console.log('Checking admin authorization...');
-    // If no vendorId provided, check if user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      console.error('Unauthorized: User not authenticated');
-      throw new Error('Unauthorized: User not authenticated')
-    }
+    // Use atomic function for service deletion
+    const result = await supabase.rpc('delete_service_atomic', {
+      p_service_id: serviceId,
+      p_vendor_id: vendorId,
+      p_is_admin: isAdmin
+    });
 
-    console.log('User authenticated:', user.id);
+    if (result.error) throw result.error;
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      console.error('Profile error:', profileError);
-      throw new Error('Unauthorized: Profile not found')
+    if (!result.data?.success) {
+      throw new Error(result.data?.error || 'Failed to delete service');
     }
 
-    console.log('User profile:', profile);
-
-    if (profile.role !== 'admin') {
-      console.error('Unauthorized: User is not admin, role:', profile.role);
-      throw new Error('Unauthorized: Only admins can delete services without vendor context')
-    }
-
-    console.log('Admin authorization confirmed');
+    console.log('Service deleted successfully');
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    throw error;
   }
-
-  console.log('Deleting service from database...');
-  const { error } = await supabase
-    .from('services')
-    .delete()
-    .eq('id', serviceId)
-
-  if (error) {
-    console.error('Error deleting service:', error)
-    throw error
-  }
-
-  console.log('Service deleted successfully');
 }
 
-// Get service categories
-export async function getServiceCategories() {
-  const { data, error } = await supabase
-    .from('service_categories')
-    .select('*')
-    .order('name')
+// Check service availability for a specific date and number of guests
+export async function checkServiceAvailability(serviceId: string, serviceDate: string, guests: number): Promise<{
+  available: boolean;
+  available_capacity?: number;
+  requested_guests?: number;
+  max_capacity?: number;
+  unlimited_capacity?: boolean;
+  error?: string;
+}> {
+  try {
+    const result = await supabase.rpc('check_service_availability', {
+      p_service_id: serviceId,
+      p_service_date: serviceDate,
+      p_requested_guests: guests
+    });
 
-  if (error) {
-    console.error('Error fetching service categories:', error)
-    throw error
+    if (result.error) throw result.error;
+
+    return result.data as {
+      available: boolean;
+      available_capacity?: number;
+      requested_guests?: number;
+      max_capacity?: number;
+      unlimited_capacity?: boolean;
+      error?: string;
+    };
+  } catch (error) {
+    console.error('Error checking service availability:', error);
+    throw error;
   }
-
-  return data || []
 }
 
 // Image upload functions
@@ -1137,6 +1468,651 @@ export async function createServiceDeleteRequest(serviceId: string, vendorId: st
   }
 }
 
+// Activation request functions
+export async function createActivationRequest(serviceId: string, vendorId: string, requesterId?: string) {
+  try {
+    const { data, error } = await supabase
+      .from('activation_requests')
+      .insert([{ service_id: serviceId, vendor_id: vendorId, requester_id: requesterId }])
+      .select(`*, service:services(*), vendor:vendors(*)`)
+      .single()
+
+    if (error) {
+      if (error.message?.includes('relation "activation_requests" does not exist')) {
+        throw new Error('Activation request functionality is not available yet. Please run the database migration first.')
+      }
+      console.error('Error creating activation request:', error)
+      throw error
+    }
+
+    // Notify admin about the activation request using messages
+    const adminId = await getAdminProfileId()
+    if (adminId) {
+      // Try to find vendor user/profile id
+      let vendorProfileId: string | null = null
+      try {
+        const { data: vendorRecord } = await supabase.from('vendors').select('user_id').eq('id', vendorId).single()
+        vendorProfileId = vendorRecord?.user_id || null
+      } catch (e) {
+        console.warn('Could not fetch vendor record for activation notification', e)
+      }
+
+      const subject = `Activation request for service ${data?.service?.title || serviceId}`
+      const message = `Vendor ${data?.vendor?.business_name || vendorId} has requested activation for service ${data?.service?.title || serviceId}. Service ID: ${serviceId}`
+
+      if (vendorProfileId) {
+        // sendMessage expects sender_id, recipient_id to be profile ids. Use vendor as sender to admin.
+        await sendMessage({ sender_id: vendorProfileId, sender_role: 'vendor', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      } else {
+        // fallback: send system message
+        await sendMessage({ sender_id: adminId, sender_role: 'admin', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      }
+    }
+
+    return data
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('Activation request functionality is not available yet')) throw err
+    console.error('Error creating activation request:', err)
+    throw new Error('Failed to create activation request')
+  }
+}
+
+export async function getActivationRequests(vendorId?: string) {
+  try {
+    let query = supabase.from('activation_requests').select(`*, service:services(*), vendor:vendors(*)`).order('requested_at', { ascending: false })
+    if (vendorId) query = query.eq('vendor_id', vendorId)
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  } catch (err) {
+    console.error('Error fetching activation requests:', err)
+    throw err
+  }
+}
+
+export async function updateActivationRequestStatus(requestId: string, status: 'pending' | 'approved' | 'rejected', adminId?: string, adminNotes?: string) {
+  try {
+    const updates: any = { status }
+    if (adminId) updates.admin_id = adminId
+    if (adminNotes) updates.admin_notes = adminNotes
+    updates.updated_at = new Date().toISOString()
+
+    const { data, error } = await supabase.from('activation_requests').update(updates).eq('id', requestId).select(`*, service:services(*), vendor:vendors(*)`).single()
+    if (error) throw error
+
+    // If approved, enable scan_enabled on the service
+    if (status === 'approved' && data?.service?.id) {
+      await updateService(data.service.id, undefined, { scan_enabled: true } as any)
+    }
+
+    return data
+  } catch (err) {
+    console.error('Error updating activation request status:', err)
+    throw err
+  }
+}
+
+// Event OTP functions
+export async function createEventOTP(serviceId: string, ttlMinutes = 30) {
+  try {
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString()
+
+    const { data, error } = await supabase.from('event_otps').insert([{ service_id: serviceId, otp, expires_at: expiresAt }]).select().single()
+    if (error) throw error
+
+    // Notify admin and event organizer via email and SMS
+    const service = await getServiceById(serviceId)
+    const adminId = await getAdminProfileId()
+    let vendorProfileId: string | null = null
+    try {
+      const { data: vendorRecord } = await supabase.from('vendors').select('user_id').eq('id', service?.vendor_id).single()
+      vendorProfileId = vendorRecord?.user_id || null
+    } catch (e) {
+      console.warn('Could not fetch vendor profile for OTP notification', e)
+    }
+
+    // Get admin and vendor contact information
+    let adminEmail: string | null = null
+    let adminPhone: string | null = null
+    let vendorEmail: string | null = null
+    let vendorPhone: string | null = null
+
+    if (adminId) {
+      try {
+        const { data: adminProfile } = await supabase.from('profiles').select('email, phone').eq('id', adminId).single()
+        adminEmail = adminProfile?.email || null
+        adminPhone = adminProfile?.phone || null
+      } catch (e) {
+        console.warn('Could not fetch admin profile for OTP notification', e)
+      }
+    }
+
+    if (vendorProfileId) {
+      try {
+        const { data: vendorProfile } = await supabase.from('profiles').select('email, phone').eq('id', vendorProfileId).single()
+        vendorEmail = vendorProfile?.email || null
+        vendorPhone = vendorProfile?.phone || null
+      } catch (e) {
+        console.warn('Could not fetch vendor profile for OTP notification', e)
+      }
+    }
+
+    const subject = `OTP for event access: ${service?.title || serviceId}`
+    const message = `An OTP was issued for access to event ${service?.title || serviceId}: ${otp}. It expires at ${expiresAt}.`
+
+    // Send email notifications
+    if (adminEmail) {
+      await sendOTPNotification({ 
+        to: adminEmail, 
+        subject, 
+        message: `Admin notification: ${message}`,
+        type: 'email' 
+      })
+    }
+
+    if (vendorEmail) {
+      await sendOTPNotification({ 
+        to: vendorEmail, 
+        subject, 
+        message: `Vendor notification: ${message}`,
+        type: 'email' 
+      })
+    }
+
+    // Send SMS notifications
+    if (adminPhone) {
+      await sendOTPNotification({ 
+        to: adminPhone, 
+        message: `Admin notification: ${message}`,
+        type: 'sms' 
+      })
+    }
+
+    if (vendorPhone) {
+      await sendOTPNotification({ 
+        to: vendorPhone, 
+        message: `Vendor notification: ${message}`,
+        type: 'sms' 
+      })
+    }
+
+    // Also send internal messages as backup
+    if (adminId) {
+      // Send to admin from vendor if vendorProfileId else from admin
+      if (vendorProfileId) await sendMessage({ sender_id: vendorProfileId, sender_role: 'vendor', recipient_id: adminId, recipient_role: 'admin', subject, message })
+      else await sendMessage({ sender_id: adminId, sender_role: 'admin', recipient_id: adminId, recipient_role: 'admin', subject, message })
+    }
+
+    if (vendorProfileId) {
+      await sendMessage({ sender_id: adminId || vendorProfileId, sender_role: adminId ? 'admin' : 'vendor', recipient_id: vendorProfileId, recipient_role: 'vendor', subject, message })
+    }
+
+    return data
+  } catch (err) {
+    console.error('Error creating event OTP:', err)
+    throw err
+  }
+}
+
+export async function verifyEventOTP(serviceId: string, otp: string) {
+  try {
+    const { data: rows, error } = await supabase.from('event_otps').select('*').eq('service_id', serviceId).eq('otp', otp).eq('used', false)
+    if (error) throw error
+    const found = (rows || []).find((r: any) => new Date(r.expires_at) > new Date())
+    if (!found) return { valid: false }
+
+    // mark used
+    await supabase.from('event_otps').update({ used: true }).eq('id', found.id)
+    return { valid: true }
+  } catch (err) {
+    console.error('Error verifying event OTP:', err)
+    throw err
+  }
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-password', {
+      body: { password }
+    })
+
+    if (error) {
+      console.error('Error verifying password:', error)
+      return false
+    }
+
+    return data?.valid === true
+  } catch (err) {
+    console.error('Error verifying password:', err)
+    return false
+  }
+}
+
+// Ticketing helpers for event management
+export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any; sale_start?: string; sale_end?: string }) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').insert([{
+      service_id: serviceId,
+      title: payload.title,
+      description: payload.description,
+      price: payload.price,
+      quantity: payload.quantity,
+      metadata: payload.metadata,
+      sale_start: payload.sale_start,
+      sale_end: payload.sale_end
+    }]).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error creating ticket type:', err)
+    throw err
+  }
+}
+
+export async function getTicketTypes(serviceId: string) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').select('*').eq('service_id', serviceId)
+    if (error) throw error
+    return data || []
+  } catch (err) {
+    console.error('Error fetching ticket types:', err)
+    throw err
+  }
+}
+
+export async function updateTicketType(ticketTypeId: string, payload: { title?: string; description?: string; price?: number; quantity?: number; metadata?: any; sale_start?: string; sale_end?: string }) {
+  try {
+    const { data, error } = await supabase.from('ticket_types').update({
+      title: payload.title,
+      description: payload.description,
+      price: payload.price,
+      quantity: payload.quantity,
+      metadata: payload.metadata,
+      sale_start: payload.sale_start,
+      sale_end: payload.sale_end
+    }).eq('id', ticketTypeId).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error updating ticket type:', err)
+    throw err
+  }
+}
+
+export async function deleteTicketType(ticketTypeId: string) {
+  try {
+    const { error } = await supabase.from('ticket_types').delete().eq('id', ticketTypeId)
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    console.error('Error deleting ticket type:', err)
+    throw err
+  }
+}
+
+export async function createOrder(userId: string | null, vendorId: string | null, items: { ticket_type_id: string; quantity: number; unit_price: number }[], currency = 'UGX') {
+  try {
+    const total = items.reduce((s, it) => s + (it.unit_price * it.quantity), 0)
+
+    const { data: order, error: orderError } = await supabase.from('orders').insert([{ user_id: userId, vendor_id: vendorId, total_amount: total, currency, status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]).select().single()
+    if (orderError) throw orderError
+
+    const orderItems = items.map(it => ({ order_id: order.id, ticket_type_id: it.ticket_type_id, quantity: it.quantity, unit_price: it.unit_price, total_price: it.unit_price * it.quantity }))
+    const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
+    if (itemsError) throw itemsError
+
+    return order
+  } catch (err) {
+    console.error('Error creating order:', err)
+    throw err
+  }
+}
+
+export async function confirmOrderAndIssueTickets(orderId: string, payment: { vendor_id: string; tourist_id?: string; amount: number; currency: string; payment_method: string; reference?: string }) {
+  return executeWithCircuitBreaker(async () => {
+    // Mark order as paid
+    const { data: order, error: orderError } = await supabase.from('orders').update({ status: 'paid', reference: payment.reference, updated_at: new Date().toISOString() }).eq('id', orderId).select().single()
+    if (orderError) throw orderError
+
+    // Create transaction record
+    try {
+      await addTransaction({ booking_id: undefined as any, vendor_id: payment.vendor_id, tourist_id: payment.tourist_id, amount: payment.amount, currency: payment.currency, transaction_type: 'payment', status: 'completed', payment_method: payment.payment_method as any, reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` })
+    } catch (txErr) {
+      console.warn('Failed to add transaction for ticket order:', txErr)
+    }
+
+    // Load order items with ticket type information
+    const { data: items, error: itemsError } = await supabase.from('order_items').select('*, ticket_types(*)').eq('order_id', orderId)
+    if (itemsError) throw itemsError
+
+    const createdTickets: any[] = []
+    // Create bookings per service for ALL ticket orders (logged-in and guest)
+    // This ensures a booking ID exists for ticket purchases
+    const bookingMap: Record<string, string> = {}
+    try {
+      // Group items by service_id to create bookings
+      const groups: Record<string, { qty: number; total: number }> = {}
+      for (const it of items || []) {
+        const sid = it.ticket_types?.service_id
+        if (!sid) continue
+        groups[sid] = groups[sid] || { qty: 0, total: 0 }
+        groups[sid].qty += it.quantity
+        groups[sid].total += (it.unit_price || 0) * it.quantity
+      }
+
+      for (const sid of Object.keys(groups)) {
+        try {
+          const booking = await createBooking({
+            service_id: sid,
+            booking_date: new Date().toISOString(),
+            service_date: new Date().toISOString(),
+            guests: groups[sid].qty,
+            total_amount: groups[sid].total,
+            currency: order.currency,
+            status: 'confirmed',
+            payment_status: 'paid',
+            tourist_id: payment.tourist_id || undefined,
+            // For guest bookings, try to get info from order if available, otherwise leave as undefined
+            guest_name: !payment.tourist_id ? (order as any).guest_name || null : undefined,
+            guest_email: !payment.tourist_id ? (order as any).guest_email || null : undefined,
+            guest_phone: !payment.tourist_id ? (order as any).guest_phone || null : undefined
+          })
+          if (booking && booking.id) bookingMap[sid] = booking.id
+        } catch (bkErr) {
+          // Log but don't fail ticket issuance if booking creation fails
+          console.warn('Failed to create booking for ticket order service', sid, bkErr)
+        }
+      }
+    } catch (err) {
+      console.error('Error creating bookings for ticket order:', err)
+    }
+
+    // Use atomic ticket booking function for each ticket type
+    for (const it of items || []) {
+      try {
+        const { data, error } = await supabase.rpc('book_tickets_atomic', {
+          p_ticket_type_id: it.ticket_type_id,
+          p_quantity: it.quantity,
+          p_order_id: orderId
+        })
+
+        if (error) {
+          console.error('Failed to book tickets atomically:', error)
+          throw new Error(`Failed to book tickets: ${error.message}`)
+        }
+
+        if (!data?.success) {
+          throw new Error(data?.error || 'Failed to book tickets')
+        }
+
+        console.log(`Successfully booked ${data.tickets_created} tickets for type ${it.ticket_type_id}`)
+      } catch (atomicError) {
+        console.error('Atomic booking failed, falling back to individual ticket creation:', atomicError)
+
+        // Fallback to individual ticket creation if atomic function fails
+        for (let i = 0; i < it.quantity; i++) {
+          const code = `TKT-${Math.random().toString(36).slice(2,10).toUpperCase()}`
+          try {
+            const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{
+              order_id: orderId,
+              ticket_type_id: it.ticket_type_id,
+              service_id: it.ticket_types.service_id,
+              owner_id: order.user_id || null,
+              code,
+              qr_data: code,
+              status: 'issued'
+            }]).select().single()
+
+            if (ticketError) {
+              console.error('Failed to create individual ticket:', ticketError)
+              continue
+            }
+            createdTickets.push(ticket)
+          } catch (indError) {
+            console.error('Exception creating individual ticket:', indError)
+          }
+        }
+
+        // increment sold count (non-atomically as fallback)
+        try {
+          await supabase.from('ticket_types').update({ sold: (it.quantity) }).eq('id', it.ticket_type_id)
+        } catch (incErr) {
+          console.warn('Failed to increment sold count:', incErr)
+        }
+      }
+    }
+
+    // Fetch all tickets created for this order
+    const { data: allTickets, error: fetchError } = await supabase
+      .from('tickets')
+      .select('*, ticket_types(*), orders(*)')
+      .eq('order_id', orderId)
+
+    if (!fetchError && allTickets) {
+      createdTickets.push(...allTickets)
+    }
+
+    return { order, tickets: createdTickets }
+  }, 'confirmOrderAndIssueTickets')
+}
+
+export async function getAvailableTickets(ticketTypeId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase.rpc('get_available_tickets', {
+      p_ticket_type_id: ticketTypeId
+    })
+
+    if (error) {
+      console.error('Error getting available tickets:', error)
+      // Fallback to manual calculation
+      const { data: ticketType, error: fetchError } = await supabase
+        .from('ticket_types')
+        .select('quantity, sold')
+        .eq('id', ticketTypeId)
+        .single()
+
+      if (fetchError || !ticketType) {
+        console.error('Error fetching ticket type for fallback:', fetchError)
+        return 0
+      }
+
+      return Math.max(0, ticketType.quantity - ticketType.sold)
+    }
+
+    return data || 0
+  } catch (err) {
+    console.error('Exception getting available tickets:', err)
+    return 0
+  }
+}
+
+export async function markTicketUsed(ticketId: string, usedAt?: string) {
+  try {
+    const { data, error } = await supabase.from('tickets').update({ status: 'used', used_at: usedAt || new Date().toISOString() }).eq('id', ticketId).select().single()
+    if (error) throw error
+    return data
+  } catch (err) {
+    console.error('Error marking ticket used:', err)
+    throw err
+  }
+}
+
+export async function verifyTicketByCode(code: string, serviceId?: string) {
+  return executeWithCircuitBreaker(async () => {
+    console.log('Verifying ticket with code:', code, 'for service:', serviceId)
+
+    // Use atomic verification function
+    const { data: result, error } = await supabase.rpc('verify_and_use_ticket_atomic', {
+      p_ticket_code: code,
+      p_service_id: serviceId || null
+    })
+
+    if (error) {
+      console.error('Database error in atomic verification:', error)
+      throw error
+    }
+
+    console.log('Atomic verification result:', result)
+
+    if (!result?.success) {
+      return {
+        valid: false,
+        ticket: null,
+        message: result?.error || 'Invalid ticket'
+      }
+    }
+
+    // Fetch full ticket details for the response
+    let ticketDetails = null;
+    let fetchError = null;
+
+    if (result.ticket_id) {
+      // Try to fetch by ticket_id (preferred for new verifications)
+      const ticketResult = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(*),
+          orders(*),
+          services(id, title, vendor_id)
+        `)
+        .eq('id', result.ticket_id)
+        .single();
+      ticketDetails = ticketResult.data;
+      fetchError = ticketResult.error;
+    }
+
+    if (!ticketDetails && !fetchError) {
+      // Fallback: try to fetch by code (for already used tickets where ticket_id might not be returned)
+      console.log('Fetching ticket details by code as fallback');
+      const ticketResult = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(*),
+          orders(*),
+          services(id, title, vendor_id)
+        `)
+        .eq('code', code)
+        .single();
+      ticketDetails = ticketResult.data;
+      fetchError = ticketResult.error;
+    }
+
+    if (fetchError) {
+      console.error('Error fetching ticket details:', fetchError)
+      // Still return success but with minimal info using the code that was verified
+      return {
+        valid: true,
+        ticket: { 
+          id: result.ticket_id || 'unknown', 
+          code: code, // Use the code that was successfully verified
+          status: 'used', 
+          used_at: result.used_at || new Date().toISOString(),
+          ticket_types: { title: 'Ticket' } // Default type
+        },
+        already_used: result.already_used,
+        message: result.already_used ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
+      }
+    }
+
+    console.log('Ticket verified successfully via atomic function')
+    return {
+      valid: true,
+      ticket: ticketDetails,
+      already_used: result.already_used,
+      message: result.already_used ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
+    }
+  }, 'verifyTicketByCode').catch(async (err: any) => {
+    console.error('Error in atomic ticket verification:', err)
+
+    // Fallback to non-atomic verification if atomic function fails
+    console.log('Falling back to non-atomic verification')
+    return executeWithCircuitBreaker(async () => {
+      // Find ticket by code or qr_data
+      const { data: ticket, error } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          ticket_types(*),
+          orders(*),
+          services(id, title, vendor_id)
+        `)
+        .or(`code.eq.${code},qr_data.eq.${code}`)
+        .single()
+
+      if (error) {
+        console.error('Database error in fallback:', error)
+        if (error.code === 'PGRST116') { // No rows returned
+          throw new Error('Ticket not found')
+        }
+        throw error
+      }
+
+      if (!ticket) {
+        throw new Error('Ticket not found')
+      }
+
+      console.log('Found ticket in fallback:', {
+        id: ticket.id,
+        code: ticket.code,
+        qr_data: ticket.qr_data,
+        status: ticket.status,
+        service_id: ticket.service_id,
+        order_status: ticket.orders?.status,
+        order_id: ticket.order_id
+      })
+
+      // Check if ticket is paid/active - be more flexible with status
+      // For verification purposes, we allow checking used tickets (verification != usage)
+      if (ticket.status !== 'active' && ticket.status !== 'confirmed' && ticket.status !== 'paid' && ticket.status !== 'issued' && ticket.status !== 'used') {
+        console.log('Ticket status is:', ticket.status, '- rejecting')
+        throw new Error(`Ticket status is ${ticket.status}, not valid`)
+      }
+
+      // Check if ticket belongs to the specified service (if provided)
+      if (serviceId && ticket.service_id !== serviceId) {
+        console.log('Ticket service_id:', ticket.service_id, 'does not match event service_id:', serviceId)
+        throw new Error('Ticket does not belong to this event')
+      }
+
+      // Check if order is paid - be more flexible with order status
+      if (ticket.orders?.status !== 'paid' && ticket.orders?.status !== 'completed' && ticket.orders?.status !== 'confirmed') {
+        console.log('Order status is:', ticket.orders?.status, '- rejecting')
+        throw new Error(`Order status is ${ticket.orders?.status}, not paid`)
+      }
+
+      // Try to mark as used (non-atomically as fallback)
+      if (ticket.status !== 'used') {
+        try {
+          await markTicketUsed(ticket.id)
+          console.log('Ticket marked as used in fallback')
+        } catch (markError) {
+          console.error('Error marking ticket as used in fallback:', markError)
+          // Don't fail verification if marking fails
+        }
+      }
+
+      console.log('Ticket verified successfully via fallback')
+      return {
+        valid: true,
+        ticket: ticket,
+        already_used: !!ticket.used_at,
+        message: ticket.used_at ? 'Ticket verified (previously used)' : 'Ticket verified successfully'
+      }
+    }, 'verifyTicketByCode_fallback').catch((fallbackErr: any) => {
+      console.error('Fallback verification also failed:', fallbackErr)
+      return {
+        valid: false,
+        ticket: null,
+        message: fallbackErr instanceof Error ? fallbackErr.message : 'Invalid ticket'
+      }
+    })
+  })
+}
+
 export async function getServiceDeleteRequests(vendorId?: string): Promise<ServiceDeleteRequest[]> {
   try {
     console.log('getServiceDeleteRequests: Called with vendorId:', vendorId);
@@ -1254,6 +2230,29 @@ export async function deleteUser(userId: string): Promise<void> {
     if (profileError) {
       console.error('Error fetching user profile:', profileError)
       throw profileError
+    }
+
+    // Delete visitor sessions for this user
+    // We need to do this before deleting the user to avoid foreign key constraint issues
+    const { error: visitorSessionsError } = await supabase
+      .from('visitor_sessions')
+      .delete()
+      .eq('user_id', userId)
+
+    if (visitorSessionsError) {
+      console.error('Error deleting visitor sessions:', visitorSessionsError)
+      throw visitorSessionsError
+    }
+
+    // Delete service likes for this user
+    const { error: serviceLikesError } = await supabase
+      .from('service_likes')
+      .delete()
+      .eq('user_id', userId)
+
+    if (serviceLikesError) {
+      console.error('Error deleting service likes:', serviceLikesError)
+      throw serviceLikesError
     }
 
     // Delete related data based on user role
@@ -1421,10 +2420,22 @@ export async function getAllBookings(): Promise<Booking[]> {
     .select(`
       *,
       services (
-        title
+        id,
+        title,
+        description,
+        vendor_id,
+        category_id,
+        service_categories (
+          name
+        ),
+        vendors (
+          business_name
+        )
       ),
       profiles (
-        full_name
+        id,
+        full_name,
+        email
       )
     `)
     .order('created_at', { ascending: false })
@@ -1434,7 +2445,30 @@ export async function getAllBookings(): Promise<Booking[]> {
     throw error
   }
 
-  return data || []
+  // Transform the data to match the expected Booking interface
+  const transformedData = (data || []).map(booking => {
+    // Create a new object without the services property to avoid conflicts
+    const { services, profiles, ...rest } = booking;
+    return {
+      ...rest,
+      service: services ? {
+        id: services.id,
+        title: services.title,
+        description: services.description,
+        vendor_id: services.vendor_id,
+        category_id: services.category_id,
+        service_categories: services.service_categories,
+        vendors: services.vendors
+      } : undefined,
+      tourist_profile: profiles ? {
+        id: profiles.id,
+        full_name: profiles.full_name,
+        email: profiles.email
+      } : undefined
+    };
+  });
+
+  return transformedData
 }
 
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'vendor_id'> & { vendor_id?: string }): Promise<Booking> {
@@ -1470,21 +2504,55 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
 
   console.log('Final booking data with vendor_id:', bookingData.vendor_id)
 
+  // Use atomic function to create booking with capacity validation
+  // Note: Supabase RPC calls use named parameters, so order in object doesn't matter
+  // But we need to ensure the parameter names match exactly
+  const result = await supabase.rpc('create_booking_atomic', {
+    p_service_id: bookingData.service_id,
+    p_vendor_id: bookingData.vendor_id,
+    p_booking_date: bookingData.booking_date,
+    p_guests: bookingData.guests,
+    p_total_amount: bookingData.total_amount,
+    p_tourist_id: bookingData.tourist_id || null,
+    p_service_date: bookingData.service_date || null,
+    p_currency: bookingData.currency || 'UGX',
+    p_special_requests: bookingData.special_requests || null,
+    p_guest_name: bookingData.guest_name || null,
+    p_guest_email: bookingData.guest_email || null,
+    p_guest_phone: bookingData.guest_phone || null,
+    p_pickup_location: bookingData.pickup_location || null,
+    p_dropoff_location: bookingData.dropoff_location || null
+  });
+
+  if (result.error) throw result.error;
+
+  if (!result.data?.success) {
+    throw new Error(result.data?.error || 'Failed to create booking');
+  }
+
+  // Fetch the complete booking with relations
   const { data, error } = await supabase
     .from('bookings')
-    .insert([{
-      ...bookingData,
-      is_guest_booking: isGuestBooking,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }])
-    .select()
-    .single()
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        vendors (
+          id,
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .eq('id', result.data.booking_id)
+    .single();
 
-  if (error) {
-    console.error('Error creating booking:', error)
-    throw error
-  }
+  if (error) throw error;
 
   console.log('Booking created successfully:', data)
 
@@ -1547,25 +2615,13 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
   try {
     console.log('DB: updateBooking called with id:', id, 'updates:', updates)
 
-    // Get the current booking to check if we need to create a transaction
-    const { data: currentBooking, error: fetchError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      console.error('DB: Error fetching current booking:', fetchError)
-      throw fetchError
-    }
-
-    console.log('DB: Current booking status:', currentBooking.status, 'payment_status:', currentBooking.payment_status)
-
-    // Update the booking
+    // Direct update to bookings table instead of using non-existent RPC function
     const { data, error } = await supabase
       .from('bookings')
       .update({
-        ...updates,
+        ...(updates.status && { status: updates.status }),
+        ...(updates.payment_status && { payment_status: updates.payment_status }),
+        ...(updates.rejection_reason !== undefined && { rejection_reason: updates.rejection_reason }),
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -1587,10 +2643,7 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
       `)
       .single()
 
-    if (error) {
-      console.error('DB: Error updating booking:', error)
-      throw error
-    }
+    if (error) throw error;
 
     console.log('DB: Booking updated successfully. New status:', data.status, 'payment_status:', data.payment_status)
 
@@ -1633,21 +2686,25 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
         // Only create transaction if one doesn't already exist
         if (!existingTransaction) {
           try {
-            const reference = `PMT_${id.slice(0, 8)}_${Date.now()}`;
-            await addTransaction({
-              booking_id: id,
-              vendor_id: data.vendor_id,
-              tourist_id: data.tourist_id,
-              amount: data.total_amount,
-              currency: data.currency,
-              transaction_type: 'payment',
-              status: 'completed',
-              payment_method: 'card', // Default payment method
-              reference
+            // Use atomic payment processing function
+            const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+              p_vendor_id: data.vendor_id,
+              p_amount: data.total_amount,
+              p_booking_id: id || null,
+              p_tourist_id: data.tourist_id || null,
+              p_currency: data.currency || 'UGX',
+              p_payment_method: 'card',
+              p_reference: `PMT_${id.slice(0, 8)}_${Date.now()}`
             });
-            console.log('Created payment transaction for booking:', id);
-            // Credit vendor wallet
-            await creditWallet(data.vendor_id, data.total_amount, data.currency);
+
+            if (paymentError) throw paymentError;
+
+            if (!paymentResult?.success) {
+              throw new Error(paymentResult?.error || 'Failed to process payment');
+            }
+
+            console.log('Created payment transaction and credited wallet for booking:', id);
+
             // Credit admin wallet (platform fee logic can be added here)
             const adminId = await getAdminProfileId();
             if (adminId) {
@@ -1664,6 +2721,29 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
             }
           }
         }
+      }
+    }
+
+    // When booking is completed, generate a review token and send review request email
+    if (data.status === 'completed') {
+      try {
+        const reviewToken = await generateReviewToken(id);
+        if (reviewToken) {
+          const serviceName = data.services?.title || 'the service';
+          const vendorName = data.services?.vendors?.business_name || 'the provider';
+          const result = await sendReviewRequestEmail(
+            id,
+            reviewToken.token,
+            reviewToken.guest_email,
+            reviewToken.guest_name,
+            serviceName,
+            vendorName
+          );
+          console.log('Review request generated for booking:', id, 'Review URL:', result.reviewUrl, 'Email sent:', result.sent);
+        }
+      } catch (reviewError) {
+        console.error('Error generating review request (non-blocking):', reviewError);
+        // Don't throw - this is non-critical
       }
     }
 
@@ -1858,31 +2938,44 @@ export async function getAllUsers(): Promise<Profile[]> {
 }
 
 export async function updateVendorStatus(vendorId: string, status: VendorStatus): Promise<Vendor> {
-  const { data, error } = await supabase
-    .from('vendors')
-    .update({
-      status,
-      approved_at: status === 'approved' ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', vendorId)
-    .select(`
-      *,
-      profiles (
-        id,
-        full_name,
-        email,
-        phone
-      )
-    `)
-    .single()
+  try {
+    // Get current user for approved_by field
+    const { data: { user } } = await supabase.auth.getUser();
 
-  if (error) {
-    console.error('Error updating vendor status:', error)
-    throw error
+    // Use atomic function to prevent race conditions
+    const { data, error } = await supabase.rpc('update_vendor_status_atomic', {
+      p_vendor_id: vendorId,
+      p_status: status,
+      p_approved_by: user?.id || null
+    });
+
+    if (error) throw error;
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to update vendor status');
+    }
+
+    // Fetch the updated vendor with profile info
+    const { data: updatedVendor, error: fetchError } = await supabase
+      .from('vendors')
+      .select(`
+        *,
+        profiles (
+          id,
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .eq('id', vendorId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return updatedVendor;
+  } catch (error) {
+    console.error('Error updating vendor status:', error);
+    throw error;
   }
-
-  return data
 }
 
 export async function getDashboardStats() {
@@ -2161,6 +3254,31 @@ export async function sendMessage(messageData: {
   } catch (error) {
     console.error('Error in sendMessage:', error)
     throw error
+  }
+}
+
+export async function sendOTPNotification(notificationData: {
+  to: string
+  subject?: string
+  message: string
+  type: 'email' | 'sms'
+}) {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-otp-notification', {
+      body: notificationData
+    })
+
+    if (error) {
+      console.warn(`Error sending ${notificationData.type} notification:`, error)
+      // Don't throw error for notifications - they're supplementary
+      return { sent: false, error }
+    }
+
+    return { sent: true, data }
+  } catch (err) {
+    console.warn(`Exception sending ${notificationData.type} notification:`, err)
+    // Don't throw error for notifications - they're supplementary
+    return { sent: false, error: err }
   }
 }
 
@@ -2887,22 +4005,37 @@ export async function addTransaction(transaction: {
   try {
 
     console.log('[Wallet Debug] addTransaction called with:', transaction);
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([transaction])
-      .select()
-      .single()
+    // Use atomic function to create transaction
+    const { data, error } = await supabase.rpc('create_transaction_atomic', {
+      p_vendor_id: transaction.vendor_id,
+      p_amount: transaction.amount,
+      p_transaction_type: transaction.transaction_type,
+      p_booking_id: transaction.booking_id || null,
+      p_tourist_id: transaction.tourist_id || null,
+      p_currency: transaction.currency || 'UGX',
+      p_status: transaction.status || 'pending',
+      p_payment_method: transaction.payment_method || 'card',
+      p_reference: transaction.reference || null
+    });
+
+    // Log raw RPC response for easier debugging in browser console
+    console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
 
     if (error) {
       // If table doesn't exist, throw a more helpful error
       if (error.message?.includes('relation "transactions" does not exist')) {
         throw new Error('Transactions table does not exist. Please run the database migrations first.')
       }
-      console.error('Error adding transaction:', error)
+      console.error('Error adding transaction (RPC error):', JSON.stringify(error, Object.getOwnPropertyNames(error)))
       throw error
     }
 
-    return data
+    if (!data?.success) {
+      console.error('Error adding transaction (RPC returned failure):', data)
+      throw new Error(data.error || 'Failed to create transaction');
+    }
+
+    return data.transaction_id;
   } catch (error) {
     console.error('Error in addTransaction:', error)
     throw error
@@ -3172,5 +4305,1553 @@ async function getUserEmail(userId: string): Promise<string> {
   } catch (error) {
     console.error('Error getting user email:', error)
     return ''
+  }
+}
+
+// ============================================================================
+// Visitor Activity Analytics
+// ============================================================================
+
+export async function getVisitorActivityStats() {
+  try {
+    // Get all profiles (visitors/tourists)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, created_at, role')
+      .eq('role', 'tourist')
+    
+    if (profilesError) throw profilesError
+
+    // Get all bookings with service and profile info
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id, tourist_id, service_id, status, created_at, total_amount, currency')
+      .in('status', ['confirmed', 'completed', 'pending'])
+    
+    if (bookingsError) throw bookingsError
+
+    // Get all services 
+    const { data: services, error: servicesError } = await supabase
+      .from('services')
+      .select('id, title')
+    
+    if (servicesError) throw servicesError
+
+    // Get all reviews
+    const { data: reviews, error: reviewsError } = await supabase
+      .from('reviews')
+      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, profiles(full_name), services(title)')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    
+    if (reviewsError) throw reviewsError
+
+    // Process data for analytics
+    const uniqueVisitorIds = new Set<string>()
+
+    profiles?.forEach((profile: any) => {
+      uniqueVisitorIds.add(profile.id)
+    })
+
+    // Get top liked services (based on service count)
+    const topLikedServices = services
+      ?.slice(0, 5)
+      .map((s: any) => ({
+        id: s.id,
+        serviceName: s.title,
+        category: '',
+        totalLikes: 0,
+        avgRating: 0
+      })) || []
+
+    // Get recent reviews with formatted data
+    const recentReviewsList = reviews
+      ?.map((r: any) => ({
+        id: r.id,
+        serviceName: r.services?.title || 'Unknown Service',
+        rating: r.rating || 0,
+        comment: r.comment || '',
+        visitorName: r.profiles?.full_name || 'Anonymous',
+        date: r.created_at || new Date().toISOString(),
+        helpful: r.helpful_count || 0
+      })) || []
+
+    // Count reviews this month
+    const now = new Date()
+    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1)
+    const reviewsThisMonth = reviews?.filter((r: any) => new Date(r.created_at) >= monthAgo).length || 0
+
+    // Calculate average rating
+    const avgRating = reviews && reviews.length > 0
+      ? (reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+      : '0'
+
+    // Calculate average session duration (using booking data as proxy)
+    const avgSessionDuration = bookings?.length ? (bookings.length * 0.5).toFixed(1) : '0'
+    const bounceRate = bookings?.length ? ((1 - (bookings.filter((b: any) => b.status === 'confirmed').length / bookings.length)) * 100).toFixed(1) : '0'
+
+    return {
+      totalVisitors: profiles?.length || 0,
+      uniqueVisitors: uniqueVisitorIds.size,
+      avgSessionDuration: parseFloat(avgSessionDuration as string),
+      bounceRate: parseFloat(bounceRate as string),
+      topCountries: [],
+      ageGroups: [],
+      genderDistribution: { male: 0, female: 0, other: 0 },
+      topLikedServices,
+      recentReviews: recentReviewsList,
+      reviewsThisMonth,
+      avgRating: parseFloat(avgRating as string)
+    }
+  } catch (error) {
+    console.error('Error fetching visitor activity stats:', error)
+    throw error
+  }
+}
+
+export async function getVendorActivityStats(vendorId: string) {
+  try {
+    // Get all services for this vendor
+    const { data: vendorServices, error: servicesError } = await supabase
+      .from('services')
+      .select('id, title')
+      .eq('vendor_id', vendorId)
+    
+    if (servicesError) throw servicesError
+
+    // Get all bookings for this vendor's services
+    const { data: vendorBookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id, tourist_id, service_id, status, created_at, total_amount, currency, profiles(full_name)')
+      .in('service_id', vendorServices?.map((s: any) => s.id) || [])
+    
+    if (bookingsError) throw bookingsError
+
+    // Get visitor sessions and view logs for this vendor's services
+    let visitorSessions: any[] = []
+    let serviceViewLogs: any[] = []
+    try {
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('visitor_sessions')
+        .select('id, ip_address, country, city, device_type, user_id, first_visit_at, visit_count')
+        .order('first_visit_at', { ascending: false })
+        .limit(100)
+      
+      if (!sessionsError && sessionsData) {
+        visitorSessions = sessionsData
+      } else if (sessionsError) {
+        console.warn('Visitor sessions table unavailable:', sessionsError)
+      }
+
+      // For sessions missing country info, attempt an IP->country lookup (cached)
+      try {
+        const sessionsToLookup = visitorSessions.filter((s: any) => (!s.country || s.country === '') && s.ip_address)
+        if (sessionsToLookup.length > 0) {
+          await Promise.all(sessionsToLookup.map(async (s: any) => {
+            try {
+              const country = await lookupCountryByIp(s.ip_address)
+              if (country) s.country = country
+            } catch (err) {
+              // ignore lookup errors per-session
+            }
+          }))
+        }
+      } catch (err) {
+        console.warn('Error during IP->country lookups:', err)
+      }
+
+      // Get view logs for services
+      const { data: viewLogsData, error: viewLogsError } = await supabase
+        .from('service_view_logs')
+        .select('id, service_id, visitor_session_id, viewed_at, services(title)')
+        .in('service_id', vendorServices?.map((s: any) => s.id) || [])
+        .order('viewed_at', { ascending: false })
+        .limit(100)
+      
+      if (!viewLogsError && viewLogsData) {
+        serviceViewLogs = viewLogsData
+      } else if (viewLogsError) {
+        console.warn('Service view logs table unavailable:', viewLogsError)
+      }
+    } catch (error) {
+      console.warn('Error fetching visitor sessions or view logs:', error)
+    }
+
+    // Get reviews for this vendor's services
+    let vendorReviews: any[] = []
+    const { data: reviewsData, error: reviewsError } = await supabase
+      .from('service_reviews')
+      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, visitor_name, services(title)')
+      .in('service_id', vendorServices?.map((s: any) => s.id) || [])
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    
+    // Log the error but don't throw - reviews may not be available
+    if (reviewsError) {
+      console.warn(`Reviews table unavailable for vendor ${vendorId}:`, reviewsError)
+      vendorReviews = []
+    } else {
+      vendorReviews = reviewsData
+    }
+
+    // Get unique visitors for this vendor
+    const uniqueVisitors = new Set<string>()
+
+    vendorBookings?.forEach((booking: any) => {
+      uniqueVisitors.add(booking.user_id)
+    })
+
+    // Track visitor countries using service view logs mapped to visitor sessions.
+    // Prefer countries from sessions that actually viewed vendor services so the counts reflect relevant visitors.
+    const sessionById: Record<string, any> = {}
+    visitorSessions.forEach((s: any) => {
+      if (s && s.id) sessionById[s.id] = s
+    })
+
+    const countryCounts: Record<string, number> = {}
+
+    // Count countries for sessions that viewed this vendor's services
+    serviceViewLogs.forEach((log: any) => {
+      const sess = sessionById[log.visitor_session_id]
+      const country = sess?.country || null
+      if (country) {
+        countryCounts[country] = (countryCounts[country] || 0) + 1
+      }
+    })
+
+    // Fallback: if no view-log-derived countries, fall back to counting all recent sessions
+    if (Object.keys(countryCounts).length === 0) {
+      visitorSessions.forEach((session: any) => {
+        if (session && session.country) {
+          countryCounts[session.country] = (countryCounts[session.country] || 0) + 1
+        }
+      })
+    }
+
+    // Compute total for percentage calculations (use total counted visitors not total sessions to avoid 0 division)
+    const totalCountryCount = Object.values(countryCounts).reduce((s, v) => s + v, 0) || visitorSessions.length || 1
+
+    // Get top countries (sorted)
+    const topCountries = Object.entries(countryCounts)
+      .map(([country, count]) => ({
+        country,
+        count: count as number,
+        percentage: ((count / totalCountryCount) * 100).toFixed(1)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+
+    // Track services checked by visitors
+    const serviceCheckedCounts: Record<string, { title: string; count: number }> = {}
+    serviceViewLogs.forEach((log: any) => {
+      const serviceTitle = log.services?.title || 'Unknown Service'
+      if (!serviceCheckedCounts[log.service_id]) {
+        serviceCheckedCounts[log.service_id] = { title: serviceTitle, count: 0 }
+      }
+      serviceCheckedCounts[log.service_id].count += 1
+    })
+
+    // Get top services checked
+    const servicesChecked = Object.entries(serviceCheckedCounts)
+      .map(([id, data]) => ({
+        id,
+        serviceName: data.title,
+        timesChecked: data.count,
+        category: '',
+        totalLikes: 0,
+        avgRating: 0
+      }))
+      .sort((a, b) => b.timesChecked - a.timesChecked)
+      .slice(0, 5)
+
+    // Get top services for this vendor (just first 5)
+    const topServices = vendorServices
+      ?.slice(0, 5)
+      .map((s: any) => ({
+        id: s.id,
+        serviceName: s.title,
+        category: '',
+        totalLikes: 0,
+        avgRating: 0
+      })) || []
+
+    // Get vendor reviews
+    const vendorReviewsList = vendorReviews
+      ?.map((r: any) => ({
+        id: r.id,
+        serviceName: r.services?.title || 'Unknown Service',
+        rating: r.rating || 0,
+        comment: r.comment || '',
+        visitorName: r.visitor_name || 'Anonymous',
+        date: r.created_at || new Date().toISOString(),
+        helpful: r.helpful_count || 0
+      })) || []
+
+    // Count reviews this month
+    const now = new Date()
+    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1)
+    const reviewsThisMonth = vendorReviews?.filter((r: any) => new Date(r.created_at) >= monthAgo).length || 0
+
+    // Calculate average rating
+    const avgRating = vendorReviews && vendorReviews.length > 0
+      ? (vendorReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / vendorReviews.length).toFixed(1)
+      : '0'
+
+    // Calculate metrics
+    const totalBookings = vendorBookings?.length || 0
+    const confirmedBookings = vendorBookings?.filter((b: any) => b.status === 'confirmed').length || 0
+    const conversionRate = totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(1) : '0'
+
+    return {
+      vendorId,
+      totalVisitors: vendorBookings?.length || 0,
+      uniqueVisitors: uniqueVisitors.size,
+      totalServices: vendorServices?.length || 0,
+      totalBookings: confirmedBookings,
+      conversionRate: parseFloat(conversionRate as string),
+      topCountries,
+      ageGroups: [],
+      genderDistribution: { male: 0, female: 0, other: 0 },
+      topServices,
+      servicesChecked,
+      visitorSessions: await enhanceVisitorSessions(visitorSessions.slice(0, 10), serviceViewLogs),
+      recentReviews: vendorReviewsList,
+      reviewsThisMonth,
+      avgRating: parseFloat(avgRating as string)
+    }
+  } catch (error) {
+    console.error(`Error fetching vendor activity stats for ${vendorId}:`, error)
+    throw error
+  }
+}
+
+/**
+ * Enhance visitor sessions with session duration and pages visited
+ */
+async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise<any[]> {
+  try {
+    // Create a map of IP addresses to their view logs
+    const ipViewMap: Record<string, any[]> = {}
+    
+    viewLogs.forEach((log: any) => {
+      const sessionId = log.visitor_session_id
+      if (!ipViewMap[sessionId]) {
+        ipViewMap[sessionId] = []
+      }
+      ipViewMap[sessionId].push(log)
+    })
+
+    // Enhance sessions with page visit info and session duration
+    const enhancedSessions = sessions.map((session: any) => {
+      const sessionViews = ipViewMap[session.id] || []
+      
+      // Calculate session duration (time between first and last view)
+      let sessionDuration = 0
+      if (sessionViews.length > 1) {
+        const firstView = new Date(sessionViews[0].viewed_at).getTime()
+        const lastView = new Date(sessionViews[sessionViews.length - 1].viewed_at).getTime()
+        sessionDuration = Math.floor((lastView - firstView) / 1000 / 60) // Convert to minutes
+      }
+
+      // Get unique pages (services) visited
+      const pagesVisited = new Set(sessionViews.map((log: any) => log.service_id))
+      const pageCount = pagesVisited.size
+
+      // Calculate time since first visit
+      const firstVisit = new Date(session.first_visit_at)
+      const now = new Date()
+      const daysSinceFirstVisit = Math.floor((now.getTime() - firstVisit.getTime()) / 1000 / 60 / 60 / 24)
+
+      return {
+        ...session,
+        sessionDuration,
+        pagesVisited: pageCount,
+        viewCount: sessionViews.length,
+        daysSinceFirstVisit,
+        ipAddress: session.ip_address || 'Unknown',
+        location: session.country ? `${session.city || ''}, ${session.country}`.trim() : 'Unknown Location'
+      }
+    })
+
+    return enhancedSessions
+  } catch (error) {
+    console.warn('Error enhancing visitor sessions:', error)
+    return sessions // Return original sessions if enhancement fails
+  }
+}
+
+export async function getAllVendorsWithActivity() {
+  try {
+    // First, try to get all vendors from profiles with role = 'vendor'
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, avatar_url, role')
+      .eq('role', 'vendor')
+    
+    if (vendorsError) throw vendorsError
+
+    console.log('Vendors from profiles:', vendors?.length, vendors)
+
+    // If no vendors found, get unique vendor_ids from services table as fallback
+    let finalVendors = vendors || []
+    
+    if (!finalVendors || finalVendors.length === 0) {
+      console.log('No vendors found in profiles, checking services table...')
+      const { data: serviceVendors, error: serviceVendorsError } = await supabase
+        .from('services')
+        .select('vendor_id')
+      
+      if (!serviceVendorsError && serviceVendors) {
+        const uniqueVendorIds = [...new Set(serviceVendors.map((s: any) => s.vendor_id))]
+        console.log('Unique vendor IDs from services:', uniqueVendorIds)
+        
+        if (uniqueVendorIds.length > 0) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url, role')
+            .in('id', uniqueVendorIds)
+          
+          if (!profileError && profileData) {
+            finalVendors = profileData
+            console.log('Vendors from services vendor_ids:', finalVendors)
+          }
+        }
+      }
+    }
+
+    if (!finalVendors || finalVendors.length === 0) {
+      console.log('No vendors found')
+      return []
+    }
+
+    // Get activity stats for each vendor
+    const vendorStats = await Promise.all(
+      finalVendors.map(async (vendor: any) => {
+        try {
+          const stats = await getVendorActivityStats(vendor.id)
+          console.log(`Stats for vendor ${vendor.full_name}:`, stats)
+          return {
+            vendorName: vendor.full_name,
+            vendorEmail: vendor.email,
+            vendorAvatar: vendor.avatar_url,
+            ...stats
+          }
+        } catch (error) {
+          console.error(`Error getting stats for vendor ${vendor.id}:`, error)
+          return {
+            vendorId: vendor.id,
+            vendorName: vendor.full_name,
+            vendorEmail: vendor.email,
+            vendorAvatar: vendor.avatar_url,
+            totalVisitors: 0,
+            uniqueVisitors: 0,
+            totalServices: 0,
+            totalBookings: 0,
+            conversionRate: 0,
+            avgRating: 0,
+            topCountries: [],
+            ageGroups: [],
+            genderDistribution: { male: 0, female: 0, other: 0 },
+            topServices: [],
+            recentReviews: [],
+            reviewsThisMonth: 0
+          }
+        }
+      })
+    )
+
+    console.log('Final vendor stats:', vendorStats)
+    return vendorStats
+  } catch (error) {
+    console.error('Error fetching all vendors activity:', error)
+    throw error
+  }
+}
+
+// ============================================
+// Visitor Activity Functions
+// ============================================
+
+/**
+ * Get or create a visitor session based on IP address
+ */
+export async function getOrCreateVisitorSession(
+  ipAddress: string,
+  options?: {
+    userId?: string;
+    country?: string;
+    city?: string;
+    deviceType?: string;
+    browserInfo?: string;
+    userAgent?: string;
+  }
+): Promise<VisitorSession> {
+  try {
+    const { data, error } = await supabase.rpc('get_or_create_visitor_session', {
+      p_ip_address: ipAddress,
+      p_user_id: options?.userId,
+      p_country: options?.country,
+      p_city: options?.city,
+      p_device_type: options?.deviceType,
+      p_browser_info: options?.browserInfo,
+      p_user_agent: options?.userAgent,
+    });
+
+    if (error) throw error;
+
+    // Fetch the created/updated session
+    const { data: session, error: fetchError } = await supabase
+      .from('visitor_sessions')
+      .select('*')
+      .eq('id', data)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return session;
+  } catch (err) {
+    console.error('Error getting/creating visitor session:', err);
+    throw err;
+  }
+}
+
+/**
+ * Record a like on a service
+ */
+export async function likeService(
+  serviceId: string,
+  visitorSessionId: string,
+  options?: {
+    userId?: string;
+    ipAddress?: string;
+  }
+): Promise<ServiceLike> {
+  try {
+    const { data, error } = await supabase.rpc('record_service_like', {
+      p_service_id: serviceId,
+      p_visitor_session_id: visitorSessionId,
+      p_user_id: options?.userId,
+      p_ip_address: options?.ipAddress,
+    });
+
+    if (error) throw error;
+
+    // Fetch the created like
+    const { data: like, error: fetchError } = await supabase
+      .from('service_likes')
+      .select('*')
+      .eq('id', data)
+      .single();
+
+    if (fetchError) throw fetchError;
+    return like;
+  } catch (err) {
+    console.error('Error liking service:', err);
+    throw err;
+  }
+}
+
+/**
+ * Remove a like from a service
+ */
+export async function unlikeService(
+  serviceId: string,
+  visitorSessionId: string
+): Promise<boolean> {
+  try {
+    const { error } = await supabase.rpc('remove_service_like', {
+      p_service_id: serviceId,
+      p_visitor_session_id: visitorSessionId,
+    });
+
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Error unliking service:', err);
+    throw err;
+  }
+}
+
+/**
+ * Check if a visitor has liked a service
+ */
+export async function hasVisitorLikedService(
+  serviceId: string,
+  visitorSessionId: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('service_likes')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('visitor_session_id', visitorSessionId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+    return !!data;
+  } catch (err) {
+    console.error('Error checking if service is liked:', err);
+    return false;
+  }
+}
+
+/**
+ * Get all likes for a service
+ */
+export async function getServiceLikes(serviceId: string): Promise<ServiceLike[]> {
+  try {
+    const { data, error } = await supabase
+      .from('service_likes')
+      .select('*')
+      .eq('service_id', serviceId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching service likes:', err);
+    throw err;
+  }
+}
+
+/**
+ * Create a review for a service
+ */
+export async function createServiceReview(
+  serviceId: string,
+  review: {
+    visitorSessionId?: string;
+    userId?: string;
+    ipAddress?: string;
+    visitorName: string;
+    visitorEmail?: string;
+    rating: number;
+    kpiRatings?: Record<string, number>;
+    comment?: string;
+    isVerifiedBooking?: boolean;
+    reviewerCity?: string;
+    reviewerCountry?: string;
+  }
+): Promise<ServiceReview> {
+  try {
+    // Use the SECURITY DEFINER RPC function to bypass RLS for both
+    // guest and logged-in review inserts
+    const { data, error } = await supabase.rpc('create_service_review', {
+      p_service_id: serviceId,
+      p_user_id: review.userId || null,
+      p_visitor_session_id: review.visitorSessionId || null,
+      p_ip_address: review.ipAddress || null,
+      p_visitor_name: review.visitorName,
+      p_visitor_email: review.visitorEmail || null,
+      p_rating: review.rating,
+      p_kpi_ratings: review.kpiRatings || null,
+      p_comment: review.comment || null,
+      p_is_verified_booking: review.isVerifiedBooking || false,
+      p_reviewer_city: review.reviewerCity || null,
+      p_reviewer_country: review.reviewerCountry || null,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error creating service review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get approved reviews for a service
+ */
+export async function getServiceReviews(
+  serviceId: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+  }
+): Promise<ServiceReview[]> {
+  try {
+    let query = supabase
+      .from('service_reviews')
+      .select('*')
+      .eq('service_id', serviceId)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false });
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    if (options?.offset) {
+      query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching service reviews:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get visitor activity for a service
+ */
+export async function getServiceVisitorActivity(serviceId: string): Promise<VisitorActivity | null> {
+  try {
+    const { data, error } = await supabase
+      .from('visitor_activity')
+      .select('*')
+      .eq('service_id', serviceId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+    return data || null;
+  } catch (err) {
+    console.error('Error fetching visitor activity:', err);
+    return null;
+  }
+}
+
+/**
+ * Log a service view
+ */
+export async function logServiceView(
+  serviceId: string,
+  visitorSessionId: string,
+  options?: {
+    userId?: string;
+    ipAddress?: string;
+    referrer?: string;
+  }
+): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('log_service_view', {
+      p_service_id: serviceId,
+      p_visitor_session_id: visitorSessionId,
+      p_user_id: options?.userId,
+      p_ip_address: options?.ipAddress,
+      p_referrer: options?.referrer,
+    });
+
+    if (error) throw error;
+  } catch (err) {
+    console.error('Error logging service view:', err);
+    // Don't throw - this is analytics data, not critical
+  }
+}
+
+/**
+ * Record a service like by a visitor
+ */
+export async function recordServiceLike(
+  serviceId: string,
+  visitorSessionId: string,
+  options?: {
+    userId?: string;
+    ipAddress?: string;
+  }
+): Promise<string> {
+  try {
+    const { data, error } = await supabase.rpc('record_service_like', {
+      p_service_id: serviceId,
+      p_visitor_session_id: visitorSessionId,
+      p_user_id: options?.userId,
+      p_ip_address: options?.ipAddress,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error recording service like:', err);
+    throw err;
+  }
+}
+
+/**
+ * Remove a service like by a visitor
+ */
+export async function removeServiceLike(
+  serviceId: string,
+  visitorSessionId: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('remove_service_like', {
+      p_service_id: serviceId,
+      p_visitor_session_id: visitorSessionId,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error removing service like:', err);
+    throw err;
+  }
+}
+
+/**
+ * Check if a service is liked by a visitor session
+ */
+export async function checkServiceLiked(
+  serviceId: string,
+  visitorSessionId: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('service_likes')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('visitor_session_id', visitorSessionId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+    return !!data;
+  } catch (err) {
+    console.error('Error checking if service is liked:', err);
+    return false;
+  }
+}
+
+/**
+ * Submit a review for a service
+ */
+export async function submitServiceReview(
+  serviceId: string,
+  visitorSessionId: string | null,
+  review: {
+    visitorName: string;
+    visitorEmail?: string;
+    rating: number;
+    comment?: string;
+    userId?: string;
+    ipAddress?: string;
+  }
+): Promise<ServiceReview> {
+  try {
+    const { data, error } = await supabase
+      .from('service_reviews')
+      .insert({
+        service_id: serviceId,
+        visitor_session_id: visitorSessionId,
+        user_id: review.userId,
+        ip_address: review.ipAddress,
+        visitor_name: review.visitorName,
+        visitor_email: review.visitorEmail,
+        rating: review.rating,
+        comment: review.comment,
+        status: 'pending', // Reviews start as pending for moderation
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error submitting service review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get visitor activity for all services of a vendor
+ */
+export async function getVendorVisitorActivity(vendorId: string): Promise<VisitorActivity[]> {
+  try {
+    const { data, error } = await supabase
+      .from('visitor_activity')
+      .select(`
+        *,
+        services:service_id (
+          id,
+          title,
+          slug
+        )
+      `)
+      .eq('vendor_id', vendorId)
+      .order('total_views', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching vendor visitor activity:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get service activity statistics
+ */
+export async function getServiceActivityStats(serviceId: string) {
+  try {
+    const activity = await getServiceVisitorActivity(serviceId);
+    const reviews = await getServiceReviews(serviceId, { limit: 5 });
+    const likes = await getServiceLikes(serviceId);
+
+    return {
+      activity,
+      recentReviews: reviews,
+      totalLikes: likes.length,
+      reviewCount: reviews.length,
+      averageRating: activity?.average_rating || 0,
+    };
+  } catch (err) {
+    console.error('Error fetching service activity stats:', err);
+    throw err;
+  }
+}
+
+/**
+ * Mark review as helpful
+ */
+export async function markReviewHelpful(reviewId: string): Promise<ServiceReview> {
+  try {
+    // Fetch current review
+    const { data: review, error: fetchError } = await supabase
+      .from('service_reviews')
+      .select('*')
+      .eq('id', reviewId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update with incremented count
+    const { data, error } = await supabase
+      .from('service_reviews')
+      .update({ helpful_count: (review.helpful_count || 0) + 1 })
+      .eq('id', reviewId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error marking review as helpful:', err);
+    throw err;
+  }
+}
+
+/**
+ * Mark review as unhelpful
+ */
+export async function markReviewUnhelpful(reviewId: string): Promise<ServiceReview> {
+  try {
+    // Fetch current review
+    const { data: review, error: fetchError } = await supabase
+      .from('service_reviews')
+      .select('*')
+      .eq('id', reviewId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update with incremented count
+    const { data, error } = await supabase
+      .from('service_reviews')
+      .update({ unhelpful_count: (review.unhelpful_count || 0) + 1 })
+      .eq('id', reviewId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error marking review as unhelpful:', err);
+    throw err;
+  }
+}
+
+// App Visit Types and Functions
+
+export interface AppVisit {
+  id: string;
+  visitor_session_id: string;
+  page_path: string;
+  page_name?: string;
+  referrer?: string;
+  ip_address?: string;
+  country?: string;
+  city?: string;
+  user_agent?: string;
+  visited_at: string;
+}
+
+/**
+ * Get app visit statistics for the platform
+ */
+export async function getAppVisitStats(daysBack: number = 30): Promise<{
+  totalVisits: number;
+  uniqueVisitors: number;
+  topPages: Array<{ page_name: string; count: number }>;
+  visitorsByCountry: Array<{ country: string; count: number }>;
+  recentVisits: AppVisit[];
+}> {
+  try {
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - daysBack);
+
+    // Get total visits and unique visitors
+    const { data: visits, error: visitsError } = await supabase
+      .from('app_visits')
+      .select('id, visitor_session_id, page_name, country', { count: 'exact' })
+      .gte('visited_at', sinceDate.toISOString());
+
+    if (visitsError) throw visitsError;
+
+    const totalVisits = visits?.length || 0;
+    const uniqueVisitors = new Set(
+      visits?.map((v) => v.visitor_session_id) || []
+    ).size;
+
+    // Get top pages
+    const pageStats = new Map<string, number>();
+    visits?.forEach((v) => {
+      const page = v.page_name || 'Unknown';
+      pageStats.set(page, (pageStats.get(page) || 0) + 1);
+    });
+
+    const topPages = Array.from(pageStats.entries())
+      .map(([page_name, count]) => ({ page_name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Get visitors by country
+    const countryStats = new Map<string, number>();
+    visits?.forEach((v) => {
+      const country = v.country || 'Unknown';
+      countryStats.set(country, (countryStats.get(country) || 0) + 1);
+    });
+
+    const visitorsByCountry = Array.from(countryStats.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+
+    // Get recent visits
+    const { data: recentVisits, error: recentError } = await supabase
+      .from('app_visits')
+      .select('*')
+      .gte('visited_at', sinceDate.toISOString())
+      .order('visited_at', { ascending: false })
+      .limit(20);
+
+    if (recentError) throw recentError;
+
+    return {
+      totalVisits,
+      uniqueVisitors,
+      topPages,
+      visitorsByCountry,
+      recentVisits: recentVisits || [],
+    };
+  } catch (err) {
+    console.error('Error fetching app visit stats:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get app visit analytics by page
+ */
+export async function getPageVisitStats(pageName: string, daysBack: number = 30) {
+  try {
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - daysBack);
+
+    const { data, error } = await supabase
+      .from('app_visits')
+      .select('*')
+      .eq('page_name', pageName)
+      .gte('visited_at', sinceDate.toISOString())
+      .order('visited_at', { ascending: false });
+
+    if (error) throw error;
+
+    const uniqueVisitors = new Set(data?.map((v) => v.visitor_session_id) || [])
+      .size;
+
+    return {
+      pageName,
+      totalVisits: data?.length || 0,
+      uniqueVisitors,
+      visits: data || [],
+    };
+  } catch (err) {
+    console.error('Error fetching page visit stats:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get visitor journey (page visit sequence)
+ */
+export async function getVisitorJourney(visitorSessionId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('app_visits')
+      .select('*')
+      .eq('visitor_session_id', visitorSessionId)
+      .order('visited_at', { ascending: true });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (err) {
+    console.error('Error fetching visitor journey:', err);
+    throw err;
+  }
+}
+
+// =====================================================
+// REVIEW TOKEN & REVIEW REQUEST SYSTEM
+// =====================================================
+
+export interface ReviewToken {
+  id: string;
+  booking_id: string;
+  service_id: string;
+  token: string;
+  guest_name: string;
+  guest_email: string;
+  is_used: boolean;
+  expires_at: string;
+  created_at: string;
+}
+
+/**
+ * Generate a unique review token for a completed booking
+ */
+export async function generateReviewToken(bookingId: string): Promise<ReviewToken | null> {
+  try {
+    // Fetch the booking with service details
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select(`
+        *,
+        services (id, title, slug, vendor_id, vendors (id, business_name)),
+        profiles (id, full_name, email)
+      `)
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError) throw bookingError;
+    if (!booking) throw new Error('Booking not found');
+
+    const guestName = booking.guest_name || booking.profiles?.full_name || 'Guest';
+    const guestEmail = booking.guest_email || booking.profiles?.email || '';
+
+    if (!guestEmail) {
+      console.warn('No email available for booking', bookingId);
+      return null;
+    }
+
+    // Generate a random token
+    const token = crypto.randomUUID ? crypto.randomUUID() : 
+      `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+    // Set expiry to 30 days from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const { data, error } = await supabase
+      .from('review_tokens')
+      .insert({
+        booking_id: bookingId,
+        service_id: booking.service_id,
+        token,
+        guest_name: guestName,
+        guest_email: guestEmail,
+        is_used: false,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error generating review token:', err);
+    return null;
+  }
+}
+
+/**
+ * Validate a review token and return associated data
+ */
+export async function validateReviewToken(token: string): Promise<{
+  valid: boolean;
+  tokenData?: ReviewToken;
+  booking?: any;
+  service?: any;
+} | null> {
+  try {
+    const { data, error } = await supabase
+      .from('review_tokens')
+      .select('*')
+      .eq('token', token)
+      .single();
+
+    if (error || !data) {
+      return { valid: false };
+    }
+
+    // Check if already used
+    if (data.is_used) {
+      return { valid: false, tokenData: data };
+    }
+
+    // Check if expired
+    if (new Date(data.expires_at) < new Date()) {
+      return { valid: false, tokenData: data };
+    }
+
+    // Fetch service details
+    const { data: service } = await supabase
+      .from('services')
+      .select(`
+        id, title, slug, images, location, price, currency,
+        vendors (id, business_name),
+        service_categories (id, name)
+      `)
+      .eq('id', data.service_id)
+      .single();
+
+    // Fetch booking details
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', data.booking_id)
+      .single();
+
+    return {
+      valid: true,
+      tokenData: data,
+      booking,
+      service,
+    };
+  } catch (err) {
+    console.error('Error validating review token:', err);
+    return null;
+  }
+}
+
+/**
+ * Submit a review using a review token (verified booking review)
+ */
+export async function submitReviewWithToken(
+  token: string,
+  review: {
+    rating: number;
+    comment: string;
+    visitorName?: string;
+    kpiRatings?: Record<string, number>;
+  }
+): Promise<ServiceReview | null> {
+  try {
+    // Validate token first
+    const validation = await validateReviewToken(token);
+    if (!validation?.valid || !validation.tokenData) {
+      throw new Error('Invalid or expired review token');
+    }
+
+    const tokenData = validation.tokenData;
+
+    // Create the review as a verified booking review
+    const { data: reviewData, error: reviewError } = await supabase
+      .from('service_reviews')
+      .insert({
+        service_id: tokenData.service_id,
+        visitor_name: review.visitorName || tokenData.guest_name,
+        visitor_email: tokenData.guest_email,
+        rating: review.rating,
+        kpi_ratings: review.kpiRatings || null,
+        comment: review.comment,
+        is_verified_booking: true,
+        status: 'approved', // Auto-approve verified booking reviews
+      })
+      .select('*')
+      .single();
+
+    if (reviewError) throw reviewError;
+
+    // Mark token as used
+    await supabase
+      .from('review_tokens')
+      .update({ is_used: true })
+      .eq('id', tokenData.id);
+
+    return reviewData;
+  } catch (err) {
+    console.error('Error submitting review with token:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get all pending reviews for admin moderation
+ * Uses the admin RPC and filters client-side for pending status
+ */
+export async function getAllPendingReviews(): Promise<(ServiceReview & { service_title?: string; vendor_name?: string })[]> {
+  try {
+    const allReviews = await getAllReviewsForAdmin();
+    return allReviews.filter(r => r.status === 'pending');
+  } catch (err) {
+    console.error('Error fetching pending reviews:', err);
+    return [];
+  }
+}
+
+/**
+ * Get all reviews for admin (all statuses)
+ * Uses SECURITY DEFINER RPC to bypass RLS and ensure all reviews are returned
+ */
+export async function getAllReviewsForAdmin(): Promise<(ServiceReview & { service_title?: string; vendor_name?: string })[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_all_reviews_admin');
+
+    if (error) throw error;
+
+    // RPC returns a JSON array or null
+    const reviews = data || [];
+    return reviews.map((r: any) => ({
+      ...r,
+      service_title: r.service_title || 'Unknown Service',
+      vendor_name: r.vendor_name || 'Unknown Vendor',
+    }));
+  } catch (err) {
+    console.error('Error fetching all reviews:', err);
+    return [];
+  }
+}
+
+/**
+ * Approve a review (uses SECURITY DEFINER RPC to bypass RLS)
+ */
+export async function approveReview(reviewId: string, approvedBy?: string): Promise<ServiceReview> {
+  try {
+    const { data, error } = await supabase.rpc('admin_approve_review', {
+      p_review_id: reviewId,
+      p_approved_by: approvedBy || null,
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error approving review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Reject a review (uses SECURITY DEFINER RPC to bypass RLS)
+ */
+export async function rejectReview(reviewId: string, reason?: string): Promise<ServiceReview> {
+  try {
+    const { data, error } = await supabase.rpc('admin_reject_review', {
+      p_review_id: reviewId,
+      p_reason: reason || 'Review does not meet guidelines',
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error rejecting review:', err);
+    throw err;
+  }
+}
+
+/**
+ * Get average rating for a service from approved reviews
+ */
+export async function getServiceAverageRating(serviceId: string): Promise<{ average: number; count: number; kpiAverages?: Record<string, { average: number; count: number }> }> {
+  try {
+    const { data, error } = await supabase
+      .from('service_reviews')
+      .select('rating, kpi_ratings')
+      .eq('service_id', serviceId)
+      .eq('status', 'approved');
+
+    if (error) throw error;
+
+    const reviews = data || [];
+    if (reviews.length === 0) return { average: 0, count: 0 };
+
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+
+    // Calculate KPI averages from all reviews that have kpi_ratings
+    const kpiTotals: Record<string, { total: number; count: number }> = {};
+    for (const review of reviews) {
+      if (review.kpi_ratings && typeof review.kpi_ratings === 'object') {
+        for (const [key, value] of Object.entries(review.kpi_ratings as Record<string, number>)) {
+          if (value && value > 0) {
+            if (!kpiTotals[key]) kpiTotals[key] = { total: 0, count: 0 };
+            kpiTotals[key].total += value;
+            kpiTotals[key].count += 1;
+          }
+        }
+      }
+    }
+
+    const kpiAverages: Record<string, { average: number; count: number }> = {};
+    for (const [key, { total: kpiTotal, count: kpiCount }] of Object.entries(kpiTotals)) {
+      kpiAverages[key] = {
+        average: Math.round((kpiTotal / kpiCount) * 10) / 10,
+        count: kpiCount,
+      };
+    }
+
+    return {
+      average: Math.round((total / reviews.length) * 10) / 10,
+      count: reviews.length,
+      kpiAverages: Object.keys(kpiAverages).length > 0 ? kpiAverages : undefined,
+    };
+  } catch (err) {
+    console.error('Error fetching average rating:', err);
+    return { average: 0, count: 0 };
+  }
+}
+
+/**
+ * Send review request email when booking is completed.
+ * Uses Supabase Edge Function or a simple fetch to your email API.
+ * Falls back to generating a review link the vendor can share manually.
+ */
+export async function sendReviewRequestEmail(
+  bookingId: string,
+  reviewToken: string,
+  guestEmail: string,
+  guestName: string,
+  serviceName: string,
+  vendorName: string
+): Promise<{ sent: boolean; reviewUrl: string }> {
+  const baseUrl = window.location.origin;
+  const reviewUrl = `${baseUrl}/review/${reviewToken}`;
+
+  try {
+    // Try to use Supabase Edge Function for email
+    const { error } = await supabase.functions.invoke('send-review-email', {
+      body: {
+        to: guestEmail,
+        guestName,
+        serviceName,
+        vendorName,
+        reviewUrl,
+        bookingId,
+      },
+    });
+
+    if (error) {
+      console.warn('Edge function email not available, review link generated:', reviewUrl);
+      return { sent: false, reviewUrl };
+    }
+
+    return { sent: true, reviewUrl };
+  } catch (err) {
+    console.warn('Email sending failed, review link generated:', reviewUrl);
+    return { sent: false, reviewUrl };
+  }
+}
+
+// Scan Session Management Functions
+export interface ScanSession {
+  id: string;
+  service_id: string;
+  created_by: string;
+  start_time: string;
+  duration_hours: number;
+  end_time: string;
+  status: 'active' | 'expired' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createScanSession(serviceId: string, durationHours: number): Promise<ScanSession | null> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .insert([{
+        service_id: serviceId,
+        created_by: (await supabase.auth.getUser()).data.user?.id,
+        duration_hours: durationHours,
+        end_time: new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
+        status: 'active'
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating scan session:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception creating scan session:', err);
+    return null;
+  }
+}
+
+export async function getActiveScanSession(serviceId: string): Promise<ScanSession | null> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .select('*')
+      .eq('service_id', serviceId)
+      .eq('status', 'active')
+      .gt('end_time', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      // No active session found is not an error
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error getting active scan session:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception getting active scan session:', err);
+    return null;
+  }
+}
+
+export async function expireScanSession(sessionId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('scan_sessions')
+      .update({ status: 'expired', updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error expiring scan session:', error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Exception expiring scan session:', err);
+    return false;
+  }
+}
+
+export async function getScanSessionsForService(serviceId: string): Promise<ScanSession[]> {
+  try {
+    const { data, error } = await supabase
+      .from('scan_sessions')
+      .select('*')
+      .eq('service_id', serviceId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error getting scan sessions:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Exception getting scan sessions:', err);
+    return [];
   }
 }

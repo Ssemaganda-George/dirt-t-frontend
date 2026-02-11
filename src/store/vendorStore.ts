@@ -1,5 +1,6 @@
 import { Service, Booking, Transaction, Wallet } from '../types'
 import { addPendingService } from './adminStore'
+import { supabase } from '../lib/supabaseClient'
 
 const key = (vendorId: string, entity: string) => `vendor:${vendorId}:${entity}`
 
@@ -208,17 +209,41 @@ export function updateTransactionStatus(vendorId: string, txId: string, status: 
   setTransactions(vendorId, list)
 }
 
-export function requestWithdrawal(vendorId: string, amount: number, currency: string): Transaction {
-  return addTransaction(vendorId, {
-    booking_id: undefined,
-    tourist_id: undefined,
-    amount,
-    currency,
-    transaction_type: 'withdrawal',
-    status: 'pending',
-    payment_method: 'mobile_money',
-    reference: `WD_${Math.random().toString(36).slice(2,8)}`
-  })
+export async function requestWithdrawal(vendorId: string, amount: number, currency: string): Promise<Transaction> {
+  try {
+    // Use atomic withdrawal processing
+    const { data, error } = await supabase.rpc('process_withdrawal_atomic', {
+      p_vendor_id: vendorId,
+      p_amount: amount,
+      p_currency: currency,
+      p_payment_method: 'mobile_money',
+      p_reference: `WD_${Math.random().toString(36).slice(2,8)}`
+    });
+
+    if (error) throw error;
+
+    if (!data?.success) {
+      throw new Error(data.error || 'Failed to process withdrawal');
+    }
+
+    // Return a transaction object for compatibility
+    return {
+      id: data.transaction_id,
+      booking_id: undefined,
+      vendor_id: vendorId,
+      tourist_id: undefined,
+      amount,
+      currency,
+      transaction_type: 'withdrawal',
+      status: 'completed',
+      payment_method: 'mobile_money',
+      reference: data.reference,
+      created_at: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error processing withdrawal:', error);
+    throw error;
+  }
 }
 
 export function getWallet(vendorId: string): Wallet {

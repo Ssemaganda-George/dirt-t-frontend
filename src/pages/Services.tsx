@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
-import { getServiceCategories } from '../lib/database'
+import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
-import { formatCurrency } from '../lib/utils'
+import { usePreferences } from '../contexts/PreferencesContext'
+import { formatCurrencyWithConversion } from '../lib/utils'
 import type { Service } from '../types'
 
 const categories = [
@@ -51,7 +52,7 @@ const categories = [
   },
   {
     name: 'Events',
-    href: '/category/activities',
+    href: '/category/events',
     icon: Target,
     description: 'Book exciting activities and adventures',
     color: 'bg-red-500'
@@ -66,6 +67,7 @@ export default function Services() {
 
   // Use the reactive useServices hook instead of local state
   const { services: allServices, loading: servicesLoading } = useServices()
+  // Use centralized formatting helper from lib/utils
 
   // Helper function to render icons (handles both string and component icons)
   const renderIcon = (icon: any, className: string = "h-4 w-4") => {
@@ -160,7 +162,6 @@ export default function Services() {
       <ServiceDetail 
         service={selectedService} 
         onBack={() => setSelectedService(null)}
-        formatCurrency={formatCurrency}
       />
     )
   }
@@ -231,7 +232,6 @@ export default function Services() {
                 <ServiceCard 
                   key={service.id} 
                   service={service}
-                  formatCurrency={formatCurrency}
                   onClick={() => setSelectedService(service)}
                 />
               ))}
@@ -283,12 +283,29 @@ export default function Services() {
 
 interface ServiceCardProps {
   service: Service
-  formatCurrency: (amount: number, currency: string) => string
   onClick: () => void
 }
-
-function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
+function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const [rating, setRating] = useState<number>(0)
+  const [reviewCount, setReviewCount] = useState<number>(0)
+  const { selectedCurrency, selectedLanguage } = usePreferences()
+  
+  // Fetch service rating and review count
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        const ratingData = await getServiceAverageRating(service.id)
+        setRating(ratingData.average || 0)
+        setReviewCount(ratingData.count || 0)
+      } catch (error) {
+        console.error('Error fetching service rating:', error)
+        setRating(0)
+        setReviewCount(0)
+      }
+    }
+    fetchRating()
+  }, [service.id])
   
   // Provide fallback image if no images exist
   const displayImage = service.images && service.images.length > 0 
@@ -340,9 +357,12 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
               <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
               <span className="truncate">{service.location || 'Location TBA'}</span>
             </div>
-            <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg ml-2">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg ml-2">
               <Star className="h-4 w-4 text-emerald-600 fill-current flex-shrink-0" />
-              <span className="text-sm font-bold text-emerald-700">4.5</span>
+              <span className="text-sm font-bold text-emerald-700">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && (
+                <span className="text-sm text-gray-600 ml-0.5">({reviewCount})</span>
+              )}
             </div>
           </div>
 
@@ -364,8 +384,8 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
           {/* Price */}
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-500">From</span>
-            <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(service.price, service.currency)}
+              <span className="text-xl font-bold text-gray-900">
+              {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
             </span>
             <span className="text-xs text-gray-500">
               {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
@@ -380,11 +400,10 @@ function ServiceCard({ service, formatCurrency, onClick }: ServiceCardProps) {
 interface ServiceDetailProps {
   service: Service
   onBack: () => void
-  formatCurrency: (amount: number, currency: string) => string
 }
-
-function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) {
+function ServiceDetail({ service, onBack }: ServiceDetailProps) {
   const [isSaved, setIsSaved] = useState(false)
+  const { selectedCurrency, selectedLanguage } = usePreferences()
 
   // Provide fallback image if no images exist
   const displayImage = service.images && service.images.length > 0 
@@ -518,7 +537,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-sm text-gray-600">From</span>
                   <span className="text-3xl font-bold text-gray-900">
-                    {formatCurrency(service.price, service.currency)}
+                    {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">
@@ -531,7 +550,7 @@ function ServiceDetail({ service, onBack, formatCurrency }: ServiceDetailProps) 
               </button>
 
               <button className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold transition-colors mb-6">
-                Contact vendor
+                Contact Provider
               </button>
 
               <div className="border-t border-gray-200 pt-6">

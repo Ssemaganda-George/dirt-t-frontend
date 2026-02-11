@@ -3,6 +3,7 @@ import { Search, X, MapPin, HelpCircle, Shield, FileText, Globe } from 'lucide-r
 import { useServices } from '../hooks/hook'
 import { Link } from 'react-router-dom'
 import type { Service } from '../types'
+import { usePreferences } from '../contexts/PreferencesContext'
 
 // Support content data
 const faqCategories = [
@@ -51,7 +52,7 @@ const faqCategories = [
       },
       {
         question: "How do I become a service provider?",
-        answer: "Visit our 'Partner With Us' page to learn about becoming a vendor. Complete the registration process and submit required documentation for approval."
+        answer: "Visit our 'Partner With Us' page to learn about becoming a service provider. Complete the registration process and submit required documentation for approval."
       }
     ]
   }
@@ -172,6 +173,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
   const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { services: allServices } = useServices()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   // Web search function
   const searchWeb = async (query: string): Promise<SearchResult[]> => {
     try {
@@ -328,21 +330,63 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     }
   }
 
-  const formatCurrency = (amount: number, currency: string) => {
-    try {
-      // Validate currency code - if invalid, use UGX as fallback
-      const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF']
-      const currencyCode = validCurrencies.includes(currency?.toUpperCase()) ? currency.toUpperCase() : 'UGX'
+  // Currency conversion functions
+  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) => {
+    const exchangeRates: { [key: string]: number } = {
+      'UGX': 1,
+      'USD': 0.00027,
+      'EUR': 0.00025,
+      'GBP': 0.00021,
+      'KES': 0.0023,
+      'TZS': 0.00064,
+      'BRL': 0.0014,
+      'MXN': 0.0054,
+      'EGP': 0.0084,
+      'MAD': 0.0025,
+      'TRY': 0.0089,
+      'THB': 0.0077,
+      'KRW': 0.33,
+      'RUB': 0.019,
+      'INR': 0.022,
+      'CNY': 0.0019,
+      'JPY': 0.039,
+      'CAD': 0.00036,
+      'AUD': 0.00037,
+      'CHF': 0.00024,
+      'SEK': 0.0024,
+      'NOK': 0.0024,
+      'DKK': 0.0017,
+      'PLN': 0.0011,
+      'CZK': 0.0064,
+      'HUF': 0.088,
+      'ZAR': 0.0048,
+      'NGN': 0.11,
+      'GHS': 0.0037,
+      'XAF': 0.16,
+      'XOF': 0.16
+    }
 
-      return new Intl.NumberFormat('en-UG', {
+    if (fromCurrency === toCurrency) return amount
+    const amountInUGX = fromCurrency === 'UGX' ? amount : amount / exchangeRates[fromCurrency]
+    return amountInUGX * (exchangeRates[toCurrency] || 1)
+  }
+
+  const formatAmount = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(selectedLanguage || 'en-US', {
         style: 'currency',
-        currency: currencyCode,
+        currency: currency,
         minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
       }).format(amount)
     } catch (error) {
-      // Fallback for any formatting errors
-      return `UGX ${amount.toLocaleString()}`
+      return `${currency} ${amount.toLocaleString()}`
     }
+  }
+
+  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
+    const convertedAmount = convertCurrency(amount, serviceCurrency, selectedCurrency || 'UGX')
+    return formatAmount(convertedAmount, selectedCurrency || 'UGX')
   }
 
   if (!isOpen) return null
@@ -357,7 +401,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search for hotels, tours, restaurants, transport, FAQs, safety tips, or search the web..."
+              placeholder="Search DirtTrails..."
               className="flex-1 text-base sm:text-base outline-none placeholder-gray-500 text-gray-900 bg-transparent min-w-0"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -380,7 +424,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                 <Search className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Search DirtTrails</h3>
-              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find hotels, tours, restaurants, transport services, FAQs, safety tips, and search the web</p>
+              <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">Find services, get help, and explore</p>
             </div>
           ) : isLoading ? (
             <div className="p-8 sm:p-12 text-center">
@@ -439,7 +483,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                             </div>
                             <div className="text-right flex-shrink-0">
                               <div className="text-lg font-medium text-blue-400">
-                                {formatCurrency(service.price, service.currency)}
+                                {formatCurrencyWithConversion(service.price, service.currency)}
                               </div>
                               {service.duration_hours && (
                                 <div className="text-xs text-gray-500 mt-0.5 font-light">
@@ -605,7 +649,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                           <div className="flex items-start space-x-3">
                             {/* Web Icon */}
                             <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shadow-sm border border-gray-200">
-                              <Globe className="h-5 w-5 text-orange-600" />
+                              <Globe className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                             </div>
 
                             {/* Web Content */}

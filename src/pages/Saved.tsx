@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, MapPin, AlertCircle } from 'lucide-react'
+import { Heart, MapPin, AlertCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Service } from '../lib/database'
 import { formatCurrency } from '../lib/utils'
@@ -75,6 +75,13 @@ export default function Saved() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
+          <Link
+            to="/profile"
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">Saved Items</h1>
           <p className="text-gray-600 mt-2">Your favorite services and experiences</p>
         </div>

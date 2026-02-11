@@ -159,6 +159,9 @@ export interface Service {
   event_status?: string
   ticket_price?: number
   early_bird_price?: number
+  // Internal ticketing flag and ticket types stored for events
+  internal_ticketing?: boolean
+  ticket_types?: any[]
   ticket_purchase_link?: string
   event_location?: string
   event_highlights?: string[]
@@ -202,6 +205,8 @@ export interface Service {
   group_discounts?: boolean
   event_description?: string
   event_cancellation_policy?: string
+  // Whether the event scan/link is enabled by an admin. When false the scan link is inactive.
+  scan_enabled?: boolean
 
   // Agency-specific fields
   services_offered?: string[]
@@ -377,13 +382,17 @@ export interface Flight {
 export interface UserPreferences {
   id: string;
   user_id: string;
-  email_bookings: boolean;
-  email_promotions: boolean;
-  push_bookings: boolean;
-  push_promotions: boolean;
-  language: string;
-  timezone: string;
+  // Region/currency/language are stored in the DB (see db/004_user_preferences.sql)
+  region?: string;
   currency: string;
+  language: string;
+  // Legacy/optional notification fields (not present in current DB schema)
+  email_bookings?: boolean;
+  email_promotions?: boolean;
+  push_bookings?: boolean;
+  push_promotions?: boolean;
+  // Optional timezone kept for compatibility with older UI
+  timezone?: string;
   created_at: string;
   updated_at: string;
 }

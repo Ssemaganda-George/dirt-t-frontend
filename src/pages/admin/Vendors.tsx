@@ -44,7 +44,7 @@ export default function Vendors() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -52,7 +52,7 @@ export default function Vendors() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Vendors</h1>
         <p className="mt-1 text-sm text-gray-600">
           Manage vendor registrations and approvals
         </p>
@@ -67,7 +67,7 @@ export default function Vendors() {
               onClick={() => setFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filter === status
-                  ? 'bg-primary-100 text-primary-700'
+                  ? 'bg-blue-50 text-blue-700'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -111,8 +111,8 @@ export default function Vendors() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                          <Store className="h-5 w-5 text-primary-600" />
+                        <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                          <Store className="h-5 w-5 text-blue-600" />
                         </div>
                       </div>
                       <div className="ml-4">
@@ -141,7 +141,7 @@ export default function Vendors() {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => setSelectedVendor(vendor)}
-                        className="text-primary-600 hover:text-primary-900"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
@@ -172,11 +172,11 @@ export default function Vendors() {
 
       {/* Vendor Details Modal */}
       {selectedVendor && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Vendor Details</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Vendor Details</h3>
                 <button
                   onClick={() => setSelectedVendor(null)}
                   className="text-gray-400 hover:text-gray-600"

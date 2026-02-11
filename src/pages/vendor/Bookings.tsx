@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
-import { getServices } from '../../store/vendorStore'
+import { getServices as getServicesDb } from '../../lib/database'
 import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
-import { formatCurrency, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
-import { StatusBadge } from '../../components/StatusBadge'
-import { Trash2 } from 'lucide-react'
+import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
+import { usePreferences } from '../../contexts/PreferencesContext'
+import { Search } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function VendorBookings() {
   const { profile, vendor } = useAuth()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { state: cartState } = useCart()
-
+  const navigate = useNavigate()
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [showForm, setShowForm] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showBookingDetails, setShowBookingDetails] = useState(false)
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [bookingToReject, setBookingToReject] = useState<Booking | null>(null)
+  const [rejectionReason, setRejectionReason] = useState<string>('')
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Fetch bookings from Supabase for this vendor
   const load = async () => {
@@ -30,10 +36,16 @@ export default function VendorBookings() {
     const allBookings = await getAllBookings()
     const filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
     setBookings(filteredBookings)
-    setServices(getServices(vendorId))
+
+    try {
+      const svc = await getServicesDb(vendorId)
+      setServices(svc)
+    } catch (err) {
+      console.error('Error loading services for vendor:', err)
+      setServices([])
+    }
   }
 
-  // Set up real-time subscription for bookings
   useEffect(() => {
     if (!vendorId) return
 
@@ -41,7 +53,7 @@ export default function VendorBookings() {
     load()
 
     // Subscribe to real-time changes for this vendor's bookings
-    const subscription = supabase
+    const bookingsSubscription = supabase
       .channel('vendor_bookings')
       .on('postgres_changes', {
         event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
@@ -50,13 +62,13 @@ export default function VendorBookings() {
         filter: `vendor_id=eq.${vendorId}` // Only listen to bookings for this vendor
       }, (payload) => {
         console.log('Real-time booking change:', payload)
-        
+
         if (payload.eventType === 'INSERT') {
           // New booking for this vendor
           setBookings(prev => [...prev, payload.new as Booking])
         } else if (payload.eventType === 'UPDATE') {
           // Booking updated
-          setBookings(prev => prev.map(booking => 
+          setBookings(prev => prev.map(booking =>
             booking.id === payload.new.id ? payload.new as Booking : booking
           ))
         } else if (payload.eventType === 'DELETE') {
@@ -66,16 +78,29 @@ export default function VendorBookings() {
       })
       .subscribe()
 
-    // Cleanup subscription on unmount or vendorId change
+    // Cleanup subscriptions on unmount or vendorId change
     return () => {
-      subscription.unsubscribe()
+      bookingsSubscription.unsubscribe()
     }
   }, [vendorId])
 
   const handleStatusChange = async (bookingId: string, status: Booking['status']) => {
     try {
-      await updateBooking(bookingId, { status })
+      const updatedBooking = await updateBooking(bookingId, { status })
       // Real-time subscription will update the UI automatically
+      
+      // Show review link notification when booking is completed
+      if (status === 'completed') {
+        // The review token was auto-generated in updateBooking
+        // Show a notification to the vendor
+        const guestName = updatedBooking.guest_name || (updatedBooking as any).profiles?.full_name || 'the guest'
+        const guestEmail = updatedBooking.guest_email || (updatedBooking as any).profiles?.email
+        if (guestEmail) {
+          alert(`✅ Booking marked as completed!\n\nA review request has been sent to ${guestName} (${guestEmail}). They will receive an email link to rate and review your service.`)
+        } else {
+          alert(`✅ Booking marked as completed!\n\nNote: No email was found for this guest, so a review request could not be sent automatically.`)
+        }
+      }
     } catch (error) {
       console.error('Error updating booking status:', error)
       // Revert local state on error
@@ -83,23 +108,99 @@ export default function VendorBookings() {
     }
   }
 
+  const handleRejectBooking = async (bookingId: string, reason: string) => {
+    try {
+      await updateBooking(bookingId, { status: 'cancelled', rejection_reason: reason })
+      // Real-time subscription will update the UI automatically
+      setShowRejectionModal(false)
+      setBookingToReject(null)
+      setRejectionReason('')
+    } catch (error) {
+      console.error('Error rejecting booking:', error)
+      // Revert local state on error
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
+    }
+  }
+
+  const openRejectionModal = (booking: Booking) => {
+    setBookingToReject(booking)
+    setRejectionReason('')
+    setShowRejectionModal(true)
+  }
+
   // Filtered bookings
   const filteredBookings = bookings.filter(b => {
     const statusMatch = statusFilter === 'all' || b.status === statusFilter
     const serviceMatch = serviceFilter === 'all' || b.service_id === serviceFilter
-    return statusMatch && serviceMatch
+
+    // Search filter
+    const searchMatch = !searchQuery.trim() || (() => {
+      const query = searchQuery.toLowerCase()
+      return (
+        // Search in service title
+        b.service?.title?.toLowerCase().includes(query) ||
+        b.services?.title?.toLowerCase().includes(query) ||
+        // Search in service description
+        b.service?.description?.toLowerCase().includes(query) ||
+        // Search in customer name
+        b.tourist_profile?.full_name?.toLowerCase().includes(query) ||
+        b.profiles?.full_name?.toLowerCase().includes(query) ||
+        b.guest_name?.toLowerCase().includes(query) ||
+        // Search in customer email
+        b.guest_email?.toLowerCase().includes(query) ||
+        // Search in booking status
+        b.status?.toLowerCase().includes(query) ||
+        b.payment_status?.toLowerCase().includes(query) ||
+        // Search in booking ID
+        b.id?.toLowerCase().includes(query)
+      )
+    })()
+
+    return statusMatch && serviceMatch && searchMatch
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <h1 className="text-2xl font-semibold text-gray-900">Bookings</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and track your customer bookings</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/vendor/availability')}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Availability
+          </button>
+          <div className="flex items-center text-xs text-emerald-600">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></div>
+            Live
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filters Card */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="p-4 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by service, customer, status, or booking ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          {/* Filter Row */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -110,7 +211,7 @@ export default function VendorBookings() {
             <select
               value={serviceFilter}
               onChange={e => setServiceFilter(e.target.value)}
-              className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:ring-primary-500 focus:border-primary-500"
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Services</option>
               {services.map(s => (
@@ -119,221 +220,180 @@ export default function VendorBookings() {
             </select>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Live updates
-          </div>
-          <button onClick={() => setShowForm(true)} className="px-3 py-2 rounded-md bg-primary-600 text-white hover:bg-primary-700">Add Booking</button>
-        </div>
       </div>
 
-  <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100">
+      {/* Bookings Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Mobile Card View */}
-  <div className="block md:hidden">
+        <div className="block md:hidden divide-y divide-gray-100">
           {filteredBookings.length === 0 ? (
-            <div className="px-6 py-10 text-center text-sm text-gray-500">
-              No bookings yet.
+            <div className="px-6 py-12 text-center">
+              <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+              <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredBookings.map(b => (
-                <div key={b.id} className="p-4 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-xl shadow-sm mb-3 border border-gray-100 hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-3 gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-primary-700 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatDateTime(b.booking_date)} • <span className="font-medium text-gray-700">{b.guests} guests</span>
-                      </p>
-                    </div>
-                    <div className="text-right flex flex-col items-end">
-                      <div className="text-lg font-bold text-primary-900">
-                        {formatCurrency(b.total_amount, b.currency)}
-                      </div>
-                      <div className="mt-1">
-                        <StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" />
-                      </div>
-                    </div>
+            filteredBookings.map(b => (
+              <div key={b.id} className="p-4">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {formatDateTime(b.booking_date)} · {b.guests} guest{b.guests > 1 ? 's' : ''}
+                    </p>
                   </div>
-
-                  {/* Mobile Action Buttons */}
-                  <div className="flex flex-col gap-2 mt-2">
-                    <select
-                      value={b.status}
-                      onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-primary-500 focus:border-primary-500"
-                      disabled={b.payment_status !== 'paid'}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="completed">Completed</option>
-                    </select>
-
-                    {b.payment_status === 'paid' && b.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <button
-                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-                          onClick={() => handleStatusChange(b.id, 'confirmed')}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                          onClick={() => handleStatusChange(b.id, 'cancelled')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setSelectedBooking(b)
-                        setShowBookingDetails(true)
-                      }}
-                      className="w-full px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm transition-all"
-                    >
-                      View Details
-                    </button>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
+                    </p>
+                    <span className={`inline-flex mt-1 px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : getVendorDisplayStatus(b.status, b.payment_status) === 'pending'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-red-50 text-red-700'
+                    }`}>
+                      {getVendorDisplayStatus(b.status, b.payment_status)}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col gap-2 mt-3">
+                  {b.status === 'pending' && (
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700"
+                        onClick={() => handleStatusChange(b.id, 'confirmed')}
+                      >Accept</button>
+                      <button
+                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50"
+                        onClick={() => openRejectionModal(b)}
+                      >Reject</button>
+                    </div>
+                  )}
+                  {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                    <button
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+                      onClick={() => handleStatusChange(b.id, 'completed')}
+                    >Mark Complete</button>
+                  )}
+                  <button
+                    onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
+                    className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                  >View Details</button>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booked</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBookings.map(b => (
-                  <tr 
-                    key={b.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedBooking(b)
-                      setShowBookingDetails(true)
-                    }}
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{b.guests}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(b.total_amount, b.currency)}</td>
-                    <td className="px-6 py-4"><StatusBadge status={getVendorDisplayStatus(b.status, b.payment_status)} variant="small" /></td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex items-center space-x-3">
-                        <select
-                          value={b.status}
-                          onChange={(e) => handleStatusChange(b.id, e.target.value as Booking['status'])}
-                          className="border rounded-md px-2 py-1"
-                          disabled={b.payment_status !== 'paid'}
-                          title={b.payment_status !== 'paid' ? 'You can only update status after payment is marked as Paid by admin.' : ''}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                        {/* Accept/Reject buttons only if payment is paid and status is pending */}
-                        {b.payment_status === 'paid' && b.status === 'pending' && (
-                          <>
-                            <button
-                              className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
-                              title="Accept booking"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleStatusChange(b.id, 'confirmed');
-                              }}
-                            >Accept</button>
-                            <button
-                              className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                              title="Reject booking"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleStatusChange(b.id, 'cancelled');
-                              }}
-                            >Reject</button>
-                          </>
-                        )}
-                        {/* Delete booking functionality not implemented for Supabase yet */}
-                        <button
-                          className="text-red-600 hover:text-red-800 cursor-not-allowed opacity-50"
-                          title={b.payment_status !== 'paid' ? 'You can only delete after payment is marked as Paid by admin.' : 'Delete booking (not implemented)'}
-                          disabled
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredBookings.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">No bookings yet.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Saved Cart Items */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saved Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Booked</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Guests</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {cartState.items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div>
-                      <div className="font-medium">{item.service.title}</div>
-                      <div className="text-gray-500">{item.service.vendors.business_name}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 capitalize">{item.category}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(item.totalPrice, item.currency)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{formatDateTime(item.savedAt)}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      {item.status}
+            <tbody>
+              {filteredBookings.map(b => (
+                <tr
+                  key={b.id}
+                  className="group border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer"
+                  onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
+                >
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{b.guests}</td>
+                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : getVendorDisplayStatus(b.status, b.payment_status) === 'pending'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-red-50 text-red-700'
+                    }`}>
+                      {getVendorDisplayStatus(b.status, b.payment_status)}
                     </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {b.status === 'pending' && (
+                        <>
+                          <button
+                            className="text-xs font-medium text-gray-900 hover:underline"
+                            onClick={e => { e.stopPropagation(); handleStatusChange(b.id, 'confirmed') }}
+                          >Accept</button>
+                          <button
+                            className="text-xs font-medium text-red-600 hover:underline"
+                            onClick={e => { e.stopPropagation(); openRejectionModal(b) }}
+                          >Reject</button>
+                        </>
+                      )}
+                      {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                        <button
+                          className="text-xs font-medium text-gray-900 hover:underline"
+                          onClick={e => { e.stopPropagation(); handleStatusChange(b.id, 'completed') }}
+                        >Complete</button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
-              {cartState.items.length === 0 && (
+              {filteredBookings.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">No saved cart items.</td>
+                  <td colSpan={6} className="px-5 py-12 text-center">
+                    <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+                    <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Saved Cart Items */}
+      {cartState.items.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Category</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Saved</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cartState.items.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-5 py-3">
+                      <p className="text-sm font-medium text-gray-900">{item.service.title}</p>
+                      <p className="text-xs text-gray-500">{item.service.vendors.business_name}</p>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-500 capitalize">{item.category}</td>
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(item.savedAt)}</td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{item.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <BookingForm
@@ -348,18 +408,18 @@ export default function VendorBookings() {
         />
       )}
 
+
+
       {/* Booking Details Modal */}
       {showBookingDetails && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Booking Details</h3>
-              <button 
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
+              <h3 className="text-base font-semibold text-gray-900">Booking Details</h3>
+              <button
                 onClick={() => setShowBookingDetails(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >✕</button>
             </div>
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -371,9 +431,13 @@ export default function VendorBookings() {
                     <p><span className="font-medium">Booked Date:</span> {formatDateTime(selectedBooking.booking_date)}</p>
                     <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
                     <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
-                    <p><span className="font-medium">Total Amount:</span> {formatCurrency(selectedBooking.total_amount, selectedBooking.currency)}</p>
-                    <p><span className="font-medium">Status:</span> <StatusBadge status={getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)} variant="small" /></p>
-                    <p><span className="font-medium">Payment Status:</span> <StatusBadge status={selectedBooking.payment_status} variant="small" /></p>
+                    <p><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBooking.total_amount, selectedBooking.currency, selectedCurrency, selectedLanguage)}</p>
+                    <p><span className="font-medium">Status:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'confirmed' || getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                    }`}>{getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)}</span></p>
+                    <p><span className="font-medium">Payment:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
+                      selectedBooking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                    }`}>{selectedBooking.payment_status}</span></p>
                   </div>
                 </div>
                 <div>
@@ -429,13 +493,52 @@ export default function VendorBookings() {
                 </div>
               )}
               
-              <div className="border-t pt-4 flex justify-end">
+              <div className="border-t border-gray-100 pt-4 flex justify-end">
                 <button 
                   onClick={() => setShowBookingDetails(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {showRejectionModal && bookingToReject && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-base font-semibold text-gray-900">Reject Booking</h3>
+              <button 
+                onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
+                className="text-gray-400 hover:text-gray-600 text-lg"
+              >✕</button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-500">Provide a reason for rejecting this booking. This will be sent to the customer.</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Reason</label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g., Not available on that date, Fully booked..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
+                  className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                >Cancel</button>
+                <button
+                  onClick={() => handleRejectBooking(bookingToReject.id, rejectionReason)}
+                  disabled={!rejectionReason.trim()}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >Reject</button>
               </div>
             </div>
           </div>
@@ -465,27 +568,27 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
   }, [form.service_id])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <h3 className="text-lg font-medium text-gray-900">Add Booking</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <h3 className="text-base font-semibold text-gray-900">Add Booking</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
         <form className="px-6 py-4 space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(form) }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service</label>
-            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="mt-1 w-full border rounded-md px-3 py-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Service</label>
+            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               {services.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Guests</label>
-              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Guests</label>
+              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="mt-1 w-full border rounded-md px-3 py-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
@@ -494,13 +597,13 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Total Amount</label>
-            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="mt-1 w-full border rounded-md px-3 py-2" />
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Total Amount</label>
+            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <p className="text-xs text-gray-500 mt-1">Currency: {form.currency}</p>
           </div>
-          <div className="flex justify-end space-x-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border bg-white">Cancel</button>
-            <button type="submit" className="px-4 py-2 rounded-md bg-primary-600 text-white">Create booking</button>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Create booking</button>
           </div>
         </form>
       </div>

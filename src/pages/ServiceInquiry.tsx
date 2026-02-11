@@ -122,7 +122,8 @@ export default function ServiceInquiry() {
       } else if (categoryName === 'restaurants') {
         categorySpecificData.dietaryRestrictions = formData.dietaryRestrictions
         categorySpecificData.specialOccasion = formData.specialOccasion
-      } else if (categoryName === 'activities') {
+      } else if (categoryName === 'activities' || categoryName === 'events') {
+        // Accept both 'activities' and the public-facing 'events' slug
         categorySpecificData.experienceLevel = formData.experienceLevel
         categorySpecificData.specialRequirements = formData.specialRequirements
       }

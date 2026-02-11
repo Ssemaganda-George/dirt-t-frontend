@@ -34,7 +34,7 @@ export default function Settings() {
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -42,15 +42,15 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
       </div>
 
       {/* Notifications Settings */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
+        <div className="p-5">
           <div className="flex items-center mb-4">
-            <Bell className="h-6 w-6 text-primary-600 mr-3" />
-            <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+            <Bell className="h-6 w-6 text-blue-600 mr-3" />
+            <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
           </div>
 
           <div className="space-y-4">
@@ -62,7 +62,7 @@ export default function Settings() {
               <button
                 onClick={() => handleNotificationChange('emailNotifications', !notifications.emailNotifications)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.emailNotifications ? 'bg-primary-600' : 'bg-gray-200'
+                  notifications.emailNotifications ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -81,7 +81,7 @@ export default function Settings() {
               <button
                 onClick={() => handleNotificationChange('pushNotifications', !notifications.pushNotifications)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.pushNotifications ? 'bg-primary-600' : 'bg-gray-200'
+                  notifications.pushNotifications ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -100,7 +100,7 @@ export default function Settings() {
               <button
                 onClick={() => handleNotificationChange('bookingReminders', !notifications.bookingReminders)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.bookingReminders ? 'bg-primary-600' : 'bg-gray-200'
+                  notifications.bookingReminders ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -119,7 +119,7 @@ export default function Settings() {
               <button
                 onClick={() => handleNotificationChange('marketingEmails', !notifications.marketingEmails)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notifications.marketingEmails ? 'bg-primary-600' : 'bg-gray-200'
+                  notifications.marketingEmails ? 'bg-blue-600' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -134,11 +134,11 @@ export default function Settings() {
       </div>
 
       {/* Preferences */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
+        <div className="p-5">
           <div className="flex items-center mb-4">
-            <Palette className="h-6 w-6 text-primary-600 mr-3" />
-            <h3 className="text-lg font-medium text-gray-900">Preferences</h3>
+            <Palette className="h-6 w-6 text-blue-600 mr-3" />
+            <h3 className="text-sm font-semibold text-gray-900">Preferences</h3>
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -147,7 +147,7 @@ export default function Settings() {
               <select
                 value={preferences.language}
                 onChange={(e) => handlePreferenceChange('language', e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
@@ -161,7 +161,7 @@ export default function Settings() {
               <select
                 value={preferences.timezone}
                 onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="UTC">UTC</option>
                 <option value="EST">Eastern Time</option>
@@ -175,7 +175,7 @@ export default function Settings() {
               <select
                 value={preferences.theme}
                 onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
@@ -187,18 +187,18 @@ export default function Settings() {
       </div>
 
       {/* Security */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
+        <div className="p-5">
           <div className="flex items-center mb-4">
-            <Shield className="h-6 w-6 text-primary-600 mr-3" />
-            <h3 className="text-lg font-medium text-gray-900">Security</h3>
+            <Shield className="h-6 w-6 text-blue-600 mr-3" />
+            <h3 className="text-sm font-semibold text-gray-900">Security</h3>
           </div>
 
           <div className="space-y-4">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
               Change Password
             </button>
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
               Enable Two-Factor Authentication
             </button>
           </div>
