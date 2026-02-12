@@ -5,7 +5,8 @@ import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Ute
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
-import { formatCurrencyWithConversion, formatCurrencyPartsWithConversion, getDisplayPrice } from '../lib/utils'
+import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
+import Money from '../components/Money'
 import type { Service } from '../types'
 
 // Playful titles per category. The UI will pick one title per category per day,
@@ -1058,21 +1059,17 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
               <div className="text-sm md:text-base font-normal text-gray-800 leading-none">
-                {(() => {
-                  const parts = formatCurrencyPartsWithConversion(
-                    // prefer any locally-fetched ticket types over the service object
-                    getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined),
-                    service.currency,
-                    selectedCurrency || 'UGX',
-                    selectedLanguage || 'en-US'
-                  )
-                  return (
-                    <>
-                      <span className="text-[11px] text-gray-600 mr-1" aria-hidden>{parts.currency}</span>
-                      <span className="text-[12px] sm:text-[13px] font-normal text-black">{parts.amount}</span>
-                    </>
-                  )
-                })()}
+                {
+                  <Money
+                    amount={getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined)}
+                    serviceCurrency={service.currency}
+                    targetCurrency={selectedCurrency || 'UGX'}
+                    locale={selectedLanguage || 'en-US'}
+                    className="text-sm md:text-base font-normal text-gray-800 leading-none"
+                    currencyClassName="text-[11px] text-gray-600 mr-1"
+                    amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
+                  />
+                }
               </div>
             </div>
 
