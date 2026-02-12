@@ -342,8 +342,6 @@ export default function PaymentPage() {
               </div>
             </div>
           </div>
-
-          {/* Order Summary: compact on mobile, details toggle */}
           <div className="px-4 py-4 border-b">
             <div className="flex items-center justify-between">
               <div>
@@ -356,7 +354,7 @@ export default function PaymentPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">Tickets</div>
                   <div>
-                    <button onClick={() => setShowEdit(s => !s)} className="text-sm text-blue-600">{showEdit ? 'Done' : 'Edit'}</button>
+                    <button type="button" onClick={() => setShowEdit(s => !s)} className="text-sm text-blue-600">{showEdit ? 'Done' : 'Edit'}</button>
                   </div>
                 </div>
 
@@ -406,6 +404,7 @@ export default function PaymentPage() {
                       <p className="text-sm text-gray-700 mb-4">Your receipt is ready. Click OK to view your receipt.</p>
                       <div className="flex justify-end">
                         <button
+                          type="button"
                           onClick={() => {
                             setPaymentSuccess(false)
                             navigate(`/tickets/${orderId}`)
@@ -551,12 +550,14 @@ export default function PaymentPage() {
           {/* Action Buttons */}
           <div className="px-6 py-4 border-t bg-gray-50 flex gap-2">
             <button
+              type="button"
               onClick={() => navigate(`/checkout/${orderId}`)}
               className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 font-light text-sm rounded-lg transition-colors border border-gray-300"
             >
               Back
             </button>
             <button
+              type="button"
               onClick={handlePayment}
               disabled={
                 processing ||

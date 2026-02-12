@@ -401,7 +401,7 @@ export default function CheckoutPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
             <div>
-              <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
+              <button type="button" onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-3 md:gap-6 overflow-x-auto pb-2">
@@ -537,6 +537,7 @@ export default function CheckoutPage() {
                         <div className="text-sm font-medium text-gray-700">Tickets</div>
                         {!showAllTickets && (
                           <button 
+                            type="button"
                             onClick={() => setShowAllTickets(true)}
                             className="text-gray-600 hover:text-gray-900 text-sm font-medium underline transition-colors"
                           >
@@ -545,6 +546,7 @@ export default function CheckoutPage() {
                         )}
                         {showAllTickets && (
                           <button 
+                            type="button"
                             onClick={() => setShowAllTickets(false)}
                             className="text-gray-600 hover:text-gray-900 text-xs font-light underline transition-colors"
                           >
@@ -569,6 +571,7 @@ export default function CheckoutPage() {
                                 {showAllTickets ? (
                                   <>
                                       <button 
+                                        type="button"
                                         onClick={() => updateTicketQuantity(ticketType.id, quantity - 1)}
                                         className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors disabled:opacity-50"
                                         disabled={quantity <= 0}
@@ -577,6 +580,7 @@ export default function CheckoutPage() {
                                       </button>
                                       <span className="text-sm font-medium min-w-[20px] text-center">{quantity}</span>
                                       <button 
+                                        type="button"
                                         onClick={() => updateTicketQuantity(ticketType.id, quantity + 1)}
                                         className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors"
                                       >
@@ -623,11 +627,12 @@ export default function CheckoutPage() {
         </div>
 
         {/* Fixed Action Buttons at Bottom - visible on all devices */}
-          <div className="sticky bottom-0 z-40 flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
-          <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
+          <div className="sticky bottom-0 z-60 pointer-events-auto flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
+          <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
             Back
           </button>
           <button 
+            type="button"
             disabled={!isNextEnabled}
             onClick={async () => {
               try {
