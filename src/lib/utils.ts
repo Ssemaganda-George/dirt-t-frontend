@@ -87,6 +87,37 @@ export function formatCurrencyWithConversion(
   }
 }
 
+// Return currency and amount parts separately so the UI can style them independently.
+export function formatCurrencyPartsWithConversion(
+  amount: number,
+  serviceCurrency: string,
+  targetCurrency: string = 'UGX',
+  locale: string = 'en-US'
+) {
+  const converted = convertCurrency(amount, serviceCurrency, targetCurrency)
+  try {
+    const nf: any = new Intl.NumberFormat(locale || 'en-US', {
+      style: 'currency',
+      currency: targetCurrency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+    const parts = nf.formatToParts(converted)
+    const currency = parts.filter((p: any) => p.type === 'currency').map((p: any) => p.value).join('')
+    // Build amount string from all non-currency and non-literal parts (keeps groups and decimals)
+    const amountStr = parts
+      .filter((p: any) => p.type !== 'currency' && p.type !== 'literal')
+      .map((p: any) => p.value)
+      .join('')
+    return { currency, amount: amountStr }
+  } catch (error) {
+    // Fallback: simple split
+    const formatted = `${targetCurrency} ${converted.toLocaleString()}`
+    const [curr, ...rest] = formatted.split(' ')
+    return { currency: curr, amount: rest.join(' ') }
+  }
+}
+
 export function formatDate(date: string): string {
   return new Intl.DateTimeFormat('en-UG', {
     year: 'numeric',

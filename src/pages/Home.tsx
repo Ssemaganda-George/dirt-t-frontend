@@ -5,7 +5,7 @@ import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Ute
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
-import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
+import { formatCurrencyWithConversion, formatCurrencyPartsWithConversion, getDisplayPrice } from '../lib/utils'
 import type { Service } from '../types'
 
 // Playful titles per category. The UI will pick one title per category per day,
@@ -921,7 +921,7 @@ export default function Home() {
 
                     <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
                       {servicesForCatToRender.map((service: Service) => (
-                        <div key={service.id} className="snap-start flex-shrink-0 w-[48%] sm:w-[40%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
+                        <div key={service.id} className="snap-start flex-shrink-0 w-[40%] sm:w-[34%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
                           <ServiceCard
                             service={service}
                             onClick={() => navigate(`/service/${service.slug || service.id}`)}
@@ -980,15 +980,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
-  // Determine unit text for price (per person/per night/etc.)
-  const getUnitLabel = (categoryName: string) => {
-    const name = (categoryName || '').toLowerCase()
-    if (name === 'transport') return 'per day'
-    if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
-    if (name === 'shops') return 'per item'
-    if (name === 'restaurants') return 'per meal'
-    return 'per person'
-  }
+  
 
   // Category-specific helper removed — card now uses a simple, image-first layout.
 
@@ -1029,7 +1021,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         <div className="aspect-square rounded-xl overflow-hidden shadow-sm bg-gray-100 relative">
           {/* Category badge */}
           {service.service_categories?.name && (
-            <div className="absolute top-3 left-3 px-2 py-1 bg-white/95 rounded-full shadow-sm text-xs font-semibold text-gray-800">
+            <div className="absolute top-3 left-3 px-2 py-0.5 sm:px-2 sm:py-0.5 bg-white/95 rounded-full shadow-sm text-[10px] sm:text-[11px] font-semibold text-gray-800 max-w-[68%] truncate">
               {getCategoryBadge(service.service_categories?.name)}
             </div>
           )}
@@ -1042,33 +1034,43 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           {/* Save Button (kept) */}
           <button
             onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved) }}
-            className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
+            className="absolute top-3 right-3 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
             aria-label={isSaved ? 'Unsave' : 'Save'}
           >
-            <Heart className={`h-5 w-5 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+            <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
           </button>
         </div>
 
         {/* Compact info block below the image (Airbnb-like) */}
         <div className="mt-2 px-0">
-          <h3 className="text-xs font-medium text-gray-900 line-clamp-1">{service.title}</h3>
-          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{service.location || 'Location TBA'}</div>
+          <h3 className="text-sm md:text-base font-medium text-gray-900 line-clamp-1 truncate leading-tight mb-0">{service.title}</h3>
+          <div className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 truncate">{service.location || 'Location TBA'}</div>
 
-          <div className="flex items-center justify-between mt-1 text-sm">
-            <div className="text-sm font-medium text-gray-900 inline-flex items-baseline">
-                {formatCurrencyWithConversion(
-                  // prefer any locally-fetched ticket types over the service object
-                  getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined),
-                  service.currency,
-                  selectedCurrency || 'UGX',
-                  selectedLanguage || 'en-US'
-                )}
-                <span className="text-[10px] font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
+              <div className="text-sm md:text-base font-normal text-gray-800 leading-none">
+                {(() => {
+                  const parts = formatCurrencyPartsWithConversion(
+                    // prefer any locally-fetched ticket types over the service object
+                    getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined),
+                    service.currency,
+                    selectedCurrency || 'UGX',
+                    selectedLanguage || 'en-US'
+                  )
+                  return (
+                    <>
+                      <span className="text-[11px] text-gray-600 mr-1" aria-hidden>{parts.currency}</span>
+                      <span className="text-[12px] sm:text-[13px] font-normal text-black">{parts.amount}</span>
+                    </>
+                  )
+                })()}
+              </div>
             </div>
-              <div className="flex items-center text-[10px] text-gray-600">
-                <Star className="h-3 w-3 text-emerald-600 fill-current mr-1" />
-                <span className="text-[10px]">{rating > 0 ? rating.toFixed(1) : '0'}</span>
-                {reviewCount > 0 && <span className="ml-1 text-[10px] text-gray-500">({reviewCount})</span>}
+
+            <div className="flex items-center gap-1 text-xs text-gray-600 flex-shrink-0">
+              <Star className="h-3 w-3 text-emerald-600 fill-current" />
+              <span className="leading-none">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
             </div>
           </div>
         </div>
@@ -1167,7 +1169,7 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-2">Departure</h3>
                       <div className="space-y-1">
-                        <p className="text-gray-700">{service.departure_city} ({service.departure_airport})</p>
+                        <p className="text-gray-700">{service.departure_city} {service.departure_airport ? `(${service.departure_airport})` : ''}</p>
                         <p className="text-gray-600">{service.departure_time ? new Date(service.departure_time).toLocaleString('en-US', { 
                           weekday: 'long', 
                           year: 'numeric', 
@@ -1181,7 +1183,7 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-2">Arrival</h3>
                       <div className="space-y-1">
-                        <p className="text-gray-700">{service.arrival_city} ({service.arrival_airport})</p>
+                        <p className="text-gray-700">{service.arrival_city} {service.arrival_airport ? `(${service.arrival_airport})` : ''}</p>
                         <p className="text-gray-600">{service.arrival_time ? new Date(service.arrival_time).toLocaleString('en-US', { 
                           weekday: 'long', 
                           year: 'numeric', 
