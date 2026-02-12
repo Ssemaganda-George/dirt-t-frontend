@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, Check, Filter } from 'lucide-react'
+import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -916,18 +916,27 @@ export default function Home() {
                   <div key={category.id}>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-semibold text-gray-900">{getDailyTitleForCategory(category.id, category.name)}</h3>
-                      <span className="text-sm text-gray-500">{servicesForCat.length} options</span>
+                      {/* <span className="text-sm text-gray-500">{servicesForCat.length} options</span> */}
                     </div>
 
-                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
-                      {servicesForCatToRender.map((service: Service) => (
-                        <div key={service.id} className="snap-start flex-shrink-0 w-[40%] sm:w-[34%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
-                          <ServiceCard
-                            service={service}
-                            onClick={() => navigate(`/service/${service.slug || service.id}`)}
-                          />
+                    <div className="relative">
+                      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                        {servicesForCatToRender.map((service: Service) => (
+                          <div key={service.id} className="snap-start flex-shrink-0 w-[40%] sm:w-[34%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
+                            <ServiceCard
+                              service={service}
+                              onClick={() => navigate(`/service/${service.slug || service.id}`)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Scroll hint arrow (non-interactive) */}
+                      <div className="absolute top-2 right-2 pointer-events-none">
+                        <div className="bg-white/90 dark:bg-black/60 rounded-full p-1 shadow-sm">
+                          <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-200" />
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </div>
                 )
