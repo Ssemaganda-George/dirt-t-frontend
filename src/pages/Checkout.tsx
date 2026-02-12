@@ -371,29 +371,29 @@ export default function CheckoutPage() {
   if (error || !order) return <div className="p-6">Order not found</div>
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-4">
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 md:p-6">
       {/* Modal-like centered container */}
-      <div className="w-full md:max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg overflow-hidden flex flex-col" style={{ height: '100vh', maxHeight: 'none', '--tw-max-height': 'auto' } as React.CSSProperties}>
+      <div className="w-full max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg overflow-hidden flex flex-col">
         {/* Progress Header - Fixed at top */}
-        <div className="px-4 md:px-6 py-3 border-b flex-shrink-0">
+        <div className="px-4 md:px-6 py-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg md:text-xl font-bold">Checkout</h2>
+            <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
             <div>
               <button onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 md:gap-4 overflow-x-auto pb-2">
-            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
-              <div className="text-xs md:text-sm font-light text-gray-700 whitespace-nowrap">Tickets</div>
+          <div className="mt-3 flex items-center gap-3 md:gap-6 overflow-x-auto pb-2">
+            <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="text-sm md:text-base font-medium text-gray-700 whitespace-nowrap">Tickets</div>
             </div>
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
-              <div className="text-xs md:text-sm font-light text-blue-600 whitespace-nowrap">Details</div>
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="text-sm md:text-base font-medium text-blue-600 whitespace-nowrap">Details</div>
             </div>
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-              <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-semibold">3</div>
-              <div className="text-xs md:text-sm font-light text-gray-700 whitespace-nowrap">Payment</div>
+              <div className="w-7 h-7 rounded-full bg-gray-400 text-white flex items-center justify-center text-sm font-semibold">3</div>
+              <div className="text-sm md:text-base font-medium text-gray-700 whitespace-nowrap">Payment</div>
             </div>
           </div>
         </div>
@@ -404,21 +404,21 @@ export default function CheckoutPage() {
             {/* Left: Buyer Information (span 1 col on md) */}
             <div className="md:col-span-1 space-y-4">
               <div className="bg-white p-4 rounded border border-gray-200">
-                <h3 className="font-bold text-base">Buyer Information</h3>
+                <h3 className="font-semibold text-lg md:text-xl">Buyer Information</h3>
                 <div className="grid grid-cols-1 gap-3 mt-4">
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <label className="block text-xs font-light text-gray-700 mb-2">First name *</label>
-                      <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First name *</label>
+                      <input className="w-full border border-gray-300 px-3 py-3 rounded focus:outline-none focus:border-gray-400 text-base md:text-sm" value={buyer.name} onChange={(e) => setBuyer(s => ({ ...s, name: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-light text-gray-700 mb-2">Surname *</label>
-                      <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Surname *</label>
+                      <input className="w-full border border-gray-300 px-3 py-3 rounded focus:outline-none focus:border-gray-400 text-base md:text-sm" value={buyer.surname} onChange={(e) => setBuyer(s => ({ ...s, surname: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-light text-gray-700 mb-2">Email *</label>
-                    <input className="w-full border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 text-sm font-light" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <input className="w-full border border-gray-300 px-3 py-3 rounded focus:outline-none focus:border-gray-400 text-base md:text-sm" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} />
                   </div>
                   <div>
                     <label className="block text-xs font-light text-gray-700 mb-2">Mobile</label>
@@ -426,7 +426,7 @@ export default function CheckoutPage() {
                       <div className="relative country-dropdown flex-shrink-0">
                         <button
                           type="button"
-                          className="border border-gray-300 px-2 py-2 rounded focus:outline-none focus:border-gray-400 bg-white flex items-center justify-between min-w-[80px] text-xs font-light"
+                          className="border border-gray-300 px-3 py-2 rounded focus:outline-none focus:border-gray-400 bg-white flex items-center justify-between min-w-[90px] text-sm md:text-sm font-medium"
                           onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                         >
                           <span className="truncate text-xs">
@@ -476,10 +476,7 @@ export default function CheckoutPage() {
                       />
                     </div>
                   </div>
-                  <div className="flex items-start gap-2 pt-1">
-                    <input type="checkbox" id="emailCopy" checked={buyer.emailCopy} onChange={(e) => setBuyer(s => ({ ...s, emailCopy: e.target.checked }))} className="rounded cursor-pointer flex-shrink-0 mt-0.5" />
-                    <label htmlFor="emailCopy" className="text-xs font-light text-gray-700 cursor-pointer">Email this ticket holder a copy of this ticket</label>
-                  </div>
+                  {/* 'Email ticket holder a copy' removed per UX request */}
                 </div>
               </div>
             </div>
@@ -488,7 +485,7 @@ export default function CheckoutPage() {
             <div className="md:col-span-2">
               <div className="sticky top-6 space-y-3">
                 <div className="bg-white p-4 rounded border border-gray-200">
-                  <h3 className="font-bold text-sm mb-3">Order Summary</h3>
+                  <h3 className="font-semibold text-base md:text-lg mb-3">Order Summary</h3>
                   <div>
                     {/* Event info */}
                     <div className="flex items-center gap-3 mb-4">
@@ -498,8 +495,8 @@ export default function CheckoutPage() {
                         <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-500">Image</div>
                       )}
                       <div className="flex-1">
-                        <div className="font-light text-sm">{order._service?.title || 'Event'}</div>
-                        <div className="text-xs text-gray-600 mt-1 font-light">Order #{order.reference || `#${(order.id || '').toString().slice(0,8)}`}</div>
+                        <div className="font-medium text-sm md:text-base">{order._service?.title || 'Event'}</div>
+                        <div className="text-sm text-gray-600 mt-1">Order #{order.reference || `#${(order.id || '').toString().slice(0,8)}`}</div>
                         {order._service?.event_datetime && (
                           <div className="text-xs text-gray-600 font-light">
                             {new Date(order._service.event_datetime).toLocaleDateString('en-US', {
@@ -513,13 +510,13 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <div className="border-t pt-3">
+                      <div className="border-t pt-3">
                       <div className="flex justify-between items-center mb-2">
-                        <div className="text-xs font-light text-gray-700">Tickets</div>
+                        <div className="text-sm font-medium text-gray-700">Tickets</div>
                         {!showAllTickets && (
                           <button 
                             onClick={() => setShowAllTickets(true)}
-                            className="text-gray-600 hover:text-gray-900 text-xs font-light underline transition-colors"
+                            className="text-gray-600 hover:text-gray-900 text-sm font-medium underline transition-colors"
                           >
                             Edit
                           </button>
@@ -549,26 +546,26 @@ export default function CheckoutPage() {
                               <div className="flex items-center gap-1">
                                 {showAllTickets ? (
                                   <>
-                                    <button 
-                                      onClick={() => updateTicketQuantity(ticketType.id, quantity - 1)}
-                                      className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs font-light transition-colors disabled:opacity-50"
-                                      disabled={quantity <= 0}
-                                    >
-                                      -
-                                    </button>
-                                    <span className="text-xs font-light min-w-[16px] text-center">{quantity}</span>
-                                    <button 
-                                      onClick={() => updateTicketQuantity(ticketType.id, quantity + 1)}
-                                      className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-xs font-light transition-colors"
-                                    >
-                                      +
-                                    </button>
+                                      <button 
+                                        onClick={() => updateTicketQuantity(ticketType.id, quantity - 1)}
+                                        className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors disabled:opacity-50"
+                                        disabled={quantity <= 0}
+                                      >
+                                        -
+                                      </button>
+                                      <span className="text-sm font-medium min-w-[20px] text-center">{quantity}</span>
+                                      <button 
+                                        onClick={() => updateTicketQuantity(ticketType.id, quantity + 1)}
+                                        className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium transition-colors"
+                                      >
+                                        +
+                                      </button>
                                   </>
                                 ) : (
                                   <span className="text-xs font-light">{quantity}</span>
                                 )}
                               </div>
-                              <div className="text-xs font-light ml-3">{formatCurrencyWithConversion(ticketType.price * quantity, order.currency)}</div>
+                              <div className="text-sm font-medium ml-3">{formatCurrencyWithConversion(ticketType.price * quantity, order.currency)}</div>
                             </div>
                           )
                         })}
@@ -576,23 +573,23 @@ export default function CheckoutPage() {
 
                       <div className="border-t pt-3 space-y-2 text-xs">
                         <div className="flex justify-between">
-                          <div className="font-light text-gray-700">Total Tickets</div>
-                          <div className="font-light">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</div>
+                          <div className="text-sm text-gray-700">Total Tickets</div>
+                          <div className="text-sm font-medium">{items.reduce((s, it) => s + Number(it.quantity || 0), 0)}</div>
                         </div>
 
                         <div className="flex justify-between">
-                          <div className="font-light text-gray-700">Subtotal</div>
-                          <div className="font-light">{formatCurrencyWithConversion(Number(order.total_amount || 0), order.currency)}</div>
+                          <div className="text-sm text-gray-700">Subtotal</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(Number(order.total_amount || 0), order.currency)}</div>
                         </div>
 
                         <div className="flex justify-between">
-                          <div className="font-light text-gray-700">Service Fees</div>
-                          <div className="font-light">{formatCurrencyWithConversion(Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                          <div className="text-sm text-gray-700">Service Fees</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
                         </div>
 
-                        <div className="flex justify-between border-t pt-2 mt-2">
-                          <div className="font-light text-gray-900">Total</div>
-                          <div className="font-semibold">{formatCurrencyWithConversion(Number(order.total_amount || 0) + Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                        <div className="flex justify-between border-t pt-3 mt-3">
+                          <div className="text-base md:text-lg font-semibold text-gray-900">Total</div>
+                          <div className="text-lg md:text-2xl font-extrabold">{formatCurrencyWithConversion(Number(order.total_amount || 0) + Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
                         </div>
                       </div>
                     </div>
@@ -604,7 +601,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Fixed Action Buttons at Bottom - visible on all devices */}
-        <div className="flex-shrink-0 border-t bg-white px-4 md:px-6 py-3 flex gap-2">
+        <div className="sticky bottom-0 z-40 flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
           <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
             Back
           </button>
@@ -644,7 +641,7 @@ export default function CheckoutPage() {
               }
             }} 
             style={{ backgroundColor: '#3B82F6' }} 
-            className="flex-1 text-white py-2 px-4 rounded font-light text-sm hover:opacity-90 transition-opacity"
+            className="flex-1 text-white py-3 px-4 rounded font-semibold text-base md:text-lg hover:opacity-90 transition-opacity"
           >
             Next
           </button>

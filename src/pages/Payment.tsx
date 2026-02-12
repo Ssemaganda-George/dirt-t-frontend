@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { useOrderQuery } from '../hooks/useOrderQuery'
+import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -20,6 +20,52 @@ export default function PaymentPage() {
   const [mobileProvider, setMobileProvider] = useState('')
   const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
   const [ticketEmail, setTicketEmail] = useState('')
+  const [showEdit, setShowEdit] = useState(false)
+  const queryClient = useOrderQueryClient()
+
+  const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
+    if (newQuantity < 0 || !orderId) return
+
+    try {
+      const existingItem = items.find((it: any) => it.ticket_type_id === ticketTypeId)
+
+      if (existingItem) {
+        if (newQuantity === 0) {
+          const { error } = await supabase
+            .from('order_items')
+            .delete()
+            .eq('id', existingItem.id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from('order_items')
+            .update({ quantity: newQuantity })
+            .eq('id', existingItem.id)
+          if (error) throw error
+        }
+      } else if (newQuantity > 0) {
+        // fallback unit_price to existing item price if available
+        const fallbackPrice = items.find((it: any) => it.ticket_type_id === ticketTypeId)?.unit_price || 0
+        const { error } = await supabase
+          .from('order_items')
+          .insert({
+            order_id: orderId,
+            ticket_type_id: ticketTypeId,
+            quantity: newQuantity,
+            unit_price: fallbackPrice
+          })
+          .select()
+          .single()
+        if (error) throw error
+      }
+
+      await queryClient.invalidateQueries({ queryKey: orderQueryKey(orderId) })
+    } catch (err) {
+      console.error('Failed to update ticket quantity (payment page):', err)
+      alert('Failed to update ticket quantity. Please try again.')
+    }
+  }
+  // summary toggle removed — details always visible
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
@@ -46,6 +92,13 @@ export default function PaymentPage() {
     const p = String(order.guest_phone).replace(/^\+256/, '')
     setPhoneNumber(p.startsWith('+') ? p : p)
   }, [order?.guest_phone])
+
+  // Prefill ticket email from order (if available) but keep it editable
+  useEffect(() => {
+    if (!order?.guest_email) return
+    // only autofill when the input is still empty to avoid stomping user edits
+    if (!ticketEmail) setTicketEmail(order.guest_email)
+  }, [order?.guest_email, ticketEmail])
 
   const handlePayment = useCallback(async () => {
     if (!orderId || !order) return
@@ -215,67 +268,92 @@ export default function PaymentPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-2xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-2">Complete Payment</h1>
-          <p className="text-gray-600 font-light text-sm">Choose your preferred payment method and complete your order</p>
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-1">Complete Payment</h1>
+          <p className="text-gray-600 font-light text-sm">Choose a payment method and finish your order</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-          {/* Progress Steps */}
-          <div className="px-6 py-4 border-b bg-gray-50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
-                <div className="text-sm">
-                  <p className="font-light text-gray-900">Tickets</p>
-                </div>
+          {/* Compact Progress Steps (minimal on mobile) */}
+          <div className="px-4 py-3 border-b bg-gray-50">
+            <div className="flex items-center justify-center gap-4 text-sm text-gray-700">
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">✓</div>
+                <div className="hidden md:block font-light">Tickets</div>
               </div>
-              <div className="w-12 h-px bg-gray-300"></div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold">✓</div>
-                <div className="text-sm">
-                  <p className="font-light text-gray-900">Details</p>
-                </div>
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">✓</div>
+                <div className="hidden md:block font-light text-blue-600">Details</div>
               </div>
-              <div className="w-12 h-px bg-gray-300"></div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-400 text-white flex items-center justify-center text-xs font-semibold">3</div>
-                <div className="text-sm">
-                  <p className="font-light text-gray-900">Payment</p>
-                </div>
+              <div className="flex items-center gap-2 text-xs md:text-sm">
+                <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center font-semibold">3</div>
+                <div className="hidden md:block font-light">Payment</div>
               </div>
             </div>
           </div>
 
-          {/* Order Summary */}
-          <div className="px-6 py-6 border-b">
-            <h3 className="text-lg font-light text-gray-900 mb-4">Order Summary</h3>
-            
-            <div className="bg-white rounded-lg p-4 space-y-3 border border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Order ID</span>
-                <span className="font-light text-gray-900 font-mono text-sm">{order.reference || `#${order.id.slice(0,8)}`}</span>
+          {/* Order Summary: compact on mobile, details toggle */}
+          <div className="px-4 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-700">Order ID <span className="font-mono text-xs text-gray-900 ml-2">{order.reference || `#${order.id.slice(0,8)}`}</span></div>
               </div>
-              
-              <div className="border-t pt-3">
-                <div className="space-y-2 mb-3">
+            </div>
+
+            <div className="mt-3"> 
+              <div className="bg-white rounded-lg p-3 space-y-2 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Tickets</div>
+                  <div>
+                    <button onClick={() => setShowEdit(s => !s)} className="text-sm text-blue-600">{showEdit ? 'Done' : 'Edit'}</button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mb-1">
                   {items.map((item: any) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-gray-700">{item.ticket_type?.title || 'Ticket'} × {item.quantity}</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(item.unit_price * item.quantity, order.currency)}</span>
+                    <div key={item.id} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="text-gray-700">{item.ticket_type?.title || 'Ticket'}</div>
+                        <div className="text-xs text-gray-500">× {item.quantity}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {showEdit ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => updateTicketQuantity(item.ticket_type_id, (item.quantity || 0) - 1)}
+                              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium"
+                              disabled={(item.quantity || 0) <= 0}
+                            >
+                              -
+                            </button>
+                            <div className="text-sm font-medium min-w-[24px] text-center">{item.quantity}</div>
+                            <button
+                              onClick={async () => updateTicketQuantity(item.ticket_type_id, (item.quantity || 0) + 1)}
+                              className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-sm font-medium">{formatCurrency(item.unit_price * item.quantity, order.currency)}</div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-                
-                <div className="border-t pt-3 flex justify-between items-center">
-                  <span className="text-gray-600 text-sm font-light">Service Fee</span>
-                  <span className="text-sm font-light text-gray-900">{formatCurrency(Math.max(1000, Math.round(order.total_amount * 0.01)), order.currency)}</span>
-                </div>
-              </div>
 
-              <div className="border-t pt-3 flex justify-between items-center">
-                <span className="text-gray-900 font-light">Total Amount</span>
-                <span className="text-lg font-semibold text-gray-900">{formatCurrency(order.total_amount + Math.max(1000, Math.round(order.total_amount * 0.01)), order.currency)}</span>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 text-sm">Service Fee</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(Math.max(1000, Math.round(order.total_amount * 0.01)), order.currency)}</span>
+                  </div>
+
+                  {/* Total shown below service fee for clarity */}
+                  <div className="mt-3 flex justify-between items-center border-t pt-3">
+                    <span className="text-gray-700 text-sm font-medium">Total</span>
+                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(Number(order.total_amount) + Math.max(1000, Math.round(Number(order.total_amount) * 0.01)), order.currency)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -284,11 +362,10 @@ export default function PaymentPage() {
           <div className="px-6 py-6">
             <h3 className="text-lg font-light text-gray-900 mb-4">Select Payment Method</h3>
             
-            <div className="space-y-4">
-              {/* Mobile Money Option */}
-              <label className="block">
-                <div className="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all" 
-                     style={{ borderColor: paymentMethod === 'mobile_money' ? '#3B82F6' : '#e5e7eb' }}>
+            <div className="space-y-3">
+              {/* Mobile Money Option (compact) */}
+              <div className={`flex items-center justify-between p-2 rounded border ${paymentMethod === 'mobile_money' ? 'border-blue-500' : 'border-gray-200'}`}>
+                <label className="flex items-center gap-3">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -298,80 +375,80 @@ export default function PaymentPage() {
                       setPaymentMethod(e.target.value)
                       setCardNoticeVisible(false)
                     }}
-                    className="mr-3 w-5 h-5 cursor-pointer"
+                    className="w-4 h-4"
                   />
-                  <div className="flex-1">
-                    <div className="font-light text-gray-900">Mobile Money</div>
-                  </div>
-                  <div className="text-lg text-gray-400">→</div>
-                </div>
-              </label>
+                  <div className="text-sm font-medium">Mobile Money</div>
+                </label>
+                <div className="text-sm text-gray-400">→</div>
+              </div>
 
-              {/* Mobile Money: Provider + Phone */}
+              {/* Mobile Money inputs (compact) */}
               {paymentMethod === 'mobile_money' && (
-                <div className="ml-4 p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
-                  <div>
-                    <label className="block text-sm font-light text-gray-900 mb-2">Mobile Money phone number *</label>
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="0712345678 or +256712345678"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 font-light text-sm"
-                    />
-                    <p className="text-xs text-gray-500 mt-1 font-light">UG only: 07xx or 03xx (10 digits)</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-light text-gray-900 mb-3">Select Provider</label>
-                    <div className="space-y-2">
-                      <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'MTN' ? '#3B82F6' : '#e5e7eb' }}>
-                        <input
-                          type="radio"
-                          name="provider"
-                          value="MTN"
-                          checked={mobileProvider === 'MTN'}
-                          onChange={(e) => setMobileProvider(e.target.value)}
-                          className="mr-3"
-                        />
-                        <div>
-                          <div className="font-light text-gray-900">MTN Mobile Money</div>
-                        </div>
-                      </label>
-
-                      <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-white transition-colors" style={{ borderColor: mobileProvider === 'Airtel' ? '#3B82F6' : '#e5e7eb' }}>
-                        <input
-                          type="radio"
-                          name="provider"
-                          value="Airtel"
-                          checked={mobileProvider === 'Airtel'}
-                          onChange={(e) => setMobileProvider(e.target.value)}
-                          className="mr-3"
-                        />
-                        <div>
-                          <div className="font-light text-gray-900">Airtel Money</div>
-                        </div>
-                      </label>
-                    </div>
+                <div className="mt-2 grid grid-cols-1 gap-2">
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="0712345678 or +256712345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                  />
+                  <div className="flex gap-2">
+                      <button type="button" onClick={() => setMobileProvider('MTN')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                          <rect width="18" height="14" rx="2" fill="#FFD200" />
+                          <text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text>
+                        </svg>
+                        <span className="text-sm font-medium">MTN</span>
+                      </button>
+                      <button type="button" onClick={() => setMobileProvider('Airtel')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                          <rect width="18" height="14" rx="2" fill="#E60000" />
+                          <text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text>
+                        </svg>
+                        <span className="text-sm font-medium">Airtel</span>
+                      </button>
                   </div>
                 </div>
               )}
 
-              {/* Credit Card Option (Disabled) */}
-              <label className="block opacity-50 pointer-events-none">
-                <div className="relative flex items-center p-4 border-2 border-gray-200 rounded-lg bg-gray-50">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    disabled
-                    className="mr-3 w-5 h-5"
-                  />
-                  <div className="flex-1">
-                    <div className="font-light text-gray-900">Credit/Debit Card</div>
+              {/* Credit/Debit Card - now visible on mobile as requested */}
+              <div className="opacity-90">
+                <div className="p-2 border border-gray-200 rounded text-sm text-gray-700">Credit/Debit Card (coming soon)</div>
+
+                <div className="mt-3 flex items-center gap-1">
+                  {/* Visa (stylized) */}
+                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
+                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <rect width="28" height="18" rx="3" fill="#1A66FF" />
+                      <text x="14" y="12" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">VISA</text>
+                    </svg>
                   </div>
-                  <div className="text-lg text-gray-400">→</div>
+
+                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
+                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <rect width="28" height="18" rx="3" fill="#fff" />
+                      <circle cx="11" cy="9" r="4" fill="#FF5F00" />
+                      <circle cx="17" cy="9" r="4" fill="#EB001B" />
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
+                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <rect width="28" height="18" rx="3" fill="#2E77BC" />
+                      <text x="14" y="12" fill="#fff" fontSize="5" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">AMEX</text>
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
+                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <rect width="28" height="18" rx="3" fill="#F76C1B" />
+                      <text x="14" y="12" fill="#fff" fontSize="5" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">DISC</text>
+                    </svg>
+                  </div>
+
+                  {/* MTN and Airtel icons intentionally removed from card icons row; they remain on the mobile provider buttons above */}
                 </div>
-              </label>
+              </div>
             </div>
 
             {cardNoticeVisible && paymentMethod === 'card' && (
