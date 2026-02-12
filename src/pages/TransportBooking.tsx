@@ -6,11 +6,13 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import SimilarServicesCarousel from '../components/SimilarServicesCarousel'
 
 interface ServiceDetail {
   id: string
   slug?: string
   vendor_id?: string
+  category_id?: string
   title: string
   description: string
   price: number
@@ -1108,12 +1110,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             {/* Action Buttons */}
             <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
-                onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                Similar Services
-              </button>
-              <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
                 className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
@@ -1126,6 +1122,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 Home
               </button>
             </div>
+
+            {/* Similar Services Carousel */}
+            {service.category_id && (
+              <SimilarServicesCarousel
+                categoryId={service.category_id}
+                excludeServiceId={service.id}
+                limit={8}
+              />
+            )}
           </div>
         )
 
@@ -1279,12 +1284,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           {/* Action Buttons */}
           <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
             <button
-              onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-            >
-              Similar Services
-            </button>
-            <button
               onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
               className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
             >
@@ -1297,6 +1296,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               Home
             </button>
           </div>
+
+          {/* Similar Services Carousel */}
+          {service.category_id && (
+            <SimilarServicesCarousel
+              categoryId={service.category_id}
+              excludeServiceId={service.id}
+              limit={8}
+            />
+          )}
         </div>
       </div>
     )

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import BookingReceipt from '../components/BookingReceipt'
 
 interface ServiceDetail {
   id: string
@@ -20,6 +21,7 @@ interface ServiceDetail {
   max_capacity: number
   amenities: string[]
   vendor_id?: string
+  category_id?: string
   vendors?: {
     id?: string
     business_name: string
@@ -718,162 +720,35 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         )
 
       case 5:
+        // Create a mock booking object for the receipt component
+        const mockBooking = {
+          id: Math.random().toString(36).substr(2, 9),
+          service_id: service.id,
+          vendor_id: service.vendor_id || '',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.date,
+          guests: bookingData.guests,
+          total_amount: totalPrice,
+          currency: service.currency,
+          status: 'confirmed' as const,
+          payment_status: 'paid' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          service: {
+            ...service,
+            category_id: service.category_id
+          } as any, // Cast to avoid type mismatch
+          is_guest_booking: true,
+          guest_name: bookingData.contactName || 'Admin User',
+          guest_email: bookingData.contactEmail || 'ssemagandageorge480@gmail.com',
+          guest_phone: bookingData.contactPhone ? `${bookingData.countryCode || '+256'} ${bookingData.contactPhone}` : '+256'
+        }
+
         return (
-          <div className="space-y-4 sm:space-y-6">
-            {/* Success Header */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600 text-sm sm:text-base">
-                Your activity booking has been successfully confirmed. You will receive a confirmation email shortly.
-              </p>
-            </div>
-
-            {/* Service Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Activity:</span>
-                  <span className="font-medium text-right">{service.title}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Location:</span>
-                  <span className="font-medium text-right">{service.location}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Category:</span>
-                  <span className="font-medium text-right">{service.service_categories.name}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Service Provider */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Provider:</span>
-                  <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
-                </div>
-                {service.vendors?.business_address && (
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Address:</span>
-                    <span className="font-medium text-right">{service.vendors.business_address}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Activity Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Activity Details</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Activity Date:</span>
-                  <span className="font-medium text-right">{bookingData.date || 'Not set'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Duration:</span>
-                  <span className="font-medium text-right">{service.duration_hours} hours</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Number of Participants:</span>
-                  <span className="font-medium text-right">{bookingData.guests}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Booking Information */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Special Requests:</span>
-                  <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Payment Method:</span>
-                  <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
-                </div>
-                {bookingData.paymentMethod === 'mobile' && (
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Provider:</span>
-                    <span className="font-medium">{bookingData.mobileProvider}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Your Contact Information */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Name:</span>
-                  <span className="font-medium text-right">{bookingData.contactName}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Price Summary */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <div className="space-y-3 text-xs sm:text-sm mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Price per participant:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Number of participants:</span>
-                  <span className="font-medium">{bookingData.guests}</span>
-                </div>
-                <div className="flex justify-between items-center pt-3 border-t">
-                  <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
-              <button
-                onClick={() => navigate(`/category/${service.service_categories.name.toLowerCase().replace(/\s+/g, '-')}`)}
-                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                Similar Activities
-              </button>
-              <button
-                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                Message Provider
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                Home
-              </button>
-            </div>
-          </div>
+          <BookingReceipt
+            booking={mockBooking}
+            showActions={true}
+          />
         )
 
       default:
@@ -884,69 +759,34 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4">
           <button
             onClick={handleBack}
-            className="flex items-center text-gray-600 hover:text-gray-900"
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors touch-manipulation"
           >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+            <span className="text-sm sm:text-base">Back</span>
           </button>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              const isActive = step.id === currentStep
-              const isCompleted = step.id < currentStep
-
-              return (
-                <div key={step.id} className="flex items-center mb-4 sm:mb-0">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    isCompleted
-                      ? 'bg-green-600 text-white'
-                      : isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className={`ml-3 text-sm font-medium ${
-                    isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`hidden sm:block w-12 h-0.5 mx-4 ${
-                      isCompleted ? 'bg-green-600' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-20 sm:pb-8">
         {/* Service Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-4 sm:space-y-0">
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0">
             <img
               src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
               alt={service.title}
-              className="w-full sm:w-20 h-48 sm:h-20 object-cover rounded-lg"
+              className="w-full sm:w-20 md:w-24 h-40 sm:h-20 md:h-24 object-cover rounded-lg"
             />
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{service.title}</h2>
-              <p className="text-gray-600 text-sm">{service.location}</p>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">{service.title}</h2>
+              <p className="text-gray-600 text-sm sm:text-base">{service.location}</p>
               <p className="text-gray-600 text-sm">{service.service_categories.name}</p>
             </div>
-            <div className="text-left sm:text-right">
-              <div className="text-lg font-bold text-gray-900">
+            <div className="text-left sm:text-right flex-shrink-0">
+              <div className="text-lg sm:text-xl font-bold text-gray-900">
                 {formatCurrencyWithConversion(totalPrice, service.currency)}
               </div>
               <div className="text-sm text-gray-500">for {bookingData.guests} participant{bookingData.guests > 1 ? 's' : ''}</div>
@@ -955,16 +795,16 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         </div>
 
         {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6">
           {renderStepContent()}
         </div>
 
         {/* Navigation */}
         {currentStep < 5 && (
-          <div className="mt-6 space-y-4 sm:space-y-0 sm:flex sm:justify-between">
+          <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-0 sm:flex sm:justify-between sm:gap-4">
             <button
               onClick={handleBack}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               {currentStep === 1 ? 'Cancel' : 'Back'}
             </button>
@@ -976,7 +816,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
                 || (currentStep === 3 && bookingData.paymentMethod === 'card')
               }
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base"
             >
               {isSubmitting ? 'Processing...' : currentStep === 3 ? 'Complete Booking' : 'Next'}
             </button>

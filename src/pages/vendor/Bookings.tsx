@@ -9,6 +9,7 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { Search } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
+import BookingReceipt from '../../components/BookingReceipt'
 
 export default function VendorBookings() {
   const { profile, vendor } = useAuth()
@@ -93,12 +94,11 @@ export default function VendorBookings() {
       if (status === 'completed') {
         // The review token was auto-generated in updateBooking
         // Show a notification to the vendor
-        const guestName = updatedBooking.guest_name || (updatedBooking as any).profiles?.full_name || 'the guest'
         const guestEmail = updatedBooking.guest_email || (updatedBooking as any).profiles?.email
         if (guestEmail) {
-          alert(`✅ Booking marked as completed!\n\nA review request has been sent to ${guestName} (${guestEmail}). They will receive an email link to rate and review your service.`)
+          alert('Booking completed. Review request sent to guest.')
         } else {
-          alert(`✅ Booking marked as completed!\n\nNote: No email was found for this guest, so a review request could not be sent automatically.`)
+          alert('Booking completed. No email found for review request.')
         }
       }
     } catch (error) {
@@ -412,95 +412,20 @@ export default function VendorBookings() {
 
       {/* Booking Details Modal */}
       {showBookingDetails && selectedBooking && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
-              <h3 className="text-base font-semibold text-gray-900">Booking Details</h3>
+              <h3 className="text-base font-semibold text-gray-900">Booking Receipt</h3>
               <button
                 onClick={() => setShowBookingDetails(false)}
                 className="text-gray-400 hover:text-gray-600 text-lg"
               >✕</button>
             </div>
-            <div className="px-6 py-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">Booking Information</h4>
-                  <div className="mt-2 space-y-2">
-                    <p><span className="font-medium">Booking ID:</span> #{selectedBooking.id.slice(0, 8)}</p>
-                    <p><span className="font-medium">Service:</span> {selectedBooking.services?.title || selectedBooking.service?.title || `Service ${selectedBooking.service_id}`}</p>
-                    <p><span className="font-medium">Booked Date:</span> {formatDateTime(selectedBooking.booking_date)}</p>
-                    <p><span className="font-medium">Service Date:</span> {selectedBooking.service_date ? formatDateTime(selectedBooking.service_date) : 'Not specified'}</p>
-                    <p><span className="font-medium">Guests:</span> {selectedBooking.guests}</p>
-                    <p><span className="font-medium">Total Amount:</span> {formatCurrencyWithConversion(selectedBooking.total_amount, selectedBooking.currency, selectedCurrency, selectedLanguage)}</p>
-                    <p><span className="font-medium">Status:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
-                      getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'confirmed' || getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'completed' ? 'bg-emerald-50 text-emerald-700' : getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status) === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-                    }`}>{getVendorDisplayStatus(selectedBooking.status, selectedBooking.payment_status)}</span></p>
-                    <p><span className="font-medium">Payment:</span> <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
-                      selectedBooking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                    }`}>{selectedBooking.payment_status}</span></p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">Customer Information</h4>
-                  <div className="mt-2 space-y-2">
-                    {selectedBooking.is_guest_booking ? (
-                      <>
-                        <p><span className="font-medium">Guest Name:</span> {selectedBooking.guest_name}</p>
-                        <p><span className="font-medium">Guest Email:</span> {selectedBooking.guest_email}</p>
-                        <p><span className="font-medium">Guest Phone:</span> {selectedBooking.guest_phone}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p><span className="font-medium">Customer ID:</span> #{selectedBooking.tourist_id?.slice(0, 8)}</p>
-                        <p><span className="font-medium">Name:</span> {selectedBooking.tourist_profile?.full_name || 'Not available'}</p>
-                      </>
-                    )}
-                  </div>
-                  
-                  {selectedBooking.special_requests && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-900">Special Requests</h4>
-                      <p className="mt-1 text-sm text-gray-600">{selectedBooking.special_requests}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Transport-specific details */}
-              {(selectedBooking.pickup_location || selectedBooking.dropoff_location || selectedBooking.driver_option) && (
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900">Transport Details</h4>
-                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedBooking.pickup_location && (
-                      <p><span className="font-medium">Pickup Location:</span> {selectedBooking.pickup_location}</p>
-                    )}
-                    {selectedBooking.dropoff_location && (
-                      <p><span className="font-medium">Dropoff Location:</span> {selectedBooking.dropoff_location}</p>
-                    )}
-                    {selectedBooking.driver_option && (
-                      <p><span className="font-medium">Driver Option:</span> {selectedBooking.driver_option}</p>
-                    )}
-                    {selectedBooking.return_trip && (
-                      <p><span className="font-medium">Return Trip:</span> Yes</p>
-                    )}
-                    {selectedBooking.start_time && (
-                      <p><span className="font-medium">Start Time:</span> {selectedBooking.start_time}</p>
-                    )}
-                    {selectedBooking.end_time && (
-                      <p><span className="font-medium">End Time:</span> {selectedBooking.end_time}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="border-t border-gray-100 pt-4 flex justify-end">
-                <button 
-                  onClick={() => setShowBookingDetails(false)}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
-                >
-                  Close
-                </button>
-              </div>
+            <div className="p-4">
+              <BookingReceipt
+                booking={selectedBooking}
+                onClose={() => setShowBookingDetails(false)}
+              />
             </div>
           </div>
         </div>

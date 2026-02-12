@@ -758,6 +758,72 @@ export async function getServices(vendorId?: string) {
   return data || []
 }
 
+export async function getServicesByCategory(categoryId: string, excludeServiceId?: string, limit: number = 10) {
+  let query = supabase
+    .from('services')
+    .select(`
+      *,
+      vendors (
+        id,
+        business_name,
+        business_description,
+        business_email,
+        status
+      ),
+      service_categories (
+        id,
+        name,
+        icon
+      ),
+      ticket_types (
+        id,
+        title,
+        description,
+        price,
+        quantity,
+        sold,
+        metadata,
+        sale_start,
+        sale_end
+      )
+    `)
+    .eq('category_id', categoryId)
+
+  // Check if current user is admin
+  const { data: { user } } = await supabase.auth.getUser();
+  let isAdmin = false;
+  
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    isAdmin = profile?.role === 'admin';
+  }
+
+  if (!isAdmin) {
+    // Public listings should only include approved/active services
+    query = query.in('status', ['approved', 'active'])
+  }
+
+  if (excludeServiceId) {
+    query = query.neq('id', excludeServiceId)
+  }
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('Error fetching services by category:', error)
+    throw error
+  }
+
+  return data || []
+}
+
 export async function getServiceCategories() {
   const { data, error } = await supabase
     .from('service_categories')
