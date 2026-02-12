@@ -1883,8 +1883,15 @@ export default function ServiceDetail() {
               )}
             </div>
 
-            {/* Mobile-only round icon Back to top button placed below the checkout/summary */}
-            <div className="md:hidden mt-4 px-3 flex justify-center">
+            {/* Mobile-only round icon buttons placed below the checkout/summary */}
+            <div className="md:hidden mt-4 px-3 flex justify-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                aria-label="Go back"
+                className="w-11 h-11 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </button>
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 aria-label="Back to top"
@@ -1899,23 +1906,31 @@ export default function ServiceDetail() {
 
       {/* Mobile Book button (replaces global bottom nav on service pages) */}
       <div
-        className={`md:hidden fixed left-0 z-50 pointer-events-auto transition-transform duration-300 ${showMobileBookButton ? 'translate-x-0' : '-translate-x-[110%]'}`}
+        className={`md:hidden fixed left-0 z-50 pointer-events-auto transition-transform duration-500 ease-out ${showMobileBookButton ? 'translate-x-0' : '-translate-x-[110%]'}`}
         style={{ bottom: 'calc(16px + env(safe-area-inset-bottom))' }}
       >
-        <div>
-          {/* two-sided control: touch left edge, cover ~3/4 width, leave gap on right; positioned above bottom safe area */}
-          <div className="flex w-[calc(100%-8px)] shadow-lg overflow-hidden">
+        <div className="relative">
+          {/* Elegant shadow and glow effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-700/20 blur-xl rounded-2xl transform scale-105"></div>
+
+          {/* Main button container with premium styling */}
+          <div className="relative flex w-[calc(100%-8px)] shadow-2xl overflow-hidden rounded-2xl backdrop-blur-sm">
             {/* Left: price + unit - opens/scrolls to booking summary */}
             <button
               onClick={openMobileBooking}
-              className="flex-1 bg-blue-600 text-white py-3 px-3 text-left hover:bg-blue-600/95 transition-colors rounded-none"
+              className="flex-1 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white py-4 px-4 text-left hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 transition-all duration-300 rounded-l-2xl relative overflow-hidden group"
               aria-hidden={!showMobileBookButton}
             >
-              <div className="text-xs text-white/90">From</div>
-              <div className="text-lg font-semibold leading-none">
-                {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
+              {/* Subtle animated background pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+
+              <div className="relative z-10">
+                <div className="text-xs text-blue-100 font-medium uppercase tracking-wider mb-1">From</div>
+                <div className="text-xl font-bold leading-none mb-1 text-white drop-shadow-sm">
+                  {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
+                </div>
+                <div className="text-xs text-blue-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
               </div>
-              <div className="text-xs text-white/90">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
             </button>
 
             {/* Right: action - performs booking/navigation */}
@@ -1929,10 +1944,16 @@ export default function ServiceDetail() {
                   openMobileBooking()
                 }
               }}
-              className="w-16 bg-blue-700 text-white flex items-center justify-center font-medium py-3 px-1 hover:bg-blue-800 transition-colors rounded-r-lg"
+              className="w-20 bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 text-white flex items-center justify-center font-bold py-4 px-3 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 rounded-r-2xl relative overflow-hidden group shadow-lg"
               aria-hidden={!showMobileBookButton}
             >
-              <span className="text-sm">Book</span>
+              {/* Animated shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+
+              <div className="relative z-10 flex flex-col items-center">
+                <span className="text-sm leading-tight">Book</span>
+                <span className="text-xs opacity-80">Now</span>
+              </div>
             </button>
           </div>
         </div>
