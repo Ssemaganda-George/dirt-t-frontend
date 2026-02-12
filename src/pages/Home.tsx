@@ -535,9 +535,8 @@ export default function Home() {
 
   const filteredServices = allServices.filter((service: Service) => {
     // First check if service is approved and vendor is not suspended
-    // Temporarily show all services for debugging
-    const isApproved = true; // service.status === 'approved' && 
-                      // (!service.vendors || service.vendors.status !== 'suspended')
+    const isApproved = service.status === 'approved' && 
+                      (!service.vendors || service.vendors.status !== 'suspended')
 
     const matchesSearch = !searchQuery || (() => {
       const query = searchQuery.toLowerCase();
@@ -910,7 +909,11 @@ export default function Home() {
             // Otherwise, show 6 category rows (one row per category). Each row scrolls horizontally if it has more items than fit.
             <div className="space-y-10">
               {getDailyCategoryOrder(categories.slice(1, 7)).map((category) => {
-                const servicesForCat = allServices.filter((s: Service) => s.category_id === category.id)
+                const servicesForCat = allServices.filter((s: Service) => 
+                  s.category_id === category.id && 
+                  s.status === 'approved' && 
+                  (!s.vendors || s.vendors.status !== 'suspended')
+                )
                 if (!servicesForCat || servicesForCat.length === 0) return null
                 const servicesForCatToRender = swapColumnsOnRefresh ? servicesForCat.slice().reverse() : servicesForCat
                 return (
@@ -1016,12 +1019,62 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
   const getCategoryBadge = (categoryName?: string) => {
     const name = (categoryName || '').toLowerCase()
     if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'Homes & Stays'
-    if (name === 'activities') return 'Activities'
+    if (name === 'activities') return 'Events'
     if (name === 'events') return 'Events'
     if (name === 'restaurants') return 'Restaurants'
     if (name === 'shops') return 'Shops'
     if (name === 'transport') return 'Transport'
     return categoryName ? categoryName : 'Service'
+  }
+
+  // Get location preposition based on category
+  const getLocationPreposition = (categoryName?: string) => {
+    const name = (categoryName || '').toLowerCase()
+    if (name === 'activities' || name === 'events') return 'At'
+    return 'In'
+  }
+
+  // Get unit label for price display
+  const getUnitLabel = (categoryName?: string) => {
+    const name = (categoryName || '').toLowerCase()
+    if (name === 'transport') return 'per day'
+    if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
+    if (name === 'shops') return 'per item'
+    if (name === 'restaurants') return 'per meal'
+    if (name === 'events' || name === 'activities') return 'per ticket'
+    if (name === 'tour_packages' || name === 'tours') return 'per guest'
+    return 'per person'
+  }
+
+  // Get location text based on service type
+  const getLocationText = (service: Service) => {
+    const categoryName = service.service_categories?.name?.toLowerCase()
+    const isEventOrActivity = categoryName === 'activities' || categoryName === 'events'
+    const isTour = categoryName === 'tour_packages'
+    
+    let location: string | undefined
+    
+    if (isEventOrActivity) {
+      // For events and activities, check event_location first, then fall back to location
+      location = service.event_location || service.location
+    } else if (isTour) {
+      // For tours, check meeting_point first, then fall back to location
+      location = service.meeting_point || service.location
+    } else {
+      // For other services, use the general location field
+      location = service.location
+    }
+    
+    if (!location) return <span className="text-[10px] md:text-[11px]">Location TBA</span>
+    
+    const preposition = getLocationPreposition(service.service_categories?.name)
+    
+    return (
+      <span>
+        <span className="text-[8px] md:text-[9px]">{preposition}</span>
+        <span className="text-[10px] md:text-[11px] ml-0.5">{location}</span>
+      </span>
+    )
   }
 
   return (
@@ -1053,12 +1106,28 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
         {/* Compact info block below the image (Airbnb-like) */}
         <div className="mt-2 px-0">
-          <h3 className="text-sm md:text-base font-medium text-gray-900 line-clamp-1 truncate leading-tight mb-0">{service.title}</h3>
-          <div className="text-[9px] md:text-[10px] text-gray-500 mt-0.5 truncate">{service.location || 'Location TBA'}</div>
+          <h3 className={`font-medium text-gray-900 leading-tight mb-0 ${
+            service.service_categories?.name?.toLowerCase() === 'tour_packages' || service.service_categories?.name?.toLowerCase() === 'tours'
+              ? 'text-[11px] md:text-xs line-clamp-2' 
+              : 'text-xs md:text-sm line-clamp-1 truncate'
+          }`}>
+            {service.title}
+          </h3>
+          <div className="flex items-center justify-between">
+            <div className="text-gray-500 truncate">
+              {getLocationText(service)}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-gray-600 flex-shrink-0">
+              <Star className="h-3 w-3 text-emerald-600 fill-current" />
+              <span className="leading-none">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
+            </div>
+          </div>
 
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
               <div className="text-sm md:text-base font-normal text-gray-800 leading-none">
+                <span className="text-[9px] md:text-[10px] text-gray-500 mr-1">From</span>
                 {
                   <Money
                     amount={getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined)}
@@ -1066,17 +1135,14 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                     targetCurrency={selectedCurrency || 'UGX'}
                     locale={selectedLanguage || 'en-US'}
                     className="text-sm md:text-base font-normal text-gray-800 leading-none"
-                    currencyClassName="text-[11px] text-gray-600 mr-1"
+                    currencyClassName="text-[10px] text-gray-600 mr-1"
                     amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
                   />
                 }
+                <span className="text-[9px] md:text-[10px] text-gray-500 ml-1 whitespace-nowrap">
+                  {getUnitLabel(service.service_categories?.name)}
+                </span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1 text-xs text-gray-600 flex-shrink-0">
-              <Star className="h-3 w-3 text-emerald-600 fill-current" />
-              <span className="leading-none">{rating > 0 ? rating.toFixed(1) : '0'}</span>
-              {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
             </div>
           </div>
         </div>

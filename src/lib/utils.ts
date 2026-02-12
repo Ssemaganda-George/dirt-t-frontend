@@ -199,6 +199,14 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
       if (prices.length > 0) return Math.min(...prices)
     }
 
+    // Check category-specific pricing fields
+    const categoryName = service?.service_categories?.name?.toLowerCase()
+    if (categoryName === 'restaurants' && service?.average_cost_per_person) {
+      const price = Number(service.average_cost_per_person)
+      if (Number.isFinite(price)) return price
+    }
+
+    // Fall back to general price field
     const p = Number(service?.price ?? 0)
     return Number.isFinite(p) ? p : 0
   } catch (e) {
