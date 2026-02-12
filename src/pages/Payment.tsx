@@ -73,7 +73,7 @@ export default function PaymentPage() {
     return s + unit * qty
   }, 0)
 
-  const serviceFeesAmount = Math.max(1000, Math.round(subtotalAmount * 0.01))
+  const serviceFeesAmount = Math.max(100, Math.round(subtotalAmount * 0.01))
   const totalAmount = subtotalAmount + serviceFeesAmount
   // summary toggle removed — details always visible
   const [phoneNumber, setPhoneNumber] = useState('')
