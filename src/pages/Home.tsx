@@ -1,12 +1,271 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, Check, Filter } from 'lucide-react'
+import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, Check, Filter } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import type { Service } from '../types'
+
+// Playful titles per category. The UI will pick one title per category per day,
+// seeded by a per-device random value stored in localStorage so different devices
+// see different titles each day.
+const CATEGORY_TITLES: Record<string, string[]> = {
+  cat_restaurants: [
+    'Are you hungry today?',
+    'Taste the best in town',
+    'Craving something delicious?',
+    'Find your next favorite meal',
+    'Food that speaks to your soul',
+    'Local flavors await',
+    'Feed your curiosity (and appetite)',
+    'Satisfy your snack attack',
+    'Dine like a local tonight',
+    'Small plates, big smiles'
+  ],
+  cat_hotels: [
+    'Sleep while you relax',
+    'Rest easy, travel happier',
+    'Your cozy corner awaits',
+    'Dream big, sleep well',
+    'Turn down service for your dreams',
+    'Beds made for adventure',
+    'Home away from home',
+    'Pillow fights optional',
+    'Wake up somewhere new',
+    'Nightly stays, delightful days'
+  ],
+  cat_transport: [
+    'Driving to your next destination made easy...',
+    'Hop in — the road is calling',
+    'Wheels ready, go explore',
+    'Smooth rides, happy travels',
+    'Arrive relaxed, not rushed',
+    'Fuel your journey',
+    'Drive local, discover more',
+    'Fast lanes to new places',
+    'Your ride, your way',
+    'On the move? We got you'
+  ],
+  cat_tour_packages: [
+    'Make memories, not plans',
+    'Adventures for every mood',
+    'See more, worry less',
+    'Pack a day full of stories',
+    'Tours that tell a tale',
+    'Local guides, big experiences',
+    'Take the scenic route today',
+    'Your next story starts here',
+    'From sunrise to sunset',
+    'Bucket-list, meet reality'
+  ],
+  cat_activities: [
+    'Ready for a little adventure?',
+    'Fun things to do right now',
+    'Make today unforgettable',
+    'Activities to spark joy',
+    'Try something new today',
+    'Thrills, chills, and good vibes',
+    'Find your next hobby',
+    'Live the moment, book the activity',
+    'Playful plans for the curious',
+    'Adventure is calling — answer it'
+  ],
+  cat_shops: [
+    'Shop at convenience',
+    'Retail therapy, meet your match',
+    'Find treasures around the corner',
+    'Deals that make you smile',
+    'Small shops, big finds',
+    'Local goods, global vibes',
+    'Bring home a story',
+    'Shop slow, live well',
+    'Gifts, treats, and little luxuries',
+    'Discover something special'
+  ]
+}
+
+// Simple deterministic hash function returning a 32-bit unsigned int
+function simpleHash32(str: string) {
+  let h = 2166136261 >>> 0
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619) >>> 0
+  }
+  return h >>> 0
+}
+
+function getDeviceSeed(): string {
+  try {
+    const key = 'dt_device_seed'
+    if (typeof window === 'undefined') return String(Math.random())
+    let seed = window.localStorage.getItem(key)
+    if (!seed) {
+      seed = Math.random().toString(36).slice(2, 10)
+      window.localStorage.setItem(key, seed)
+    }
+    return seed
+  } catch (e) {
+    return Math.random().toString(36).slice(2, 10)
+  }
+}
+
+function getDailyTitleForCategory(categoryId: string, fallback: string) {
+  // Build a larger pool (≈100) by expanding the base titles with generators
+  const pool = getAllTitles(categoryId)
+  if (!pool || pool.length === 0) return fallback
+
+  const deviceSeed = getDeviceSeed()
+  // Use UTC date (YYYY-MM-DD) to have a new title each day
+  const today = new Date().toISOString().slice(0, 10)
+  const combined = deviceSeed + '|' + today + '|' + categoryId
+  const hash = simpleHash32(combined)
+  const idx = hash % pool.length
+  return pool[idx]
+}
+
+// Generate expanded playful titles for a category by combining templates and modifiers
+function getAllTitles(categoryId: string, desired = 100) {
+  const base = CATEGORY_TITLES[categoryId] || []
+
+  // Category-specific modifier pools and templates so generated titles match category intent
+  const pools: Record<string, {starts: string[]; adjectives: string[]; hooks: string[]; templates: string[]}> = {
+    cat_restaurants: {
+      starts: ['Taste', 'Savor', 'Try', 'Discover', 'Grab', 'Nibble on', 'Treat yourself to', 'Feast on', 'Sample', 'Dig into'],
+      adjectives: ['delicious', 'fresh', 'local', 'spicy', 'sweet', 'mouthwatering', 'comforting', 'authentic', 'seasonal', 'hearty'],
+      hooks: ['near you', 'tonight', 'this week', 'for a date', 'after a long day', 'with friends', 'on the go', 'before sunset', 'for two', 'in town'],
+      templates: [
+        `${'{start}'} {adj} bites {hook}`,
+        `${'{adjCap}'} flavors await {hook}`,
+        `${'{start}'} the {adj} special {hook}`,
+        `${'{start}'} new {adj} spots {hook}`,
+        `${'{start}'} something {adj} {hook}`
+      ]
+    },
+    cat_hotels: {
+      starts: ['Rest', 'Sleep', 'Relax', 'Unwind', 'Stay', 'Recharge', 'Nestle into', 'Dream at', 'Check into', 'Cozy up at'],
+      adjectives: ['cozy', 'calm', 'luxurious', 'quiet', 'comfortable', 'charming', 'peaceful', 'scenic', 'stylish', 'inviting'],
+      hooks: ['after a day of exploring', 'tonight', 'this weekend', 'on your trip', 'with a view', 'near the market', 'close to the park', 'for a quick stay', 'during your tour', 'for two'],
+      templates: [
+        `${'{start}'} and {adj} {hook}`,
+        `${'{adjCap}'} stays await {hook}`,
+        `${'{start}'} somewhere {adj} {hook}`,
+        `${'{start}'} where you can {adj}ly rest {hook}`,
+        `${'{start}'} the {adj} corner {hook}`
+      ]
+    },
+    cat_transport: {
+      starts: ['Drive', 'Ride', 'Hop in', 'Get moving', 'Hit the road', 'Wheel your way', 'Cruise', 'Commute', 'Set off', 'Go further'],
+      adjectives: ['smooth', 'fast', 'reliable', 'comfortable', 'scenic', 'safe', 'convenient', 'affordable', 'direct', 'hassle-free'],
+      hooks: ['to your next stop', 'around town', 'to the park', 'to the airport', 'for an adventure', 'between cities', 'with ease', 'on demand', 'for the day', 'when you travel'],
+      templates: [
+        `${'{start}'} — {adj} rides {hook}`,
+        `${'{start}'} to your {adj} destination {hook}`,
+        `${'{start}'} the {adj} way {hook}`,
+        `${'{start}'} and explore {hook}`,
+        `${'{start}'} with {adj} comfort {hook}`
+      ]
+    },
+    cat_tour_packages: {
+      starts: ['Explore', 'Journey', 'Discover', 'Venture', 'Wander', 'Take a trip', 'Embark on', 'Tour', 'See', 'Experience'],
+      adjectives: ['guided', 'epic', 'local', 'scenic', 'historic', 'immersive', 'unforgettable', 'curated', 'relaxing', 'adventurous'],
+      hooks: ['today', 'this season', 'with a guide', 'for memories', 'on foot', 'by boat', 'with friends', 'in comfort', 'for a day', 'for the weekend'],
+      templates: [
+        `${'{start}'} a {adj} tour {hook}`,
+        `${'{start}'} hidden gems {hook}`,
+        `${'{start}'} the {adj} route {hook}`,
+        `${'{start}'} beyond the guidebook {hook}`,
+        `${'{start}'} places you’ll remember {hook}`
+      ]
+    },
+    cat_activities: {
+      starts: ['Try', 'Join', 'Book', 'Dive into', 'Get active with', 'Have fun with', 'Experience', 'Take part in', 'Play', 'Give a go'],
+      adjectives: ['thrilling', 'relaxing', 'fun', 'outdoor', 'local', 'creative', 'intense', 'gentle', 'family-friendly', 'scenic'],
+      hooks: ['today', 'this afternoon', 'this weekend', 'with friends', 'for the family', 'nearby', 'on a sunny day', 'after breakfast', 'before sunset', 'tonight'],
+      templates: [
+        `${'{start}'} a {adj} activity {hook}`,
+        `${'{start}'} adventures {hook}`,
+        `${'{start}'} moments that matter {hook}`,
+        `${'{start}'} the outdoors {hook}`,
+        `${'{start}'} something new {hook}`
+      ]
+    },
+    cat_shops: {
+      starts: ['Shop', 'Browse', 'Discover', 'Find', 'Pick up', 'Score', 'Collect', 'Snap up', 'Treat yourself with', 'Unearth'],
+      adjectives: ['local', 'handmade', 'unique', 'useful', 'quirky', 'affordable', 'curated', 'giftable', 'artisanal', 'stylish'],
+      hooks: ['nearby', 'today', 'for a gift', 'for the trip', 'at the market', 'before you leave', 'for memories', 'in town', 'for your home', 'to bring back'],
+      templates: [
+        `${'{start}'} {adj} finds {hook}`,
+        `${'{start}'} treasures {hook}`,
+        `${'{start}'} something special {hook}`,
+        `${'{start}'} at the local stalls {hook}`,
+        `${'{start}'} gifts and more {hook}`
+      ]
+    }
+  }
+
+  const poolDef = pools[categoryId] || {
+    starts: ['Try', 'Discover', 'Find'],
+    adjectives: ['great', 'new', 'local'],
+    hooks: ['today', 'near you'],
+    templates: [`${'{start}'} {adj} picks {hook}`]
+  }
+
+  const { starts, adjectives, hooks, templates } = poolDef
+
+  const generated = new Set<string>(base)
+
+  let i = 0
+  while (generated.size < desired && i < 10000) {
+    const s = starts[i % starts.length]
+    const a = adjectives[(i * 7) % adjectives.length]
+    const h = hooks[(i * 13) % hooks.length]
+    const tmpl = templates[i % templates.length]
+
+    const adjCap = a.charAt(0).toUpperCase() + a.slice(1)
+    const composed = tmpl
+      .replace('{start}', s)
+      .replace('{adj}', a)
+      .replace('{adjCap}', adjCap)
+      .replace('{hook}', h)
+
+    generated.add(composed)
+    i++
+  }
+
+  return Array.from(generated).slice(0, desired)
+}
+
+// PRNG helper (mulberry32) seeded from a hash to get deterministic shuffles per device+date
+function mulberry32(a: number) {
+  return function() {
+    a |= 0
+    a = (a + 0x6D2B79F5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Deterministically shuffle categories per device+date
+function getDailyCategoryOrder(categoryList: Array<{id: string; name: string}>) {
+  const deviceSeed = getDeviceSeed()
+  const today = new Date().toISOString().slice(0, 10)
+  const seedStr = deviceSeed + '|' + today + '|category-order'
+  const seedHash = simpleHash32(seedStr)
+  const rnd = mulberry32(seedHash)
+
+  // Copy and shuffle with Fisher-Yates using our PRNG
+  const arr = categoryList.slice()
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1))
+    const tmp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = tmp
+  }
+  return arr
+}
 
 export default function Home() {
   const [heroMediaList, setHeroMediaList] = useState<Array<{ url: string; type: 'image' | 'video' }>>([])
@@ -19,6 +278,10 @@ export default function Home() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  // When the user refreshes the page multiple times, we may swap the column order.
+  // Track a simple refresh counter in localStorage; when it reaches 5 we set
+  // swapColumnsOnRefresh=true for that load and reset the counter.
+  const [swapColumnsOnRefresh, setSwapColumnsOnRefresh] = useState(false)
 
   const navigate = useNavigate()
 
@@ -63,27 +326,7 @@ export default function Home() {
     }
   }
 
-  // Function to count services per category
-  const getCategoryCounts = () => {
-    const counts: { [key: string]: number } = {}
-    
-    // Initialize counts for all categories
-    categories.forEach(cat => {
-      counts[cat.id] = 0
-    })
-    
-    // Count services for each category
-    allServices.forEach(service => {
-      const categoryId = service.category_id || service.service_categories?.id
-      if (categoryId && counts.hasOwnProperty(categoryId)) {
-        counts[categoryId]++
-      }
-    })
-    
-    return counts
-  }
-
-  const categoryCounts = getCategoryCounts()
+  // Category counting helper removed — we no longer display numeric counts next to categories.
 
 
   useEffect(() => {
@@ -122,6 +365,28 @@ export default function Home() {
       document.removeEventListener('click', handleUserInteraction)
       document.removeEventListener('touchstart', handleUserInteraction)
       document.removeEventListener('keydown', handleUserInteraction)
+    }
+  }, [])
+
+  // Increment a refresh counter stored in localStorage. When it hits 5, toggle
+  // the swapColumnsOnRefresh flag for this session and reset the counter.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const key = 'dt_refresh_count'
+      let count = Number(window.localStorage.getItem(key) || '0')
+      count = count + 1
+      // If the user has refreshed 5 times, enable the swap for this load and reset
+      if (count >= 5) {
+        setSwapColumnsOnRefresh(true)
+        window.localStorage.setItem(key, '0')
+      } else {
+        setSwapColumnsOnRefresh(false)
+        window.localStorage.setItem(key, String(count))
+      }
+    } catch (e) {
+      // ignore storage errors and keep default behaviour
+      setSwapColumnsOnRefresh(false)
     }
   }, [])
 
@@ -245,7 +510,7 @@ export default function Home() {
         { id: 'all', name: t('all_listings'), icon: Map },
         ...sortedCategories.map(cat => ({
           id: cat.id,
-          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Stays' : cat.name,
+          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Homes & Stays' : cat.name,
           icon: cat.icon || MapPinIcon
         }))
       ]
@@ -255,7 +520,7 @@ export default function Home() {
       // Fallback to basic categories if database fetch fails (also filter out flights)
       setCategories([
         { id: 'all', name: t('all_listings'), icon: Map },
-        { id: 'cat_hotels', name: 'Stays', icon: Hotel },
+        { id: 'cat_hotels', name: 'Homes & Stays', icon: Hotel },
         { id: 'cat_transport', name: 'Transport', icon: Car },
         { id: 'cat_activities', name: 'Events', icon: Target },
         { id: 'cat_tour_packages', name: 'Tours', icon: Map },
@@ -432,6 +697,51 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Filters moved up to appear immediately after the hero section */}
+      {!searchQuery && (
+        <div className="mt-6">{/* small gap after hero */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide pb-2">
+              <button
+                onClick={() => handleCategorySelect('all')}
+                className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                  selectedCategories.includes('all')
+                    ? 'text-gray-900'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <div className="flex flex-col items-center px-1">
+                  {selectedCategories.includes('all') && (
+                    <span className="block h-1 w-8 bg-emerald-600 rounded-full mb-1"></span>
+                  )}
+                  <span className="text-sm">All</span>
+                </div>
+              </button>
+              <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
+                {categories.slice(1).map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategorySelect(category.id)}
+                    className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                      selectedCategories.includes(category.id) && !selectedCategories.includes('all')
+                        ? 'text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center px-1">
+                      {selectedCategories.includes(category.id) && !selectedCategories.includes('all') && (
+                        <span className="block h-1 w-8 bg-emerald-600 rounded-full mb-1"></span>
+                      )}
+                      <span className="text-sm">{category.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fixed Search Bar - Always Visible */}
       <div className="fixed top-20 left-0 right-0 z-[60] w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
@@ -501,7 +811,7 @@ export default function Home() {
                             )}
                           </div>
                           <span className={`text-sm ${selectedCategories.includes('all') ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-                            {t('show_all_travel_needs')} ({allServices.length})
+                            {t('show_all_travel_needs')}
                           </span>
                         </div>
                       </button>
@@ -526,7 +836,7 @@ export default function Home() {
                               )}
                             </div>
                             <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-                              {category.name} ({categoryCounts[category.id] || 0})
+                              {category.name}
                             </span>
                           </div>
                         </button>
@@ -555,55 +865,25 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Spacer to prevent content from being hidden behind fixed search bar */}
-      <div className="h-8"></div>
+      {/* Category Filters Section relocated to just below the fixed search bar */}
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16 md:pb-20">
 
         {/* Results Header */}
         <div className="mb-4">
           <div className="mb-3">
-            <h2 className="text-2xl font-bold text-black">
-              {searchQuery
-                ? `Search results for "${searchQuery}"`
-                : selectedCategories.includes('all')
-                  ? t('all_listings')
-                  : selectedCategories.length === 1
-                    ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
-                    : `${selectedCategories.length} categories selected`}
-            </h2>
-          </div>
-
-          {/* Category Filters Section */}
-          {!searchQuery && (
-            <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide pb-2">
-              <button
-                onClick={() => handleCategorySelect('all')}
-                className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                  selectedCategories.includes('all')
-                    ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                All ({allServices.length})
-              </button>
-              <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
-                {categories.slice(1).map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                      selectedCategories.includes(category.id) && !selectedCategories.includes('all')
-                        ? 'text-gray-900 border-b-2 border-emerald-600 pb-1'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {category.name} ({categoryCounts[category.id] || 0})
-                  </button>
-                ))}
-              </div>
+              {(searchQuery || !selectedCategories.includes('all')) && (
+                <h2 className="text-2xl font-bold text-black">
+                  {searchQuery
+                    ? `Search results for "${searchQuery}"`
+                    : selectedCategories.length === 1
+                      ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
+                      : `${selectedCategories.length} categories selected`}
+                </h2>
+              )}
             </div>
-          )}
+
+          {/* Category Filters Section relocated to just below the fixed search bar */}
         </div>
 
         {/* Content Grid */}
@@ -612,15 +892,48 @@ export default function Home() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {currentItems.map((service: Service) => (
-              <ServiceCard 
-                key={service.id} 
-                service={service}
-                onClick={() => navigate(`/service/${service.slug || service.id}`)}
-              />
-            ))}
-          </div>
+          // If searching or filtering by categories, show the standard grid of results.
+          (searchQuery || !selectedCategories.includes('all')) ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-10 mb-12">
+              {(
+                swapColumnsOnRefresh ? [...currentItems].reverse() : currentItems
+              ).map((service: Service) => (
+                <ServiceCard 
+                  key={service.id} 
+                  service={service}
+                  onClick={() => navigate(`/service/${service.slug || service.id}`)}
+                />
+              ))}
+            </div>
+          ) : (
+            // Otherwise, show 6 category rows (one row per category). Each row scrolls horizontally if it has more items than fit.
+            <div className="space-y-10">
+              {getDailyCategoryOrder(categories.slice(1, 7)).map((category) => {
+                const servicesForCat = allServices.filter((s: Service) => s.category_id === category.id)
+                if (!servicesForCat || servicesForCat.length === 0) return null
+                const servicesForCatToRender = swapColumnsOnRefresh ? servicesForCat.slice().reverse() : servicesForCat
+                return (
+                  <div key={category.id}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">{getDailyTitleForCategory(category.id, category.name)}</h3>
+                      <span className="text-sm text-gray-500">{servicesForCat.length} options</span>
+                    </div>
+
+                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                      {servicesForCatToRender.map((service: Service) => (
+                        <div key={service.id} className="snap-start flex-shrink-0 w-[48%] sm:w-[40%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
+                          <ServiceCard
+                            service={service}
+                            onClick={() => navigate(`/service/${service.slug || service.id}`)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
         )}
 
         {!isLoading && currentItemCount === 0 && (
@@ -646,7 +959,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [reviewCount, setReviewCount] = useState<number>(0)
 
   // Preferences for currency/language (used for displaying prices on cards)
-  const { selectedCurrency, selectedLanguage, t } = usePreferences()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
 
   // Fetch service rating and review count
   useEffect(() => {
@@ -666,159 +979,48 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
-  // Helper function to render icons (handles both string and component icons)
-  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
-    if (typeof icon === 'string') {
-      return <span className={className}>{icon}</span>
-    }
-    if (typeof icon === 'function') {
-      const IconComponent = icon
-      return <IconComponent className={className} />
-    }
-    return null
+  // Determine unit text for price (per person/per night/etc.)
+  const getUnitLabel = (categoryName: string) => {
+    const name = (categoryName || '').toLowerCase()
+    if (name === 'transport') return 'per day'
+    if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
+    if (name === 'shops') return 'per item'
+    if (name === 'restaurants') return 'per meal'
+    return 'per person'
   }
 
-  // Get category-specific information
-  const getCategoryInfo = () => {
-    switch (service.category_id) {
-      case 'cat_hotels':
-        return {
-          icon: Hotel,
-          label: 'Accommodation',
-          primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
-          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null,
-          priceUnit: 'per_day'
-        }
-      case 'cat_tour_packages':
-        return {
-          icon: Map,
-          label: 'Tour Package',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
-          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null,
-          priceUnit: 'per_person'
-        }
-      case 'cat_transport':
-        return {
-          icon: Car,
-          label: 'Transport',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
-          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null,
-          priceUnit: 'per_day'
-        }
-      case 'cat_restaurants':
-        return {
-          icon: Utensils,
-          label: 'Restaurant',
-          primaryInfo: 'Dining experience',
-          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null,
-          priceUnit: 'per_meal'
-        }
-      case 'cat_activities':
-        return {
-          icon: Target,
-          label: 'Event',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h activity` : 'Adventure',
-          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null,
-          priceUnit: 'per_ticket'
-        }
-      case 'cat_flights':
-        return {
-          icon: Plane,
-          label: 'Flight',
-          primaryInfo: service.flight_number ? `${service.flight_number} - ${service.airline || 'Airline'}` : 'Flight booking',
-          secondaryInfo: service.departure_city && service.arrival_city ? `${service.departure_city} → ${service.arrival_city}` : null,
-          priceUnit: 'per_person'
-        }
-      case 'cat_shops':
-        return {
-          icon: ShoppingBag,
-          label: 'Shop',
-          primaryInfo: 'Retail shopping',
-          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null,
-          priceUnit: 'per_item'
-        }
-      default:
-        return {
-          icon: Package,
-          label: 'Service',
-          primaryInfo: 'Experience',
-          secondaryInfo: null,
-          priceUnit: 'per_person'
-        }
-    }
-  }
+  // Category-specific helper removed — card now uses a simple, image-first layout.
 
-  const categoryInfo = getCategoryInfo()
+  // categoryInfo removed from here as the card now shows a standalone image tile with compact info below
 
   return (
-    <div
-      onClick={onClick}
-      className="group block cursor-pointer"
-    >
-      <div className="bg-white rounded-xl overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100 h-full flex flex-col">
-        {/* Image Container */}
-        <div className="relative h-48 overflow-hidden">
+    <div onClick={onClick} className="group block cursor-pointer">
+      <div className="w-full">
+        {/* Standalone square image tile */}
+        <div className="aspect-square rounded-xl overflow-hidden shadow-sm bg-gray-100 relative">
           <img
             src={imageUrl}
             alt={service.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
-          {/* Save Button */}
+          {/* Save Button (kept) */}
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsSaved(!isSaved)
-            }}
+            onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved) }}
             className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
+            aria-label={isSaved ? 'Unsave' : 'Save'}
           >
-            <Heart
-              className={`h-5 w-5 transition-colors ${
-                isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-              }`}
-            />
+            <Heart className={`h-5 w-5 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
           </button>
-
-          {/* Category Badge */}
-          <div className="absolute bottom-3 left-3">
-            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
-              {renderIcon(categoryInfo.icon, "h-4 w-4")}
-              <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
-            </div>
-          </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 px-4 py-4 flex flex-col justify-between">
-          {/* Title with Location and Rating */}
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-2 text-sm leading-snug">
-                {service.title}
-                <span className="text-xs text-gray-500 font-normal">
-                  {service.category_id === 'cat_activities' ? ' at ' : ' in '} 
-                  {service.location || service.event_location || 'Location TBA'}
-                </span>
-              </h3>
-            </div>
-            <div className="flex items-center gap-0.5 px-2 py-1 rounded-lg flex-shrink-0">
-              <Star className="h-3 w-3 text-emerald-600 fill-current" />
-              <span className="text-xs font-medium text-emerald-700">{rating > 0 ? rating.toFixed(1) : '0'}</span>
-              {reviewCount > 0 && (
-                <span className="text-xs text-gray-500 ml-0.5">({reviewCount})</span>
-              )}
-            </div>
-          </div>
+        {/* Compact info block below the image (Airbnb-like) */}
+        <div className="mt-2 px-0">
+          <h3 className="text-xs font-medium text-gray-900 line-clamp-1">{service.title}</h3>
+          <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{service.location || 'Location TBA'}</div>
 
-          {/* Vendor Name */}
-          <div className="text-xs text-gray-500 mb-3 line-clamp-1 font-normal">
-            By {service.vendors?.business_name || 'Service Provider'}
-          </div>
-
-          {/* Price */}
-          <div className="flex items-baseline gap-1.5 pt-3 border-t border-gray-100 mt-auto">
-            <span className="text-xs text-gray-500 font-light">{t('from')}</span>
-            <span className="text-sm font-semibold text-gray-900">
+          <div className="flex items-center justify-between mt-1 text-sm">
+            <div className="text-sm font-medium text-gray-900 inline-flex items-baseline">
               {formatCurrencyWithConversion(
                 service.ticket_types && service.ticket_types.length > 0
                   ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0)))
@@ -827,14 +1029,13 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                 selectedCurrency || 'UGX',
                 selectedLanguage || 'en-US'
               )}
-            </span>
-            <span className="text-xs text-gray-500 ml-0.5 font-light">
-              {service.category_id === 'cat_hotels' ? 'per night' :
-               service.category_id === 'cat_transport' ? 'per day' :
-               service.category_id === 'cat_restaurants' ? 'per meal' :
-               service.category_id === 'cat_shops' ? 'per item' :
-               'per person'}
-            </span>
+              <span className="text-xs font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+            </div>
+            <div className="flex items-center text-[11px] text-gray-600">
+              <Star className="h-3 w-3 text-emerald-600 fill-current mr-1" />
+              <span>{rating > 0 ? rating.toFixed(1) : '0'}</span>
+              {reviewCount > 0 && <span className="ml-1 text-[11px] text-gray-500">({reviewCount})</span>}
+            </div>
           </div>
         </div>
       </div>

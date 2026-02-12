@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { createOrder, createServiceReview } from '../lib/database'
+import { createServiceReview } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -412,6 +412,16 @@ export default function ServiceDetail() {
     
     // Use React Router navigation with state
     navigate(bookingUrl, { state: navigationState })
+  }
+
+  // Determine unit text for price (per person/per night/etc.)
+  const getUnitLabel = (categoryName: string) => {
+    const name = (categoryName || '').toLowerCase()
+    if (name === 'transport') return 'per day'
+    if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
+    if (name === 'shops') return 'per item'
+    if (name === 'restaurants') return 'per meal'
+    return 'per person'
   }
 
   const handleInquiry = () => {
@@ -1221,22 +1231,13 @@ export default function ServiceDetail() {
         </div>
 
         {/* Compact CTA row for mobile or inline price for desktop */}
-        <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="mt-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-xs text-gray-400">From</div>
-            <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
-          </div>
-          <div className="flex-shrink-0 w-32">
-            {!(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-              <button onClick={() => {
-                  const el = document.querySelector('[data-tickets-section]')
-                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md shadow-sm transition-colors"
-              >
-                Buy Tickets
-              </button>
-            )}
+            <div className="text-sm font-semibold inline-flex items-baseline">
+              {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
+              <span className="text-xs font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1475,20 +1476,24 @@ export default function ServiceDetail() {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 text-right pl-2">
-                    <div className="text-[10px] text-gray-300">From</div>
-                    <div className="text-sm font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
-                    <button
-                      onClick={() => {
-                        const el = document.querySelector('[data-tickets-section]')
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      }}
-                      aria-label="Buy Tickets"
-                      className="mt-2 w-28 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md shadow-sm transition-colors"
-                    >
-                      Buy Tickets
-                    </button>
-                  </div>
+                    <div className="flex-shrink-0 text-right pl-2">
+                      <div className="text-[10px] text-gray-300">From</div>
+                      <div className="text-sm font-semibold inline-flex items-baseline">
+                        {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
+                        <span className="text-xs font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                      </div>
+                      {/* Mobile-only Buy Tickets CTA (keeps purchase action accessible on mobile hero for events/activities) */}
+                      <button
+                        onClick={() => {
+                          const el = document.querySelector('[data-tickets-section]')
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }}
+                        aria-label="Buy Tickets"
+                        className="mt-2 w-28 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md shadow-sm transition-colors md:hidden"
+                      >
+                        Buy Tickets
+                      </button>
+                    </div>
                 </div>
               </div>
             </div>
@@ -1559,7 +1564,10 @@ export default function ServiceDetail() {
                     </div>
                     <div className="mt-4">
                       <div className="text-sm text-gray-300">From</div>
-                      <div className="text-2xl font-semibold">{formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}</div>
+                      <div className="text-2xl font-semibold inline-flex items-baseline">
+                        {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
+                        <span className="text-xs font-normal text-gray-200 ml-3 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1574,19 +1582,27 @@ export default function ServiceDetail() {
               {service.images && service.images.length > 1 && (
                 <div className="flex space-x-2 overflow-x-auto pb-2">
                   {service.images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setSelectedImage(image)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                        selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`${service.title} ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setSelectedImage(image)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              setSelectedImage(image)
+                            }
+                          }}
+                          aria-label={`View image ${index + 1}`}
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                            selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <img
+                            src={image}
+                            alt={`${service.title} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
                   ))}
                 </div>
               )}
@@ -1654,19 +1670,6 @@ export default function ServiceDetail() {
                   </div>
 
                   <div className="flex space-x-3">
-                    <button onClick={async () => {
-                      try {
-                        const items = Object.entries(ticketQuantities).filter(([, qty]) => qty > 0).map(([ticket_type_id, qty]) => ({ ticket_type_id, quantity: qty as number, unit_price: ticketTypes.find(tt => tt.id === ticket_type_id)?.price || 0 }))
-                        if (items.length === 0) return alert('Select at least one ticket')
-                        const vendorId = service.vendor_id || service.vendors?.id || null
-                          const order = await createOrder(user?.id || null, vendorId, items, service.currency)
-                          // Navigate to checkout to collect buyer info and complete payment
-                          navigate(`/checkout/${order.id}`)
-                      } catch (err) {
-                        console.error('Failed to create order:', err)
-                        alert('Failed to create order. Try again later.')
-                      }
-                    }} disabled={ticketsTotal <= 0} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors">Buy Tickets</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
                 </div>

@@ -163,21 +163,19 @@ export default function PublicLayout() {
                   title={t('preferences')}
                 >
                   <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
+                  {/* Show only the icon in the navbar; keep an sr-only label for accessibility */}
+                  <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
                 </button>
 
-                {user && profile?.role === 'tourist' && (
-                  <>
-                    <button className="flex items-center text-gray-700 hover:text-blue-600 relative">
-                      <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
-                      {getCartCount() > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                          {getCartCount()}
-                        </span>
-                      )}
-                    </button>
-                  </>
-                )}
+                {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-blue-600 relative">
+                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
+                  {getCartCount() > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {getCartCount()}
+                    </span>
+                  )}
+                </Link>
 
                 {/* Sign In Button or User Account Dropdown */}
                 {user && profile?.role === 'tourist' ? (
