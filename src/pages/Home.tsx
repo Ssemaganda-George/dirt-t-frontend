@@ -687,7 +687,7 @@ export default function Home() {
           ))
         )}
         
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20">
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20 transform -translate-y-6 md:-translate-y-8">
           <h1 className="text-3xl md:text-6xl font-bold text-white mb-4 md:mb-6 text-center text-heading leading-tight">
             {t('hero_title')}
           </h1>

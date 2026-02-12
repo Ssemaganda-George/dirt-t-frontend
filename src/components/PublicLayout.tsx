@@ -105,7 +105,8 @@ export default function PublicLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${
+      {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         location.pathname.includes('/scan/') 
           ? 'bg-transparent shadow-none' 
           : 'bg-white shadow-sm'
@@ -403,7 +404,8 @@ export default function PublicLayout() {
       />
 
       {/* Main Content */}
-      <main className={`${location.pathname.includes('/scan/') ? 'pb-0' : 'pb-16'} md:pb-0`}>
+      {/* Add top padding equal to header height so fixed header doesn't overlap content */}
+      <main className={`${location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
         <Outlet />
       </main>
 
