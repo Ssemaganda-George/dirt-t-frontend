@@ -407,8 +407,8 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Navigation - Hidden on scan pages */}
-      {!location.pathname.includes('/scan/') && (
+      {/* Mobile Bottom Navigation - Hidden on scan pages and service detail pages (we render a Book button in the service page) */}
+      {!location.pathname.includes('/scan/') && !location.pathname.startsWith('/service/') && (
         <MobileBottomNav
           onSupportClick={() => setShowSupportModal(true)}
           onSearchClick={() => setShowGlobalSearch(true)}

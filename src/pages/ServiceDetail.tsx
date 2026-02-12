@@ -194,6 +194,9 @@ export default function ServiceDetail() {
   const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
   const [kpiHoverRatings, setKpiHoverRatings] = useState<KpiRatings>({})
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const bookingRef = useRef<HTMLDivElement>(null)
+  const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
+  const [showMobileBookButton, setShowMobileBookButton] = useState(true)
   const { user, profile } = useAuth()
   const { addToCart } = useCart()
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -505,6 +508,36 @@ export default function ServiceDetail() {
     })
     // Could add a toast notification here
   }
+
+  const openMobileBooking = () => {
+    // Scroll booking panel into view and mark it open for mobile highlighting
+    try {
+      bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setMobileBookingOpen(true)
+      setShowMobileBookButton(false)
+      // remove highlight after a short delay
+      setTimeout(() => setMobileBookingOpen(false), 2200)
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  // Hide the mobile Book button when the booking panel is visible in the viewport.
+  useEffect(() => {
+    if (!bookingRef.current) return
+    const el = bookingRef.current
+    const obs = new IntersectionObserver((entries) => {
+      const e = entries[0]
+      if (e && e.isIntersecting) {
+        setShowMobileBookButton(false)
+      } else {
+        setShowMobileBookButton(true)
+      }
+    }, { root: null, threshold: 0.5 })
+
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [bookingRef.current])
 
   // Get appropriate button text based on category
   const getBookingButtonText = (categoryName: string): string => {
@@ -1664,7 +1697,7 @@ export default function ServiceDetail() {
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
+            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''}`}>
               {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
                   <div data-tickets-section>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
@@ -1842,6 +1875,47 @@ export default function ServiceDetail() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Book button (replaces global bottom nav on service pages) */}
+      <div
+        className={`md:hidden fixed left-0 z-50 pointer-events-auto transition-transform duration-300 ${showMobileBookButton ? 'translate-x-0' : '-translate-x-[110%]'}`}
+        style={{ bottom: 'calc(16px + env(safe-area-inset-bottom))' }}
+      >
+        <div>
+          {/* two-sided control: touch left edge, cover ~3/4 width, leave gap on right; positioned above bottom safe area */}
+          <div className="flex w-[calc(100%-8px)] shadow-lg overflow-hidden">
+            {/* Left: price + unit - opens/scrolls to booking summary */}
+            <button
+              onClick={openMobileBooking}
+              className="flex-1 bg-blue-600 text-white py-3 px-3 text-left hover:bg-blue-600/95 transition-colors rounded-none"
+              aria-hidden={!showMobileBookButton}
+            >
+              <div className="text-xs text-white/90">From</div>
+              <div className="text-lg font-semibold leading-none">
+                {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
+              </div>
+              <div className="text-xs text-white/90">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
+            </button>
+
+            {/* Right: action - performs booking/navigation */}
+            <button
+              onClick={() => {
+                // If booking summary is already visible, proceed with booking
+                if (!showMobileBookButton) {
+                  handleBooking()
+                } else {
+                  // Otherwise, scroll to the booking summary first
+                  openMobileBooking()
+                }
+              }}
+              className="w-16 bg-blue-700 text-white flex items-center justify-center font-medium py-3 px-1 hover:bg-blue-800 transition-colors rounded-r-lg"
+              aria-hidden={!showMobileBookButton}
+            >
+              <span className="text-sm">Book</span>
+            </button>
           </div>
         </div>
       </div>
