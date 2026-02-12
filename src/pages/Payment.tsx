@@ -65,6 +65,16 @@ export default function PaymentPage() {
       alert('Failed to update ticket quantity. Please try again.')
     }
   }
+  
+  // Derived totals from current items so UI updates when quantities change
+  const subtotalAmount = items.reduce((s: number, it: any) => {
+    const unit = Number(it.unit_price ?? it.price ?? 0)
+    const qty = Number(it.quantity ?? 0)
+    return s + unit * qty
+  }, 0)
+
+  const serviceFeesAmount = Math.max(1000, Math.round(subtotalAmount * 0.01))
+  const totalAmount = subtotalAmount + serviceFeesAmount
   // summary toggle removed — details always visible
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
@@ -107,8 +117,9 @@ export default function PaymentPage() {
   }, [order?.guest_email, ticketEmail])
 
   const handlePayment = useCallback(async () => {
-    if (!orderId || !order) return
-    const totalWithFee = Number(order.total_amount) + Math.max(1000, Math.round(Number(order.total_amount) * 0.01))
+  if (!orderId || !order) return
+  // Use derived totals from items (keeps payment amount in sync with edits)
+  const totalWithFee = Math.round(totalAmount)
     const rawPhone = (phoneNumber || order?.guest_phone || '').trim().replace(/^\+256/, '')
     const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
 
@@ -122,14 +133,14 @@ export default function PaymentPage() {
     setPaymentReference(null)
     try {
       const { data: session } = await supabase.auth.getSession()
-      const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+                const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({
-          amount: Math.round(totalWithFee),
+                  amount: Math.round(totalWithFee),
           phone_number: phone,
           order_id: orderId,
           description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
@@ -265,7 +276,7 @@ export default function PaymentPage() {
       paymentChannelRef.current = channel
       console.log('[Payment] Realtime channel subscribed', { ref })
 
-      const statusOnce = await checkStatus()
+  const statusOnce = await checkStatus()
       console.log('[Payment] statusOnce (immediate)', { statusOnce, ref })
         if (statusOnce === 'completed') {
           console.log('[Payment] handleCompleted from immediate check')
@@ -383,9 +394,9 @@ export default function PaymentPage() {
                 </div>
 
                 <div className="border-t pt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 text-sm">Service Fee</span>
-                    <span className="text-sm font-medium text-gray-900">{formatCurrency(Math.max(1000, Math.round(order.total_amount * 0.01)), order.currency)}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Service Fee</span>
+            <span className="text-sm font-medium text-gray-900">{formatCurrency(serviceFeesAmount, order.currency)}</span>
                 {/* Success Dialog */}
                 {paymentSuccess && (
                   <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -412,7 +423,7 @@ export default function PaymentPage() {
                   {/* Total shown below service fee for clarity */}
                   <div className="mt-3 flex justify-between items-center border-t pt-3">
                     <span className="text-gray-700 text-sm font-medium">Total</span>
-                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(Number(order.total_amount) + Math.max(1000, Math.round(Number(order.total_amount) * 0.01)), order.currency)}</span>
+                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(totalAmount, order.currency)}</span>
                   </div>
                 </div>
               </div>

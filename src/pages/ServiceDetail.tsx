@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-import { createServiceReview } from '../lib/database'
+import { createServiceReview, createOrder } from '../lib/database'
 import { getDisplayPrice } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
@@ -188,6 +188,7 @@ export default function ServiceDetail() {
   const [reviewError, setReviewError] = useState<string | null>(null)
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
+  const [creatingOrder, setCreatingOrder] = useState(false)
 
   const [hoverRating, setHoverRating] = useState(0)
   const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
@@ -436,6 +437,39 @@ export default function ServiceDetail() {
     navigate(`/service/${service.slug}/inquiry`)
   }
 
+  const handleBuyTickets = async () => {
+    if (!service) return
+
+    // Build selected ticket lines for order creation
+    const items = ticketTypes
+      .filter((t: any) => (ticketQuantities[t.id] || 0) > 0)
+      .map((t: any) => ({ ticket_type_id: t.id, quantity: ticketQuantities[t.id] || 0, unit_price: Number(t.price || 0) }))
+
+    if (items.length === 0) return
+
+    let order: any = null
+    setCreatingOrder(true)
+    try {
+      // Create an order server-side and navigate to the checkout page for that order
+      const userId = user?.id ?? null
+      const vendorId = service.vendor_id || service.vendors?.id || null
+      order = await createOrder(userId, vendorId, items, service.currency)
+      if (order && order.id) {
+        navigate(`/checkout/${order.id}`)
+      } else {
+        // Fallback: show minimal feedback
+        // eslint-disable-next-line no-alert
+        alert('Failed to create order. Please try again.')
+      }
+    } catch (err) {
+      console.error('Failed to create order for tickets:', err)
+      // eslint-disable-next-line no-alert
+      alert('Failed to create order. Please try again later.')
+    } finally {
+      setCreatingOrder(false)
+    }
+  }
+
   const handleSaveToCart = () => {
     if (!service) return
     
@@ -482,7 +516,7 @@ export default function ServiceDetail() {
       'activities': 'Check Availability & Book',
       'flights': 'Check Availability & Book'
     }
-    
+
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
     return categoryTexts[mappedCategory] || 'Check Availability & Book'
   }
@@ -1683,6 +1717,13 @@ export default function ServiceDetail() {
 
                   <div className="flex space-x-3">
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300">Contact Provider</button>
+                    <button
+                      onClick={handleBuyTickets}
+                      disabled={ticketsTotal <= 0 || creatingOrder}
+                      className={`flex-1 ${(ticketsTotal > 0 && !creatingOrder) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-500 cursor-not-allowed'} font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300`}
+                    >
+                      {creatingOrder ? 'Creating...' : 'Buy Tickets'}
+                    </button>
                   </div>
                 </div>
               ) : (

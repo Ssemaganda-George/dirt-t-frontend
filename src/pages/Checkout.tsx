@@ -379,6 +379,16 @@ export default function CheckoutPage() {
     }
   }
 
+  // Compute derived totals from current items (so UI updates immediately when items change)
+  const subtotalAmount = items.reduce((sum: number, it: any) => {
+    const unit = Number(it.unit_price ?? it.price ?? 0)
+    const qty = Number(it.quantity ?? 0)
+    return sum + unit * qty
+  }, 0)
+
+  const serviceFeesAmount = Math.max(1000, Math.round(subtotalAmount * 0.01))
+  const totalAmount = subtotalAmount + serviceFeesAmount
+
   if (isLoading) return <PageSkeleton type="checkout" />
   if (error || !order) return <div className="p-6">Order not found</div>
 
@@ -591,17 +601,17 @@ export default function CheckoutPage() {
 
                         <div className="flex justify-between">
                           <div className="text-sm text-gray-700">Subtotal</div>
-                          <div className="text-sm font-medium">{formatCurrencyWithConversion(Number(order.total_amount || 0), order.currency)}</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(subtotalAmount, order.currency)}</div>
                         </div>
 
                         <div className="flex justify-between">
                           <div className="text-sm text-gray-700">Service Fees</div>
-                          <div className="text-sm font-medium">{formatCurrencyWithConversion(Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(serviceFeesAmount, order.currency)}</div>
                         </div>
 
                         <div className="flex justify-between border-t pt-3 mt-3">
                           <div className="text-base md:text-lg font-semibold text-gray-900">Total</div>
-                          <div className="text-lg md:text-2xl font-extrabold">{formatCurrencyWithConversion(Number(order.total_amount || 0) + Math.max(1000, Math.round(Number(order.total_amount || 0) * 0.01)), order.currency)}</div>
+                          <div className="text-lg md:text-2xl font-extrabold">{formatCurrencyWithConversion(totalAmount, order.currency)}</div>
                         </div>
                       </div>
                     </div>
