@@ -208,6 +208,9 @@ export interface Service {
   // Whether the event scan/link is enabled by an admin. When false the scan link is inactive.
   scan_enabled?: boolean
 
+  // User-defined custom fields (stored as JSONB in database)
+  custom_fields?: Record<string, any>
+
   // Agency-specific fields
   services_offered?: string[]
   destinations_covered?: string[]
@@ -286,6 +289,16 @@ export interface Service {
     name: string;
     icon?: string;
   };
+}
+
+// Custom field definition for UI
+export interface CustomFieldDefinition {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'date' | 'boolean' | 'select'
+  options?: string[] // for select type
+  required?: boolean
+  value?: any
 }
 
 export interface Booking {

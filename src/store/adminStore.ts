@@ -1,19 +1,6 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { Service } from '../types'
-
-const PENDING_KEY = 'admin:pending_services'
-
-function load<T>(k: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(k)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function save<T>(k: string, v: T) {
-  localStorage.setItem(k, JSON.stringify(v))
-}
 
 export interface PendingServiceRecord {
   vendor_id: string
@@ -25,28 +12,59 @@ export interface PendingServiceRecord {
   created_at: string
 }
 
+interface AdminStore {
+  pendingServices: PendingServiceRecord[]
+  addPendingService: (vendorId: string, svc: Service) => void
+  removePendingService: (vendorId: string, serviceId: string) => void
+  getPendingServices: () => PendingServiceRecord[]
+}
+
+export const useAdminStore = create<AdminStore>()(
+  persist(
+    (set, get) => ({
+      pendingServices: [],
+
+      addPendingService: (vendorId: string, svc: Service) => {
+        const list = get().pendingServices
+        // Avoid duplicates
+        if (list.some(x => x.vendor_id === vendorId && x.service_id === svc.id)) return
+
+        const rec: PendingServiceRecord = {
+          vendor_id: vendorId,
+          service_id: svc.id,
+          title: svc.title,
+          category_id: svc.category_id,
+          price: svc.price,
+          currency: svc.currency,
+          created_at: svc.created_at,
+        }
+
+        set({ pendingServices: [rec, ...list] })
+      },
+
+      removePendingService: (vendorId: string, serviceId: string) => {
+        const list = get().pendingServices
+        const next = list.filter(x => !(x.vendor_id === vendorId && x.service_id === serviceId))
+        set({ pendingServices: next })
+      },
+
+      getPendingServices: () => get().pendingServices,
+    }),
+    {
+      name: 'admin:pending_services',
+    }
+  )
+)
+
+// Export legacy functions for backward compatibility during migration
 export function getPendingServices(): PendingServiceRecord[] {
-  return load<PendingServiceRecord[]>(PENDING_KEY, [])
+  return useAdminStore.getState().getPendingServices()
 }
 
 export function addPendingService(vendorId: string, svc: Service) {
-  const list = getPendingServices()
-  // Avoid duplicates
-  if (list.some(x => x.vendor_id === vendorId && x.service_id === svc.id)) return
-  const rec: PendingServiceRecord = {
-    vendor_id: vendorId,
-    service_id: svc.id,
-    title: svc.title,
-    category_id: svc.category_id,
-    price: svc.price,
-    currency: svc.currency,
-    created_at: svc.created_at,
-  }
-  save(PENDING_KEY, [rec, ...list])
+  useAdminStore.getState().addPendingService(vendorId, svc)
 }
 
 export function removePendingService(vendorId: string, serviceId: string) {
-  const list = getPendingServices()
-  const next = list.filter(x => !(x.vendor_id === vendorId && x.service_id === serviceId))
-  save(PENDING_KEY, next)
+  useAdminStore.getState().removePendingService(vendorId, serviceId)
 }
