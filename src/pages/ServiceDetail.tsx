@@ -1665,11 +1665,17 @@ export default function ServiceDetail() {
                         <button
                           key={index}
                           type="button"
-                          onClick={() => setSelectedImage(image)}
+                          onClick={() => {
+                            setSelectedImage(image)
+                            setLightboxIndex(index)
+                            setLightboxOpen(true)
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault()
                               setSelectedImage(image)
+                              setLightboxIndex(index)
+                              setLightboxOpen(true)
                             }
                           }}
                           aria-label={`View image ${index + 1}`}
