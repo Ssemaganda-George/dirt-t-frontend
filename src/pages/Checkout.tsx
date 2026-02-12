@@ -326,6 +326,18 @@ export default function CheckoutPage() {
     }))
   }, [data?.order, profile])
 
+  // Basic validation: enable Next only when required fields are filled and valid
+  // Note: phone is intentionally optional on Checkout — payment page will require it if needed
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const isNextEnabled = Boolean(
+    buyer.name?.trim() &&
+    buyer.surname?.trim() &&
+    validateEmail(buyer.email || '')
+  )
+
   const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
     if (newQuantity < 0 || !orderId) return
     
@@ -601,11 +613,12 @@ export default function CheckoutPage() {
         </div>
 
         {/* Fixed Action Buttons at Bottom - visible on all devices */}
-        <div className="sticky bottom-0 z-40 flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
+          <div className="sticky bottom-0 z-40 flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
           <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
             Back
           </button>
           <button 
+            disabled={!isNextEnabled}
             onClick={async () => {
               try {
                 // Save buyer information to order
@@ -640,8 +653,8 @@ export default function CheckoutPage() {
                 alert('Failed to save buyer information. Please try again.');
               }
             }} 
-            style={{ backgroundColor: '#3B82F6' }} 
-            className="flex-1 text-white py-3 px-4 rounded font-semibold text-base md:text-lg hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: isNextEnabled ? '#3B82F6' : '#d1d5db' }} 
+            className={`flex-1 text-white py-3 px-4 rounded font-semibold text-base md:text-lg transition-opacity ${!isNextEnabled ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90'}`}
           >
             Next
           </button>

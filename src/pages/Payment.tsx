@@ -69,8 +69,14 @@ export default function PaymentPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
   const paymentChannelRef = useRef<RealtimeChannel | null>(null)
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Ensure the paymentReference is observed so linters/TS don't flag it as unused.
+  useEffect(() => {
+    if (paymentReference) console.debug('[Payment] internal reference set', paymentReference)
+  }, [paymentReference])
 
   useEffect(() => {
     return () => {
@@ -148,8 +154,9 @@ export default function PaymentPage() {
       }
 
       const ref = result.data.reference
-      setPaymentReference(ref)
-      setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+  setPaymentReference(ref)
+  // Show the phone confirmation message inside the Pay button while processing
+  setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
       const cleanup = () => {
         console.log('[Payment] cleanup', { ref })
@@ -166,8 +173,41 @@ export default function PaymentPage() {
       const handleCompleted = () => {
         console.log('[Payment] handleCompleted called', { orderId, ref })
         cleanup()
-        setPollingMessage('Payment confirmed! Redirecting…')
-        navigate(`/tickets/${orderId}`)
+        setPollingMessage('Payment confirmed!')
+        // show success dialog — user will be able to go to receipt when they click OK
+        setProcessing(false)
+        setPaymentSuccess(true)
+
+        // Trigger server-side function to send tickets to the provided email (do not block UX)
+        ;(async () => {
+          try {
+            const recipient = ticketEmail || order?.guest_email
+            if (!recipient) {
+              console.warn('[Payment] No recipient email available to send tickets')
+              return
+            }
+
+            console.log('[Payment] Calling send-order-emails edge function', { orderId, recipient })
+            const resp = await fetch(`${supabaseUrl}/functions/v1/send-order-emails`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+                'apikey': supabaseAnonKey,
+              },
+              body: JSON.stringify({ order_id: orderId, recipient_email: recipient }),
+            })
+
+            if (!resp.ok) {
+              const text = await resp.text()
+              console.error('[Payment] send-order-emails failed:', resp.status, text)
+            } else {
+              console.log('[Payment] send-order-emails succeeded')
+            }
+          } catch (e) {
+            console.error('[Payment] Error calling send-order-emails:', e)
+          }
+        })()
       }
 
       const handleFailed = () => {
@@ -227,11 +267,11 @@ export default function PaymentPage() {
 
       const statusOnce = await checkStatus()
       console.log('[Payment] statusOnce (immediate)', { statusOnce, ref })
-      if (statusOnce === 'completed') {
-        console.log('[Payment] handleCompleted from immediate check')
-        handleCompleted()
-        return
-      }
+        if (statusOnce === 'completed') {
+          console.log('[Payment] handleCompleted from immediate check')
+          handleCompleted()
+          return
+        }
       if (statusOnce === 'failed') {
         handleFailed()
         return
@@ -346,6 +386,27 @@ export default function PaymentPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 text-sm">Service Fee</span>
                     <span className="text-sm font-medium text-gray-900">{formatCurrency(Math.max(1000, Math.round(order.total_amount * 0.01)), order.currency)}</span>
+                {/* Success Dialog */}
+                {paymentSuccess && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black opacity-40"></div>
+                    <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 z-10">
+                      <h2 className="text-xl font-semibold text-gray-900 mb-2">Payment successful</h2>
+                      <p className="text-sm text-gray-700 mb-4">Your receipt is ready. Click OK to view your receipt.</p>
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setPaymentSuccess(false)
+                            navigate(`/tickets/${orderId}`)
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                   </div>
 
                   {/* Total shown below service fee for clarity */}
@@ -392,6 +453,7 @@ export default function PaymentPage() {
                     placeholder="0712345678 or +256712345678"
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
                   />
+                  <div className="text-sm text-gray-600 mb-1">Select provider to continue</div>
                   <div className="flex gap-2">
                       <button type="button" onClick={() => setMobileProvider('MTN')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -458,12 +520,9 @@ export default function PaymentPage() {
                 </p>
               </div>
             )}
-            {paymentReference && pollingMessage && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800 font-light">{pollingMessage}</p>
-                <p className="text-xs text-blue-600 mt-2 font-mono">Ref: {paymentReference}</p>
-              </div>
-            )}
+            {/* Removed the explicit phone confirmation notification and reference from the UI.
+                The internal payment reference is still recorded for debugging, but it's not
+                displayed to the user during processing to avoid cluttering the payment UI. */}
           </div>
 
           {/* Email for Tickets */}
@@ -506,8 +565,12 @@ export default function PaymentPage() {
             >
               {processing ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⏳</span>
-                  {pollingMessage || 'Processing...'}
+                  {/* Larger spinner on mobile, slightly smaller on md+ screens */}
+                  <svg className="animate-spin h-10 w-10 md:h-4 md:w-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  <span className="text-white text-sm">{pollingMessage || 'Processing...'}</span>
                 </span>
               ) : (
                 'Pay with Mobile Money'
