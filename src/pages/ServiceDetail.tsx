@@ -16,6 +16,7 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { createServiceReview } from '../lib/database'
+import { getDisplayPrice } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -237,21 +238,26 @@ export default function ServiceDetail() {
     return amountInUGX * (exchangeRates[toCurrency] || 1)
   }
 
-  const formatAmount = (amount: number, currency: string) => {
+  const formatAmount = (amount: number | string, currency: string) => {
+    // Coerce to a finite number; fall back to 0 if invalid so we never render NaN
+    let value = Number(amount)
+    if (!Number.isFinite(value)) value = 0
     try {
       return new Intl.NumberFormat(selectedLanguage || 'en-US', {
         style: 'currency',
         currency: currency,
         minimumFractionDigits: 0,
         maximumFractionDigits: 2,
-      }).format(amount)
+      }).format(value)
     } catch (error) {
-      return `${currency} ${amount.toLocaleString()}`
+      return `${currency} ${value.toLocaleString()}`
     }
   }
 
-  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
-    const convertedAmount = convertCurrency(amount, serviceCurrency, selectedCurrency || 'UGX')
+  const formatCurrencyWithConversion = (amount: number | string, serviceCurrency: string) => {
+    const numeric = Number(amount)
+    const safe = Number.isFinite(numeric) ? numeric : 0
+    const convertedAmount = convertCurrency(safe, serviceCurrency, selectedCurrency || 'UGX')
     return formatAmount(convertedAmount, selectedCurrency || 'UGX')
   }
 
@@ -1225,7 +1231,10 @@ export default function ServiceDetail() {
           </div>
 
           <div className="flex-shrink-0 text-right ml-2">
-            <div className={isMobile ? 'text-2xl font-bold text-gray-900' : 'text-2xl font-bold text-gray-900'}>{Math.round(averageRating) || 0}</div>
+            <div className={isMobile ? 'text-2xl font-bold text-gray-900 inline-flex items-center' : 'text-2xl font-bold text-gray-900 inline-flex items-center'}>
+              <Star className="h-4 w-4 text-yellow-400 fill-current mr-1" />
+              <span>{Math.round(averageRating) || 0}</span>
+            </div>
             <div className="text-xs text-gray-500">({reviewCount} reviews)</div>
           </div>
         </div>
@@ -1234,9 +1243,9 @@ export default function ServiceDetail() {
             <div className="mt-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-xs text-gray-400">From</div>
-            <div className="text-sm font-semibold inline-flex items-baseline">
-              {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
-              <span className="text-xs font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+            <div className="text-xs font-semibold inline-flex items-baseline">
+              {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
+              <span className="text-[10px] font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
             </div>
           </div>
         </div>
@@ -1333,8 +1342,11 @@ export default function ServiceDetail() {
           </div>
 
           <div className="flex items-center gap-2.5 bg-gray-50 rounded-lg p-2.5">
-            <div className="text-center flex-shrink-0">
-              <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+              <div className="text-center flex-shrink-0">
+              <div className="inline-flex items-center">
+                <Star className="h-5 w-5 text-yellow-400 fill-current mr-1" />
+                <span className="text-xl font-extrabold text-gray-900">{averageRating || '0'}</span>
+              </div>
               <div className="flex items-center gap-0.5 mt-0.5">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-2.5 w-2.5 ${i < Math.round(averageRating) ? 'text-yellow-400 fill-current' : 'text-gray-200'}`} />
@@ -1478,9 +1490,9 @@ export default function ServiceDetail() {
 
                     <div className="flex-shrink-0 text-right pl-2">
                       <div className="text-[10px] text-gray-300">From</div>
-                      <div className="text-sm font-semibold inline-flex items-baseline">
-                        {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
-                        <span className="text-xs font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                      <div className="text-xs font-semibold inline-flex items-baseline">
+                        {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
+                        <span className="text-[10px] font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
                       </div>
                       {/* Mobile-only Buy Tickets CTA (keeps purchase action accessible on mobile hero for events/activities) */}
                       <button
@@ -1564,8 +1576,8 @@ export default function ServiceDetail() {
                     </div>
                     <div className="mt-4">
                       <div className="text-sm text-gray-300">From</div>
-                      <div className="text-2xl font-semibold inline-flex items-baseline">
-                        {formatCurrencyWithConversion(ticketTypes.length > 0 ? Math.min(...ticketTypes.map((t: any) => Number(t.price || 0))) : service.price, service.currency)}
+                      <div className="text-xl font-semibold inline-flex items-baseline">
+                        {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
                         <span className="text-xs font-normal text-gray-200 ml-3 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
                       </div>
                     </div>
@@ -1676,13 +1688,13 @@ export default function ServiceDetail() {
               ) : (
                 <div>
                   <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-gray-900">{formatCurrencyWithConversion(service.price, service.currency)}</div>
-                    <div className="text-sm text-gray-500">
-                      {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
-                       ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
-                       service.service_categories?.name?.toLowerCase() === 'shops' ? 'per item' :
-                       service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
-                    </div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}</div>
+                      <div className="text-xs text-gray-500">
+                        {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
+                         ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
+                         service.service_categories?.name?.toLowerCase() === 'shops' ? 'per item' :
+                         service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
+                      </div>
                   </div>
 
                   {/* Date & Guest Selection Form */}
@@ -1755,10 +1767,10 @@ export default function ServiceDetail() {
                     <div className="flex justify-between items-center mb-2 text-xs">
                       <span className="text-gray-600">
                         {service.service_categories?.name?.toLowerCase() === 'transport' 
-                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
                           : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                          ? `${formatCurrencyWithConversion(service.price, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
-                          : `${formatCurrencyWithConversion(service.price, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                          : `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
                       </span>
                       <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>

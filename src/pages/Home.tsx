@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, Check, Filter } from 'lucide-react'
-import { getServiceCategories, getServiceAverageRating } from '../lib/database'
+import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
 import type { Service } from '../types'
 
 // Playful titles per category. The UI will pick one title per category per day,
@@ -957,6 +957,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
   const [isSaved, setIsSaved] = useState(false)
   const [rating, setRating] = useState<number>(0)
   const [reviewCount, setReviewCount] = useState<number>(0)
+  const [localTicketTypes, setLocalTicketTypes] = useState<any[]>(service.ticket_types || [])
 
   // Preferences for currency/language (used for displaying prices on cards)
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -993,11 +994,45 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
   // categoryInfo removed from here as the card now shows a standalone image tile with compact info below
 
+  useEffect(() => {
+    let mounted = true
+    // If the service doesn't include ticket_types but might have ticket types in the DB,
+    // fetch them so the card can show the same price as ServiceDetail.
+    if ((!service.ticket_types || service.ticket_types.length === 0) && service.id) {
+      void (async () => {
+        try {
+          const types = await getTicketTypes(service.id)
+          if (mounted && Array.isArray(types) && types.length > 0) setLocalTicketTypes(types)
+        } catch (err) {
+          // ignore; leave localTicketTypes as-is (empty)
+        }
+      })()
+    }
+    return () => { mounted = false }
+  }, [service.id, service.ticket_types])
+  // Map category names to friendly badge labels
+  const getCategoryBadge = (categoryName?: string) => {
+    const name = (categoryName || '').toLowerCase()
+    if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'Homes & Stays'
+    if (name === 'activities') return 'Activities'
+    if (name === 'events') return 'Events'
+    if (name === 'restaurants') return 'Restaurants'
+    if (name === 'shops') return 'Shops'
+    if (name === 'transport') return 'Transport'
+    return categoryName ? categoryName : 'Service'
+  }
+
   return (
     <div onClick={onClick} className="group block cursor-pointer">
       <div className="w-full">
         {/* Standalone square image tile */}
         <div className="aspect-square rounded-xl overflow-hidden shadow-sm bg-gray-100 relative">
+          {/* Category badge */}
+          {service.service_categories?.name && (
+            <div className="absolute top-3 left-3 px-2 py-1 bg-white/95 rounded-full shadow-sm text-xs font-semibold text-gray-800">
+              {getCategoryBadge(service.service_categories?.name)}
+            </div>
+          )}
           <img
             src={imageUrl}
             alt={service.title}
@@ -1021,20 +1056,19 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
           <div className="flex items-center justify-between mt-1 text-sm">
             <div className="text-sm font-medium text-gray-900 inline-flex items-baseline">
-              {formatCurrencyWithConversion(
-                service.ticket_types && service.ticket_types.length > 0
-                  ? Math.min(...service.ticket_types.map((t: any) => Number(t.price || 0)))
-                  : service.price,
-                service.currency,
-                selectedCurrency || 'UGX',
-                selectedLanguage || 'en-US'
-              )}
-              <span className="text-xs font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                {formatCurrencyWithConversion(
+                  // prefer any locally-fetched ticket types over the service object
+                  getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined),
+                  service.currency,
+                  selectedCurrency || 'UGX',
+                  selectedLanguage || 'en-US'
+                )}
+                <span className="text-[10px] font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
             </div>
-            <div className="flex items-center text-[11px] text-gray-600">
-              <Star className="h-3 w-3 text-emerald-600 fill-current mr-1" />
-              <span>{rating > 0 ? rating.toFixed(1) : '0'}</span>
-              {reviewCount > 0 && <span className="ml-1 text-[11px] text-gray-500">({reviewCount})</span>}
+              <div className="flex items-center text-[10px] text-gray-600">
+                <Star className="h-3 w-3 text-emerald-600 fill-current mr-1" />
+                <span className="text-[10px]">{rating > 0 ? rating.toFixed(1) : '0'}</span>
+                {reviewCount > 0 && <span className="ml-1 text-[10px] text-gray-500">({reviewCount})</span>}
             </div>
           </div>
         </div>

@@ -147,3 +147,30 @@ export function getVendorDisplayStatus(bookingStatus: string, paymentStatus: str
     return 'pending';
   }
 }
+
+/**
+ * Determine the best display price for a service.
+ * Priority:
+ * 1. Provided ticketTypes array (if any) -> minimum ticket price
+ * 2. service.ticket_types property on the service object -> minimum ticket price
+ * 3. service.price
+ * Returns a safe number (0 when absent/invalid).
+ */
+export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
+  try {
+    if (Array.isArray(ticketTypes) && ticketTypes.length > 0) {
+      const prices = ticketTypes.map((t: any) => Number(t?.price ?? 0)).filter(Number.isFinite)
+      if (prices.length > 0) return Math.min(...prices)
+    }
+
+    if (Array.isArray(service?.ticket_types) && service.ticket_types.length > 0) {
+      const prices = service.ticket_types.map((t: any) => Number(t?.price ?? 0)).filter(Number.isFinite)
+      if (prices.length > 0) return Math.min(...prices)
+    }
+
+    const p = Number(service?.price ?? 0)
+    return Number.isFinite(p) ? p : 0
+  } catch (e) {
+    return 0
+  }
+}
