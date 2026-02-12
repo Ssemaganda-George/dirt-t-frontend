@@ -13,7 +13,8 @@ import {
   CheckCircle,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronUp
 } from 'lucide-react'
 import { createServiceReview, createOrder } from '../lib/database'
 import { getDisplayPrice } from '../lib/utils'
@@ -1310,18 +1311,18 @@ export default function ServiceDetail() {
             <div className="mt-3 flex items-center justify-between gap-3">
           <div>
             <div className="text-xs text-gray-400">From</div>
-            <div className="text-xs font-semibold inline-flex items-baseline">
+            <div className={isMobile ? 'text-lg font-semibold inline-flex items-baseline' : 'text-2xl font-semibold inline-flex items-baseline'}>
               {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-              <span className="text-[10px] font-normal text-gray-500 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+              <span className={isMobile ? 'text-sm font-normal text-gray-500 ml-2 whitespace-nowrap align-middle' : 'text-sm font-normal text-gray-500 ml-2 whitespace-nowrap align-middle'}>{getUnitLabel(service.service_categories?.name || '')}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Information Section: Instant confirmation, description, quick info, provider */}
+  {/* Main Information Section: About (description), quick info, provider */}
       <div className={isMobile ? 'bg-gray-50 pb-6 px-3' : 'mt-8 space-y-6'}>
         <div className="bg-white rounded-lg p-3">
-          <div className="text-sm font-semibold text-gray-900 mb-1">Instant confirmation</div>
+          <div className="text-sm font-semibold text-gray-900 mb-1">ABOUT</div>
           {service.description && (
             <p className="text-sm text-gray-600 leading-relaxed mb-3">{service.description}</p>
           )}
@@ -1557,9 +1558,9 @@ export default function ServiceDetail() {
 
                     <div className="flex-shrink-0 text-right pl-2">
                       <div className="text-[10px] text-gray-300">From</div>
-                      <div className="text-xs font-semibold inline-flex items-baseline">
+                      <div className="text-lg font-semibold inline-flex items-baseline">
                         {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-                        <span className="text-[10px] font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                        <span className="text-sm font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
                       </div>
                       {/* Mobile-only Buy Tickets CTA (keeps purchase action accessible on mobile hero for events/activities) */}
                       <button
@@ -1643,9 +1644,9 @@ export default function ServiceDetail() {
                     </div>
                     <div className="mt-4">
                       <div className="text-sm text-gray-300">From</div>
-                      <div className="text-xl font-semibold inline-flex items-baseline">
+                      <div className="text-2xl font-semibold inline-flex items-baseline">
                         {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-                        <span className="text-xs font-normal text-gray-200 ml-3 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
+                        <span className="text-sm font-normal text-gray-200 ml-3 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
                       </div>
                     </div>
                   </div>
@@ -1874,6 +1875,17 @@ export default function ServiceDetail() {
                   <a href={`/scan/${service.id}`} className="text-blue-600 underline">Open Event Scan Portal</a>
                 </div>
               )}
+            </div>
+
+            {/* Mobile-only round icon Back to top button placed below the checkout/summary */}
+            <div className="md:hidden mt-4 px-3 flex justify-center">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
+                className="w-11 h-11 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors"
+              >
+                <ChevronUp className="h-5 w-5 text-gray-700" />
+              </button>
             </div>
           </div>
         </div>
