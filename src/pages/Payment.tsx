@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { formatCurrency } from '../lib/utils'
+import { formatCurrencyWithConversion } from '../lib/utils'
+import { calculatePaymentForAmount } from '../lib/pricingService'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -73,8 +74,18 @@ export default function PaymentPage() {
     return s + unit * qty
   }, 0)
 
-  const serviceFeesAmount = Math.max(100, Math.round(subtotalAmount * 0.01))
-  const totalAmount = subtotalAmount + serviceFeesAmount
+  const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
+
+  // Prefer per-ticket calculated platform fees (from tier/override) when available
+  const serviceFeesAmount = items.reduce((sum: number, it: any) => {
+    const qty = Number(it.quantity ?? 0)
+    const calc = ticketCalculations[it.ticket_type_id]
+    if (calc && typeof calc.platform_fee === 'number') return sum + calc.platform_fee * qty
+    return sum
+  }, 0)
+
+  const effectiveServiceFees = serviceFeesAmount > 0 ? serviceFeesAmount : Math.max(100, Math.round(subtotalAmount * 0.01))
+  const totalAmount = subtotalAmount + effectiveServiceFees
   // summary toggle removed — details always visible
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
@@ -108,6 +119,34 @@ export default function PaymentPage() {
     const p = String(order.guest_phone).replace(/^\+256/, '')
     setPhoneNumber(p.startsWith('+') ? p : p)
   }, [order?.guest_phone])
+
+  // Compute per-ticket pricing calculations (mirrors Checkout/TransportBooking logic)
+  useEffect(() => {
+    if (!order?._service?.id) return
+
+    const uniqueTicketTypeIds = Array.from(new Set(items.map((it: any) => it.ticket_type_id)))
+    let cancelled = false
+
+    const fetchCalculations = async () => {
+      const map: Record<string, any> = {}
+      await Promise.all(uniqueTicketTypeIds.map(async (ttId) => {
+        const tt = (data?.allTicketTypes || []).find((t: any) => t.id === ttId)
+        if (!tt) return
+        try {
+          const calc = await calculatePaymentForAmount(order._service.id, Number(tt.price || 0))
+          if (cancelled) return
+          map[ttId] = calc
+        } catch (err) {
+          console.error('Failed to calculate ticket pricing for', ttId, err)
+        }
+      }))
+
+      if (!cancelled) setTicketCalculations(map)
+    }
+
+    fetchCalculations()
+    return () => { cancelled = true }
+  }, [items, data?.allTicketTypes, order?._service?.id])
 
   // Prefill ticket email from order (if available) but keep it editable
   useEffect(() => {
@@ -384,7 +423,7 @@ export default function PaymentPage() {
                             </button>
                           </div>
                         ) : (
-                          <div className="text-sm font-medium">{formatCurrency(item.unit_price * item.quantity, order.currency)}</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(item.unit_price * item.quantity, order.currency)}</div>
                         )}
                       </div>
                     </div>
@@ -394,7 +433,46 @@ export default function PaymentPage() {
                 <div className="border-t pt-2">
           <div className="flex justify-between items-center">
             <span className="text-gray-600 text-sm">Service Fee</span>
-            <span className="text-sm font-medium text-gray-900">{formatCurrency(serviceFeesAmount, order.currency)}</span>
+            <span className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
+
+                        {/* Detailed breakdown per ticket type when available */}
+                        {items.length > 0 && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            {items.map((it: any) => {
+                              const tt = (data?.allTicketTypes || []).find((t: any) => t.id === it.ticket_type_id)
+                              const calc = ticketCalculations[it.ticket_type_id]
+                              const qty = Number(it.quantity || 0)
+                              if (!tt) return null
+                              const label = tt.title || tt.id
+                              if (!calc) {
+                                return (
+                                  <div key={it.ticket_type_id} className="flex justify-between mb-1">
+                                    <div>{label} × {qty}</div>
+                                    <div>{formatCurrencyWithConversion(0, order.currency)}</div>
+                                  </div>
+                                )
+                              }
+
+                              const unitPlatform = Number(calc.platform_fee || 0)
+                              const totalPlatform = unitPlatform * qty
+
+                              return (
+                                <div key={it.ticket_type_id} className="mb-1">
+                                  <div className="flex justify-between">
+                                    <div>{label} × {qty} — platform fee</div>
+                                    <div>{formatCurrencyWithConversion(totalPlatform, order.currency)}</div>
+                                  </div>
+                                  {calc.fee_payer === 'shared' && (
+                                    <div className="mt-1 ml-3 text-xs text-gray-500">
+                                      <div>Tourist pays {formatCurrencyWithConversion(Number(calc.tourist_fee || 0) * qty, order.currency)}</div>
+                                      <div>Vendor pays {formatCurrencyWithConversion(Number(calc.vendor_fee || 0) * qty, order.currency)}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                 {/* Success Dialog */}
                 {paymentSuccess && (
                   <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -422,7 +500,7 @@ export default function PaymentPage() {
                   {/* Total shown below service fee for clarity */}
                   <div className="mt-3 flex justify-between items-center border-t pt-3">
                     <span className="text-gray-700 text-sm font-medium">Total</span>
-                    <span className="text-lg font-semibold text-gray-900">{formatCurrency(totalAmount, order.currency)}</span>
+                    <span className="text-lg font-semibold text-gray-900">{formatCurrencyWithConversion(totalAmount, order.currency)}</span>
                   </div>
                 </div>
               </div>

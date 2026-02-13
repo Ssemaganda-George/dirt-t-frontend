@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
+import ErrorBoundary from './components/ErrorBoundary'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
 import { CartProvider } from './contexts/CartContext'
@@ -75,6 +76,8 @@ const ToursBookings = lazy(() => import('./pages/admin/ToursBookings').then(modu
 const TransportBookings = lazy(() => import('./pages/admin/TransportBookings').then(module => ({ default: module.TransportBookings })))
 const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(module => ({ default: module.VisitorActivity })))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => ({ default: module.Reviews })))
+const VendorTierManagement = lazy(() => import('./pages/admin/VendorTierManagement'))
+const Vendors = lazy(() => import('./pages/admin/Vendors'))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
 
 // Preload critical routes
@@ -129,6 +132,7 @@ function App() {
             <Router>
               <AppVisitorTracker />
               <ScrollToTop />
+              <ErrorBoundary>
               <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
               <Routes>
           {/* Public Routes */}
@@ -278,6 +282,8 @@ function App() {
             <Route path="hero-video" element={<HeroVideoManager />} />
             <Route path="visitor-activity" element={<VisitorActivity />} />
             <Route path="reviews" element={<AdminReviews />} />
+            <Route path="vendor-tiers" element={<VendorTierManagement />} />
+            <Route path="vendors" element={<Vendors />} />
           </Route>
           <Route path="/unauthorized" element={
             <div className="min-h-screen flex items-center justify-center">
@@ -289,6 +295,7 @@ function App() {
           } />
         </Routes>
             </Suspense>
+            </ErrorBoundary>
           </Router>
         </BookingProvider>
       </CartProvider>

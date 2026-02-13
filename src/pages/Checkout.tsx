@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
+import { calculatePaymentForAmount } from '../lib/pricingService'
 
 export default function CheckoutPage() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -16,6 +17,7 @@ export default function CheckoutPage() {
   const allTicketTypes = data?.allTicketTypes ?? []
   const [buyer, setBuyer] = useState({ name: '', surname: '', email: '', phone: '', countryCode: '+256', emailCopy: false })
   const [showAllTickets, setShowAllTickets] = useState(false)
+  const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
 
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
@@ -326,6 +328,36 @@ export default function CheckoutPage() {
     }))
   }, [data?.order, profile])
 
+  // Compute per-ticket pricing calculations (platform fee / splits) using pricing rules
+  useEffect(() => {
+    if (!order?._service?.id) return
+
+    const uniqueTicketTypeIds = Array.from(new Set(items.map((it: any) => it.ticket_type_id)));
+
+    let cancelled = false;
+
+    const fetchCalculations = async () => {
+      const map: Record<string, any> = {};
+      for (const ttId of uniqueTicketTypeIds) {
+        const tt = allTicketTypes.find((t: any) => t.id === ttId);
+        if (!tt) continue;
+        try {
+          const calc = await calculatePaymentForAmount(order._service.id, Number(tt.price || 0));
+          if (cancelled) return;
+          map[ttId] = calc;
+        } catch (err) {
+          console.error('Failed to calculate ticket pricing for', ttId, err);
+        }
+      }
+
+      if (!cancelled) setTicketCalculations(map);
+    }
+
+    fetchCalculations();
+
+    return () => { cancelled = true }
+  }, [items, allTicketTypes, order?._service?.id])
+
   // Basic validation: enable Next only when required fields are filled and valid
   // Note: phone is intentionally optional on Checkout — payment page will require it if needed
   const validateEmail = (email: string) => {
@@ -386,8 +418,19 @@ export default function CheckoutPage() {
     return sum + unit * qty
   }, 0)
 
-  const serviceFeesAmount = Math.max(100, Math.round(subtotalAmount * 0.01))
-  const totalAmount = subtotalAmount + serviceFeesAmount
+  // Determine service/platform fees using pricing logic per ticket type when available
+  const serviceFeesAmount = items.reduce((sum: number, it: any) => {
+    const qty = Number(it.quantity ?? 0)
+    const calc = ticketCalculations[it.ticket_type_id]
+    if (calc && typeof calc.platform_fee === 'number') {
+      return sum + calc.platform_fee * qty
+    }
+    return sum
+  }, 0)
+
+  // fallback minimum fee if no calculations available (preserves previous UX)
+  const effectiveServiceFees = serviceFeesAmount > 0 ? serviceFeesAmount : Math.max(100, Math.round(subtotalAmount * 0.01))
+  const totalAmount = subtotalAmount + effectiveServiceFees
 
   if (isLoading) return <PageSkeleton type="checkout" />
   if (error || !order) return <div className="p-6">Order not found</div>
@@ -610,8 +653,47 @@ export default function CheckoutPage() {
 
                         <div className="flex justify-between">
                           <div className="text-sm text-gray-700">Service Fees</div>
-                          <div className="text-sm font-medium">{formatCurrencyWithConversion(serviceFeesAmount, order.currency)}</div>
+                          <div className="text-sm font-medium">{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</div>
                         </div>
+
+                        {/* Detailed breakdown per ticket type when available */}
+                        {items.length > 0 && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            {items.map((it: any) => {
+                              const tt = allTicketTypes.find((t: any) => t.id === it.ticket_type_id);
+                              const calc = ticketCalculations[it.ticket_type_id];
+                              const qty = Number(it.quantity || 0);
+                              if (!tt) return null;
+                              const label = tt.title || tt.id;
+                              if (!calc) {
+                                return (
+                                  <div key={it.ticket_type_id} className="flex justify-between mb-1">
+                                    <div>{label} × {qty}</div>
+                                    <div>{formatCurrencyWithConversion(0, order.currency)}</div>
+                                  </div>
+                                )
+                              }
+
+                              const unitPlatform = Number(calc.platform_fee || 0);
+                              const totalPlatform = unitPlatform * qty;
+
+                              return (
+                                <div key={it.ticket_type_id} className="mb-1">
+                                  <div className="flex justify-between">
+                                    <div>{label} × {qty} — platform fee</div>
+                                    <div>{formatCurrencyWithConversion(totalPlatform, order.currency)}</div>
+                                  </div>
+                                  {calc.fee_payer === 'shared' && (
+                                    <div className="mt-1 ml-3 text-xs text-gray-500">
+                                      <div>Tourist pays {formatCurrencyWithConversion(Number(calc.tourist_fee || 0) * qty, order.currency)}</div>
+                                      <div>Vendor pays {formatCurrencyWithConversion(Number(calc.vendor_fee || 0) * qty, order.currency)}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
 
                         <div className="flex justify-between border-t pt-3 mt-3">
                           <div className="text-base md:text-lg font-semibold text-gray-900">Total</div>

@@ -7,6 +7,7 @@ import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import SimilarServicesCarousel from '../components/SimilarServicesCarousel'
+import { calculatePaymentForAmount, PaymentCalculation } from '../lib/pricingService'
 
 interface ServiceDetail {
   id: string
@@ -343,6 +344,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
 
+  // Pricing calculation for transport (platform fee / splits)
+  const [pricingCalc, setPricingCalc] = useState<PaymentCalculation | null>(null)
+
   // Blocked dates (single-booking categories)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
@@ -439,8 +443,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Auto-populate contact information for logged-in users
   useEffect(() => {
+    // Prevent repeated attempts if we've already fetched or handled missing table
+    const fetchedRef = { current: false }
+
     const fetchTouristData = async () => {
       if (!user) return
+      if ((fetchedRef as any).current) return
 
       try {
         // Get tourist profile data
@@ -451,9 +459,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           .single()
 
         if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-          console.error('Error fetching tourist data:', error)
+          // Handle table-missing or other PostgREST responses gracefully
+          console.error('Error fetching tourist data (will fallback to profile):', error)
+          // Mark as fetched to avoid repeated failing requests
+          ;(fetchedRef as any).current = true
+          setBookingData(prev => ({
+            ...prev,
+            contactName: profile?.full_name || prev.contactName,
+            contactEmail: profile?.email || prev.contactEmail
+          }))
         } else if (touristData) {
           // Auto-populate contact fields
+          ;(fetchedRef as any).current = true
           setBookingData(prev => ({
             ...prev,
             contactName: touristData.first_name && touristData.last_name 
@@ -464,14 +481,22 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           }))
         } else {
           // Fallback to profile data if no tourist record exists
+          ;(fetchedRef as any).current = true
           setBookingData(prev => ({
             ...prev,
             contactName: profile?.full_name || prev.contactName,
             contactEmail: profile?.email || prev.contactEmail
           }))
         }
-      } catch (error) {
-        console.error('Error fetching tourist data:', error)
+      } catch (error: any) {
+        // If the REST endpoint returns 406 or other errors, fallback to profile and mark fetched
+        console.error('Error fetching tourist data (fallback):', error)
+        ;(fetchedRef as any).current = true
+        setBookingData(prev => ({
+          ...prev,
+          contactName: profile?.full_name || prev.contactName,
+          contactEmail: profile?.email || prev.contactEmail
+        }))
       }
     }
 
@@ -691,6 +716,24 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
   const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
 
+  // Recalculate platform fee and split when price/selection changes
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!service?.id) return
+      try {
+        // Pass totalPrice (includes driverCost) so platform fee is calculated on full payable amount
+        const calc = await calculatePaymentForAmount(service.id, totalPrice)
+        if (!mounted) return
+        setPricingCalc(calc.success ? calc : null)
+      } catch (err) {
+        console.error('Error fetching transport pricing calculation:', err)
+        if (mounted) setPricingCalc(null)
+      }
+    })()
+    return () => { mounted = false }
+  }, [service?.id, bookingData.startDate, bookingData.endDate, bookingData.startTime, bookingData.endTime, bookingData.driverOption, bookingData.passengers, totalPrice])
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -895,7 +938,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="border-t pt-6">
               <h3 className="text-base font-semibold text-gray-900 mb-4">Payment Details</h3>
               
-              {/* Price Breakdown */}
+              {/* Price Breakdown (includes platform fee + splits) */}
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -908,10 +951,51 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
                     </div>
                   )}
-                  <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
-                    <span>Total</span>
-                    <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
-                  </div>
+
+                  {pricingCalc ? (
+                    <>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Platform fee</span>
+                        <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.platform_fee, service.currency)}</span>
+                      </div>
+
+                      {pricingCalc.fee_payer === 'shared' ? (
+                        <>
+                          <div className="flex justify-between text-gray-600">
+                            <span>Tourist pays ({Math.round((pricingCalc.tourist_fee / (pricingCalc.platform_fee || 1)) * 100) || 0}%)</span>
+                            <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.tourist_fee, service.currency)}</span>
+                          </div>
+                          <div className="flex justify-between text-gray-600">
+                            <span>Vendor pays ({Math.round((pricingCalc.vendor_fee / (pricingCalc.platform_fee || 1)) * 100) || 0}%)</span>
+                            <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.vendor_fee, service.currency)}</span>
+                          </div>
+                        </>
+                      ) : pricingCalc.fee_payer === 'tourist' ? (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Tourist pays</span>
+                          <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.tourist_fee, service.currency)}</span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-gray-600">
+                          <span>Vendor pays (deducted)</span>
+                          <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.vendor_fee, service.currency)}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
+                        <span>Total</span>
+                        <span>{formatCurrencyWithConversion(pricingCalc.total_customer_payment, service.currency)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs text-gray-500">Service fee calculation unavailable — using default totals.</div>
+                      <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
+                        <span>Total</span>
+                        <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1103,7 +1187,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(pricingCalc ? pricingCalc.total_customer_payment : totalPrice, service.currency)}</span>
               </div>
             </div>
 
@@ -1277,7 +1361,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(pricingCalc ? pricingCalc.total_customer_payment : totalPrice, service.currency)}</span>
             </div>
           </div>
 

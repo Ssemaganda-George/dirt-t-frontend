@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, DollarSign, CreditCard } from 'lucide-react';
 
 import { useAdminTransactions } from '../../hooks/hook';
+import { getAllBookings } from '../../lib/database';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
@@ -17,7 +18,6 @@ interface CompanyWalletStats {
 }
 
 // Assume commission rate is 5% (can be made configurable)
-const COMMISSION_RATE = 0.05;
 
 export function DirtTrailsWallet() {
   const { transactions, loading, error } = useAdminTransactions();
@@ -33,11 +33,26 @@ export function DirtTrailsWallet() {
   });
   const [dateRange, setDateRange] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
 
+  const [bookings, setBookings] = useState<any[]>([]);
+
   // Calculate wallet statistics
   useEffect(() => {
     if (transactions && transactions.length > 0) {
       calculateStats();
     }
+
+    // Fetch bookings so we can compute actual commission amounts (stored on bookings)
+    const loadBookings = async () => {
+      try {
+        const data = await getAllBookings();
+        setBookings(data || []);
+      } catch (err) {
+        console.error('Failed to load bookings for DirtTrailsWallet:', err);
+        setBookings([]);
+      }
+    };
+
+    loadBookings();
   }, [transactions, dateRange]);
 
   const getFilteredTransactions = () => {
@@ -69,8 +84,41 @@ export function DirtTrailsWallet() {
       .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Total Commissions - calculated as percentage of revenue
-    const totalCommissions = totalRevenue * COMMISSION_RATE;
+    // Total Commissions - derive from bookings' commission_amount where available
+    // Filter bookings by the same dateRange and completed/paid criteria
+    const filteredBookings = (() => {
+      const now = new Date();
+      let startDate: Date | null = null;
+
+      switch (dateRange) {
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'quarter':
+          startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate = null;
+      }
+
+      return bookings.filter(b => {
+        try {
+          if (!b) return false;
+          if (b.status !== 'confirmed') return false;
+          if (b.payment_status !== 'paid' && b.payment_status !== 'completed' && b.payment_status !== 'paid') return false;
+          if (!b.commission_amount) return false;
+          if (!startDate) return true;
+          return new Date(b.created_at) >= startDate;
+        } catch (e) {
+          return false;
+        }
+      });
+    })();
+
+    const totalCommissions = filteredBookings.reduce((sum, b) => sum + (Number(b.commission_amount) || 0), 0);
 
     // Total Refunds - completed refunds (charges to company)
     const totalRefunds = filteredTx
@@ -339,7 +387,7 @@ export function DirtTrailsWallet() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-700">Commissions ({(COMMISSION_RATE * 100).toFixed(0)}% of revenue)</span>
+                    <span className="text-gray-700">Commissions (calculated from bookings)</span>
                     <span className="font-semibold text-gray-900">
                       +{formatCurrencyWithConversion(stats.totalCommissions, selectedCurrency)}
                     </span>

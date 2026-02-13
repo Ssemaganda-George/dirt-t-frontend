@@ -8,6 +8,7 @@ import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
 import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
+import { createServicePricingOverride } from '../../lib/pricingService';
 import type { Service } from '../../types';
 
 function formatServicePrice(service: Service, selectedCurrency: string, selectedLanguage: string) {
@@ -46,6 +47,18 @@ export function Services() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [approvingService, setApprovingService] = useState<Service | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [pricingOverride, setPricingOverride] = useState({
+    enabled: false,
+    override_type: 'percentage' as 'percentage' | 'flat',
+    override_value: 0,
+    fee_payer: 'vendor' as 'vendor' | 'tourist' | 'shared',
+    tourist_percentage: 0,
+    vendor_percentage: 100,
+    effective_from: new Date().toISOString().slice(0, 16),
+    effective_until: ''
+  });
 
   console.log('Admin deleteRequests:', deleteRequests);
   console.log('Admin deleteRequests length:', deleteRequests?.length || 0);
@@ -136,12 +149,49 @@ export function Services() {
         service.vendors?.business_email?.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-  const approveService = async (serviceId: string) => {
-    setUpdatingStatus(serviceId);
+  const approveService = async (service: Service) => {
+    setApprovingService(service);
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleServiceApproval = async () => {
+    if (!approvingService) return;
+
+    setUpdatingStatus(approvingService.id);
     try {
-      await updateServiceStatus(serviceId, 'approved');
+      // First approve the service
+      await updateServiceStatus(approvingService.id, 'approved');
+
+      // Then create pricing override if enabled
+      if (pricingOverride.enabled) {
+        await createServicePricingOverride({
+          service_id: approvingService.id,
+          override_enabled: true,
+          override_type: pricingOverride.override_type,
+          override_value: pricingOverride.override_value,
+          fee_payer: pricingOverride.fee_payer,
+          tourist_percentage: pricingOverride.fee_payer === 'shared' ? pricingOverride.tourist_percentage : undefined,
+          vendor_percentage: pricingOverride.fee_payer === 'shared' ? pricingOverride.vendor_percentage : undefined,
+          effective_from: pricingOverride.effective_from,
+          effective_until: pricingOverride.effective_until || undefined
+        }, 'admin'); // Using 'admin' as the creator
+      }
+
+      setIsApprovalModalOpen(false);
+      setApprovingService(null);
+      // Reset pricing override form
+      setPricingOverride({
+        enabled: false,
+        override_type: 'percentage',
+        override_value: 0,
+        fee_payer: 'vendor',
+        tourist_percentage: 0,
+        vendor_percentage: 100,
+        effective_from: new Date().toISOString().slice(0, 16),
+        effective_until: ''
+      });
     } catch (err) {
-      console.error('Failed to approve service:', err);
+      console.error('Failed to approve service with pricing:', err);
     } finally {
       setUpdatingStatus(null);
     }
@@ -527,7 +577,7 @@ export function Services() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
-                          onClick={() => approveService(service.id)}
+                          onClick={() => approveService(service)}
                           disabled={updatingStatus === service.id}
                           className="inline-flex items-center px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
                         >
@@ -653,6 +703,202 @@ export function Services() {
         isLoading={updatingStatus === editingService?.id}
         saveMessage={saveMessage}
       />
+
+      {/* Service Approval Modal */}
+      {isApprovalModalOpen && approvingService && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Approve Service: {approvingService.title}
+              </h3>
+
+              <div className="space-y-6">
+                {/* Service Details */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Service Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Vendor:</span> {approvingService.vendors?.business_name}
+                    </div>
+                    <div>
+                      <span className="font-medium">Category:</span> {approvingService.service_categories?.name}
+                    </div>
+                    <div>
+                      <span className="font-medium">Price:</span> {formatServicePrice(approvingService, selectedCurrency, selectedLanguage)}
+                    </div>
+                    <div>
+                      <span className="font-medium">Currency:</span> {approvingService.currency}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing Override Configuration */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center mb-4">
+                    <input
+                      type="checkbox"
+                      checked={pricingOverride.enabled}
+                      onChange={(e) => setPricingOverride({...pricingOverride, enabled: e.target.checked})}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label className="ml-2 text-sm font-medium text-gray-700">
+                      Configure pricing override for this service
+                    </label>
+                  </div>
+
+                  {pricingOverride.enabled && (
+                    <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Override Type</label>
+                          <select
+                            value={pricingOverride.override_type}
+                            onChange={(e) => setPricingOverride({...pricingOverride, override_type: e.target.value as 'percentage' | 'flat'})}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="percentage">Percentage</option>
+                            <option value="flat">Flat Amount</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Override Value ({pricingOverride.override_type === 'percentage' ? '%' : `$${approvingService.currency}`})
+                          </label>
+                          <input
+                            type="number"
+                            value={pricingOverride.override_value}
+                            onChange={(e) => setPricingOverride({...pricingOverride, override_value: parseFloat(e.target.value)})}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Fee Payer</label>
+                        <select
+                          value={pricingOverride.fee_payer}
+                          onChange={(e) => {
+                            const newFeePayer = e.target.value as 'vendor' | 'tourist' | 'shared';
+                            let touristPercentage = pricingOverride.tourist_percentage;
+                            let vendorPercentage = pricingOverride.vendor_percentage;
+
+                            if (newFeePayer === 'shared' && pricingOverride.fee_payer !== 'shared') {
+                              touristPercentage = 50;
+                              vendorPercentage = 50;
+                            } else if (newFeePayer !== 'shared') {
+                              touristPercentage = 0;
+                              vendorPercentage = 100;
+                            }
+
+                            setPricingOverride({
+                              ...pricingOverride,
+                              fee_payer: newFeePayer,
+                              tourist_percentage: touristPercentage,
+                              vendor_percentage: vendorPercentage
+                            });
+                          }}
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="vendor">Vendor</option>
+                          <option value="tourist">Tourist</option>
+                          <option value="shared">Shared</option>
+                        </select>
+                      </div>
+
+                      {pricingOverride.fee_payer === 'shared' && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Tourist Fee %</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={pricingOverride.tourist_percentage}
+                              onChange={(e) => {
+                                const touristPct = parseFloat(e.target.value) || 0;
+                                const vendorPct = 100 - touristPct;
+                                setPricingOverride({
+                                  ...pricingOverride,
+                                  tourist_percentage: touristPct,
+                                  vendor_percentage: vendorPct
+                                });
+                              }}
+                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Vendor Fee %</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={pricingOverride.vendor_percentage}
+                              onChange={(e) => {
+                                const vendorPct = parseFloat(e.target.value) || 0;
+                                const touristPct = 100 - vendorPct;
+                                setPricingOverride({
+                                  ...pricingOverride,
+                                  tourist_percentage: touristPct,
+                                  vendor_percentage: vendorPct
+                                });
+                              }}
+                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Effective From</label>
+                          <input
+                            type="datetime-local"
+                            value={pricingOverride.effective_from}
+                            onChange={(e) => setPricingOverride({...pricingOverride, effective_from: e.target.value})}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Effective Until (optional)</label>
+                          <input
+                            type="datetime-local"
+                            value={pricingOverride.effective_until}
+                            onChange={(e) => setPricingOverride({...pricingOverride, effective_until: e.target.value})}
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setIsApprovalModalOpen(false);
+                    setApprovingService(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleServiceApproval}
+                  disabled={updatingStatus === approvingService.id}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+                >
+                  {updatingStatus === approvingService.id ? 'Approving...' : 'Approve Service'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

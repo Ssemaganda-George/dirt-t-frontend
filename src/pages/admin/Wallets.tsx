@@ -3,7 +3,7 @@ import { useAdminTransactions } from '../../hooks/hook';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { updateTransactionStatus, getAllVendorWallets, getAllTransactions } from '../../lib/database';
+import { updateTransactionStatus, getAllVendorWallets, getAllTransactionsForAdmin } from '../../lib/database';
 import { useState, useEffect } from 'react';
 
 interface VendorWallet {
@@ -52,7 +52,8 @@ export function Transactions() {
 
       const [walletsData, transactionsData] = await Promise.all([
         getAllVendorWallets(),
-        getAllTransactions()
+        // Use admin version so admins see all transactions (not limited by RLS for non-admins)
+        getAllTransactionsForAdmin()
       ]);
 
       setVendorWallets(walletsData);
@@ -83,13 +84,13 @@ export function Transactions() {
   const calculateStats = (): WalletStats => {
     const totalVendors = vendorWallets.length;
     const activeVendors = vendorWallets.filter(w => w.vendors?.status === 'approved').length;
-    const totalBalance = vendorWallets.reduce((sum, w) => sum + w.balance, 0);
+    const totalBalance = vendorWallets.reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
     const totalEarnings = allTransactions
       .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const totalWithdrawn = allTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const pendingWithdrawals = transactions.filter(t =>
       t.transaction_type === 'withdrawal' && t.status === 'pending'
     ).length;
@@ -265,15 +266,17 @@ export function Transactions() {
                       .sort((a, b) => b.balance - a.balance)
                       .slice(0, 10)
                       .map((wallet) => {
-                        const name = wallet.vendors?.business_name || 'Unknown';
-                        const email = wallet.vendors?.business_email || '—';
-                        const status = wallet.vendors?.status || 'unknown';
+                        const name = wallet.vendors?.business_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown');
+                        const email = wallet.vendors?.business_email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—');
+                        // If vendor metadata is missing (join returned null), mark as 'missing'
+                        const status = wallet.vendors?.status ?? (wallet.vendors === null ? 'missing' : 'unknown');
                         const joinedAt = wallet.vendors?.created_at || wallet.created_at || null;
                         const balance = formatCurrencyWithConversion(wallet.balance, wallet.currency || 'UGX', selectedCurrency || wallet.currency || 'UGX', selectedLanguage || 'en-US');
 
                         const statusCls =
                           status === 'approved' ? 'bg-emerald-50 text-emerald-700' :
                           status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                          status === 'missing' ? 'bg-red-50 text-red-800' :
                           'bg-gray-100 text-gray-600';
 
                         return (
@@ -283,12 +286,15 @@ export function Transactions() {
                                 <div className="flex-1 min-w-0">
                                   <div className="text-sm font-medium text-gray-900 truncate">{name}</div>
                                   <div className="text-xs text-gray-500 truncate">{email}</div>
+                                  {wallet.vendors === null && (
+                                    <div className="text-xs text-red-600 mt-1">Missing vendor record — <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>View vendor</a></div>
+                                  )}
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{balance}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusCls}`}>{status}</span>
+                                  <span title={wallet.vendors === null ? 'Vendor metadata not found' : undefined} className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusCls}`}>{status}</span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{joinedAt ? format(new Date(joinedAt), 'MMM dd, yyyy') : '—'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -343,18 +349,21 @@ export function Transactions() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {vendorWallets.map((wallet) => {
-                    const vendorTransactions = allTransactions.filter(t => t.vendor_id === wallet.vendor_id);
+                                    const vendorTransactions = allTransactions.filter(t => t.vendor_id === wallet.vendor_id);
                     return (
                       <tr key={wallet.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {wallet.vendors?.business_name || 'Unknown Vendor'}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {wallet.vendors?.business_email}
-                              </div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {wallet.vendors?.business_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown Vendor')}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {wallet.vendors?.business_email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—')}
+                                </div>
+                                {wallet.vendors === null && (
+                                  <div className="text-xs text-red-600 mt-1">Missing vendor record — <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>View vendor</a></div>
+                                )}
                             </div>
                           </div>
                         </td>

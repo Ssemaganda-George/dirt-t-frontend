@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { calculatePaymentForAmount } from '../lib/pricingService'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle } from 'lucide-react'
 // using local formatCurrencyWithConversion helper (based on user preferences defined in this file)
@@ -426,6 +427,31 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   }
 
   const totalPrice = service.price * bookingData.guests
+  const [pricingCalc, setPricingCalc] = useState<any | null>(null)
+
+  // Calculate platform/service fee per participant using pricing rules
+  useEffect(() => {
+    let cancelled = false
+    const fetchCalc = async () => {
+      try {
+        const calc = await calculatePaymentForAmount(service.id, Number(service.price || 0))
+        if (cancelled) return
+        setPricingCalc(calc)
+      } catch (err) {
+        console.error('Failed to fetch pricing calc for activity:', err)
+        setPricingCalc(null)
+      }
+    }
+    fetchCalc()
+    return () => { cancelled = true }
+  }, [service.id, service.price])
+
+  const platformFeePer = pricingCalc && typeof pricingCalc.platform_fee === 'number'
+    ? Number(pricingCalc.platform_fee)
+    : Math.max(100, Math.round(service.price * 0.01))
+
+  const serviceFeeTotal = platformFeePer * bookingData.guests
+  const grandTotal = totalPrice + serviceFeeTotal
 
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
@@ -612,9 +638,28 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 <span className="text-gray-600">Activity: {service.title}</span>
                 <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)} × {bookingData.guests}</span>
               </div>
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Amount</span>
-                <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>Subtotal</span>
+                  <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm text-gray-700">
+                  <span>Service Fee</span>
+                  <span>{formatCurrencyWithConversion(serviceFeeTotal, service.currency)}</span>
+                </div>
+
+                {pricingCalc?.fee_payer === 'shared' && (
+                  <div className="text-xs text-gray-500 ml-2">
+                    <div>Tourist pays {formatCurrencyWithConversion(Number(pricingCalc.tourist_fee || 0) * bookingData.guests, service.currency)}</div>
+                    <div>Vendor pays {formatCurrencyWithConversion(Number(pricingCalc.vendor_fee || 0) * bookingData.guests, service.currency)}</div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center text-lg font-semibold mt-1">
+                  <span>Total Amount</span>
+                  <span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span>
+                </div>
               </div>
             </div>
             <div>

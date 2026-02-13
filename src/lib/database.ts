@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 import { formatCurrency } from './utils';
 import { creditWallet } from './creditWallet';
 import { executeWithCircuitBreaker } from './concurrency';
-import type { UserPreferences } from '../types'
+import type { UserPreferences, VendorTier } from '../types'
 
 /**
  * Lookup country name for an IP address using ipapi.co with a short timeout.
@@ -409,6 +409,20 @@ export interface Vendor {
   created_at: string
   updated_at: string
   profiles?: Profile
+  // Tier and commission fields
+  current_tier_id?: string
+  current_commission_rate?: number
+  average_rating?: number
+  monthly_booking_count?: number
+  lifetime_booking_count?: number
+  last_tier_evaluated_at?: string
+  current_tier?: VendorTier
+  // Manual tier assignment fields
+  manual_tier_id?: string
+  manual_tier_assigned_at?: string
+  manual_tier_expires_at?: string
+  manual_tier_reason?: string
+  manual_tier?: VendorTier
 }
 
 export interface ServiceCategory {
@@ -2668,25 +2682,57 @@ async function sendBookingEmails(bookingId: string): Promise<void> {
     const { data: { session } } = await supabase.auth.getSession()
     const authToken = session?.access_token
 
-    // Call the edge function directly with fetch (more reliable than invoke)
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authToken ? `Bearer ${authToken}` : `Bearer ${supabaseAnonKey}`,
-        'apikey': supabaseAnonKey,
-      },
-      body: JSON.stringify({ booking_id: bookingId }),
-    })
+    // Call the edge function directly with fetch, with retry/backoff for 429 rate limits
+    const maxAttempts = 4
+    let attempt = 0
+    let lastError: any = null
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Edge function returned error:', response.status, errorText)
-      throw new Error(`Failed to send booking emails: ${response.status} ${errorText}`)
+    while (attempt < maxAttempts) {
+      attempt += 1
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken ? `Bearer ${authToken}` : `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({ booking_id: bookingId }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Booking emails sent successfully:', data)
+          return
+        }
+
+        // Handle 429 (rate limit) specially: use Retry-After header if present
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After')
+          const waitSeconds = retryAfter ? parseInt(retryAfter, 10) : Math.min(2 ** attempt, 10)
+          console.warn(`Rate limited sending emails (attempt ${attempt}). Waiting ${waitSeconds}s before retry.`)
+          await new Promise(res => setTimeout(res, waitSeconds * 1000))
+          lastError = new Error(`429 Rate limited (attempt ${attempt})`)
+          continue
+        }
+
+        const errorText = await response.text()
+        console.error('❌ Edge function returned error:', response.status, errorText)
+        lastError = new Error(`Failed to send booking emails: ${response.status} ${errorText}`)
+        break
+      } catch (err) {
+        // Network or other error - backoff and retry
+        console.error(`Error calling send-booking-emails (attempt ${attempt}):`, err)
+        lastError = err
+        const backoff = Math.min(2 ** attempt, 10)
+        await new Promise(res => setTimeout(res, backoff * 1000))
+      }
     }
 
-    const data = await response.json()
-    console.log('✅ Booking emails sent successfully:', data)
+    if (lastError) {
+      console.error('❌ All attempts to call send-booking-emails failed:', lastError)
+      // We don't rethrow; email failures shouldn't block booking creation
+    }
   } catch (error: any) {
     console.error('❌ Error calling send-booking-emails edge function:', error)
     console.error('Error details:', error?.message, error?.stack)
@@ -2788,11 +2834,25 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
 
             console.log('Created payment transaction and credited wallet for booking:', id);
 
-            // Credit admin wallet (platform fee logic can be added here)
+            // Credit admin wallet with platform commission only
             const adminId = await getAdminProfileId();
             if (adminId) {
-              // For now, credit full amount to admin as well. Adjust for fee split if needed.
-              await creditWallet(adminId, data.total_amount, data.currency);
+              // Prefer booked commission_amount if present, otherwise compute from stored rate
+              let commissionToCredit = 0
+              try {
+                commissionToCredit = Number(data.commission_amount) || 0
+                if (!commissionToCredit && data.commission_rate_at_booking) {
+                  commissionToCredit = Math.round((Number(data.total_amount || 0) * Number(data.commission_rate_at_booking)) * 100) / 100
+                }
+              } catch (e) {
+                commissionToCredit = 0
+              }
+
+              if (commissionToCredit > 0) {
+                await creditWallet(adminId, commissionToCredit, data.currency)
+              } else {
+                console.warn('No commission amount available to credit admin wallet for booking', id)
+              }
             }
           } catch (transactionError) {
             // If transactions table doesn't exist, just log and continue

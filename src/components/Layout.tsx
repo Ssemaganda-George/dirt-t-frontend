@@ -72,7 +72,8 @@ const navigation = [
     items: [
       { labelKey: 'dirt_trails_wallet', href: '/admin/dirt-trails-wallet', icon: CreditCard },
       { labelKey: 'business_wallets', href: '/admin/wallets', icon: CreditCard },
-      { labelKey: 'finance', href: '/admin/finance', icon: DollarSign }
+      { labelKey: 'finance', href: '/admin/finance', icon: DollarSign },
+      { labelKey: 'vendor_tiers', href: '/admin/vendor-tiers', icon: BarChart3 }
     ]
   },
   {

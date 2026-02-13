@@ -1,13 +1,54 @@
 import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor } from '../../lib/utils'
-import { Check, X, Eye, Store } from 'lucide-react'
+import { Check, X, Eye, Store, UserCog } from 'lucide-react'
 import { getAllVendors, updateVendorStatus, Vendor } from '../../lib/database'
+import { getActiveTiers } from '../../lib/commissionService'
+import { VendorTier } from '../../types'
+import { supabase } from '../../lib/supabaseClient'
+
+const getCurrentTierDisplay = (vendor: Vendor) => {
+  if (vendor.manual_tier_id) {
+    const tierName = vendor.manual_tier_id === '1' ? 'Bronze' : 
+                    vendor.manual_tier_id === '2' ? 'Silver' : 'Gold';
+    const isExpired = vendor.manual_tier_expires_at && new Date(vendor.manual_tier_expires_at) < new Date();
+    return (
+      <div className="flex flex-col">
+        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+          isExpired ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-800'
+        }`}>
+          {tierName} (Manual)
+        </span>
+        {vendor.manual_tier_expires_at && (
+          <span className="text-xs text-gray-500 mt-1">
+            Expires: {formatDate(vendor.manual_tier_expires_at)}
+          </span>
+        )}
+      </div>
+    );
+  } else {
+    const tierName = vendor.current_tier_id === '1' ? 'Bronze' : 
+                    vendor.current_tier_id === '2' ? 'Silver' : 'Gold';
+    return (
+      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+        {tierName} (Auto)
+      </span>
+    );
+  }
+};
 
 export default function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [filter, setFilter] = useState<string>('all')
+  const [showTierModal, setShowTierModal] = useState(false)
+  const [tierVendor, setTierVendor] = useState<Vendor | null>(null)
+  const [availableTiers, setAvailableTiers] = useState<VendorTier[]>([])
+  const [tierForm, setTierForm] = useState({
+    tierId: '',
+    expiresAt: '',
+    reason: ''
+  })
 
   useEffect(() => {
     fetchVendors()
@@ -22,6 +63,90 @@ export default function Vendors() {
       console.error('Error fetching vendors:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAvailableTiers = async () => {
+    try {
+      const tiers = await getActiveTiers()
+      setAvailableTiers(tiers)
+    } catch (error) {
+      console.error('Error loading tiers:', error)
+    }
+  }
+
+  const handleAssignTier = (vendor: Vendor) => {
+    setTierVendor(vendor)
+    setTierForm({
+      tierId: vendor.manual_tier_id || '',
+      expiresAt: vendor.manual_tier_expires_at ? new Date(vendor.manual_tier_expires_at).toISOString().split('T')[0] : '',
+      reason: vendor.manual_tier_reason || ''
+    })
+    setShowTierModal(true)
+    loadAvailableTiers()
+  }
+
+  const handleSaveTierAssignment = async () => {
+    if (!tierVendor || !tierForm.tierId) return
+
+    try {
+      const updateData: any = {
+        manual_tier_id: tierForm.tierId,
+        manual_tier_assigned_at: new Date().toISOString(),
+        manual_tier_reason: tierForm.reason || null
+      }
+
+      if (tierForm.expiresAt) {
+        updateData.manual_tier_expires_at = new Date(tierForm.expiresAt).toISOString()
+      } else {
+        updateData.manual_tier_expires_at = null
+      }
+
+      // Update vendor with manual tier assignment
+      const { error } = await supabase
+        .from('vendors')
+        .update(updateData)
+        .eq('id', tierVendor.id)
+
+      if (error) throw error
+
+      // Update the vendor's current commission rate to match the assigned tier
+      const selectedTier = availableTiers.find(t => t.id === tierForm.tierId)
+      if (selectedTier) {
+        await supabase
+          .from('vendors')
+          .update({
+            current_commission_rate: selectedTier.commission_rate,
+            current_tier_id: selectedTier.id
+          })
+          .eq('id', tierVendor.id)
+      }
+
+      await fetchVendors()
+      setShowTierModal(false)
+      setTierVendor(null)
+    } catch (error) {
+      console.error('Error saving tier assignment:', error)
+    }
+  }
+
+  const handleRemoveManualTier = async (vendor: Vendor) => {
+    try {
+      const { error } = await supabase
+        .from('vendors')
+        .update({
+          manual_tier_id: null,
+          manual_tier_assigned_at: null,
+          manual_tier_expires_at: null,
+          manual_tier_reason: null
+        })
+        .eq('id', vendor.id)
+
+      if (error) throw error
+
+      await fetchVendors()
+    } catch (error) {
+      console.error('Error removing manual tier:', error)
     }
   }
 
@@ -98,6 +223,9 @@ export default function Vendors() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Current Tier
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -134,6 +262,9 @@ export default function Vendors() {
                       {vendor.status}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getCurrentTierDisplay(vendor)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(vendor.created_at)}
                   </td>
@@ -160,6 +291,22 @@ export default function Vendors() {
                             <X className="h-4 w-4" />
                           </button>
                         </>
+                      )}
+                      <button
+                        onClick={() => handleAssignTier(vendor)}
+                        className="text-purple-600 hover:text-purple-900"
+                        title="Assign Tier"
+                      >
+                        <UserCog className="h-4 w-4" />
+                      </button>
+                      {vendor.manual_tier_id && (
+                        <button
+                          onClick={() => handleRemoveManualTier(vendor)}
+                          className="text-orange-600 hover:text-orange-900"
+                          title="Remove Manual Tier"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
                   </td>
@@ -233,6 +380,101 @@ export default function Vendors() {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tier Assignment Modal */}
+      {showTierModal && tierVendor && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Assign Tier to {tierVendor.business_name}</h3>
+                <button
+                  onClick={() => setShowTierModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Tier
+                  </label>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    {getCurrentTierDisplay(tierVendor)}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign New Tier
+                  </label>
+                  <select
+                    value={tierForm.tierId}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, tierId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select a tier...</option>
+                    {availableTiers.map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.name} ({tier.commission_rate}% commission)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiration Date (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={tierForm.expiresAt}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty for permanent assignment
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Assignment
+                  </label>
+                  <textarea
+                    value={tierForm.reason}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Explain why this tier is being assigned..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-6">
+                <button
+                  onClick={handleSaveTierAssignment}
+                  className="btn-primary flex items-center"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Assign Tier
+                </button>
+                <button
+                  onClick={() => setShowTierModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

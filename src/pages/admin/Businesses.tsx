@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { formatDate } from '../../lib/utils'
-import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2, AlertCircle } from 'lucide-react'
+import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2, AlertCircle, UserCog } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { deleteUser } from '../../lib/database'
+import { getActiveTiers } from '../../lib/commissionService'
+import { VendorTier } from '../../types'
 import SearchBar from '../../components/SearchBar'
 
 // Database types
@@ -37,6 +39,17 @@ interface Vendor {
   created_at: string
   updated_at: string
   profiles?: Profile
+  // Tier and commission fields
+  current_tier_id?: string
+  current_commission_rate?: number
+  // Manual tier assignment fields
+  manual_tier_id?: string
+  manual_tier_assigned_at?: string
+  manual_tier_expires_at?: string
+  manual_tier_reason?: string
+  // Joined tier information
+  current_tier?: { name: string }
+  manual_tier?: { name: string }
 }
 
 interface Tourist {
@@ -82,6 +95,16 @@ export default function Businesses() {
     action: () => void
   } | null>(null)
 
+  // Tier assignment modal state
+  const [showTierModal, setShowTierModal] = useState(false)
+  const [tierVendor, setTierVendor] = useState<UserWithDetails | null>(null)
+  const [availableTiers, setAvailableTiers] = useState<VendorTier[]>([])
+  const [tierForm, setTierForm] = useState({
+    tierId: '',
+    expiresAt: '',
+    reason: ''
+  })
+
   useEffect(() => {
     fetchUsers()
   }, [])
@@ -90,11 +113,11 @@ export default function Businesses() {
     try {
       setLoading(true)
 
-      // Fetch only vendor profiles from the database profiles table
+      // Fetch vendor profiles and their vendor data
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'vendor') // Only fetch vendors
+        .eq('role', 'vendor')
         .order('created_at', { ascending: false })
 
       if (profilesError) {
@@ -102,9 +125,59 @@ export default function Businesses() {
         throw profilesError
       }
 
-      // Create user details using only profile data
+      // Fetch vendor data including manual tier fields
+      const { data: vendors, error: vendorsError } = await supabase
+        .from('vendors')
+        .select('*')
+        .in('user_id', profiles.map(p => p.id))
+
+      if (vendorsError) {
+        console.warn('Error fetching vendor data:', vendorsError)
+        // Continue without vendor data
+      }
+
+      // If we have vendors, fetch their tier information separately
+      let vendorsWithTiers = vendors || []
+      if (vendors && vendors.length > 0) {
+        try {
+          // Get unique tier IDs that exist
+          const tierIds = [...new Set(
+            vendors
+              .map(v => [v.current_tier_id, v.manual_tier_id])
+              .flat()
+              .filter(id => id) // Remove nulls
+          )]
+
+          if (tierIds.length > 0) {
+            const { data: tiers, error: tiersError } = await supabase
+              .from('vendor_tiers')
+              .select('id, name')
+              .in('id', tierIds)
+
+            if (!tiersError && tiers) {
+              // Create a map of tier ID to name
+              const tierMap = tiers.reduce((map, tier) => {
+                map[tier.id] = tier.name
+                return map
+              }, {} as Record<string, string>)
+
+              // Add tier names to vendors
+              vendorsWithTiers = vendors.map(vendor => ({
+                ...vendor,
+                current_tier: vendor.current_tier_id ? { name: tierMap[vendor.current_tier_id] || 'Unknown' } : null,
+                manual_tier: vendor.manual_tier_id ? { name: tierMap[vendor.manual_tier_id] || 'Unknown' } : null
+              }))
+            }
+          }
+        } catch (tierError) {
+          console.warn('Error fetching tier information:', tierError)
+          // Continue with vendors without tier names
+        }
+      }
+
+      // Create user details with vendor data
       const usersWithDetails: UserWithDetails[] = profiles.map(profile => {
-        // Use profile status directly
+        const vendor = vendorsWithTiers?.find(v => v.user_id === profile.id)
         const profileStatus = profile.status || (profile.role === 'vendor' ? 'pending' : 'active')
 
         return {
@@ -112,8 +185,8 @@ export default function Businesses() {
             ...profile,
             status: profileStatus
           },
-          vendor: undefined, // Not fetching vendor data
-          tourist: undefined, // Not fetching tourist data
+          vendor: vendor,
+          tourist: undefined,
           isVerified: (profile.role === 'vendor' && profileStatus === 'approved') || profile.role === 'tourist' || profile.role === 'admin'
         }
       })
@@ -121,7 +194,6 @@ export default function Businesses() {
       setUsers(usersWithDetails)
     } catch (error) {
       console.error('Error fetching users from database:', error)
-      // In a production app, you would show a user-friendly error message here
     } finally {
       setLoading(false)
     }
@@ -397,6 +469,178 @@ export default function Businesses() {
     setShowConfirmModal(true)
   }
 
+  const getCurrentTierDisplay = (user: UserWithDetails) => {
+    if (!user.vendor) return null;
+    
+    if (user.vendor.manual_tier_id) {
+      const tierName = user.vendor.manual_tier?.name || 'Unknown';
+      const isExpired = user.vendor.manual_tier_expires_at && new Date(user.vendor.manual_tier_expires_at) < new Date();
+      return (
+        <div className="flex flex-col">
+          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            isExpired ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-800'
+          }`}>
+            {tierName} (Manual)
+          </span>
+          {user.vendor.manual_tier_expires_at && (
+            <span className="text-xs text-gray-500 mt-1">
+              Expires: {formatDate(user.vendor.manual_tier_expires_at)}
+            </span>
+          )}
+        </div>
+      );
+    } else {
+      const tierName = user.vendor.current_tier?.name || 'Unknown';
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+          {tierName} (Auto)
+        </span>
+      );
+    }
+  };
+
+  const handleAssignTier = async (user: UserWithDetails) => {
+    if (!user.vendor) return;
+    
+    setTierVendor(user)
+    setTierForm({
+      tierId: user.vendor.manual_tier_id || '',
+      expiresAt: user.vendor.manual_tier_expires_at ? new Date(user.vendor.manual_tier_expires_at).toISOString().slice(0, 16) : '',
+      reason: user.vendor.manual_tier_reason || ''
+    })
+    await loadAvailableTiers()
+    setShowTierModal(true)
+  }
+
+  const loadAvailableTiers = async () => {
+    try {
+      const tiers = await getActiveTiers()
+      setAvailableTiers(tiers)
+    } catch (error) {
+      console.error('Error loading tiers:', error)
+    }
+  }
+
+  const handleSaveTierAssignment = async () => {
+    if (!tierVendor || !tierVendor.vendor || !tierForm.tierId) {
+      console.error('Missing required data:', { tierVendor, tierForm })
+      return
+    }
+
+    console.log('Saving tier assignment:', {
+      vendorId: tierVendor.vendor.id,
+      tierId: tierForm.tierId,
+      expiresAt: tierForm.expiresAt,
+      reason: tierForm.reason
+    })
+
+    console.log('Available tiers:', availableTiers.map(t => ({ id: t.id, name: t.name })))
+
+    try {
+      // First check if the vendor exists
+      const { data: existingVendor, error: checkError } = await supabase
+        .from('vendors')
+        .select('id')
+        .eq('id', tierVendor.vendor.id)
+        .single()
+
+      if (checkError || !existingVendor) {
+        console.error('Vendor not found:', tierVendor.vendor.id, checkError)
+        throw new Error('Vendor not found')
+      }
+
+      // Check if the tier exists in available tiers
+      const selectedTier = availableTiers.find(t => t.id === tierForm.tierId)
+      if (!selectedTier) {
+        console.error('Tier not found in available tiers:', tierForm.tierId)
+        console.error('Available tier IDs:', availableTiers.map(t => t.id))
+        throw new Error('Selected tier not found in available tiers')
+      }
+
+      console.log('Selected tier details:', selectedTier)
+
+      const { error } = await supabase
+        .from('vendors')
+        .update({
+          manual_tier_id: tierForm.tierId,
+          manual_tier_assigned_at: new Date().toISOString(),
+          manual_tier_expires_at: tierForm.expiresAt || null,
+          manual_tier_reason: tierForm.reason,
+          current_commission_rate: selectedTier.commission_rate,
+          current_tier_id: tierForm.tierId
+        })
+        .eq('id', tierVendor.vendor.id)
+
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw error
+      }
+
+      console.log('Tier assignment saved successfully')
+      await fetchUsers()
+      setShowTierModal(false)
+      setTierVendor(null)
+      setTierForm({ tierId: '', expiresAt: '', reason: '' })
+    } catch (error) {
+      console.error('Error saving tier assignment:', error)
+      // You could show a user-friendly error message here
+    }
+  }
+
+  const handleRemoveManualTier = async (user: UserWithDetails) => {
+    if (!user.vendor) return;
+
+    try {
+      // First, calculate what the automatic tier should be
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('monthly_booking_count, average_rating')
+        .eq('id', user.vendor.id)
+        .single();
+
+      // Get available tiers
+      const tiers = await getActiveTiers();
+
+      // Find the appropriate automatic tier
+      let automaticTier = null;
+      for (const tier of tiers) {
+        const isEligible = (
+          (vendor?.monthly_booking_count || 0) >= tier.min_monthly_bookings &&
+          (!tier.min_rating || (vendor?.average_rating || 0) >= tier.min_rating)
+        );
+
+        if (isEligible) {
+          automaticTier = tier;
+          break;
+        }
+      }
+
+      // Default to Bronze if no tier is eligible
+      if (!automaticTier) {
+        automaticTier = tiers.find(t => t.name === 'Bronze') || tiers[0];
+      }
+
+      // Remove manual tier and update to automatic tier
+      const { error } = await supabase
+        .from('vendors')
+        .update({
+          manual_tier_id: null,
+          manual_tier_assigned_at: null,
+          manual_tier_expires_at: null,
+          manual_tier_reason: null,
+          current_tier_id: automaticTier?.id || null,
+          current_commission_rate: automaticTier?.commission_rate || 0.15
+        })
+        .eq('id', user.vendor.id)
+
+      if (error) throw error
+
+      await fetchUsers()
+    } catch (error) {
+      console.error('Error removing manual tier:', error)
+    }
+  }
+
   const handleConfirmAction = async () => {
     if (!confirmAction) return
 
@@ -575,6 +819,11 @@ export default function Businesses() {
                       <div className="text-sm text-gray-500">
                         {formatDate(user.profile.created_at)}
                       </div>
+                      {user.vendor && (
+                        <div className="mt-1">
+                          {getCurrentTierDisplay(user)}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       {user.profile.role === 'vendor' && (
@@ -674,6 +923,27 @@ export default function Businesses() {
                             <Ban className="h-4 w-4" />
                           )}
                         </button>
+                      )}
+                      {/* Tier assignment buttons for vendors */}
+                      {user.profile.role === 'vendor' && user.vendor && (
+                        <>
+                          <button
+                            onClick={() => handleAssignTier(user)}
+                            className="text-purple-600 hover:text-purple-900"
+                            title="Assign Tier"
+                          >
+                            <UserCog className="h-4 w-4" />
+                          </button>
+                          {user.vendor.manual_tier_id && (
+                            <button
+                              onClick={() => handleRemoveManualTier(user)}
+                              className="text-orange-600 hover:text-orange-900"
+                              title="Remove Manual Tier"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </>
                       )}
                       {/* Delete button */}
                       <button
@@ -970,6 +1240,101 @@ export default function Businesses() {
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tier Assignment Modal */}
+      {showTierModal && tierVendor && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Assign Tier to {tierVendor.vendor?.business_name}</h3>
+                <button
+                  onClick={() => setShowTierModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Tier
+                  </label>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    {getCurrentTierDisplay(tierVendor)}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign New Tier
+                  </label>
+                  <select
+                    value={tierForm.tierId}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, tierId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    <option value="">Select a tier...</option>
+                    {availableTiers.map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.name} ({tier.commission_rate}% commission)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiration Date (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={tierForm.expiresAt}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty for permanent assignment
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Assignment
+                  </label>
+                  <textarea
+                    value={tierForm.reason}
+                    onChange={(e) => setTierForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Explain why this tier is being assigned..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-6">
+                <button
+                  onClick={handleSaveTierAssignment}
+                  className="btn-primary flex items-center"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Assign Tier
+                </button>
+                <button
+                  onClick={() => setShowTierModal(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

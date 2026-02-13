@@ -15,6 +15,18 @@ export interface UserProfile {
   updated_at: string;
 }
 
+export interface VendorTier {
+  id: string;
+  name: string;
+  commission_rate: number;
+  min_monthly_bookings: number;
+  min_rating?: number;
+  priority_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Vendor {
   id: string;
   user_id: string;
@@ -29,6 +41,20 @@ export interface Vendor {
   created_at: string;
   updated_at: string;
   user_profile?: UserProfile;
+  // Tier and commission fields
+  current_tier_id?: string;
+  current_commission_rate?: number;
+  average_rating?: number;
+  monthly_booking_count?: number;
+  lifetime_booking_count?: number;
+  last_tier_evaluated_at?: string;
+  current_tier?: VendorTier;
+  // Manual tier assignment fields
+  manual_tier_id?: string;
+  manual_tier_assigned_at?: string;
+  manual_tier_expires_at?: string;
+  manual_tier_reason?: string;
+  manual_tier?: VendorTier;
 }
 
 export interface Service {
@@ -320,6 +346,10 @@ export interface Booking {
   start_time?: string;
   end_time?: string;
   end_date?: string;
+  // Commission fields
+  commission_rate_at_booking?: number;
+  commission_amount?: number;
+  vendor_payout_amount?: number;
 }
 
 export interface Transaction {

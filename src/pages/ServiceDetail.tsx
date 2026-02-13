@@ -26,6 +26,7 @@ import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
 import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
+import PricingBreakdown from '../components/PricingBreakdown'
 
 interface ServiceDetail {
   id: string
@@ -1847,7 +1848,7 @@ export default function ServiceDetail() {
                   <div className="bg-gray-50 rounded-lg p-3 mb-6">
                     <div className="flex justify-between items-center mb-2 text-xs">
                       <span className="text-gray-600">
-                        {service.service_categories?.name?.toLowerCase() === 'transport' 
+                        {service.service_categories?.name?.toLowerCase() === 'transport'
                           ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
                           : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
                           ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
@@ -1860,6 +1861,17 @@ export default function ServiceDetail() {
                       <span className="text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
                   </div>
+
+                  {/* Pricing Breakdown */}
+                  <PricingBreakdown
+                    serviceId={service.id}
+                    quantity={service.service_categories?.name?.toLowerCase() === 'transport'
+                      ? calculateDays(startDate, startTime, endDate, endTime)
+                      : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+                      ? calculateNights(checkInDate, checkOutDate)
+                      : guests}
+                    className="mb-6"
+                  />
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 mb-3">
