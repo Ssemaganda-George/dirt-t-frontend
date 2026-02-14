@@ -93,7 +93,22 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
         getAllServicePricingOverrides()
       ]);
 
-      setTiers(tiersData);
+      // Remove duplicate tiers based on name, keeping the one with lowest priority_order (highest priority)
+      const uniqueTiers = tiersData.reduce((acc, tier) => {
+        const existing = acc.find(t => t.name === tier.name);
+        if (!existing || tier.priority_order < existing.priority_order) {
+          if (existing) {
+            // Replace existing with higher priority (lower number)
+            const index = acc.indexOf(existing);
+            acc[index] = tier;
+          } else {
+            acc.push(tier);
+          }
+        }
+        return acc;
+      }, [] as PricingTier[]).sort((a, b) => a.priority_order - b.priority_order);
+
+      setTiers(uniqueTiers);
       setVendorCounts(vendorCountsData);
       setAllOverrides(allOverridesData);
     } catch (error) {
@@ -318,8 +333,6 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Pricing Management</h1>
-
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-6">
         <button

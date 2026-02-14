@@ -284,7 +284,21 @@ export default function VendorLogin() {
           console.error('Profile creation error:', profileCheckError)
         }
 
-        // Update or create the vendor record with business details
+        // Get the Bronze tier ID (default tier for new vendors)
+        const { data: bronzeTier, error: tierError } = await supabase
+          .from('pricing_tiers')
+          .select('id, commission_value')
+          .eq('name', 'Bronze')
+          .eq('is_active', true)
+          .single();
+
+        if (tierError) {
+          console.error('Error fetching Bronze tier:', tierError);
+          setError('Account created but tier assignment failed. Please contact support.');
+          return;
+        }
+
+        // Update or create the vendor record with business details and default Bronze tier
         const serviceClient = getServiceClient()
         const { error: vendorError } = await serviceClient
           .from('vendors')
@@ -293,7 +307,9 @@ export default function VendorLogin() {
             business_name: businessName,
             business_email: email,
             business_phone: `${businessPhoneCountryCode}${businessPhone}`,
-            status: 'pending'
+            status: 'pending',
+            current_tier_id: bronzeTier.id,
+            current_commission_rate: bronzeTier.commission_value
           }, { onConflict: 'user_id' })
 
         if (vendorError) {

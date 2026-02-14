@@ -17,6 +17,7 @@ const statusConfig = {
   failed: { color: 'bg-red-100 text-red-800', label: 'Failed' },
   available: { color: 'bg-green-100 text-green-800', label: 'Available' },
   unavailable: { color: 'bg-gray-100 text-gray-800', label: 'Unavailable' },
+  suspended: { color: 'bg-orange-100 text-orange-800', label: 'Suspended' },
 };
 
 export function StatusBadge({ status, variant = 'default' }: StatusBadgeProps) {

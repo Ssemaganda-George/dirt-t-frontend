@@ -6,6 +6,8 @@ import { deleteUser } from '../../lib/database'
 import { getActiveTiers } from '../../lib/commissionService'
 import { VendorTier } from '../../types'
 import SearchBar from '../../components/SearchBar'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { StatusBadge } from '../../components/StatusBadge'
 
 // Database types
 interface Profile {
@@ -675,7 +677,7 @@ export default function Businesses() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     )
   }
@@ -700,7 +702,7 @@ export default function Businesses() {
       )}
 
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Businesses</h1>
             <p className="mt-1 text-sm text-gray-600">
@@ -786,7 +788,7 @@ export default function Businesses() {
           {filteredUsers.map((user) => (
             <li key={user.profile.id} className={`${user.profile.status === 'pending' ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`}>
               <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
                       <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -811,8 +813,8 @@ export default function Businesses() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
+                  <div className="mt-3 sm:mt-0 flex items-center space-x-4">
+                    <div className="text-left sm:text-right">
                       <div className="text-sm text-gray-900 capitalize">
                         {user.profile.role}
                       </div>
@@ -825,26 +827,20 @@ export default function Businesses() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="mt-2 sm:mt-0 flex items-center space-x-2 overflow-x-auto">
                       {user.profile.role === 'vendor' && (
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.profile.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300 animate-pulse'
-                            : user.profile.status === 'approved'
-                            ? 'bg-green-100 text-green-800'
-                            : user.profile.status === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : user.profile.status === 'suspended'
-                            ? 'bg-orange-100 text-orange-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.profile.status === 'pending' ? '⏳ PENDING APPROVAL' : (user.profile.status || 'Unknown').toUpperCase()}
-                        </span>
+                        <div>
+                          {user.profile.status === 'pending' ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border-2 border-yellow-300 animate-pulse">⏳ PENDING APPROVAL</span>
+                          ) : (
+                            <StatusBadge status={user.profile.status || 'unknown'} variant="small" />
+                          )}
+                        </div>
                       )}
                       {user.profile.role === 'tourist' && (
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.profile.status === 'suspended' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                          {user.profile.status === 'suspended' ? 'Suspended' : 'Active'}
-                        </span>
+                        <div>
+                          <StatusBadge status={user.profile.status === 'suspended' ? 'suspended' : 'approved'} variant="small" />
+                        </div>
                       )}
                       <button
                         onClick={() => setSelectedUser(user)}
@@ -1084,7 +1080,7 @@ export default function Businesses() {
       {/* Suspension Confirmation Modal */}
       {showSuspendModal && suspendTarget && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-xl rounded-xl bg-white">
+    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-md md:w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-900">Confirm Suspension</h3>
@@ -1151,7 +1147,7 @@ export default function Businesses() {
       {/* Generic Confirmation Modal */}
       {showConfirmModal && confirmAction && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-xl rounded-xl bg-white">
+    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-md md:w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-900">

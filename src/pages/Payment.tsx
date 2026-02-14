@@ -534,13 +534,6 @@ export default function PaymentPage() {
               {/* Mobile Money inputs (compact) */}
               {paymentMethod === 'mobile_money' && (
                 <div className="mt-2 grid grid-cols-1 gap-2">
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="0712345678 or +256712345678"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
-                  />
                   <div className="text-sm text-gray-600 mb-1">Select provider to continue</div>
                   <div className="flex gap-2">
                       <button type="button" onClick={() => setMobileProvider('MTN')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
@@ -558,6 +551,13 @@ export default function PaymentPage() {
                         <span className="text-sm font-medium">Airtel</span>
                       </button>
                   </div>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="0712345678 or +256712345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
+                  />
                 </div>
               )}
 
