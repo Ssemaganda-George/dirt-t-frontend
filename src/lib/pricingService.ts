@@ -57,6 +57,8 @@ export interface PricingPreview {
   fee_payer: 'vendor' | 'tourist' | 'shared';
   pricing_source: 'tier' | 'override';
   applied_rule: string;
+  // The reference id for the applied pricing rule (override id or tier id)
+  pricing_reference_id?: string;
 }
 
 /**
@@ -97,18 +99,40 @@ export async function calculatePayment(
     const basePrice = service.price;
 
     // Check for active service pricing override
-    const { data: override, error: overrideError } = await supabase
+    // Some PostgREST filters (complex OR with timestamps) can trigger 406 responses in some environments.
+    // To be robust, fetch candidate overrides for the service and apply date filters client-side.
+    const { data: overridesData, error: overridesError } = await supabase
       .from('service_pricing_overrides')
       .select('*')
       .eq('service_id', serviceId)
       .eq('override_enabled', true)
-      .lte('effective_from', purchaseDate.toISOString())
-      .or(`effective_until.is.null,effective_until.gte.${purchaseDate.toISOString()}`)
-      .order('effective_from', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('effective_from', { ascending: false });
 
-    if (override && !overrideError) {
+    // Debug: log override query outcome to help diagnose why an active override may not be applied
+    try {
+      console.debug('calculatePayment: overrides fetch', { serviceId, purchaseDate: purchaseDate.toISOString(), count: overridesData?.length || 0, overridesError });
+    } catch (e) {
+      // ignore stringify problems
+    }
+
+    let override: any = null;
+    if (overridesData && overridesData.length > 0) {
+      // Find first override row that is active for the purchaseDate
+      for (const o of overridesData) {
+        try {
+          const effFrom = o.effective_from ? new Date(o.effective_from) : null;
+          const effUntil = o.effective_until ? new Date(o.effective_until) : null;
+          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
+            override = o;
+            break;
+          }
+        } catch (e) {
+          // ignore parse errors and continue
+        }
+      }
+    }
+
+    if (override) {
       // Use override pricing
       const platformFee = override.override_type === 'flat'
         ? override.override_value
@@ -164,22 +188,43 @@ export async function calculatePayment(
     let pricingReferenceId = '';
 
     if (vendor && !vendorError && vendor.current_tier_id) {
-      const { data: tierData, error: tierError } = await supabase
+      // Fetch the tier row directly then validate effective dates client-side to avoid complex OR filters.
+      const { data: tierDataRaw, error: tierError } = await supabase
         .from('pricing_tiers')
-        .select('id, commission_type, commission_value')
+        .select('id, commission_type, commission_value, effective_from, effective_until, is_active')
         .eq('id', vendor.current_tier_id)
         .eq('is_active', true)
-        .lte('effective_from', purchaseDate.toISOString())
-        .or(`effective_until.is.null,effective_until.gte.${purchaseDate.toISOString()}`)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (tierData && !tierError) {
-        pricingReferenceId = tierData.id;
-        platformFee = tierData.commission_type === 'flat'
-          ? tierData.commission_value
-          : basePrice * (tierData.commission_value / 100);
+      // Debugging
+      try {
+        console.debug('calculatePayment: tier fetch', { vendorId: service.vendor_id, tierId: vendor.current_tier_id, tierError, tierFound: !!tierDataRaw });
+      } catch (e) {}
+
+      if (tierDataRaw && !tierError) {
+        // Validate effective window
+        let tierMatches = false;
+        try {
+          const effFrom = tierDataRaw.effective_from ? new Date(tierDataRaw.effective_from) : null;
+          const effUntil = tierDataRaw.effective_until ? new Date(tierDataRaw.effective_until) : null;
+          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
+            tierMatches = true;
+          }
+        } catch (e) {
+          // if parse fails, treat as non-matching and fall back to default
+          tierMatches = false;
+        }
+
+        if (tierMatches) {
+          pricingReferenceId = tierDataRaw.id;
+          platformFee = tierDataRaw.commission_type === 'flat'
+            ? tierDataRaw.commission_value
+            : basePrice * (tierDataRaw.commission_value / 100);
+        } else {
+          platformFee = basePrice * 0.15; // default
+        }
       } else {
-        // Default commission if no tier found
         platformFee = basePrice * 0.15; // 15% default
       }
     } else {
@@ -258,18 +303,33 @@ export async function calculatePaymentForAmount(
     }
 
     // Check for active service pricing override
-    const { data: override, error: overrideError } = await supabase
+    // Fetch candidate overrides and apply effective date filtering client-side to avoid complex REST filters.
+    const { data: overridesData, error: overridesError } = await supabase
       .from('service_pricing_overrides')
       .select('*')
       .eq('service_id', serviceId)
       .eq('override_enabled', true)
-      .lte('effective_from', purchaseDate.toISOString())
-      .or(`effective_until.is.null,effective_until.gte.${purchaseDate.toISOString()}`)
-      .order('effective_from', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order('effective_from', { ascending: false });
 
-    if (override && !overrideError) {
+    try {
+      console.debug('calculatePaymentForAmount: overrides fetch', { serviceId, purchaseDate: purchaseDate.toISOString(), count: overridesData?.length || 0, overridesError });
+    } catch (e) {}
+
+    let override: any = null;
+    if (overridesData && overridesData.length > 0) {
+      for (const o of overridesData) {
+        try {
+          const effFrom = o.effective_from ? new Date(o.effective_from) : null;
+          const effUntil = o.effective_until ? new Date(o.effective_until) : null;
+          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
+            override = o;
+            break;
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (override) {
       const platformFee = override.override_type === 'flat'
         ? Number(override.override_value)
         : basePrice * (Number(override.override_value) / 100);
@@ -323,20 +383,35 @@ export async function calculatePaymentForAmount(
     let pricingReferenceId = '';
 
     if (vendor && !vendorError && vendor.current_tier_id) {
-      const { data: tierData, error: tierError } = await supabase
+      // Fetch tier and validate effective window client-side
+      const { data: tierDataRaw, error: tierError } = await supabase
         .from('pricing_tiers')
-        .select('id, commission_type, commission_value')
+        .select('id, commission_type, commission_value, effective_from, effective_until, is_active')
         .eq('id', vendor.current_tier_id)
         .eq('is_active', true)
-        .lte('effective_from', purchaseDate.toISOString())
-        .or(`effective_until.is.null,effective_until.gte.${purchaseDate.toISOString()}`)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (tierData && !tierError) {
-        pricingReferenceId = tierData.id;
-        platformFee = tierData.commission_type === 'flat'
-          ? Number(tierData.commission_value)
-          : basePrice * (Number(tierData.commission_value) / 100);
+      try { console.debug('calculatePaymentForAmount: tier fetch', { vendorId: service.vendor_id, tierId: vendor.current_tier_id, tierError, tierFound: !!tierDataRaw }); } catch (e) {}
+
+      if (tierDataRaw && !tierError) {
+        let tierMatches = false;
+        try {
+          const effFrom = tierDataRaw.effective_from ? new Date(tierDataRaw.effective_from) : null;
+          const effUntil = tierDataRaw.effective_until ? new Date(tierDataRaw.effective_until) : null;
+          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
+            tierMatches = true;
+          }
+        } catch (e) { tierMatches = false; }
+
+        if (tierMatches) {
+          pricingReferenceId = tierDataRaw.id;
+          platformFee = tierDataRaw.commission_type === 'flat'
+            ? Number(tierDataRaw.commission_value)
+            : basePrice * (Number(tierDataRaw.commission_value) / 100);
+        } else {
+          platformFee = basePrice * 0.15;
+        }
       } else {
         platformFee = basePrice * 0.15; // 15% default
       }
@@ -748,7 +823,8 @@ export async function getPricingPreview(
     total_customer_payment: calculation.total_customer_payment,
     fee_payer: calculation.fee_payer,
     pricing_source: calculation.pricing_source,
-    applied_rule: appliedRule
+    applied_rule: appliedRule,
+    pricing_reference_id: calculation.pricing_reference_id
   };
 }
 
@@ -878,4 +954,135 @@ export async function searchServices(searchTerm: string, limit: number = 10): Pr
   }
 
   return results.slice(0, limit);
+}
+
+/**
+ * Update vendor's current tier and identify affected services
+ * Services without pricing overrides will automatically use the new tier's pricing
+ * Services with active overrides will maintain their custom pricing
+ * @param vendorId - The vendor ID
+ * @param tierId - The new tier ID
+ * @param metrics - Optional metrics to update (monthly bookings, rating)
+ * @returns Object containing update result and affected services information
+ */
+export async function updateVendorTierWithServiceImpact(
+  vendorId: string,
+  tierId: string,
+  _metrics?: { monthlyBookings?: number; averageRating?: number }
+): Promise<{
+  success: boolean;
+  error?: string;
+  affectedServices: {
+    totalServices: number;
+    servicesUsingNewTier: number;
+    servicesWithOverrides: number;
+    overriddenServiceIds: string[];
+  };
+}> {
+  try {
+    // Get the tier details to update commission rate
+    const { data: tier, error: tierError } = await supabase
+      .from('pricing_tiers')
+      .select('commission_type, commission_value')
+      .eq('id', tierId)
+      .single();
+
+    if (tierError || !tier) {
+      return {
+        success: false,
+        error: `Failed to get tier details: ${tierError?.message || 'Tier not found'}`,
+        affectedServices: {
+          totalServices: 0,
+          servicesUsingNewTier: 0,
+          servicesWithOverrides: 0,
+          overriddenServiceIds: []
+        }
+      };
+    }
+
+  // Commission rate calculated if needed by callers
+  // (kept here for completeness but not used directly in this helper)
+
+    // Get all services for this vendor
+    const { data: services, error: servicesError } = await supabase
+      .from('services')
+      .select('id')
+      .eq('vendor_id', vendorId)
+      .eq('status', 'approved');
+
+    if (servicesError) {
+      return {
+        success: false,
+        error: `Failed to get services: ${servicesError.message}`,
+        affectedServices: {
+          totalServices: 0,
+          servicesUsingNewTier: 0,
+          servicesWithOverrides: 0,
+          overriddenServiceIds: []
+        }
+      };
+    }
+
+    const totalServices = services?.length || 0;
+    let servicesWithOverrides = 0;
+    const overriddenServiceIds: string[] = [];
+
+    // Check each service for active pricing overrides (client-side effective date checks)
+    const now = new Date();
+    for (const svc of services || []) {
+      const { data: overridesData, error: overridesError } = await supabase
+        .from('service_pricing_overrides')
+        .select('id, effective_from, effective_until, override_enabled')
+        .eq('service_id', svc.id)
+        .eq('override_enabled', true)
+        .order('effective_from', { ascending: false });
+
+      if (overridesError) {
+        console.warn(`Error checking overrides for service ${svc.id}:`, overridesError);
+        continue;
+      }
+
+      let hasActive = false;
+      if (overridesData && overridesData.length > 0) {
+        for (const o of overridesData) {
+          try {
+            const effFrom = o.effective_from ? new Date(o.effective_from) : null;
+            const effUntil = o.effective_until ? new Date(o.effective_until) : null;
+            if (effFrom && effFrom <= now && (!effUntil || effUntil >= now)) {
+              hasActive = true;
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (hasActive) {
+        servicesWithOverrides++;
+        overriddenServiceIds.push(svc.id);
+      }
+    }
+
+    const servicesUsingNewTier = totalServices - servicesWithOverrides;
+
+    return {
+      success: true,
+      affectedServices: {
+        totalServices,
+        servicesUsingNewTier,
+        servicesWithOverrides,
+        overriddenServiceIds
+      }
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error occurred',
+      affectedServices: {
+        totalServices: 0,
+        servicesUsingNewTier: 0,
+        servicesWithOverrides: 0,
+        overriddenServiceIds: []
+      }
+    };
+  }
 }

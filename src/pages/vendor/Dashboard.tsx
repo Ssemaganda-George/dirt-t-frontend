@@ -5,7 +5,7 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { getVendorStats } from '../../lib/database'
 import { supabase } from '../../lib/supabaseClient'
 import { formatDateTime, getVendorDisplayStatus, formatCurrencyWithConversion } from '../../lib/utils'
-import { getNextTierInfo } from '../../lib/tierEvaluationService'
+import { useVendorPricing } from '../../hooks/hook'
 import { Calendar, TrendingUp } from 'lucide-react'
 
 export default function VendorDashboard() {
@@ -29,12 +29,7 @@ export default function VendorDashboard() {
     recentBookings: [] as any[],
     recentTransactions: [] as any[]
   })
-  const [tierInfo, setTierInfo] = useState<{
-    currentTier: any;
-    nextTier: any;
-    progressPercentage: number;
-    requirements: string[];
-  } | null>(null)
+  const { tier: currentTier } = useVendorPricing(vendorId)
   const [loading, setLoading] = useState(true)
 
   // Memoize expensive calculations
@@ -111,14 +106,7 @@ export default function VendorDashboard() {
       const data = await getVendorStats(vendorId)
       setStats(data)
 
-      // Load tier information
-      try {
-        const tierData = await getNextTierInfo(vendorId)
-        setTierInfo(tierData)
-      } catch (tierError) {
-        console.error('Error loading tier info:', tierError)
-        setTierInfo(null)
-      }
+      // Tier information is now handled by useVendorPricing hook
     } catch (error) {
       console.error('Error fetching vendor stats:', error)
     } finally {
@@ -324,10 +312,13 @@ export default function VendorDashboard() {
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-purple-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Current Tier</p>
           <p className="text-lg font-semibold text-gray-900 mt-2">
-            {tierInfo?.currentTier?.name || 'Loading...'}
+            {currentTier?.name || 'Loading...'}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {(tierInfo?.currentTier?.commission_rate || 0) * 100}% commission
+            {currentTier?.commission_type === 'flat' 
+              ? `${currentTier.commission_value} ${currentTier.currency || 'UGX'} flat fee`
+              : `${currentTier?.commission_value || 0}% commission`
+            }
           </p>
         </div>
       </div>
@@ -385,48 +376,26 @@ export default function VendorDashboard() {
               <p className="text-xs text-gray-500 mt-0.5">Your commission tier status</p>
             </div>
             <div className="p-5">
-              {tierInfo ? (
+              {currentTier ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-900">
-                      {tierInfo.currentTier.name}
+                      {currentTier.name}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {(tierInfo.currentTier.commission_rate * 100).toFixed(1)}% commission
+                      {currentTier.commission_type === 'flat' 
+                        ? `${currentTier.commission_value} ${currentTier.currency || 'UGX'} flat fee`
+                        : `${currentTier.commission_value}% commission`
+                      }
                     </span>
                   </div>
 
-                  {tierInfo.nextTier && (
-                    <>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Progress to {tierInfo.nextTier.name}</span>
-                          <span className="font-medium">{tierInfo.progressPercentage.toFixed(0)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${tierInfo.progressPercentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-gray-700">Requirements for next tier:</p>
-                        {tierInfo.requirements.map((req, index) => (
-                          <p key={index} className="text-xs text-gray-600">• {req}</p>
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {!tierInfo.nextTier && (
-                    <div className="text-center py-4">
-                      <TrendingUp className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-green-700">Highest Tier Reached!</p>
-                      <p className="text-xs text-gray-500">You're at the best commission rate</p>
-                    </div>
-                  )}
+                  {/* Next tier information not available in new pricing system */}
+                  <div className="text-center py-4">
+                    <TrendingUp className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-green-700">Tier System Active</p>
+                    <p className="text-xs text-gray-500">Your commission rate is automatically managed</p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8">

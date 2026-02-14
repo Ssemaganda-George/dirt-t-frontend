@@ -579,3 +579,96 @@ export function useServiceDeleteRequests(vendorId?: string) {
     deleteDeleteRequest: removeDeleteRequest
   };
 }
+
+export function useVendorPricing(vendorId: string | null) {
+  const [tier, setTier] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchVendorTier = async () => {
+    if (!vendorId) {
+      setTier(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { getVendorCurrentTier, getActivePricingTiers } = await import('../lib/pricingService');
+      let tierData = await getVendorCurrentTier(vendorId);
+      
+      // If vendor doesn't have a tier assigned, use Bronze tier as default
+      if (!tierData) {
+        const tiers = await getActivePricingTiers();
+        const bronzeTier = tiers.find(t => t.name.toLowerCase().includes('bronze'));
+        tierData = bronzeTier || null;
+      }
+      
+      setTier(tierData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch vendor tier');
+      setTier(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateFee = (price: number): { fee: number; feeType: string; description: string } => {
+    if (!price) {
+      return {
+        fee: 0,
+        feeType: 'percentage',
+        description: 'No price entered'
+      };
+    }
+
+    if (!tier) {
+      // If no tier is available at all, use default 15%
+      return {
+        fee: price * 0.15,
+        feeType: 'percentage',
+        description: 'Default 15% platform fee'
+      };
+    }
+
+    const fee = tier.commission_type === 'flat'
+      ? tier.commission_value
+      : price * (tier.commission_value / 100);
+
+    return {
+      fee,
+      feeType: tier.commission_type,
+      description: `${tier.name} tier: ${tier.commission_type === 'flat' ? `${tier.commission_value} ${tier.currency || 'UGX'} flat fee` : `${tier.commission_value}% commission`}`
+    };
+  };
+
+  useEffect(() => {
+    fetchVendorTier();
+
+    // Set up real-time subscription for pricing tier changes
+    const subscription = supabase
+      .channel('pricing_tiers_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'pricing_tiers'
+      }, () => {
+        // Refetch tier data when pricing tiers are updated
+        fetchVendorTier();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [vendorId]);
+
+  return {
+    tier,
+    loading,
+    error,
+    calculateFee,
+    refetch: fetchVendorTier
+  };
+}

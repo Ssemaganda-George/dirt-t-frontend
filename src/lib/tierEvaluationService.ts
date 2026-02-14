@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { VendorTier } from '../types';
 import { getVendorWithTier, getAutomaticTierForVendor } from './commissionService';
+import { updateVendorTierWithServiceImpact } from './pricingService';
 
 export interface TierEvaluationResult {
   vendorId: string;
@@ -137,7 +138,13 @@ async function evaluateSingleVendorTier(
 
     // Update vendor if tier changed
     if (tierChanged) {
-      await updateVendorTier(vendor.id, eligibleTier, metrics);
+      const updateResult = await updateVendorTierWithServiceImpact(vendor.id, eligibleTier.id, metrics);
+      if (!updateResult.success) {
+        console.error(`Failed to update tier for vendor ${vendor.id}:`, updateResult.error);
+        // Continue with evaluation even if update fails
+      } else {
+        console.log(`Updated tier for vendor ${vendor.id}: ${updateResult.affectedServices.servicesUsingNewTier} services now use new tier, ${updateResult.affectedServices.servicesWithOverrides} services have overrides`);
+      }
     }
 
     // Update evaluation timestamp
@@ -213,29 +220,6 @@ export function isEligibleForTier(
   }
 
   return true;
-}
-
-/**
- * Updates vendor's tier and commission rate
- */
-async function updateVendorTier(
-  vendorId: string,
-  newTier: VendorTier,
-  metrics: { monthlyBookings: number; averageRating?: number }
-): Promise<void> {
-  const { error } = await supabase
-    .from('vendors')
-    .update({
-      current_tier_id: newTier.id,
-      current_commission_rate: newTier.commission_rate,
-      monthly_booking_count: metrics.monthlyBookings,
-      average_rating: metrics.averageRating,
-    })
-    .eq('id', vendorId);
-
-  if (error) {
-    throw new Error(`Failed to update vendor tier: ${error.message}`);
-  }
 }
 
 /**

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
@@ -264,7 +263,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   console.log('TransportBooking - service.vendor_id:', service.vendor_id)
   
   const { user, profile } = useAuth()
-  const { selectedCurrency } = usePreferences()
 
   // Currency conversion rates (simplified)
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
@@ -303,18 +301,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }).format(amount);
   }
 
-  // Create a formatCurrency function that uses user preferences
+  // Create a formatCurrency function that uses UGX as default
   const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
     try {
-      const userCurrency = selectedCurrency || 'UGX';
-      if (userCurrency === serviceCurrency) {
-        return formatAmount(amount, userCurrency);
+      // Always display in UGX as default
+      const displayCurrency = 'UGX';
+      if (displayCurrency === serviceCurrency) {
+        return formatAmount(amount, displayCurrency);
       }
-      const convertedAmount = convertCurrency(amount, serviceCurrency, userCurrency);
-      return formatAmount(convertedAmount, userCurrency);
+      const convertedAmount = convertCurrency(amount, serviceCurrency, displayCurrency);
+      return formatAmount(convertedAmount, displayCurrency);
     } catch (error) {
-      console.warn('Currency conversion failed, using original currency:', error);
-      return formatAmount(amount, serviceCurrency);
+      console.warn('Currency conversion failed, using UGX as default:', error);
+      return formatAmount(amount, 'UGX');
     }
   }
 

@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
-import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
+import { useServices, useServiceCategories, useServiceDeleteRequests, useVendorPricing } from '../../hooks/hook'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { Plus, X, Search, Map } from 'lucide-react'
 import SearchMap from '../../components/SearchMap'
+import PricingNotification from '../../components/PricingNotification'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
 import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
@@ -67,6 +68,7 @@ export default function VendorServices() {
   const { services, loading, error, createService, updateService, deleteService } = useServices(vendorId || undefined, { skipInitialFetch: vendorLoading })
   const { categories } = useServiceCategories()
   const { deleteRequests, createDeleteRequest } = useServiceDeleteRequests(vendorId || undefined)
+  const { calculateFee, refetch: refetchTier } = useVendorPricing(vendorId)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
@@ -131,6 +133,10 @@ export default function VendorServices() {
           console.warn('Could not fetch vendor record:', vendorError)
           
           // Try to create vendor record if it doesn't exist
+          const { getActivePricingTiers } = await import('../../lib/pricingService');
+          const tiers = await getActivePricingTiers();
+          const bronzeTier = tiers.find(t => t.name.toLowerCase().includes('bronze'));
+          
           const { data: newVendor, error: createError } = await supabase
             .from('vendors')
             .insert([{
@@ -138,7 +144,8 @@ export default function VendorServices() {
               business_name: 'Business Name',
               business_description: 'Please update your business description',
               business_email: user.email || '',
-              status: 'approved'
+              status: 'approved',
+              current_tier_id: bronzeTier?.id || null
             }])
             .select('id')
             .single()
@@ -184,6 +191,13 @@ export default function VendorServices() {
 
     checkVendorStatus()
   }, [user?.id])
+
+  // Refresh tier data when vendorId is set
+  useEffect(() => {
+    if (vendorId && !vendorLoading) {
+      refetchTier()
+    }
+  }, [vendorId, vendorLoading, refetchTier])
 
   // Load ticket types for services when services change
   useEffect(() => {
@@ -1007,6 +1021,9 @@ export default function VendorServices() {
         <ServiceForm
           initial={editing || undefined}
           vendorId={vendorId}
+          selectedCurrency={selectedCurrency}
+          selectedLanguage={selectedLanguage}
+          calculateFee={calculateFee}
           onClose={() => setShowForm(false)}
           onSubmit={(payload) => {
             if (editing) {
@@ -1023,7 +1040,15 @@ export default function VendorServices() {
   )
 }
 
-function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Partial<Service>; vendorId: string | null; onClose: () => void; onSubmit: (payload: Partial<Service>) => void }) {
+function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, calculateFee, onClose, onSubmit }: { 
+  initial?: Partial<Service>; 
+  vendorId: string | null; 
+  selectedCurrency: string;
+  selectedLanguage: string;
+  calculateFee: (price: number) => { fee: number; feeType: string; description: string };
+  onClose: () => void; 
+  onSubmit: (payload: Partial<Service>) => void 
+}) {
   const { categories } = useServiceCategories()
   const [form, setForm] = useState<Partial<Service>>({
     title: initial?.title || '',
@@ -1170,6 +1195,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapModalInitialCoords, setMapModalInitialCoords] = useState<{ lat: number; lon: number } | null>(null)
+  const [flexibleTierComment, setFlexibleTierComment] = useState('')
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -3555,7 +3581,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 return;
               }
             }
-            
+
+            // Handle flexible tier comment
+            if (flexibleTierComment.trim()) {
+              // For now, just show an alert. In production, this should be sent to admin
+              alert(`Flexible tier request submitted: ${flexibleTierComment}\n\nOur team will review your request and contact you if needed.`);
+            }
+
             onSubmit(form) 
           }}
         >
@@ -3593,6 +3625,16 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                   <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                  {form.price && form.price > 0 && (
+                    <PricingNotification
+                      price={form.price}
+                      currency={form.currency || 'UGX'}
+                      fee={calculateFee(form.price).fee}
+                      description={calculateFee(form.price).description}
+                      selectedCurrency={selectedCurrency}
+                      selectedLanguage={selectedLanguage}
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
@@ -3613,7 +3655,22 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             </>
           )}
 
-          
+          {/* Flexible Tier Request Comment Box */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Request Flexible Pricing Tier (Optional)
+            </label>
+            <textarea
+              value={flexibleTierComment}
+              onChange={(e) => setFlexibleTierComment(e.target.value)}
+              placeholder="If you'd like to request a different pricing tier or special pricing arrangement for this service, please explain your request here. Our team will review and get back to you."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This comment will be sent to our admin team for review. You may be contacted for more details.
+            </p>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>

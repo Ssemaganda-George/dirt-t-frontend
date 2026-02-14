@@ -201,7 +201,7 @@ export default function ServiceDetail() {
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
   const { user, profile } = useAuth()
   const { addToCart } = useCart()
-  const { selectedCurrency, selectedLanguage } = usePreferences()
+  const { selectedLanguage } = usePreferences()
 
   // Currency conversion functions
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) => {
@@ -263,8 +263,13 @@ export default function ServiceDetail() {
   const formatCurrencyWithConversion = (amount: number | string, serviceCurrency: string) => {
     const numeric = Number(amount)
     const safe = Number.isFinite(numeric) ? numeric : 0
-    const convertedAmount = convertCurrency(safe, serviceCurrency, selectedCurrency || 'UGX')
-    return formatAmount(convertedAmount, selectedCurrency || 'UGX')
+    // Always display in UGX as default
+    const displayCurrency = 'UGX';
+    if (displayCurrency === serviceCurrency) {
+      return formatAmount(safe, displayCurrency);
+    }
+    const convertedAmount = convertCurrency(safe, serviceCurrency, displayCurrency);
+    return formatAmount(convertedAmount, displayCurrency);
   }
 
   const ticketsTotal = ticketTypes.reduce((sum: number, t: any) => sum + (Number(t.price || 0) * (ticketQuantities[t.id] || 0)), 0)

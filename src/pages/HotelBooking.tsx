@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
 import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 
@@ -47,7 +46,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, profile } = useAuth()
-  const { selectedCurrency } = usePreferences()
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 (Booking Details)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -88,18 +86,19 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     }).format(amount);
   }
 
-  // Create a formatCurrency function that uses user preferences
+  // Create a formatCurrency function that uses UGX as default
   const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
     try {
-      const userCurrency = selectedCurrency || 'UGX';
-      if (userCurrency === serviceCurrency) {
-        return formatAmount(amount, userCurrency);
+      // Always display in UGX as default
+      const displayCurrency = 'UGX';
+      if (displayCurrency === serviceCurrency) {
+        return formatAmount(amount, displayCurrency);
       }
-      const convertedAmount = convertCurrency(amount, serviceCurrency, userCurrency);
-      return formatAmount(convertedAmount, userCurrency);
+      const convertedAmount = convertCurrency(amount, serviceCurrency, displayCurrency);
+      return formatAmount(convertedAmount, displayCurrency);
     } catch (error) {
-      console.warn('Currency conversion failed, using original currency:', error);
-      return formatAmount(amount, serviceCurrency);
+      console.warn('Currency conversion failed, using UGX as default:', error);
+      return formatAmount(amount, 'UGX');
     }
   }
 

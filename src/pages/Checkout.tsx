@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import { calculatePaymentForAmount } from '../lib/pricingService'
@@ -23,7 +22,6 @@ export default function CheckoutPage() {
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
   const { profile } = useAuth()
-  const { selectedCurrency } = usePreferences()
 
   // Currency conversion rates (simplified)
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
@@ -62,25 +60,20 @@ export default function CheckoutPage() {
     }).format(amount);
   }
 
-  // Create a formatCurrency function that uses user preferences
+  // Create a formatCurrency function that uses UGX as default
   const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
     try {
-      // Use user's selected currency preference
-      const userCurrency = selectedCurrency || 'UGX';
-
-      // If user's currency matches service currency, no conversion needed
-      if (userCurrency === serviceCurrency) {
-        return formatAmount(amount, userCurrency);
+      // Always display in UGX as default
+      const displayCurrency = 'UGX';
+      if (displayCurrency === serviceCurrency) {
+        return formatAmount(amount, displayCurrency);
       }
-
-      // Convert amount to user's currency
-      const convertedAmount = convertCurrency(amount, serviceCurrency, userCurrency);
-
-      return formatAmount(convertedAmount, userCurrency);
+      const convertedAmount = convertCurrency(amount, serviceCurrency, displayCurrency);
+      return formatAmount(convertedAmount, displayCurrency);
     } catch (error) {
-      // Fallback to original service currency
-      console.warn('Currency conversion failed, using original currency:', error);
-      return formatAmount(amount, serviceCurrency);
+      // Fallback to UGX
+      console.warn('Currency conversion failed, using UGX as default:', error);
+      return formatAmount(amount, 'UGX');
     }
   }
 
@@ -355,7 +348,37 @@ export default function CheckoutPage() {
 
     fetchCalculations();
 
-    return () => { cancelled = true }
+    // Subscribe to realtime changes on service_pricing_overrides for this service
+    let channel: any = null;
+    try {
+      const svcId = order._service.id;
+      channel = supabase
+        .channel(`checkout-pricing-${svcId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'service_pricing_overrides', filter: `service_id=eq.${svcId}` }, () => {
+          // re-run calculations when overrides change
+          fetchCalculations();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('Failed to subscribe to pricing overrides realtime updates:', err);
+    }
+
+    return () => {
+      cancelled = true;
+      if (channel) {
+        try {
+          // @ts-ignore
+          supabase.removeChannel(channel);
+        } catch (e) {
+          try {
+            // @ts-ignore
+            channel.unsubscribe();
+          } catch (_) {
+            // ignore
+          }
+        }
+      }
+    }
   }, [items, allTicketTypes, order?._service?.id])
 
   // Basic validation: enable Next only when required fields are filled and valid
