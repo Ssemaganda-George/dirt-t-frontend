@@ -6,6 +6,7 @@ import { EditServiceModal } from '../../components/EditServiceModal';
 import SearchBar from '../../components/SearchBar';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { useState, useEffect } from 'react';
 import { getAllVendors } from '../../lib/database';
 import type { Service } from '../../types';
@@ -379,6 +380,9 @@ export function Services() {
                     Availability
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Toggle
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Event Link
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -418,9 +422,31 @@ export function Services() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge 
-                        status={service.status === 'approved' ? 'available' : 'unavailable'} 
+                        status={service.status === 'approved' ? 'available' : service.status === 'inactive' ? 'unavailable' : 'unavailable'} 
                         variant="small" 
                       />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {/* Availability toggle for approved and inactive services */}
+                      {(service.status === 'approved' || service.status === 'inactive') && (
+                        <ToggleSwitch
+                          checked={service.status === 'approved'}
+                          onChange={async () => {
+                            setUpdatingStatus(service.id);
+                            try {
+                              await updateServiceStatus(service.id, service.status === 'approved' ? 'inactive' : 'approved');
+                            } catch (err) {
+                              console.error('Failed to toggle service availability:', err);
+                              alert('Failed to update service availability.');
+                            } finally {
+                              setUpdatingStatus(null);
+                            }
+                          }}
+                          disabled={updatingStatus === service.id}
+                          size="sm"
+                          label=""
+                        />
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {/* Show event scan link status for activities */}
@@ -605,7 +631,7 @@ export function Services() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge 
-                          status={request.service?.status === 'approved' ? 'available' : 'unavailable'} 
+                          status={request.service?.status === 'approved' ? 'available' : request.service?.status === 'inactive' ? 'unavailable' : 'unavailable'} 
                           variant="small" 
                         />
                       </td>
