@@ -1,7 +1,6 @@
 // Partnership types
 import { supabase } from './supabaseClient';
 import { formatCurrency } from './utils';
-import { creditWallet } from './creditWallet';
 import { executeWithCircuitBreaker } from './concurrency';
 import type { UserPreferences, VendorTier } from '../types'
 
@@ -1873,11 +1872,89 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
     const { data: order, error: orderError } = await supabase.from('orders').update({ status: 'paid', reference: payment.reference, updated_at: new Date().toISOString() }).eq('id', orderId).select().single()
     if (orderError) throw orderError
 
-    // Create transaction record
-    try {
-      await addTransaction({ booking_id: undefined as any, vendor_id: payment.vendor_id, tourist_id: payment.tourist_id, amount: payment.amount, currency: payment.currency, transaction_type: 'payment', status: 'completed', payment_method: payment.payment_method as any, reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` })
-    } catch (txErr) {
-      console.warn('Failed to add transaction for ticket order:', txErr)
+    // Calculate commission for ticket purchases (similar to bookings)
+    const adminId = await getAdminProfileId();
+    let commissionAmount = 0;
+    
+    // For ticket orders, use a default commission rate of 15% (can be made configurable later)
+    const defaultCommissionRate = 0.15;
+    commissionAmount = Math.round((payment.amount * defaultCommissionRate) * 100) / 100;
+
+    if (!adminId) {
+      console.warn('Admin profile not found - processing ticket payment without commission');
+      // Fallback to simple transaction creation if admin not found
+      try {
+        await addTransaction({ 
+          booking_id: undefined as any, 
+          vendor_id: payment.vendor_id, 
+          tourist_id: payment.tourist_id, 
+          amount: payment.amount, 
+          currency: payment.currency, 
+          transaction_type: 'payment', 
+          status: 'completed', 
+          payment_method: payment.payment_method as any, 
+          reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+        })
+      } catch (txErr) {
+        console.warn('Failed to add transaction for ticket order:', txErr)
+      }
+    } else {
+      // Use atomic payment processing with commission deduction
+      const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
+        p_vendor_id: payment.vendor_id,
+        p_total_amount: payment.amount,
+        p_commission_amount: commissionAmount,
+        p_admin_id: adminId,
+        p_booking_id: null, // No specific booking for ticket orders
+        p_tourist_id: payment.tourist_id || null,
+        p_currency: payment.currency || 'UGX',
+        p_payment_method: payment.payment_method,
+        p_reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}`
+      });
+
+      if (paymentError) {
+        console.error('Error processing ticket payment with commission:', paymentError);
+        // Fallback to simple transaction
+        try {
+          await addTransaction({ 
+            booking_id: undefined as any, 
+            vendor_id: payment.vendor_id, 
+            tourist_id: payment.tourist_id, 
+            amount: payment.amount, 
+            currency: payment.currency, 
+            transaction_type: 'payment', 
+            status: 'completed', 
+            payment_method: payment.payment_method as any, 
+            reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+          })
+        } catch (txErr) {
+          console.warn('Failed to add fallback transaction for ticket order:', txErr)
+        }
+      } else if (!paymentResult?.success) {
+        console.error('Failed to process ticket payment with commission:', paymentResult?.error);
+        // Fallback to simple transaction
+        try {
+          await addTransaction({ 
+            booking_id: undefined as any, 
+            vendor_id: payment.vendor_id, 
+            tourist_id: payment.tourist_id, 
+            amount: payment.amount, 
+            currency: payment.currency, 
+            transaction_type: 'payment', 
+            status: 'completed', 
+            payment_method: payment.payment_method as any, 
+            reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+          })
+        } catch (txErr) {
+          console.warn('Failed to add fallback transaction for ticket order:', txErr)
+        }
+      } else {
+        console.log('Successfully processed ticket payment with commission:', {
+          total_amount: payment.amount,
+          vendor_amount: paymentResult.vendor_amount,
+          commission_amount: paymentResult.commission_amount
+        });
+      }
     }
 
     // Load order items with ticket type information
@@ -2815,10 +2892,37 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
         // Only create transaction if one doesn't already exist
         if (!existingTransaction) {
           try {
-            // Use atomic payment processing function
-            const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+            // Calculate commission amount first
+            const adminId = await getAdminProfileId();
+            let commissionAmount = 0;
+            try {
+              commissionAmount = Number(data.commission_amount) || 0;
+              if (!commissionAmount && data.commission_rate_at_booking) {
+                commissionAmount = Math.round((Number(data.total_amount || 0) * Number(data.commission_rate_at_booking)) * 100) / 100;
+              }
+              // If still no commission amount, use default 15% commission rate
+              if (!commissionAmount) {
+                const defaultCommissionRate = 0.15; // 15% default commission
+                commissionAmount = Math.round((Number(data.total_amount || 0) * defaultCommissionRate) * 100) / 100;
+                console.log('Using default commission rate for booking:', id, 'commission:', commissionAmount);
+              }
+            } catch (e) {
+              // Fallback to default commission if calculation fails
+              const defaultCommissionRate = 0.15;
+              commissionAmount = Math.round((Number(data.total_amount || 0) * defaultCommissionRate) * 100) / 100;
+              console.log('Commission calculation failed, using default for booking:', id, 'commission:', commissionAmount);
+            }
+
+            if (!adminId) {
+              throw new Error('Admin profile not found - cannot process payment with commission');
+            }
+
+            // Use atomic payment processing with commission deduction
+            const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
               p_vendor_id: data.vendor_id,
-              p_amount: data.total_amount,
+              p_total_amount: data.total_amount,
+              p_commission_amount: commissionAmount,
+              p_admin_id: adminId,
               p_booking_id: id || null,
               p_tourist_id: data.tourist_id || null,
               p_currency: data.currency || 'UGX',
@@ -2829,31 +2933,15 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
             if (paymentError) throw paymentError;
 
             if (!paymentResult?.success) {
-              throw new Error(paymentResult?.error || 'Failed to process payment');
+              throw new Error(paymentResult?.error || 'Failed to process payment with commission');
             }
 
-            console.log('Created payment transaction and credited wallet for booking:', id);
+            console.log('Created payment transaction with commission deduction for booking:', id, {
+              total_amount: data.total_amount,
+              vendor_amount: paymentResult.vendor_amount,
+              commission_amount: paymentResult.commission_amount
+            });
 
-            // Credit admin wallet with platform commission only
-            const adminId = await getAdminProfileId();
-            if (adminId) {
-              // Prefer booked commission_amount if present, otherwise compute from stored rate
-              let commissionToCredit = 0
-              try {
-                commissionToCredit = Number(data.commission_amount) || 0
-                if (!commissionToCredit && data.commission_rate_at_booking) {
-                  commissionToCredit = Math.round((Number(data.total_amount || 0) * Number(data.commission_rate_at_booking)) * 100) / 100
-                }
-              } catch (e) {
-                commissionToCredit = 0
-              }
-
-              if (commissionToCredit > 0) {
-                await creditWallet(adminId, commissionToCredit, data.currency)
-              } else {
-                console.warn('No commission amount available to credit admin wallet for booking', id)
-              }
-            }
           } catch (transactionError) {
             // If transactions table doesn't exist, just log and continue
             if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
@@ -4097,7 +4185,14 @@ export async function getTransactions(vendorId: string) {
       .from('vendors')
       .select(`
         id,
-        transactions (*)
+        transactions (
+          *,
+          bookings (
+            id,
+            commission_amount,
+            total_amount
+          )
+        )
       `)
       .eq('id', vendorId)
       .single()
@@ -4106,14 +4201,33 @@ export async function getTransactions(vendorId: string) {
 
     if (!vendorError && vendorData?.transactions) {
       console.log('getTransactions: Got transactions through vendor relationship:', vendorData.transactions.length)
-      return vendorData.transactions
+      // Process transactions to show net amounts
+      const processedTransactions = vendorData.transactions.map((transaction: any) => {
+        if (transaction.transaction_type === 'payment' && transaction.bookings?.commission_amount) {
+          return {
+            ...transaction,
+            amount: transaction.amount - transaction.bookings.commission_amount, // Net amount vendor receives
+            original_amount: transaction.amount, // Keep original for reference
+            commission_deducted: transaction.bookings.commission_amount
+          }
+        }
+        return transaction
+      })
+      return processedTransactions
     }
 
     // Fallback: direct query (might be blocked by RLS)
     console.log('getTransactions: Using direct query...')
     const { data, error } = await supabase
       .from('transactions')
-      .select('*')
+      .select(`
+        *,
+        bookings (
+          id,
+          commission_amount,
+          total_amount
+        )
+      `)
       .eq('vendor_id', vendorId)
       .order('created_at', { ascending: false })
 
@@ -4127,7 +4241,20 @@ export async function getTransactions(vendorId: string) {
       throw error
     }
 
-    return data || []
+    // For vendor transactions, calculate net amount (total - commission)
+    const processedData = (data || []).map(transaction => {
+      if (transaction.transaction_type === 'payment' && transaction.bookings?.commission_amount) {
+        return {
+          ...transaction,
+          amount: transaction.amount - transaction.bookings.commission_amount, // Net amount vendor receives
+          original_amount: transaction.amount, // Keep original for reference
+          commission_deducted: transaction.bookings.commission_amount
+        }
+      }
+      return transaction
+    })
+
+    return processedData
   } catch (error) {
     console.error('Error in getTransactions:', error)
     return []

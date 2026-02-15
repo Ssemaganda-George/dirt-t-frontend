@@ -1,21 +1,12 @@
 import { format } from 'date-fns';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrendingUp, DollarSign, CreditCard } from 'lucide-react';
 
 import { useAdminTransactions } from '../../hooks/hook';
-import { getAllBookings } from '../../lib/database';
+import { getAdminProfileId, getVendorWallet } from '../../lib/database';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
-
-interface CompanyWalletStats {
-  totalRevenue: number;
-  totalCommissions: number;
-  totalRefunds: number;
-  totalWithdrawals: number;
-  netBalance: number;
-  pendingWithdrawals: number;
-}
 
 // Assume commission rate is 5% (can be made configurable)
 
@@ -23,41 +14,18 @@ export function DirtTrailsWallet() {
   const { transactions, loading, error } = useAdminTransactions();
   const { selectedCurrency } = usePreferences();
   const [activeTab, setActiveTab] = useState<'overview' | 'earnings' | 'commissions' | 'refunds' | 'transactions'>('overview');
-  const [stats, setStats] = useState<CompanyWalletStats>({
-    totalRevenue: 0,
-    totalCommissions: 0,
-    totalRefunds: 0,
-    totalWithdrawals: 0,
-    netBalance: 0,
-    pendingWithdrawals: 0
-  });
   const [dateRange, setDateRange] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // Show 20 transactions per page
 
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [adminWallet, setAdminWallet] = useState<any>(null);
 
-  // Calculate wallet statistics
-  useEffect(() => {
-    if (transactions && transactions.length > 0) {
-      calculateStats();
-    }
+  // Memoize filtered transactions based on date range
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
 
-    // Fetch bookings so we can compute actual commission amounts (stored on bookings)
-    const loadBookings = async () => {
-      try {
-        const data = await getAllBookings();
-        setBookings(data || []);
-      } catch (err) {
-        console.error('Failed to load bookings for DirtTrailsWallet:', err);
-        setBookings([]);
-      }
-    };
-
-    loadBookings();
-  }, [transactions, dateRange]);
-
-  const getFilteredTransactions = () => {
     const now = new Date();
-    let startDate: Date;
+    let startDate: Date | null = null;
 
     switch (dateRange) {
       case 'month':
@@ -73,80 +41,166 @@ export function DirtTrailsWallet() {
         return transactions;
     }
 
-    return transactions.filter(t => new Date(t.created_at) >= startDate);
-  };
+    return transactions.filter(t => !startDate || new Date(t.created_at) >= startDate);
+  }, [transactions, dateRange]);
 
-  const calculateStats = () => {
-    const filteredTx = getFilteredTransactions();
+  // Memoize stats calculation
+  const stats = useMemo(() => {
+    if (!filteredTransactions) {
+      return {
+        totalRevenue: 0,
+        totalCommissions: 0,
+        totalRefunds: 0,
+        totalWithdrawals: 0,
+        netBalance: 0,
+        pendingWithdrawals: 0
+      };
+    }
 
     // Total Revenue - all completed payments
-    const totalRevenue = filteredTx
+    const totalRevenue = filteredTransactions
       .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Total Commissions - derive from bookings' commission_amount where available
-    // Filter bookings by the same dateRange and completed/paid criteria
-    const filteredBookings = (() => {
-      const now = new Date();
-      let startDate: Date | null = null;
+    // Total Commissions - from admin wallet balance
+    const totalCommissions = adminWallet?.balance || 0;
 
-      switch (dateRange) {
-        case 'month':
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          break;
-        case 'quarter':
-          startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
-          break;
-        case 'year':
-          startDate = new Date(now.getFullYear(), 0, 1);
-          break;
-        default:
-          startDate = null;
-      }
-
-      return bookings.filter(b => {
-        try {
-          if (!b) return false;
-          if (b.status !== 'confirmed') return false;
-          if (b.payment_status !== 'paid' && b.payment_status !== 'completed' && b.payment_status !== 'paid') return false;
-          if (!b.commission_amount) return false;
-          if (!startDate) return true;
-          return new Date(b.created_at) >= startDate;
-        } catch (e) {
-          return false;
-        }
-      });
-    })();
-
-    const totalCommissions = filteredBookings.reduce((sum, b) => sum + (Number(b.commission_amount) || 0), 0);
-
-    // Total Refunds - completed refunds (charges to company)
-    const totalRefunds = filteredTx
+    // Total Refunds - completed refunds
+    const totalRefunds = filteredTransactions
       .filter(t => t.transaction_type === 'refund' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Total Withdrawals - funds paid out to vendors
-    const totalWithdrawals = filteredTx
+    // Total Withdrawals - completed withdrawals
+    const totalWithdrawals = filteredTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Pending withdrawals not yet processed
-    const pendingWithdrawals = filteredTx
+    // Pending withdrawals
+    const pendingWithdrawals = filteredTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'pending')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Net Balance - Total Revenue + Commissions - Refunds - Withdrawals
+    // Net Balance
     const netBalance = totalRevenue + totalCommissions - totalRefunds - totalWithdrawals;
 
-    setStats({
+    return {
       totalRevenue,
       totalCommissions,
       totalRefunds,
       totalWithdrawals,
       netBalance,
       pendingWithdrawals
-    });
-  };
+    };
+  }, [filteredTransactions, adminWallet]);
+
+  // Calculate wallet statistics
+  useEffect(() => {
+    if (transactions && transactions.length > 0) {
+      // Stats are now calculated via useMemo, no need for separate calculateStats function
+    }
+
+    // Fetch admin wallet balance
+    const loadAdminWallet = async () => {
+      try {
+        const adminId = await getAdminProfileId();
+        if (adminId) {
+          const wallet = await getVendorWallet(adminId);
+          setAdminWallet(wallet);
+        }
+      } catch (err) {
+        console.error('Failed to load admin wallet for DirtTrailsWallet:', err);
+        setAdminWallet(null);
+      }
+    };
+
+    loadAdminWallet();
+  }, [transactions]); // Removed dateRange from dependencies since filtering is now memoized
+
+  // Memoize transaction category filters
+  const commissionTransactions = useMemo(() => 
+    filteredTransactions.filter((t: any) => t.transaction_type === 'payment' && t.status === 'completed'),
+    [filteredTransactions]
+  );
+
+  const refundTransactions = useMemo(() => 
+    filteredTransactions.filter((t: any) => t.transaction_type === 'refund'),
+    [filteredTransactions]
+  );
+
+  const earningTransactions = useMemo(() => 
+    filteredTransactions.filter((t: any) => t.transaction_type === 'payment' && t.status === 'completed'),
+    [filteredTransactions]
+  );
+
+  const allCompanyTransactions = useMemo(() => 
+    filteredTransactions.filter((t: any) => ['payment', 'withdrawal', 'refund'].includes(t.transaction_type)),
+    [filteredTransactions]
+  );
+
+  const getCurrentTransactions = useCallback(() => {
+    switch (activeTab) {
+      case 'commissions':
+        return commissionTransactions;
+      case 'refunds':
+        return refundTransactions;
+      case 'earnings':
+        return earningTransactions;
+      case 'transactions':
+        return allCompanyTransactions;
+      default:
+        return [];
+    }
+  }, [activeTab, commissionTransactions, refundTransactions, earningTransactions, allCompanyTransactions]);
+
+  const currentTransactions = useMemo(() => getCurrentTransactions(), [getCurrentTransactions]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(currentTransactions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTransactions = useMemo(() => 
+    currentTransactions.slice(startIndex, endIndex),
+    [currentTransactions, startIndex, endIndex]
+  );
+
+  // Reset to page 1 when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, dateRange]);
+
+  // Memoize export functions
+  const exportToCSV = useCallback((data: any[], filename: string) => {
+    const headers = Object.keys(data[0] || {}).join(',');
+    const rows = data.map(row =>
+      Object.values(row).map(value =>
+        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+      ).join(',')
+    );
+    const csv = [headers, ...rows].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }, []);
+
+  const exportWalletReport = useCallback(() => {
+    const reportData = currentTransactions.map((t: any) => ({
+      'Transaction ID': t.id.slice(0, 8),
+      'Type': t.transaction_type,
+      'Amount': t.amount,
+      'Currency': t.currency,
+      'Status': t.status,
+      'Reference': t.reference,
+      'Created At': format(new Date(t.created_at), 'yyyy-MM-dd HH:mm:ss'),
+      'Vendor': t.vendors?.business_name || 'N/A'
+    }));
+
+    exportToCSV(reportData, `dirt-trails-wallet-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+  }, [currentTransactions, exportToCSV]);
 
   if (loading) {
     return (
@@ -163,67 +217,6 @@ export function DirtTrailsWallet() {
       </div>
     );
   }
-
-  const filteredTransactions = getFilteredTransactions();
-  
-  const commissionTransactions = filteredTransactions.filter(t => t.transaction_type === 'payment' && t.status === 'completed');
-  const refundTransactions = filteredTransactions.filter(t => t.transaction_type === 'refund');
-  const earningTransactions = filteredTransactions.filter(t => 
-    t.transaction_type === 'payment' && t.status === 'completed'
-  );
-  const allCompanyTransactions = filteredTransactions.filter(t => 
-    ['payment', 'withdrawal', 'refund'].includes(t.transaction_type)
-  );
-
-  const getCurrentTransactions = () => {
-    switch (activeTab) {
-      case 'commissions':
-        return commissionTransactions;
-      case 'refunds':
-        return refundTransactions;
-      case 'earnings':
-        return earningTransactions;
-      case 'transactions':
-        return allCompanyTransactions;
-      default:
-        return [];
-    }
-  };
-
-  const currentTransactions = getCurrentTransactions();
-
-  const exportToCSV = (data: any[], filename: string) => {
-    const headers = Object.keys(data[0] || {}).join(',');
-    const rows = data.map(row =>
-      Object.values(row).map(value =>
-        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
-      ).join(',')
-    );
-    const csv = [headers, ...rows].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportWalletReport = () => {
-    const reportData = currentTransactions.map(t => ({
-      'Transaction ID': t.id.slice(0, 8),
-      'Type': t.transaction_type,
-      'Amount': t.amount,
-      'Currency': t.currency,
-      'Status': t.status,
-      'Reference': t.reference,
-      'Created At': format(new Date(t.created_at), 'yyyy-MM-dd HH:mm:ss'),
-      'Vendor': t.vendors?.business_name || 'N/A'
-    }));
-
-    exportToCSV(reportData, `dirt-trails-wallet-${format(new Date(), 'yyyy-MM-dd')}.csv`);
-  };
 
   return (
     <div className="space-y-6">
@@ -242,7 +235,7 @@ export function DirtTrailsWallet() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-blue-100">Net Balance</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">
+              <p className="text-xl font-semibold text-gray-900 mt-2">
                 {formatCurrencyWithConversion(stats.netBalance, selectedCurrency)}
               </p>
             </div>
@@ -254,7 +247,7 @@ export function DirtTrailsWallet() {
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Total Revenue</p>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">
+            <p className="text-xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalRevenue, selectedCurrency)}
             </p>
           </div>
@@ -265,7 +258,7 @@ export function DirtTrailsWallet() {
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Commissions Earned</p>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">
+            <p className="text-xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalCommissions, selectedCurrency)}
             </p>
           </div>
@@ -276,7 +269,7 @@ export function DirtTrailsWallet() {
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Refunds Issued</p>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">
+            <p className="text-xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalRefunds, selectedCurrency)}
             </p>
           </div>
@@ -287,7 +280,7 @@ export function DirtTrailsWallet() {
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Withdrawals</p>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">
+            <p className="text-xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalWithdrawals, selectedCurrency)}
             </p>
           </div>
@@ -426,7 +419,35 @@ export function DirtTrailsWallet() {
 
           {activeTab !== 'overview' && (
             <div className="space-y-4">
-              {currentTransactions.length > 0 ? (
+              {/* Transaction count and pagination info */}
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  Showing {startIndex + 1}-{Math.min(endIndex, currentTransactions.length)} of {currentTransactions.length} transactions
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {paginatedTransactions.length > 0 ? (
                 <>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
@@ -450,7 +471,7 @@ export function DirtTrailsWallet() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {currentTransactions.map((transaction) => (
+                        {paginatedTransactions.map((transaction) => (
                           <tr key={transaction.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
@@ -482,12 +503,49 @@ export function DirtTrailsWallet() {
                       </tbody>
                     </table>
                   </div>
-                  <button
-                    onClick={exportWalletReport}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Export {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                  </button>
+                  <div className="flex justify-between items-center">
+                    <button
+                      onClick={exportWalletReport}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      Export {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                    </button>
+                    {totalPages > 1 && (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                        >
+                          First
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                        >
+                          ‹
+                        </button>
+                        <span className="text-xs text-gray-600 px-2">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                        >
+                          ›
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                        >
+                          Last
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="text-center py-8">

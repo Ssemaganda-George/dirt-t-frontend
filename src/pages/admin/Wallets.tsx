@@ -3,7 +3,7 @@ import { useAdminTransactions } from '../../hooks/hook';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { updateTransactionStatus, getAllVendorWallets, getAllTransactionsForAdmin } from '../../lib/database';
+import { updateTransactionStatus, getAllVendorWallets, getAllTransactionsForAdmin, getAllBookings } from '../../lib/database';
 import { useState, useEffect } from 'react';
 
 interface VendorWallet {
@@ -37,6 +37,7 @@ export function Transactions() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [vendorWallets, setVendorWallets] = useState<VendorWallet[]>([]);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'transactions' | 'approvals'>('overview');
@@ -50,14 +51,16 @@ export function Transactions() {
       setLoading(true);
       setError(null);
 
-      const [walletsData, transactionsData] = await Promise.all([
+      const [walletsData, transactionsData, bookingsData] = await Promise.all([
         getAllVendorWallets(),
         // Use admin version so admins see all transactions (not limited by RLS for non-admins)
-        getAllTransactionsForAdmin()
+        getAllTransactionsForAdmin(),
+        getAllBookings()
       ]);
 
       setVendorWallets(walletsData);
       setAllTransactions(transactionsData);
+      setAllBookings(bookingsData);
     } catch (err) {
       console.error('Error loading wallet data:', err);
       setError('Failed to load wallet data');
@@ -85,9 +88,9 @@ export function Transactions() {
     const totalVendors = vendorWallets.length;
     const activeVendors = vendorWallets.filter(w => w.vendors?.status === 'approved').length;
     const totalBalance = vendorWallets.reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
-    const totalEarnings = allTransactions
-      .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalEarnings = allBookings
+      .filter(b => b.commission_amount && b.status === 'confirmed')
+      .reduce((sum, b) => sum + (Number(b.commission_amount) || 0), 0);
     const totalWithdrawn = allTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'completed')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
