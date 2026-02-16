@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
+import { PageSkeleton } from '../components/SkeletonLoader'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
@@ -305,6 +306,27 @@ export default function Home() {
 
   // Combined loading state
   const isLoading = servicesLoading
+
+  // Local control for full-page skeleton timing: keep the full skeleton visible
+  // for a maximum of 2 seconds so the page layout appears promptly.
+  const [showFullSkeleton, setShowFullSkeleton] = useState(true)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    if (isLoading) {
+      // Ensure we start by showing the full skeleton, but hide it after 2s
+      setShowFullSkeleton(true)
+      timer = setTimeout(() => setShowFullSkeleton(false), 2000)
+    } else {
+      // Data loaded — hide full skeleton immediately
+      setShowFullSkeleton(false)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [isLoading])
+
 
   const handleCategorySelect = (categoryId: string) => {
     if (categoryId === 'all') {
@@ -638,6 +660,13 @@ export default function Home() {
 
   const currentItems = filteredServices
   const currentItemCount = currentItems.length
+
+  // If services are still loading, show the full-page home skeleton, but only
+  // while `showFullSkeleton` is true (max ~2s). After that we'll render the
+  // page layout and let list-level placeholders handle the remaining loading.
+  if (isLoading && showFullSkeleton) {
+    return <PageSkeleton type="home" />
+  }
 
   if (selectedService) {
     return (
