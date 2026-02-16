@@ -190,12 +190,18 @@ export function getVendorDisplayStatus(bookingStatus: string, paymentStatus: str
 export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
   try {
     if (Array.isArray(ticketTypes) && ticketTypes.length > 0) {
-      const prices = ticketTypes.map((t: any) => Number(t?.price ?? 0)).filter(Number.isFinite)
+      // prefer positive ticket prices; ignore zero or invalid prices
+      const prices = ticketTypes
+        .map((t: any) => Number(t?.price ?? 0))
+        .filter((p: number) => Number.isFinite(p) && p > 0)
       if (prices.length > 0) return Math.min(...prices)
     }
 
     if (Array.isArray(service?.ticket_types) && service.ticket_types.length > 0) {
-      const prices = service.ticket_types.map((t: any) => Number(t?.price ?? 0)).filter(Number.isFinite)
+      // prefer positive ticket prices; ignore zero or invalid prices
+      const prices = service.ticket_types
+        .map((t: any) => Number(t?.price ?? 0))
+        .filter((p: number) => Number.isFinite(p) && p > 0)
       if (prices.length > 0) return Math.min(...prices)
     }
 
@@ -207,8 +213,12 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
     }
 
     // Fall back to general price field
-    const p = Number(service?.price ?? 0)
-    return Number.isFinite(p) ? p : 0
+    let p = service?.price
+    if (typeof p === 'string') {
+      p = parseFloat(p)
+    }
+    if (!Number.isFinite(p)) p = 0
+    return Number(p)
   } catch (e) {
     return 0
   }

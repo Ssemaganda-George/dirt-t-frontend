@@ -1128,17 +1128,15 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
             <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
               <div className="text-sm md:text-base font-normal text-gray-800 leading-none">
                 <span className="text-[9px] md:text-[10px] text-gray-500 mr-1">From</span>
-                {
-                  <Money
-                    amount={getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined)}
-                    serviceCurrency={service.currency}
-                    targetCurrency={selectedCurrency || 'UGX'}
-                    locale={selectedLanguage || 'en-US'}
-                    className="text-sm md:text-base font-normal text-gray-800 leading-none"
-                    currencyClassName="text-[10px] text-gray-600 mr-1"
-                    amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
-                  />
-                }
+                <Money
+                  amount={getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined)}
+                  serviceCurrency={service.currency}
+                  targetCurrency={selectedCurrency || 'UGX'}
+                  locale={selectedLanguage || 'en-US'}
+                  className="text-sm md:text-base font-normal text-gray-800 leading-none"
+                  currencyClassName="text-[10px] text-gray-600 mr-1"
+                  amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
+                />
                 <span className="text-[9px] md:text-[10px] text-gray-500 ml-1 whitespace-nowrap">
                   {getUnitLabel(service.service_categories?.name)}
                 </span>

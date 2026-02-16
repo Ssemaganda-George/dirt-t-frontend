@@ -37,6 +37,15 @@ function formatServicePrice(service: Service, selectedCurrency: string, selected
 export function Services() {
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
+  // Helper to determine if a service should be auto-inactive
+  function isPast24HoursAfterEvent(service: Service): boolean {
+    const eventDateTimeStr = service.event_datetime || service.event_date;
+    if (!eventDateTimeStr) return false;
+    const eventDate = new Date(eventDateTimeStr);
+    if (isNaN(eventDate.getTime())) return false;
+    const now = new Date();
+    return now.getTime() > eventDate.getTime() + 24 * 60 * 60 * 1000;
+  }
   const { categories } = useServiceCategories();
   const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
@@ -430,7 +439,7 @@ export function Services() {
                       {/* Availability toggle for approved and inactive services */}
                       {(service.status === 'approved' || service.status === 'inactive') && (
                         <ToggleSwitch
-                          checked={service.status === 'approved'}
+                          checked={service.status === 'approved' && !isPast24HoursAfterEvent(service)}
                           onChange={async () => {
                             setUpdatingStatus(service.id);
                             try {
@@ -442,9 +451,9 @@ export function Services() {
                               setUpdatingStatus(null);
                             }
                           }}
-                          disabled={updatingStatus === service.id}
+                          disabled={updatingStatus === service.id || isPast24HoursAfterEvent(service)}
                           size="sm"
-                          label=""
+                          label={isPast24HoursAfterEvent(service) ? 'Auto-deactivated after 24h' : ''}
                         />
                       )}
                     </td>
