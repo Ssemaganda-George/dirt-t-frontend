@@ -16,14 +16,14 @@ export default function VendorPending() {
   }
 
   const getStatusInfo = () => {
-    // Use profile status instead of vendor status
+    // Use profile status to determine account state
     const status = profile?.status
     switch (status) {
       case 'pending':
         return {
           icon: <Clock className="h-12 w-12 text-yellow-500" />,
           title: 'Account Under Review',
-          message: 'Your vendor account is currently being reviewed by our administrators. You will receive an email notification once your account is approved.',
+          message: 'Your business account is currently under review by our team. You will receive an email notification once a decision has been made.',
           bgColor: 'bg-yellow-50',
           borderColor: 'border-yellow-200'
         }
@@ -31,7 +31,7 @@ export default function VendorPending() {
         return {
           icon: <AlertCircle className="h-12 w-12 text-red-500" />,
           title: 'Account Rejected',
-          message: 'Unfortunately, your vendor account application has been rejected. Please contact support for more information.',
+          message: 'We regret to inform you that your business account application has been declined. If you require further details, please contact our support team.',
           bgColor: 'bg-red-50',
           borderColor: 'border-red-200'
         }
@@ -39,7 +39,7 @@ export default function VendorPending() {
         return {
           icon: <AlertCircle className="h-12 w-12 text-orange-500" />,
           title: 'Account Suspended',
-          message: 'Your Business account has been suspended. Please contact support for assistance.',
+          message: 'Your business account has been suspended. Please contact our support team for assistance.',
           bgColor: 'bg-orange-50',
           borderColor: 'border-orange-200'
         }
@@ -47,7 +47,7 @@ export default function VendorPending() {
         return {
           icon: <CheckCircle className="h-12 w-12 text-green-500" />,
           title: 'Account Approved!',
-          message: 'Congratulations! Your vendor account has been approved. You can now access the vendor dashboard.',
+          message: 'Congratulations! Your business account has been approved. You may now access the business dashboard.',
           bgColor: 'bg-green-50',
           borderColor: 'border-green-200'
         }
@@ -55,7 +55,7 @@ export default function VendorPending() {
         return {
           icon: <Clock className="h-12 w-12 text-blue-500" />,
           title: 'Business Account Status',
-          message: 'Your Business account status is being reviewed. Please check back later or contact support.',
+          message: 'Your business account is being reviewed. Please check back later or contact support if you need assistance.',
           bgColor: 'bg-blue-50',
           borderColor: 'border-blue-200'
         }
@@ -90,12 +90,12 @@ export default function VendorPending() {
                   <h3 className="text-sm font-medium text-blue-800">
                     What happens next?
                   </h3>
-                  <div className="mt-2 text-sm text-blue-700">
+                    <div className="mt-2 text-sm text-blue-700">
                     <ul className="list-disc list-inside space-y-1">
-                      <li>Our team will review your business information</li>
-                      <li>We'll verify your business details and documentation</li>
-                      <li>You'll receive an email once approved</li>
-                      <li>Approval typically takes 1-3 business days</li>
+                      <li>Our team will review the information you submitted.</li>
+                      <li>We will verify the business details and any supporting documentation.</li>
+                      <li>You will receive an email notification once a decision has been made.</li>
+                      <li>Review typically takes 1–3 business days.</li>
                     </ul>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ export default function VendorPending() {
                 onClick={() => navigate('/vendor')}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                Go to Vendor Dashboard
+                Go to Business Dashboard
               </button>
             ) : (
               <button
@@ -130,7 +130,7 @@ export default function VendorPending() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Need help? <a href="mailto:support@dirttrails.com" className="font-medium text-primary-600 hover:text-primary-500">
+              Need help? <a href="mailto:safaris.dirttrails@gmail.com" className="font-medium text-primary-600 hover:text-primary-500">
                 Contact Support
               </a>
             </p>
