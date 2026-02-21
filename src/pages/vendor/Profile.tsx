@@ -29,6 +29,15 @@ export default function Profile() {
     business_email: '',
     business_website: '',
     operating_hours: ''
+    ,
+    // Payment / payout fields
+    bank_name: '',
+    bank_account_name: '',
+    bank_account_number: '',
+    bank_branch: '',
+    bank_swift: '',
+    // Up to 2 mobile money payout accounts
+    mobile_money_accounts: [] as { provider: string; phone: string; country_code: string }[]
   })
   const [message, setMessage] = useState('')
 
@@ -98,6 +107,20 @@ export default function Profile() {
         business_email: vendorData.business_email || '',
         business_website: vendorData.business_website || '',
         operating_hours: vendorData.operating_hours || ''
+        ,
+        bank_name: (vendorData.bank_details && vendorData.bank_details.name) || vendorData.bank_name || '',
+        bank_account_name: (vendorData.bank_details && vendorData.bank_details.account_name) || vendorData.bank_account_name || '',
+        bank_account_number: (vendorData.bank_details && vendorData.bank_details.account_number) || vendorData.bank_account_number || '',
+        bank_branch: (vendorData.bank_details && vendorData.bank_details.branch) || vendorData.bank_branch || '',
+        bank_swift: (vendorData.bank_details && vendorData.bank_details.swift) || vendorData.bank_swift || '',
+        mobile_money_accounts: (() => {
+          const accounts = Array.isArray(vendorData.mobile_money_accounts)
+            ? vendorData.mobile_money_accounts
+            : (Array.isArray(vendorData.business_phones) ? vendorData.business_phones.map((p: any) => ({ provider: p.provider || '', phone: String(p.phone || ''), country_code: String(p.country_code || '+256') })) : [])
+
+          while (accounts.length < 2) accounts.push({ provider: '', phone: '', country_code: '+256' })
+          return accounts.slice(0, 2)
+        })()
       })
     }
   }, [profile, vendorData])
@@ -151,6 +174,15 @@ export default function Profile() {
           operating_hours: formData.operating_hours,
           vendor_phone: formData.phone,
           vendor_phone_country_code: formData.phone_country_code,
+          // Persist new payment fields
+          bank_details: {
+            name: formData.bank_name,
+            account_name: formData.bank_account_name,
+            account_number: formData.bank_account_number,
+            branch: formData.bank_branch,
+            swift: formData.bank_swift
+          },
+          mobile_money_accounts: formData.mobile_money_accounts,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
@@ -238,6 +270,20 @@ export default function Profile() {
         business_email: vendorData.business_email || '',
         business_website: vendorData.business_website || '',
         operating_hours: vendorData.operating_hours || ''
+        ,
+        bank_name: (vendorData.bank_details && vendorData.bank_details.name) || vendorData.bank_name || '',
+        bank_account_name: (vendorData.bank_details && vendorData.bank_details.account_name) || vendorData.bank_account_name || '',
+        bank_account_number: (vendorData.bank_details && vendorData.bank_details.account_number) || vendorData.bank_account_number || '',
+        bank_branch: (vendorData.bank_details && vendorData.bank_details.branch) || vendorData.bank_branch || '',
+        bank_swift: (vendorData.bank_details && vendorData.bank_details.swift) || vendorData.bank_swift || '',
+        mobile_money_accounts: (() => {
+          const accounts = Array.isArray(vendorData.mobile_money_accounts)
+            ? vendorData.mobile_money_accounts
+            : (Array.isArray(vendorData.business_phones) ? vendorData.business_phones.map((p: any) => ({ provider: p.provider || '', phone: String(p.phone || ''), country_code: String(p.country_code || '+256') })) : [])
+
+          while (accounts.length < 2) accounts.push({ provider: '', phone: '', country_code: '+256' })
+          return accounts.slice(0, 2)
+        })()
       })
     }
     setIsEditing(false)
@@ -285,6 +331,8 @@ export default function Profile() {
           </button>
         )}
       </div>
+
+      
 
       {message && (
         <div className={`px-4 py-3 rounded-xl text-sm font-medium ${message.includes('successfully') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -339,7 +387,7 @@ export default function Profile() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone *</label>
             {isEditing ? (
               <PhoneModal
                 phone={formData.business_phone}
@@ -478,6 +526,135 @@ export default function Profile() {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
             placeholder="e.g., Mon-Fri 9AM-6PM, Sat-Sun 10AM-4PM"
           />
+        </div>
+      </div>
+
+      {/* Payment / Payout Details */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Payment Details</h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+            <input
+              type="text"
+              name="bank_name"
+              id="bank_name"
+              value={formData.bank_name}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="e.g., Stanbic Bank"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bank_account_name" className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+            <input
+              type="text"
+              name="bank_account_name"
+              id="bank_account_name"
+              value={formData.bank_account_name}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Name on the account"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+            <input
+              type="text"
+              name="bank_account_number"
+              id="bank_account_number"
+              value={formData.bank_account_number}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="e.g., 1234567890"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bank_branch" className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+            <input
+              type="text"
+              name="bank_branch"
+              id="bank_branch"
+              value={formData.bank_branch}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="Branch name (optional)"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="bank_swift" className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC (optional)</label>
+            <input
+              type="text"
+              name="bank_swift"
+              id="bank_swift"
+              value={formData.bank_swift}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              placeholder="e.g., SBICUGKX"
+            />
+          </div>
+        </div>
+
+          <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Accounts</label>
+          <div className="space-y-3">
+            {formData.mobile_money_accounts.map((acct, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                  <input
+                    type="text"
+                    name={`mm_provider_${idx}`}
+                    value={acct.provider}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, provider: e.target.value } : m)
+                    }))}
+                    disabled={!isEditing}
+                    placeholder="Provider (e.g., MTN, Airtel)"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="sr-only">Mobile money phone</label>
+                  {isEditing ? (
+                    <PhoneModal
+                      phone={acct.phone}
+                      countryCode={acct.country_code || '+256'}
+                      onPhoneChange={(phone) => setFormData(prev => ({
+                        ...prev,
+                        mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, phone } : m)
+                      }))}
+                      onCountryCodeChange={(countryCode) => setFormData(prev => ({
+                        ...prev,
+                        mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, country_code: countryCode } : m)
+                      }))}
+                      placeholder="700 000 000"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={acct.phone ? `${acct.country_code} ${acct.phone} ${acct.provider ? `(${acct.provider})` : ''}` : ''}
+                      readOnly
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
