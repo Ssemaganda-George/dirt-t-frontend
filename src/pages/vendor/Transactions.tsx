@@ -21,6 +21,10 @@ export default function VendorTransactions() {
   const [amount, setAmount] = useState<number>(0)
   const [currency, setCurrency] = useState('UGX')
   const [walletStats, setWalletStats] = useState<any>(null)
+  // Payout account selection
+  const [payoutOptions, setPayoutOptions] = useState<any[]>([])
+  const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null)
+  const [setAsDefault, setSetAsDefault] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -156,6 +160,42 @@ export default function VendorTransactions() {
     setFilteredTxs(filtered)
   }
 
+  // Build payout options when vendor record changes
+  useEffect(() => {
+    const buildOptions = () => {
+      const opts: any[] = []
+      if (!vendor) return opts
+
+      const bank = vendor.bank_details
+      if (bank && (bank.account_number || bank.account_name || bank.name)) {
+        const acctNum = String(bank.account_number || '')
+        const masked = acctNum ? `****${acctNum.slice(-4)}` : ''
+        opts.push({ id: 'bank', type: 'bank', label: `${bank.name || 'Bank'} ${masked ? '· ' + masked : ''}`, meta: bank })
+      }
+
+      const mobiles = Array.isArray(vendor.mobile_money_accounts) ? vendor.mobile_money_accounts : []
+      mobiles.forEach((m: any, i: number) => {
+        if (m && (m.phone || m.provider)) {
+          const labelPhone = `${m.country_code || ''} ${m.phone || ''}`.trim()
+          opts.push({ id: `mobile-${i}`, type: 'mobile', label: `${m.provider || 'Mobile Money'} · ${labelPhone}`, meta: m, index: i })
+        }
+      })
+
+      // If vendor has a preferred_payout saved, try to select it
+      const preferred = vendor.preferred_payout
+      if (preferred && opts.find(o => o.id === preferred)) {
+        setSelectedPayoutId(preferred)
+      } else if (opts.length === 1) {
+        // Auto-select when only one option exists
+        setSelectedPayoutId(opts[0].id)
+      }
+
+      setPayoutOptions(opts)
+    }
+
+    buildOptions()
+  }, [vendor])
+
   // Update filters when they change
   useEffect(() => {
     if (txs.length > 0) {
@@ -211,7 +251,24 @@ export default function VendorTransactions() {
   const handleWithdraw = async () => {
     if (!amount || amount <= 0) return
     try {
-      await requestWithdrawal(vendorId, amount, currency)
+      // Ensure a payout account is selected
+      if (!selectedPayoutId || payoutOptions.length === 0) {
+        setError('Please add a payout account in your profile before withdrawing.')
+        return
+      }
+
+      const payout = payoutOptions.find(p => p.id === selectedPayoutId)
+
+      // If user opted to set this as default, persist to vendor record
+      if (setAsDefault && vendor && vendorId) {
+        try {
+          await supabase.from('vendors').update({ preferred_payout: selectedPayoutId }).eq('id', vendorId)
+        } catch (e) {
+          console.warn('Failed to save preferred payout:', e)
+        }
+      }
+
+      await requestWithdrawal(vendorId, amount, currency, payout)
       setAmount(0)
       setShowWithdraw(false)
       refresh()
@@ -945,6 +1002,32 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     <p className="mt-1 text-xs text-red-600">Exceeds available balance</p>
                   )}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Payout account</label>
+                  {payoutOptions.length === 0 ? (
+                    <p className="text-sm text-red-600">No payout account found. Please add a bank or mobile-money account in your profile before requesting a withdrawal.</p>
+                  ) : payoutOptions.length === 1 ? (
+                    <div className="text-sm text-gray-700">{payoutOptions[0].label}</div>
+                  ) : (
+                    <select
+                      value={selectedPayoutId || ''}
+                      onChange={(e) => setSelectedPayoutId(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select payout account</option>
+                      {payoutOptions.map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.label}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {payoutOptions.length > 1 && (
+                    <label className="inline-flex items-center mt-2 text-sm text-gray-600">
+                      <input type="checkbox" checked={setAsDefault} onChange={(e) => setSetAsDefault(e.target.checked)} className="mr-2" />
+                      Set as default payout account
+                    </label>
+                  )}
+                </div>
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setShowWithdraw(false)}
@@ -952,7 +1035,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   >Cancel</button>
                   <button
                     onClick={handleWithdraw}
-                    disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0)}
+                    disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0) || payoutOptions.length === 0 || !selectedPayoutId}
                     className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >{loading ? 'Submitting...' : 'Withdraw'}</button>
                 </div>

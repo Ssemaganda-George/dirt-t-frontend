@@ -5,6 +5,7 @@ import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { updateTransactionStatus, getAllVendorWallets, getAllTransactions } from '../../lib/database';
 import { useState, useEffect } from 'react';
+import type { Transaction } from '../../lib/database';
 
 interface VendorWallet {
   id: string;
@@ -40,6 +41,8 @@ export function Transactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'transactions' | 'approvals'>('overview');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedVendor, setSelectedVendor] = useState<any | null>(null);
 
   useEffect(() => {
     loadWalletData();
@@ -509,6 +512,9 @@ export function Transactions() {
                         Vendor
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Payout Account
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Amount
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -529,13 +535,39 @@ export function Transactions() {
                           #{transaction.id.slice(0, 8)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {transaction.vendors?.business_name || 'Unknown Vendor'}
+                          {transaction.vendors ? (
+                            <button
+                              onClick={() => setSelectedVendor(transaction.vendors)}
+                              className="text-blue-600 hover:underline"
+                            >
+                              {transaction.vendors.business_name || 'Unknown Vendor'}
+                            </button>
+                          ) : (
+                            'Unknown Vendor'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {transaction.payout_meta ? (
+                            transaction.payout_meta.type === 'bank' ? (
+                              <div className="text-sm">
+                                <div className="font-medium">{transaction.payout_meta.name || transaction.payout_meta.account_name}</div>
+                                <div className="text-xs text-gray-500">Acct: {transaction.payout_meta.account_number}</div>
+                              </div>
+                            ) : (
+                              <div className="text-sm">
+                                <div className="font-medium">{transaction.payout_meta.provider || 'Mobile Money'}</div>
+                                <div className="text-xs text-gray-500">{transaction.payout_meta.country_code || ''} {transaction.payout_meta.phone || ''}</div>
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-xs text-gray-400">No payout info</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                           {formatCurrencyWithConversion(transaction.amount, transaction.currency || 'UGX', selectedCurrency || transaction.currency || 'UGX', selectedLanguage || 'en-US')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                          {transaction.payment_method.replace('_', ' ')}
+                          <button onClick={() => setSelectedTransaction(transaction)} className="text-blue-600 hover:underline">{transaction.payment_method.replace('_', ' ')}</button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
@@ -572,6 +604,110 @@ export function Transactions() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Payment details modal for approvals */}
+      {selectedTransaction && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedTransaction(null)} />
+          <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Payout Details</h2>
+              <button onClick={() => setSelectedTransaction(null)} className="text-gray-500 hover:text-black">Close</button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-gray-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_',' ')}</span></p>
+              <div className="mt-4">
+                {selectedTransaction.payout_meta ? (
+                  selectedTransaction.payout_meta.type === 'bank' ? (
+                    <div>
+                      <div className="text-sm font-medium">{selectedTransaction.payout_meta.name || selectedTransaction.payout_meta.account_name}</div>
+                      <div className="text-sm text-gray-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
+                      <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy account number</button></div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-sm font-medium">{selectedTransaction.payout_meta.provider || 'Mobile Money'}</div>
+                      <div className="text-sm text-gray-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
+                      <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy phone number</button></div>
+                    </div>
+                  )
+                ) : (
+                  <div className="text-sm text-gray-500">No payout info available</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vendor details modal */}
+      {selectedVendor && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedVendor(null)} />
+          <div className="relative bg-white shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Vendor Details</h2>
+              <button onClick={() => setSelectedVendor(null)} className="text-gray-500 hover:text-black">Close</button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold">{selectedVendor.business_name || 'Business'}</h3>
+                <p className="text-xs text-gray-500">{selectedVendor.business_email || ''}</p>
+                <p className="text-xs text-gray-400 mt-1">Status: {selectedVendor.status || '—'}</p>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-medium">Business Phones</h4>
+                <div className="mt-2 space-y-2">
+                  {(selectedVendor.business_phones || []).map((p: any, i: number) => (
+                    <div key={i} className="text-sm text-gray-700">
+                      <div className="font-medium">{p.country_code || ''} {p.phone || ''}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-medium">Bank Details</h4>
+                {selectedVendor.bank_details ? (
+                  <div className="mt-2 text-sm text-gray-700">
+                    <div className="font-medium">{selectedVendor.bank_details.name || selectedVendor.bank_details.account_name}</div>
+                    <div className="text-xs text-gray-600">Account: <span className="font-mono">{selectedVendor.bank_details.account_number}</span></div>
+                    <div className="text-xs text-gray-600">Branch: {selectedVendor.bank_details.branch || '—'}</div>
+                    <div className="mt-2"><button onClick={() => navigator.clipboard.writeText(selectedVendor.bank_details.account_number || '')} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy account number</button></div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 mt-2">No bank details provided</div>
+                )}
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-medium">Mobile Money Accounts</h4>
+                <div className="mt-2 space-y-2">
+                  {(selectedVendor.mobile_money_accounts || []).map((m: any, idx: number) => (
+                    <div key={idx} className="text-sm text-gray-700">
+                      <div className="font-medium">{m.provider || 'Mobile Money'}</div>
+                      {m.name && <div className="text-sm text-gray-700">Account name: <span className="font-medium">{m.name}</span></div>}
+                      <div className="text-xs text-gray-600">{(m.country_code || '') + ' ' + (m.phone || '')}</div>
+                      <div className="mt-1">
+                        <button onClick={() => navigator.clipboard.writeText((m.name || '').toString())} className="px-3 py-1 bg-gray-100 rounded text-sm mr-2">Copy name</button>
+                        <button onClick={() => navigator.clipboard.writeText(((m.country_code || '') + (m.phone || '')).trim())} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy phone</button>
+                      </div>
+                    </div>
+                  ))}
+                  {(!selectedVendor.mobile_money_accounts || selectedVendor.mobile_money_accounts.length === 0) && (
+                    <div className="text-sm text-gray-500">No mobile money accounts provided</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <a href={`/admin/vendors/${selectedVendor.id || ''}`} className="text-sm text-blue-600 hover:underline">Open full vendor profile</a>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

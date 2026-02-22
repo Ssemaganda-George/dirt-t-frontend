@@ -29,6 +29,29 @@ export interface Vendor {
   created_at: string;
   updated_at: string;
   user_profile?: UserProfile;
+  // Optional payout fields added by migration 015
+  bank_details?: {
+    name?: string;
+    account_name?: string;
+    account_number?: string;
+    branch?: string;
+    swift?: string;
+    [key: string]: any;
+  };
+  mobile_money_accounts?: Array<{
+    provider?: string;
+    phone?: string;
+    country_code?: string;
+    name?: string;
+    [key: string]: any;
+  }>;
+  crypto_accounts?: Array<{
+    currency?: string;
+    address?: string;
+    label?: string;
+    [key: string]: any;
+  }>;
+  preferred_payout?: string;
 }
 
 export interface Service {
@@ -333,6 +356,7 @@ export interface Transaction {
   status: 'pending' | 'approved' | 'completed' | 'failed' | 'rejected';
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
+  payout_meta?: any
   receipt_url?: string;
   payment_notes?: string;
   processed_by?: string;

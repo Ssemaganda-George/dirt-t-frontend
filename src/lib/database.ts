@@ -396,6 +396,29 @@ export interface Vendor {
   business_city?: string
   business_phone?: string
   business_phones?: string[]
+  // Payment / payout fields
+  bank_details?: {
+    name?: string
+    account_name?: string
+    account_number?: string
+    branch?: string
+    swift?: string
+    [key: string]: any
+  }
+  mobile_money_accounts?: Array<{
+    provider?: string
+    phone?: string
+    country_code?: string
+    name?: string
+    [key: string]: any
+  }>
+  crypto_accounts?: Array<{
+    currency?: string
+    address?: string
+    label?: string
+    [key: string]: any
+  }>
+  preferred_payout?: string
   business_email?: string
   business_website?: string
   business_type?: string
@@ -660,6 +683,7 @@ export interface Transaction {
   status: TransactionStatus
   payment_method: 'card' | 'mobile_money' | 'bank_transfer'
   reference: string
+  payout_meta?: any
   created_at: string
 }
 
@@ -2497,6 +2521,58 @@ export async function getAllVendors(): Promise<Vendor[]> {
   return []
 }
 
+export async function getVendorById(vendorId: string): Promise<Vendor | null> {
+  try {
+    // First attempt: try joining profiles (may fail in some RLS/schema setups)
+    const { data, error } = await supabase
+      .from('vendors')
+      .select(`
+        *,
+        profiles (
+          id,
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .eq('id', vendorId)
+      .single()
+
+    if (!error && data) {
+      return data as Vendor
+    }
+
+    // Fallback: simple vendor select without joins (safer for strict RLS setups)
+    console.warn('getVendorById: profiles join failed or returned no data, falling back to simple vendor select', error)
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('vendors')
+      .select('id, user_id, business_name, business_email, business_description, business_address, business_phone, status, created_at, updated_at, bank_details, mobile_money_accounts, preferred_payout')
+      .eq('id', vendorId)
+      .single()
+
+    if (simpleError) {
+      console.error('Error fetching vendor by id (simple fallback):', simpleError)
+      throw simpleError
+    }
+
+    // Construct a Vendor-shaped object with a minimal profiles stub
+    const vendor = {
+      ...simpleData,
+      profiles: {
+        id: (simpleData as any)?.user_id,
+        full_name: (simpleData as any)?.business_name,
+        email: (simpleData as any)?.business_email,
+        phone: undefined
+      }
+    } as Vendor
+
+    return vendor
+  } catch (error) {
+    console.error('getVendorById error:', error)
+    throw error
+  }
+}
+
 export async function getAllBookings(): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('bookings')
@@ -4016,20 +4092,34 @@ export async function getTransactions(vendorId: string) {
   try {
     console.log('getTransactions: Querying transactions for vendorId:', vendorId)
     
-    // Try RPC function first (if it exists)
+    // Try RPC function first (if it exists). Some deployments use different parameter names
+    // in the SQL function (vendor_id_param, vendor_id, p_vendor_id, etc). Try a few common
+    // variants and log the returned error details so we can diagnose 400 responses.
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_vendor_transactions', {
-        vendor_id_param: vendorId
-      })
-      
-      if (!rpcError && rpcData) {
-        console.log('getTransactions: Got transactions via RPC:', rpcData.length)
-        return rpcData
+      const paramCandidates = ['vendor_id_param', 'vendor_id', 'p_vendor_id', 'p_vendor']
+      for (const paramName of paramCandidates) {
+        try {
+          const params: any = {}
+          params[paramName] = vendorId
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_vendor_transactions', params)
+
+          if (!rpcError && rpcData) {
+            console.log(`getTransactions: Got transactions via RPC (param=${paramName}):`, rpcData.length)
+            return rpcData
+          }
+
+          // If we got an rpcError object, log details for debugging
+          if (rpcError) {
+            console.log(`getTransactions: RPC attempt param=${paramName} returned error:`, rpcError)
+          }
+        } catch (innerErr) {
+          // Network-level or unexpected errors from the RPC call
+          console.log(`getTransactions: RPC attempt param=${paramName} threw:`, innerErr)
+        }
       }
-      
-      console.log('getTransactions: RPC failed or not available:', rpcError)
+      console.log('getTransactions: RPC attempts exhausted or RPC not available, falling back')
     } catch (rpcErr) {
-      console.log('getTransactions: RPC not available, using fallback')
+      console.log('getTransactions: RPC wrapper failed, using fallback', rpcErr)
     }
     
     // Try querying through vendors relationship
@@ -4084,25 +4174,49 @@ export async function addTransaction(transaction: {
   status: 'pending' | 'completed' | 'failed'
   payment_method: 'card' | 'mobile_money' | 'bank_transfer'
   reference: string
+  payout_meta?: any
 }) {
   try {
 
     console.log('[Wallet Debug] addTransaction called with:', transaction);
     // Use atomic function to create transaction
-    const { data, error } = await supabase.rpc('create_transaction_atomic', {
-      p_vendor_id: transaction.vendor_id,
-      p_amount: transaction.amount,
-      p_transaction_type: transaction.transaction_type,
-      p_booking_id: transaction.booking_id || null,
-      p_tourist_id: transaction.tourist_id || null,
-      p_currency: transaction.currency || 'UGX',
-      p_status: transaction.status || 'pending',
-      p_payment_method: transaction.payment_method || 'card',
-      p_reference: transaction.reference || null
-    });
+    let data: any = null
+    let error: any = null
+
+    if (transaction.payout_meta) {
+      // Use a helper RPC that accepts payout_meta and inserts it into transactions.payout_meta
+      const rpcRes = await supabase.rpc('create_transaction_with_meta_atomic', {
+        p_vendor_id: transaction.vendor_id,
+        p_amount: transaction.amount,
+        p_transaction_type: transaction.transaction_type,
+        p_booking_id: transaction.booking_id || null,
+        p_tourist_id: transaction.tourist_id || null,
+        p_currency: transaction.currency || 'UGX',
+        p_status: transaction.status || 'pending',
+        p_payment_method: transaction.payment_method || 'card',
+        p_reference: transaction.reference || null,
+        p_payout_meta: transaction.payout_meta
+      })
+      data = rpcRes.data
+      error = rpcRes.error
+    } else {
+      const rpcRes = await supabase.rpc('create_transaction_atomic', {
+        p_vendor_id: transaction.vendor_id,
+        p_amount: transaction.amount,
+        p_transaction_type: transaction.transaction_type,
+        p_booking_id: transaction.booking_id || null,
+        p_tourist_id: transaction.tourist_id || null,
+        p_currency: transaction.currency || 'UGX',
+        p_status: transaction.status || 'pending',
+        p_payment_method: transaction.payment_method || 'card',
+        p_reference: transaction.reference || null
+      })
+      data = rpcRes.data
+      error = rpcRes.error
+    }
 
     // Log raw RPC response for easier debugging in browser console
-    console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
+  console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
 
     if (error) {
       // If table doesn't exist, throw a more helpful error
@@ -4305,7 +4419,7 @@ export async function getWalletStats(vendorId: string) {
   }
 }
 
-export async function requestWithdrawal(vendorId: string, amount: number, currency: string) {
+export async function requestWithdrawal(vendorId: string, amount: number, currency: string, payout?: { id?: string; type?: string; meta?: any }) {
   try {
     // Get current wallet stats to validate the withdrawal amount
     const walletStats = await getWalletStats(vendorId)
@@ -4321,15 +4435,25 @@ export async function requestWithdrawal(vendorId: string, amount: number, curren
     // Check if transactions table exists by trying to insert
     const reference = `WD_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
 
+    const payment_method = payout?.type === 'bank' ? 'bank_transfer' : 'mobile_money'
+
+    // Include payout metadata if provided
     const transaction = await addTransaction({
       vendor_id: vendorId,
       amount,
       currency,
       transaction_type: 'withdrawal',
       status: 'pending',
-      payment_method: 'mobile_money',
-      reference
+      payment_method: (payment_method as 'card' | 'mobile_money' | 'bank_transfer'),
+      reference,
+      payout_meta: payout?.meta || (payout ? { type: payout.type } : null)
     })
+
+    // Optionally store payout metadata in a payments_payouts table or attach metadata to the transaction via another RPC.
+    // For now, we log it to the console for server-side developers to wire into the processing pipeline.
+    if (payout?.meta) {
+      console.log('[Wallet Debug] payout metadata provided for withdrawal:', payout.meta)
+    }
 
     return transaction
   } catch (error) {

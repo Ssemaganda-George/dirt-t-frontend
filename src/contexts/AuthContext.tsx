@@ -39,6 +39,23 @@ interface Vendor {
   status: 'pending' | 'approved' | 'rejected' | 'suspended'
   created_at: string
   updated_at: string
+  // Optional payout fields
+  bank_details?: {
+    name?: string
+    account_name?: string
+    account_number?: string
+    branch?: string
+    swift?: string
+    [key: string]: any
+  }
+  mobile_money_accounts?: Array<{
+    provider?: string
+    phone?: string
+    country_code?: string
+    name?: string
+    [key: string]: any
+  }>
+  preferred_payout?: string
 }
 
 interface AuthContextType {
