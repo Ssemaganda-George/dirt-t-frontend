@@ -529,151 +529,234 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business City</label>
-            {isEditing ? (
-              <CitySearchInput
-                city={formData.business_city}
-                onSelect={(city, country) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    business_city: city,
-                    business_country: country
-                  }))
-                }}
-                placeholder="Select business city"
-              />
-            ) : (
-              <input
-                type="text"
-                value={formData.business_city}
-                readOnly
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
-              />
-            )}
-          </div>
+        {/* Payment / Payout Details */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-base font-semibold text-gray-900 mb-3">Payment Details</h3>
 
-          <div>
-            <label htmlFor="business_address" className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
-            <input
-              type="text"
-              name="business_address"
-              id="business_address"
-              value={formData.business_address}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="Enter your business address"
-            />
+          <div className="space-y-4">
+            {/* Bank details - stacked on mobile, two columns on >=sm */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                <input
+                  type="text"
+                  name="bank_name"
+                  id="bank_name"
+                  value={formData.bank_name}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  placeholder="e.g., Stanbic"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="bank_account_name" className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                <input
+                  type="text"
+                  name="bank_account_name"
+                  id="bank_account_name"
+                  value={formData.bank_account_name}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  placeholder="Name on the account"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mt-1 mb-1">Account Number</label>
+                <input
+                  type="text"
+                  name="bank_account_number"
+                  id="bank_account_number"
+                  value={formData.bank_account_number}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  placeholder="e.g., 1234567890"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="bank_branch" className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <input
+                  type="text"
+                  name="bank_branch"
+                  id="bank_branch"
+                  value={formData.bank_branch}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  placeholder="Branch name (optional)"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label htmlFor="bank_swift" className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC (optional)</label>
+                <input
+                  type="text"
+                  name="bank_swift"
+                  id="bank_swift"
+                  value={formData.bank_swift}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  placeholder="e.g., SBICUGKX"
+                />
+              </div>
+            </div>
+
+            {/* Mobile money accounts - compact list optimized for mobile */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Accounts</label>
+              <div className="space-y-3">
+                {formData.mobile_money_accounts.map((acct, idx) => (
+                  <div key={idx} className="bg-gray-50 border border-gray-100 rounded-md p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-gray-600">Provider</label>
+                        <input
+                          type="text"
+                          name={`mm_provider_${idx}`}
+                          value={acct.provider}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, provider: e.target.value } : m)
+                          }))}
+                          disabled={!isEditing}
+                          placeholder="Provider (e.g., MTN, Airtel)"
+                          className="w-full border border-gray-200 rounded-md px-2 py-2 text-sm"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-gray-600">Account name</label>
+                        <input
+                          type="text"
+                          name={`mm_name_${idx}`}
+                          value={acct.name || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, name: e.target.value } : m)
+                          }))}
+                          disabled={!isEditing}
+                          placeholder="Name on the account"
+                          className="w-full border border-gray-200 rounded-md px-2 py-2 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="text-xs text-gray-600">Mobile money phone</label>
+                      {isEditing ? (
+                        <PhoneModal
+                          phone={acct.phone}
+                          countryCode={acct.country_code || '+256'}
+                          onPhoneChange={(phone) => setFormData(prev => ({
+                            ...prev,
+                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, phone } : m)
+                          }))}
+                          onCountryCodeChange={(countryCode) => setFormData(prev => ({
+                            ...prev,
+                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, country_code: countryCode } : m)
+                          }))}
+                          placeholder="700 000 000"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={acct.phone ? `${acct.country_code} ${acct.phone} ${acct.provider ? `(${acct.provider})` : ''} ${acct.name ? `- ${acct.name}` : ''}` : ''}
+                          readOnly
+                          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Add Payment Method */}
+            <div className="mt-1 border-t pt-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Add a Payment Method</h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+                  <select
+                    value={newPayment.type}
+                    onChange={(e) => setNewPayment({ type: e.target.value })}
+                    disabled={!isEditing}
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  >
+                    <option value="bank">Bank</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="swift">SWIFT / BIC</option>
+                    <option value="crypto">Crypto</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  {/* bank fields */}
+                  {newPayment.type === 'bank' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name — e.g., Stanbic" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Account Name" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="Account Number — e.g., 1234567890" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+                    </div>
+                  )}
+
+                  {/* mobile money fields */}
+                  {newPayment.type === 'mobile_money' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider — e.g., MTN" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Account name — e.g., ssemaganda George" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <div>
+                        {isEditing ? (
+                          <PhoneModal
+                            phone={newPayment.phone || ''}
+                            countryCode={newPayment.country_code || '+256'}
+                            onPhoneChange={(phone) => setNewPayment((prev:any) => ({ ...prev, phone }))}
+                            onCountryCodeChange={(countryCode) => setNewPayment((prev:any) => ({ ...prev, country_code: countryCode }))}
+                            placeholder="700 000 000"
+                          />
+                        ) : (
+                          <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* swift */}
+                  {newPayment.type === 'swift' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                    </div>
+                  )}
+
+                  {/* crypto */}
+                  {newPayment.type === 'crypto' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="Currency / Network — e.g., BTC" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="Label (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-xs text-gray-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
+                    <button onClick={handleAddPayment} disabled={!isEditing} className="px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 disabled:opacity-50">Add</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="mt-4">
-          <label htmlFor="business_description" className="block text-sm font-medium text-gray-700 mb-1">Business Description</label>
-          <textarea
-            name="business_description"
-            id="business_description"
-            rows={4}
-            value={formData.business_description}
-            onChange={handleInputChange}
-            disabled={!isEditing}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 resize-none"
-            placeholder="Describe your business..."
-          />
-        </div>
-
-        <div className="mt-4">
-          <label htmlFor="operating_hours" className="block text-sm font-medium text-gray-700 mb-1">Operating Hours</label>
-          <input
-            type="text"
-            name="operating_hours"
-            id="operating_hours"
-            value={formData.operating_hours}
-            onChange={handleInputChange}
-            disabled={!isEditing}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-            placeholder="e.g., Mon-Fri 9AM-6PM, Sat-Sun 10AM-4PM"
-          />
-        </div>
-      </div>
-
-      {/* Payment / Payout Details */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Payment Details</h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-            <input
-              type="text"
-              name="bank_name"
-              id="bank_name"
-              value={formData.bank_name}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="e.g., Stanbic Bank"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="bank_account_name" className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
-            <input
-              type="text"
-              name="bank_account_name"
-              id="bank_account_name"
-              value={formData.bank_account_name}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="Name on the account"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-            <input
-              type="text"
-              name="bank_account_number"
-              id="bank_account_number"
-              value={formData.bank_account_number}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="e.g., 1234567890"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="bank_branch" className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-            <input
-              type="text"
-              name="bank_branch"
-              id="bank_branch"
-              value={formData.bank_branch}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="Branch name (optional)"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="bank_swift" className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC (optional)</label>
-            <input
-              type="text"
-              name="bank_swift"
-              id="bank_swift"
-              value={formData.bank_swift}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-              placeholder="e.g., SBICUGKX"
-            />
-          </div>
-        </div>
-
           <div className="mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Accounts</label>
           <div className="space-y-3">
