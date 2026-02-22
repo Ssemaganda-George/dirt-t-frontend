@@ -165,7 +165,34 @@ export default function Profile() {
 
       if (profileError) throw profileError
 
-      // Update vendor data
+      // Update vendor data. If an encryption passphrase is provided via
+      // VITE_ENCRYPTION_PASSPHRASE the code will also write encrypted blobs
+      // into *_encrypted columns. This is optional; plain JSON is still written
+      // to existing JSONB columns for backward compatibility.
+
+      let bank_details_encrypted: string | null = null
+      let mobile_money_accounts_encrypted: string | null = null
+      let crypto_accounts_encrypted: string | null = null
+
+      const passphrase = (import.meta as any).env?.VITE_ENCRYPTION_PASSPHRASE as string | undefined
+      if (passphrase) {
+        try {
+          const cryptoLib = await import('../../lib/crypto')
+          bank_details_encrypted = await cryptoLib.encryptJSON(passphrase, {
+            name: formData.bank_name,
+            account_name: formData.bank_account_name,
+            account_number: formData.bank_account_number,
+            branch: formData.bank_branch,
+            swift: formData.bank_swift
+          })
+          mobile_money_accounts_encrypted = await cryptoLib.encryptJSON(passphrase, formData.mobile_money_accounts)
+          crypto_accounts_encrypted = await cryptoLib.encryptJSON(passphrase, formData.crypto_accounts || [])
+        } catch (err) {
+          // If encryption fails, log and continue — do not block save.
+          console.error('Encryption failed:', err)
+        }
+      }
+
       const { error: vendorError } = await supabase
         .from('vendors')
         .update({
@@ -194,6 +221,10 @@ export default function Profile() {
           },
           mobile_money_accounts: formData.mobile_money_accounts,
           crypto_accounts: formData.crypto_accounts,
+          // Optional encrypted columns
+          bank_details_encrypted: bank_details_encrypted,
+          mobile_money_accounts_encrypted: mobile_money_accounts_encrypted,
+          crypto_accounts_encrypted: crypto_accounts_encrypted,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
