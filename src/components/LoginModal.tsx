@@ -387,6 +387,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}
             </button>
           </div>
+
+          {!isSignUp && (
+            <button
+              type="button"
+              onClick={() => setShowAccountTypePrompt(true)}
+              className="w-full rounded-xl border-2 border-emerald-600 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+            >
+              New here? Create your account — Sign up
+            </button>
+          )}
         </form>
 
         {/* Divider */}
@@ -410,25 +420,21 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         </div>
 
         {/* Toggle between sign in and sign up */}
-        <div className="mt-4 pb-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (isSignUp) {
+        {isSignUp && (
+          <div className="mt-4 pb-2">
+            <button
+              type="button"
+              onClick={() => {
                 setIsSignUp(false)
                 setShowAccountTypePrompt(false)
                 resetAuthFields()
-              } else {
-                setShowAccountTypePrompt(true)
-              }
-            }}
-            className={isSignUp
-              ? 'w-full text-center text-sm text-emerald-700 hover:text-emerald-800 font-medium transition-colors'
-              : 'w-full rounded-xl border border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors'}
-          >
-            {isSignUp ? 'Already have an account? Sign in' : 'New here? Create your account — Sign up'}
-          </button>
-        </div>
+              }}
+              className="w-full text-center text-sm text-emerald-700 hover:text-emerald-800 font-medium transition-colors"
+            >
+              Already have an account? Sign in
+            </button>
+          </div>
+        )}
         </>
         )}
           </div>
