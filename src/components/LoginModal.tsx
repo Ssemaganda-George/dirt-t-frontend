@@ -167,7 +167,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 setIsSignUp(true)
                 resetAuthFields()
               }}
-              className="w-full rounded-xl border border-gray-900 bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors"
+              className="w-full min-h-[48px] rounded-xl border border-gray-900 bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               Tourist
             </button>
@@ -179,7 +179,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 onClose()
                 navigate('/vendor-login?signup=true')
               }}
-              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
+              className="w-full min-h-[48px] rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               Business
             </button>
@@ -187,7 +187,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             <button
               type="button"
               onClick={() => setShowAccountTypePrompt(false)}
-              className="w-full text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+              className="w-full text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md py-1"
             >
               ← Back to sign in
             </button>
@@ -227,7 +227,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   name="firstName"
                   type="text"
                   required
-                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Enter your first name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -242,7 +242,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   name="lastName"
                   type="text"
                   required
-                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Enter your last name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -261,7 +261,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               type="email"
               autoComplete="email"
               required
-              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -289,7 +289,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               {!isSignUp && (
                 <button
                   type="button"
-                  className="text-xs text-emerald-700 hover:text-emerald-800 font-medium transition-colors"
+                  className="text-xs text-gray-700 hover:text-gray-900 font-medium transition-colors"
                   onClick={() => {
                     // TODO: Implement forgot password functionality
                     alert('Forgot password functionality coming soon!');
@@ -306,7 +306,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 type={showPassword ? 'text' : 'password'}
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
                 required
-                className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -337,7 +337,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -365,11 +365,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 type="checkbox"
                 checked={agreedToTerms}
                 onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
               />
               <label htmlFor="agreeTerms" className="text-xs text-gray-600 leading-relaxed">
                 I agree to the{' '}
-                <a href="/terms" className="text-emerald-700 hover:text-emerald-800 underline">
+                <a href="/terms" className="text-gray-900 hover:text-gray-700 underline">
                   Terms and Conditions
                 </a>
                 .
@@ -382,7 +382,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             <button
               type="submit"
               disabled={loading || (isSignUp && !agreedToTerms)}
-              className="w-full px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full min-h-[48px] px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}
             </button>
@@ -392,7 +392,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             <button
               type="button"
               onClick={() => setShowAccountTypePrompt(true)}
-              className="w-full rounded-xl border-2 border-emerald-600 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+              className="w-full min-h-[48px] rounded-xl border border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               New here? Create your account — Sign up
             </button>
@@ -414,7 +414,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         <div className="mt-4">
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center px-4 py-3.5 text-sm border border-gray-300 rounded-xl font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            className="w-full min-h-[48px] flex items-center justify-center px-4 py-3.5 text-sm border border-gray-300 rounded-xl font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             Continue with Google
           </button>
@@ -430,7 +430,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 setShowAccountTypePrompt(false)
                 resetAuthFields()
               }}
-              className="w-full text-center text-sm text-emerald-700 hover:text-emerald-800 font-medium transition-colors"
+              className="w-full text-center text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md py-1"
             >
               Already have an account? Sign in
             </button>

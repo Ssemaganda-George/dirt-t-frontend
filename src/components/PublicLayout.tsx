@@ -109,17 +109,17 @@ export default function PublicLayout() {
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         location.pathname.includes('/scan/') 
           ? 'bg-transparent shadow-none' 
-          : 'bg-white shadow-sm'
+          : 'bg-white/95 backdrop-blur-sm border-b border-gray-200/70'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 md:h-[72px]">
             {/* Logo */}
             <Link to="/" className={`flex items-center transition-colors duration-300 ${
               location.pathname.includes('/scan/') 
                 ? 'text-white drop-shadow-lg' 
                 : 'text-gray-900'
             }`}>
-              <span className="text-2xl font-bold">DirtTrails</span>
+              <span className="text-xl md:text-2xl font-semibold tracking-tight">DirtTrails</span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
                   Event Verification
@@ -129,15 +129,15 @@ export default function PublicLayout() {
 
             {/* Desktop Navigation */}
             {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex space-x-8 mt-6">
+              <nav className="hidden md:flex items-center space-x-7">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`text-sm font-medium transition-colors ${
                       location.pathname === item.href
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-700 hover:text-blue-600'
+                        ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
+                        : 'text-gray-700 hover:text-gray-900 pb-1'
                     }`}
                   >
                     {t(item.name)}
@@ -148,11 +148,11 @@ export default function PublicLayout() {
 
             {/* Right side actions */}
             {!location.pathname.includes('/scan/') && (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-3">
                 {/* Search Button - Hidden on mobile, only in bottom nav */}
                 <button
                   onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-transparent hover:bg-gray-100 hover:border-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
                   title={t('search')}
                 >
                   <Search className="h-5 w-5 text-gray-600" />
@@ -160,7 +160,7 @@ export default function PublicLayout() {
 
                 <button
                   onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
                   title={t('preferences')}
                 >
                   <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
@@ -169,7 +169,7 @@ export default function PublicLayout() {
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-blue-600 relative">
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-gray-900 relative p-1.5 rounded-full hover:bg-gray-100 transition-colors">
                   <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -183,7 +183,7 @@ export default function PublicLayout() {
                   <div className="relative" ref={userDropdownRef}>
                     <button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                       <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
                         <span className="text-sm font-bold text-white">
@@ -279,7 +279,7 @@ export default function PublicLayout() {
                   <div className="relative" ref={guestDropdownRef}>
                     <button
                       onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                       <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
                       <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />

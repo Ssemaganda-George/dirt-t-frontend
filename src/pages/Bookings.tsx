@@ -99,7 +99,7 @@ export default function Bookings() {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchBookings}
-            className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition-colors"
+            className="min-h-[44px] bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             Try Again
           </button>
@@ -115,7 +115,7 @@ export default function Bookings() {
         <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
@@ -126,7 +126,7 @@ export default function Bookings() {
 
         {/* Bookings List */}
         {bookings.length === 0 ? (
-          <div className="bg-white shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings yet</h3>
             <p className="text-gray-600 mb-6">
@@ -134,7 +134,7 @@ export default function Bookings() {
             </p>
             <Link
               to="/"
-              className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors inline-block"
+              className="inline-flex items-center justify-center min-h-[48px] bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               Explore Services
             </Link>
@@ -201,12 +201,12 @@ export default function Bookings() {
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <Link
                         to={`/booking/${booking.id}`}
-                        className="bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors text-sm text-center w-full sm:w-auto"
+                        className="bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out text-sm text-center w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                       >
                         View Details
                       </Link>
                       {booking.status === 'pending' && (
-                        <button className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-colors text-sm w-full sm:w-auto">
+                        <button className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2">
                           Cancel
                         </button>
                       )}

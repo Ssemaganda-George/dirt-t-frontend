@@ -17,13 +17,13 @@ export default function Profile() {
           <div className="space-y-3">
             <Link
               to="/login"
-              className="w-full bg-blue-600 text-white py-3 px-4 hover:bg-blue-700 transition-colors block font-medium"
+              className="w-full min-h-[48px] bg-gray-900 text-white py-3 px-4 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out block font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               {t('sign_in')}
             </Link>
             <Link
               to="/vendor-login"
-              className="w-full bg-green-600 text-white py-3 px-4 hover:bg-green-700 transition-colors block font-medium"
+              className="w-full min-h-[48px] border border-gray-300 bg-white text-gray-800 py-3 px-4 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out block font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               {t('vendor_sign_in')}
             </Link>

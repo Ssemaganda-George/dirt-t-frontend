@@ -288,7 +288,7 @@ export default function Wallet() {
         <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
@@ -354,7 +354,7 @@ export default function Wallet() {
                   step="0.01"
                   value={amountInput}
                   onChange={(event) => setAmountInput(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                   placeholder="0.00"
                 />
               </div>
@@ -364,7 +364,7 @@ export default function Wallet() {
                   type="text"
                   value={noteInput}
                   onChange={(event) => setNoteInput(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                   placeholder="e.g. Weekend travel budget"
                 />
               </div>
@@ -374,7 +374,7 @@ export default function Wallet() {
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value as 'card' | 'mobile_money' | 'bank_transfer')}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                 >
                   <option value="mobile_money">Mobile Money</option>
                   <option value="card">Card</option>
@@ -389,7 +389,7 @@ export default function Wallet() {
                     type="tel"
                     value={mobileNumber}
                     onChange={(event) => setMobileNumber(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                     placeholder="e.g. +256700000000"
                   />
                 </div>
@@ -403,7 +403,7 @@ export default function Wallet() {
                       type="text"
                       value={cardHolderName}
                       onChange={(event) => setCardHolderName(event.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                       placeholder="e.g. Visa"
                     />
                   </div>
@@ -417,7 +417,7 @@ export default function Wallet() {
                         const grouped = digits.replace(/(.{4})/g, '$1 ').trim()
                         setCardNumber(grouped)
                       }}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                       placeholder="1234 5678 9012 3456"
                     />
                   </div>
@@ -433,7 +433,7 @@ export default function Wallet() {
                           const formatted = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits
                           setCardExpiry(formatted)
                         }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                         placeholder="MM/YY"
                       />
                     </div>
@@ -444,7 +444,7 @@ export default function Wallet() {
                         maxLength={4}
                         value={cardCvc}
                         onChange={(event) => setCardCvc(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                         placeholder="123"
                       />
                     </div>
@@ -459,7 +459,7 @@ export default function Wallet() {
                     type="text"
                     value={bankReference}
                     onChange={(event) => setBankReference(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400"
                     placeholder="e.g. TRX-458920"
                   />
                 </div>
@@ -468,7 +468,7 @@ export default function Wallet() {
               <button
                 onClick={handleAddFunds}
                 disabled={saving}
-                className="w-full inline-flex items-center justify-center bg-blue-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full min-h-[48px] inline-flex items-center justify-center bg-gray-900 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-all duration-200 ease-out disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 {saving ? 'Saving...' : 'Save to Wallet'}

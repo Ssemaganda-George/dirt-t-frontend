@@ -80,8 +80,8 @@ export default function Login() {
 
         {/* Header */}
         <div className="px-8 pt-8 pb-2 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 mb-4">
-            <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gray-100 mb-4">
+            <svg className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -102,7 +102,7 @@ export default function Login() {
               {/* Google */}
               <button
                 onClick={handleGoogleSignIn}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="w-full min-h-[48px] flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -122,7 +122,7 @@ export default function Login() {
               {/* Email */}
               <button
                 onClick={() => setShowEmailForm(true)}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg bg-gray-900 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+                className="w-full min-h-[48px] flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-gray-900 text-sm font-medium text-white hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -133,7 +133,7 @@ export default function Login() {
               {/* Switch to sign-up */}
               <p className="text-center text-sm text-gray-500 pt-2">
                 Don't have an account?{' '}
-                <button onClick={() => { setIsSignUp(true); setShowEmailForm(false) }} className="text-emerald-600 font-medium hover:underline">
+                <button onClick={() => { setIsSignUp(true); setShowEmailForm(false) }} className="text-gray-900 font-medium hover:underline">
                   Sign up
                 </button>
               </p>
@@ -152,7 +152,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setIsSignUp(false)}
-                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-1"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -167,7 +167,7 @@ export default function Login() {
                   <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
                   <input
                     id="fullName" name="fullName" type="text" required
-                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                     placeholder="Jane Doe"
                     value={fullName} onChange={(e) => setFullName(e.target.value)}
                   />
@@ -176,7 +176,7 @@ export default function Login() {
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
                     id="email" name="email" type="email" autoComplete="email" required
-                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                     placeholder="you@example.com"
                     value={email} onChange={(e) => setEmail(e.target.value)}
                   />
@@ -196,7 +196,7 @@ export default function Login() {
                   <div className="relative">
                     <input
                       id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required
-                      className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                      className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                       placeholder="••••••••"
                       value={password} onChange={(e) => setPassword(e.target.value)}
                     />
@@ -209,7 +209,7 @@ export default function Login() {
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
                   <input
                     id="confirmPassword" name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required
-                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                     placeholder="••••••••"
                     value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   />
@@ -218,14 +218,14 @@ export default function Login() {
 
               <button
                 type="submit" disabled={loading}
-                className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full min-h-[48px] rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out"
               >
                 {loading ? 'Creating account…' : 'Create account'}
               </button>
 
               <p className="text-center text-sm text-gray-500">
                 Already have an account?{' '}
-                <button type="button" onClick={() => { setIsSignUp(false); setShowEmailForm(true) }} className="text-emerald-600 font-medium hover:underline">Sign in</button>
+                <button type="button" onClick={() => { setIsSignUp(false); setShowEmailForm(true) }} className="text-gray-900 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-1">Sign in</button>
               </p>
             </form>
 
@@ -235,7 +235,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowEmailForm(false)}
-                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-1"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -250,7 +250,7 @@ export default function Login() {
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
                     id="email" name="email" type="email" autoComplete="email" required
-                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                    className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                     placeholder="you@example.com"
                     value={email} onChange={(e) => setEmail(e.target.value)}
                   />
@@ -258,12 +258,12 @@ export default function Login() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                    <a href="/forgot-password" className="text-xs text-emerald-600 hover:underline">Forgot password?</a>
+                    <a href="/forgot-password" className="text-xs text-gray-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-1">Forgot password?</a>
                   </div>
                   <div className="relative">
                     <input
                       id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required
-                      className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-colors"
+                      className="block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 pr-10 text-sm shadow-sm placeholder:text-gray-400 focus:border-gray-400 focus:ring-1 focus:ring-gray-500 outline-none transition-colors"
                       placeholder="••••••••"
                       value={password} onChange={(e) => setPassword(e.target.value)}
                     />
@@ -276,14 +276,14 @@ export default function Login() {
 
               <button
                 type="submit" disabled={loading}
-                className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full min-h-[48px] rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-sm hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out"
               >
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
 
               <p className="text-center text-sm text-gray-500">
                 Don't have an account?{' '}
-                <button type="button" onClick={() => { setIsSignUp(true); setShowEmailForm(false) }} className="text-emerald-600 font-medium hover:underline">Sign up</button>
+                <button type="button" onClick={() => { setIsSignUp(true); setShowEmailForm(false) }} className="text-gray-900 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-1">Sign up</button>
               </p>
             </form>
           )}

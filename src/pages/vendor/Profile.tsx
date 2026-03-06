@@ -425,7 +425,7 @@ export default function Profile() {
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="min-h-[40px] px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
           >
             Edit Profile
           </button>
@@ -443,7 +443,7 @@ export default function Profile() {
       {/* Profile Header */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center gap-5">
-          <div className="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
+          <div className="h-20 w-20 rounded-full bg-gray-900 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
             {profile.full_name?.charAt(0).toUpperCase() || 'V'}
           </div>
           <div>
@@ -469,7 +469,7 @@ export default function Profile() {
               value={formData.business_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your business name"
             />
           </div>
@@ -482,7 +482,7 @@ export default function Profile() {
               value={formData.business_email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter business email"
             />
           </div>
@@ -554,7 +554,7 @@ export default function Profile() {
               value={formData.business_website}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="https://yourwebsite.com"
             />
           </div>
@@ -576,7 +576,7 @@ export default function Profile() {
                   value={formData.bank_name}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full min-h-[40px] border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="e.g., Stanbic"
                 />
               </div>
@@ -781,7 +781,7 @@ export default function Profile() {
 
                   <div className="flex items-center justify-between mt-3">
                     <p className="text-xs text-gray-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
-                    <button onClick={handleAddPayment} disabled={!isEditing} className="px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 disabled:opacity-50">Add</button>
+                    <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-gray-900 text-white rounded-md text-sm hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50">Add</button>
                   </div>
                 </div>
               </div>
@@ -964,7 +964,7 @@ export default function Profile() {
 
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-gray-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
-                <button onClick={handleAddPayment} disabled={!isEditing} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 disabled:opacity-50">Add</button>
+                <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50">Add</button>
               </div>
             </div>
           </div>
@@ -1002,7 +1002,7 @@ export default function Profile() {
               value={formData.first_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your first name"
             />
           </div>
@@ -1015,7 +1015,7 @@ export default function Profile() {
               value={formData.last_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your last name"
             />
           </div>
@@ -1028,7 +1028,7 @@ export default function Profile() {
               value={formData.email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
               placeholder="Enter your email"
             />
           </div>
@@ -1083,14 +1083,14 @@ export default function Profile() {
           <button
             onClick={handleCancel}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            className="min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Save Changes'}
           </button>

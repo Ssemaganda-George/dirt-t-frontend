@@ -372,7 +372,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         <button
           onClick={() => setShowWithdraw(true)}
           disabled={!walletStats || walletStats.currentBalance <= 0}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="min-h-[40px] px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
         >
           Withdraw Funds
         </button>
@@ -384,8 +384,8 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+              activeTab === tab ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             {tab === 'overview' ? 'Overview' : tab === 'transactions' ? 'Transactions' : 'Insights'}
@@ -398,7 +398,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-red-600">{error}</p>
-            <button onClick={refresh} className="text-xs font-medium text-gray-600 hover:text-gray-900">Retry</button>
+            <button onClick={refresh} className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded">Retry</button>
           </div>
         </div>
       )}
@@ -564,7 +564,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <select
                           value={dateRange}
                           onChange={(e) => setDateRange(e.target.value)}
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                         >
                           <option value="all">All Time</option>
                           <option value="today">Today</option>
@@ -583,7 +583,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                               type="date"
                               value={customStartDate}
                               onChange={(e) => setCustomStartDate(e.target.value)}
-                              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                             />
                           </div>
                           <div>
@@ -592,7 +592,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                               type="date"
                               value={customEndDate}
                               onChange={(e) => setCustomEndDate(e.target.value)}
-                              className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                              className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                             />
                           </div>
                         </>
@@ -603,7 +603,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <select
                           value={transactionType}
                           onChange={(e) => setTransactionType(e.target.value)}
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                         >
                           <option value="all">All Types</option>
                           <option value="booking_payment">Booking Payment</option>
@@ -618,7 +618,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <select
                           value={statusFilter}
                           onChange={(e) => setStatusFilter(e.target.value)}
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                         >
                           <option value="all">All Statuses</option>
                           <option value="pending">Pending</option>
@@ -642,7 +642,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           setTransactionType('all')
                           setStatusFilter('all')
                         }}
-                        className="text-sm text-indigo-600 hover:text-indigo-500 self-start sm:self-auto"
+                        className="text-sm text-gray-700 hover:text-gray-900 self-start sm:self-auto transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                       >
                         Clear Filters
                       </button>
@@ -663,7 +663,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       <div className="flex flex-wrap gap-2 lg:gap-3">
                         <button
                           onClick={() => setShowFilters(!showFilters)}
-                          className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 min-w-[80px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 min-w-[80px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -673,7 +673,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <button
                           onClick={exportToCSV}
                           disabled={filteredTxs.length === 0}
-                          className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -683,7 +683,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <button
                           onClick={generateReport}
                           disabled={filteredTxs.length === 0}
-                          className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -692,7 +692,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </button>
                         <button
                           onClick={refresh}
-                          className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 min-w-[80px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 min-w-[80px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -719,7 +719,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       ) : (
                         <div className="divide-y divide-gray-200">
                           {filteredTxs.slice().reverse().map((transaction) => (
-                            <div key={transaction.id} className="p-4 hover:bg-gray-50">
+                            <div key={transaction.id} className="p-3.5 hover:bg-gray-50">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1 min-w-0 pr-4">
                                   <div className="flex items-center space-x-2 mb-2">
@@ -760,19 +760,19 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Type
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Reference
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Amount
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Date
                             </th>
                           </tr>
@@ -780,7 +780,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <tbody className="bg-white divide-y divide-gray-200">
                           {filteredTxs.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="px-6 py-12 text-center">
+                              <td colSpan={5} className="px-4 py-10 text-center">
                                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                 </svg>
@@ -793,20 +793,20 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           ) : (
                             filteredTxs.slice().reverse().map((transaction) => (
                               <tr key={transaction.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <div className="flex items-center">
                                     <div className="text-sm font-medium text-gray-900 capitalize">
                                       {transaction.transaction_type.replace('_', ' ')}
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                                   {transaction.reference}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                                   {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                                     transaction.status === 'completed' ? 'bg-emerald-50 text-emerald-700'
                                       : transaction.status === 'pending' ? 'bg-amber-50 text-amber-700'
@@ -814,7 +814,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                           : 'bg-red-50 text-red-700'
                                   }`}>{transaction.status}</span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                                   {formatDateTime(transaction.created_at)}
                                 </td>
                               </tr>
@@ -976,7 +976,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                 <h3 className="text-base font-semibold text-gray-900">Request Withdrawal</h3>
-                <button onClick={() => setShowWithdraw(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+                <button onClick={() => setShowWithdraw(false)} className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">✕</button>
               </div>
               <div className="px-6 py-4 space-y-4">
                 <div className="bg-gray-50 rounded-lg p-3">
@@ -993,7 +993,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       max={walletStats?.currentBalance || 0}
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       placeholder="0.00"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">{currency}</span>
@@ -1012,7 +1012,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     <select
                       value={selectedPayoutId || ''}
                       onChange={(e) => setSelectedPayoutId(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                     >
                       <option value="">Select payout account</option>
                       {payoutOptions.map(opt => (
@@ -1023,7 +1023,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                   {payoutOptions.length > 1 && (
                     <label className="inline-flex items-center mt-2 text-sm text-gray-600">
-                      <input type="checkbox" checked={setAsDefault} onChange={(e) => setSetAsDefault(e.target.checked)} className="mr-2" />
+                      <input type="checkbox" checked={setAsDefault} onChange={(e) => setSetAsDefault(e.target.checked)} className="mr-2 rounded border-gray-300 text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/20" />
                       Set as default payout account
                     </label>
                   )}
@@ -1031,12 +1031,12 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setShowWithdraw(false)}
-                    className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                    className="flex-1 min-h-[40px] px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                   >Cancel</button>
                   <button
                     onClick={handleWithdraw}
                     disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0) || payoutOptions.length === 0 || !selectedPayoutId}
-                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="flex-1 min-h-[40px] px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >{loading ? 'Submitting...' : 'Withdraw'}</button>
                 </div>
               </div>

@@ -118,7 +118,7 @@ export default function Settings() {
         <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
@@ -148,7 +148,7 @@ export default function Settings() {
               </div>
               <Link
                 to="/edit-profile"
-                className="w-full sm:w-auto text-center bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors"
+                className="w-full sm:w-auto min-h-[44px] text-center bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 Edit Profile
               </Link>
@@ -175,7 +175,7 @@ export default function Settings() {
                     checked={notifications.emailBookings}
                     onChange={(e) => handleNotificationChange('emailBookings', e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
 
@@ -191,7 +191,7 @@ export default function Settings() {
                     checked={notifications.emailPromotions}
                     onChange={(e) => handleNotificationChange('emailPromotions', e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
 
@@ -207,7 +207,7 @@ export default function Settings() {
                     checked={notifications.pushBookings}
                     onChange={(e) => handleNotificationChange('pushBookings', e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
 
@@ -223,7 +223,7 @@ export default function Settings() {
                     checked={notifications.pushPromotions}
                     onChange={(e) => handleNotificationChange('pushPromotions', e.target.checked)}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
             </div>
@@ -239,7 +239,7 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Manage your privacy settings and account security</p>
                 </div>
               </div>
-              <button className="text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-gray-900 hover:text-gray-700 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-2 py-1">
                 Manage
               </button>
             </div>
@@ -255,7 +255,7 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Manage your saved payment methods</p>
                 </div>
               </div>
-              <button className="text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-gray-900 hover:text-gray-700 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-2 py-1">
                 Manage
               </button>
             </div>
@@ -271,7 +271,7 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Change your language and regional preferences</p>
                 </div>
               </div>
-              <button className="text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-gray-900 hover:text-gray-700 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-2 py-1">
                 Change
               </button>
             </div>
@@ -289,7 +289,7 @@ export default function Settings() {
               </div>
               <Link
                 to="/help"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="text-gray-900 hover:text-gray-700 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md px-2 py-1"
               >
                 Get Help
               </Link>
@@ -308,7 +308,7 @@ export default function Settings() {
               </div>
               <button
                 onClick={handleSignOut}
-                className="w-full sm:w-auto bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-colors"
+                className="w-full sm:w-auto min-h-[44px] bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
               >
                 Sign Out
               </button>
@@ -326,13 +326,13 @@ export default function Settings() {
             <div className="flex space-x-3">
               <button
                 onClick={cancelSignOut}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 min-h-[44px] px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmSignOut}
-                className="flex-1 px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 min-h-[44px] px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
               >
                 Log out
               </button>
