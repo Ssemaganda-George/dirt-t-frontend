@@ -160,6 +160,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
           <div className="space-y-4 pb-2">
             <p className="text-sm text-gray-700 text-center font-medium">Select the account to create</p>
 
+          {!isSignUp && (
+            <button
+              type="button"
+              onClick={() => setShowAccountTypePrompt(true)}
+              className="w-full rounded-xl border-2 border-emerald-600 bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+            >
+              New here? Create your account — Sign up
+            </button>
+          )}
+
             <button
               type="button"
               onClick={() => {
@@ -397,6 +407,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               New here? Create your account — Sign up
             </button>
           )}
+
         </form>
 
         {/* Divider */}
