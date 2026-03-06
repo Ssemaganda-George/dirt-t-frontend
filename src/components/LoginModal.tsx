@@ -28,6 +28,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
@@ -41,6 +42,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     setLastName('')
     setHomeCity('')
     setHomeCountry('')
+    setAgreedToTerms(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -355,11 +357,31 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             </div>
           )}
 
+          {isSignUp && (
+            <div className="flex items-start gap-2">
+              <input
+                id="agreeTerms"
+                name="agreeTerms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <label htmlFor="agreeTerms" className="text-xs text-gray-600 leading-relaxed">
+                I agree to the{' '}
+                <a href="/terms" className="text-emerald-700 hover:text-emerald-800 underline">
+                  Terms and Conditions
+                </a>
+                .
+              </label>
+            </div>
+          )}
+
           {/* Sign in button */}
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (isSignUp && !agreedToTerms)}
               className="w-full px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}

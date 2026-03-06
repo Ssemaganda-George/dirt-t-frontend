@@ -547,7 +547,7 @@ export default function Home() {
         { id: 'cat_transport', name: 'Transport', icon: Car },
         { id: 'cat_activities', name: 'Events', icon: Target },
         { id: 'cat_tour_packages', name: 'Tours', icon: Map },
-        { id: 'cat_restaurants', name: 'Food', icon: Utensils },
+        { id: 'cat_restaurants', name: 'Restaurants', icon: Utensils },
         { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])
     }
@@ -579,16 +579,6 @@ export default function Home() {
              containsQuery(service.location) ||
              containsQuery(service.vendors?.business_name) ||
              containsQuery(service.service_categories?.name);
-
-      // Debug: Log which basic field matched
-      if (searchQuery && result) {
-        console.log('Search match found for query:', searchQuery, 'in service:', service.title);
-        if (containsQuery(service.title)) console.log('  - Match in TITLE');
-        if (containsQuery(service.description)) console.log('  - Match in DESCRIPTION');
-        if (containsQuery(service.location)) console.log('  - Match in LOCATION');
-        if (containsQuery(service.vendors?.business_name)) console.log('  - Match in VENDOR NAME');
-        if (containsQuery(service.service_categories?.name)) console.log('  - Match in CATEGORY NAME');
-      }
 
       // If no match in basic fields, check additional fields and category synonyms
       if (!result) {
@@ -632,11 +622,6 @@ export default function Home() {
                  (query.includes('activity') && service.category_id === 'cat_activities') ||
                  (query.includes('event') && service.category_id === 'cat_activities') ||
                  (query.includes('experience') && service.category_id === 'cat_activities');
-
-        // Debug: Log which additional field matched
-        if (searchQuery && result) {
-          console.log('Match in ADDITIONAL FIELD or CATEGORY SYNONYM for query:', searchQuery, 'service:', service.title);
-        }
       }
 
       return result;
@@ -650,13 +635,6 @@ export default function Home() {
 
     return shouldInclude;
   })
-
-  // Debug: Log filtering results
-  useEffect(() => {
-    if (searchQuery) {
-      console.log('Search query:', searchQuery, 'Total services:', allServices.length, 'Filtered services:', filteredServices.length);
-    }
-  }, [searchQuery, filteredServices.length, allServices.length]);
 
   const currentItems = filteredServices
   const currentItemCount = currentItems.length
@@ -678,10 +656,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative min-h-[280px] md:min-h-[400px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
-        <div className="absolute inset-0 bg-black/30"></div>
+      <div className="relative min-h-[280px] md:min-h-[380px] bg-gray-900">
+        <div className="absolute inset-0 bg-black/45"></div>
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
             <div
@@ -696,7 +674,7 @@ export default function Home() {
                   muted
                   playsInline
                   className="w-full h-full object-cover"
-                  style={{ opacity: 0.6 }}
+                  style={{ opacity: 0.55 }}
                   key={currentSlide === idx ? media.url : undefined}
                 />
               ) : (
@@ -708,7 +686,7 @@ export default function Home() {
                     backgroundPosition: 'center',
                     width: '100%',
                     height: '100%',
-                    opacity: 0.2
+                    opacity: 0.35
                   }}
                 ></div>
               )}
@@ -716,11 +694,11 @@ export default function Home() {
           ))
         )}
         
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20 transform -translate-y-6 md:-translate-y-8">
-          <h1 className="text-3xl md:text-6xl font-bold text-white mb-4 md:mb-6 text-center text-heading leading-tight">
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20">
+          <h1 className="text-3xl md:text-5xl font-semibold text-white mb-3 md:mb-5 text-center text-heading leading-tight">
             {t('hero_title')}
           </h1>
-          <p className="text-base md:text-xl text-white/90 mb-0 text-center max-w-3xl text-elegant leading-relaxed">
+          <p className="text-sm md:text-lg text-white/90 mb-0 text-center max-w-2xl text-elegant leading-relaxed">
             {t('hero_subtitle')}
           </p>
         </div>
@@ -728,12 +706,12 @@ export default function Home() {
 
       {/* Filters moved up to appear immediately after the hero section */}
       {!searchQuery && (
-        <div className="mt-6">{/* small gap after hero */}
+        <div className="mt-5">{/* small gap after hero */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide pb-2">
+            <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide pb-2">
               <button
                 onClick={() => handleCategorySelect('all')}
-                className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                className={`text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                   selectedCategories.includes('all')
                     ? 'text-gray-900'
                     : 'text-gray-600 hover:text-gray-900'
@@ -746,12 +724,12 @@ export default function Home() {
                   <span className="text-sm">All</span>
                 </div>
               </button>
-              <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
                 {categories.slice(1).map((category) => (
                   <button
                     key={category.id}
                     onClick={() => handleCategorySelect(category.id)}
-                    className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                    className={`text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                       selectedCategories.includes(category.id) && !selectedCategories.includes('all')
                         ? 'text-gray-900'
                         : 'text-gray-600 hover:text-gray-900'
@@ -774,19 +752,17 @@ export default function Home() {
       {/* Fixed Search Bar - Always Visible */}
       <div className="fixed top-20 left-0 right-0 z-[60] w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
-          <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-lg p-2 relative">
-            <div className="flex items-center gap-1">
+          <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-2 md:p-2.5 relative">
+            <div className="flex items-center gap-2">
               <div className="flex-1 flex items-center px-3">
                 <Search className="h-4 w-4 text-gray-400 mr-2" />
                 <input
                   type="text"
                   placeholder={t('search_placeholder')}
-                  className="w-full py-1.5 md:py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-xs md:text-sm font-thin"
+                  className="w-full py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-sm"
                   value={searchQuery}
                   onChange={(e) => {
-                    const newValue = e.target.value;
-                    console.log('Search input changed:', newValue);
-                    setSearchQuery(newValue);
+                    setSearchQuery(e.target.value)
                   }}
                 />
               </div>
@@ -794,7 +770,7 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1 bg-gray-700 hover:bg-gray-900 text-white px-2 md:px-4 py-1.5 md:py-2 rounded-full font-thin transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs"
+                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white px-3 md:px-4 py-2 rounded-xl font-medium transition-colors text-xs md:text-sm"
                   title="Filter services by category - click to select multiple categories"
                 >
                   <Filter className="w-3.5 h-3.5" />
@@ -810,10 +786,10 @@ export default function Home() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden z-50">
                     {/* Header */}
                     <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h3 className="font-medium text-gray-900 text-xs">{t('choose_travel_needs')}</h3>
+                        <h3 className="font-medium text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
                         <p className="text-xs text-gray-500">{t('select_one_or_more')}</p>
                     </div>
 
@@ -896,7 +872,7 @@ export default function Home() {
 
       {/* Category Filters Section relocated to just below the fixed search bar */}
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16 md:pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-16 md:pb-20">
 
         {/* Results Header */}
         <div className="mb-4">
@@ -923,7 +899,7 @@ export default function Home() {
         ) : (
           // If searching or filtering by categories, show the standard grid of results.
           (searchQuery || !selectedCategories.includes('all')) ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-10 mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 sm:gap-x-5 gap-y-5 sm:gap-y-8 mb-12">
               {(
                 swapColumnsOnRefresh ? [...currentItems].reverse() : currentItems
               ).map((service: Service) => (
@@ -947,15 +923,15 @@ export default function Home() {
                 const servicesForCatToRender = swapColumnsOnRefresh ? servicesForCat.slice().reverse() : servicesForCat
                 return (
                   <div key={category.id}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{getDailyTitleForCategory(category.id, category.name)}</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm sm:text-lg md:text-xl font-semibold text-gray-900 whitespace-nowrap pr-2">{getDailyTitleForCategory(category.id, category.name)}</h3>
                       {/* <span className="text-sm text-gray-500">{servicesForCat.length} options</span> */}
                     </div>
 
                     <div className="relative">
                       <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
                         {servicesForCatToRender.map((service: Service) => (
-                          <div key={service.id} className="snap-start flex-shrink-0 w-[40%] sm:w-[34%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
+                          <div key={service.id} className="snap-start flex-shrink-0 w-[56%] sm:w-[46%] md:w-[32%] lg:w-[22%] xl:w-[18%]">
                             <ServiceCard
                               service={service}
                               onClick={() => navigate(`/service/${service.slug || service.id}`)}
@@ -1094,26 +1070,26 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
       location = service.location
     }
     
-    if (!location) return <span className="text-[10px] md:text-[11px]">Location TBA</span>
+    if (!location) return <span className="text-xs">Location TBA</span>
     
     const preposition = getLocationPreposition(service.service_categories?.name)
     
     return (
       <span>
-        <span className="text-[8px] md:text-[9px]">{preposition}</span>
-        <span className="text-[10px] md:text-[11px] ml-0.5">{location}</span>
+        <span className="text-[10px] md:text-xs">{preposition}</span>
+        <span className="text-xs md:text-sm ml-1">{location}</span>
       </span>
     )
   }
 
   return (
     <div onClick={onClick} className="group block cursor-pointer">
-      <div className="w-full">
+      <div className="w-[92%] sm:w-full mx-auto">
         {/* Standalone square image tile */}
-        <div className="aspect-square rounded-xl overflow-hidden shadow-sm bg-gray-100 relative">
+        <div className="aspect-square rounded-lg sm:rounded-xl overflow-hidden shadow-sm bg-gray-100 relative border border-gray-100">
           {/* Category badge */}
           {service.service_categories?.name && (
-            <div className="absolute top-3 left-3 px-2 py-0.5 sm:px-2 sm:py-0.5 bg-white/95 rounded-full shadow-sm text-[10px] sm:text-[11px] font-semibold text-gray-800 max-w-[68%] truncate">
+            <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/95 rounded-full shadow-sm text-[9px] sm:text-[11px] font-semibold text-gray-800 max-w-[74%] truncate">
               {getCategoryBadge(service.service_categories?.name)}
             </div>
           )}
@@ -1126,7 +1102,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           {/* Save Button (kept) */}
           <button
             onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved) }}
-            className="absolute top-3 right-3 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
             aria-label={isSaved ? 'Unsave' : 'Save'}
           >
             <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
@@ -1135,18 +1111,18 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
         {/* Compact info block below the image (Airbnb-like) */}
         <div className="mt-2 px-0">
-          <h3 className={`font-medium text-gray-900 leading-tight mb-0 ${
+          <h3 className={`font-medium text-gray-900 leading-tight mb-0.5 ${
             service.service_categories?.name?.toLowerCase() === 'tour_packages' || service.service_categories?.name?.toLowerCase() === 'tours'
-              ? 'text-[11px] md:text-xs line-clamp-2' 
-              : 'text-xs md:text-sm line-clamp-1 truncate'
+              ? 'text-[11px] sm:text-xs md:text-sm line-clamp-2' 
+              : 'text-xs sm:text-sm md:text-base line-clamp-1 truncate'
           }`}>
             {service.title}
           </h3>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-1">
             <div className="text-gray-500 truncate">
               {getLocationText(service)}
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-600 flex-shrink-0">
+            <div className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-600 flex-shrink-0 ml-2">
               <Star className="h-3 w-3 text-emerald-600 fill-current" />
               <span className="leading-none">{rating > 0 ? rating.toFixed(1) : '0'}</span>
               {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
@@ -1154,19 +1130,19 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
-              <div className="text-sm md:text-base font-normal text-gray-800 leading-none">
-                <span className="text-[9px] md:text-[10px] text-gray-500 mr-1">From</span>
+            <div className="flex items-baseline gap-1 whitespace-nowrap flex-shrink-0">
+              <div className="text-xs sm:text-sm md:text-base font-normal text-gray-800 leading-none">
+                <span className="text-[10px] md:text-xs text-gray-500 mr-1">From</span>
                 <Money
                   amount={getDisplayPrice(service, localTicketTypes && localTicketTypes.length > 0 ? localTicketTypes : undefined)}
                   serviceCurrency={service.currency}
                   targetCurrency={selectedCurrency || 'UGX'}
                   locale={selectedLanguage || 'en-US'}
-                  className="text-sm md:text-base font-normal text-gray-800 leading-none"
-                  currencyClassName="text-[10px] text-gray-600 mr-1"
-                  amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
+                  className="text-xs sm:text-sm md:text-base font-normal text-gray-800 leading-none"
+                  currencyClassName="text-[10px] md:text-xs text-gray-600 mr-1"
+                  amountClassName="text-xs sm:text-sm md:text-base font-semibold text-black"
                 />
-                <span className="text-[9px] md:text-[10px] text-gray-500 ml-1 whitespace-nowrap">
+                <span className="text-[10px] md:text-xs text-gray-500 ml-1 whitespace-nowrap">
                   {getUnitLabel(service.service_categories?.name)}
                 </span>
               </div>

@@ -418,51 +418,51 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block bg-gray-900 text-white">
+      <footer className="hidden md:block bg-gray-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="mb-4">
-                <span className="text-xl font-bold">DirtTrails</span>
+                <span className="text-xl font-semibold tracking-tight">DirtTrails</span>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-sm leading-relaxed">
                 Discover Uganda's hidden gems and create unforgettable experiences with local service providers.
               </p>
             </div>
             
             <div>
-              <h3 className="font-semibold mb-4">Explore</h3>
+              <h3 className="font-semibold mb-4 text-white">Explore</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/" className="hover:text-white">Home</Link></li>
-                <li><Link to="/category/flights" className="hover:text-white">Flights</Link></li>
-                <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
-                <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
-                <li><Link to="/category/events" className="hover:text-white">Events</Link></li>
-                <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
-                <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
+                <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
+                <li><Link to="/category/flights" className="hover:text-white transition-colors">Flights</Link></li>
+                <li><Link to="/category/hotels" className="hover:text-white transition-colors">Hotels</Link></li>
+                <li><Link to="/category/tours" className="hover:text-white transition-colors">Tours</Link></li>
+                <li><Link to="/category/events" className="hover:text-white transition-colors">Events</Link></li>
+                <li><Link to="/category/restaurants" className="hover:text-white transition-colors">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="hover:text-white transition-colors">Transport</Link></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-semibold mb-4">Support</h3>
+              <h3 className="font-semibold mb-4 text-white">Support</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
-                <li><Link to="/contact" className="hover:text-white">Contact Us</Link></li>
-                <li><Link to="/safety" className="hover:text-white">Safety</Link></li>
-                <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
-                <li><Link to="/travel-insurance" className="hover:text-white">Travel Insurance</Link></li>
-                <li><Link to="/visa-processing" className="hover:text-white">Visa Processing</Link></li>
-                <li><Link to="/internet-connectivity" className="hover:text-white">Internet & Connectivity</Link></li>
+                <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/safety" className="hover:text-white transition-colors">Safety</Link></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="hover:text-white transition-colors">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="hover:text-white transition-colors">Visa Processing</Link></li>
+                <li><Link to="/internet-connectivity" className="hover:text-white transition-colors">Internet & Connectivity</Link></li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-semibold mb-4">For Businesses</h3>
+              <h3 className="font-semibold mb-4 text-white">For Businesses</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/vendor-login" className="hover:text-white">List My Business</Link></li>
-                <li><Link to="/refer-business" className="hover:text-white">Refer a Business</Link></li>
-                <li><Link to="/hospitality-class" className="hover:text-white">Join a Hospitality Class</Link></li>
-                <li><Link to="/partner" className="hover:text-white">Partner with DirtTrails</Link></li>
+                <li><Link to="/vendor-login" className="hover:text-white transition-colors">List My Business</Link></li>
+                <li><Link to="/refer-business" className="hover:text-white transition-colors">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="hover:text-white transition-colors">Join a Hospitality Class</Link></li>
+                <li><Link to="/partner" className="hover:text-white transition-colors">Partner with DirtTrails</Link></li>
               </ul>
             </div>
           </div>

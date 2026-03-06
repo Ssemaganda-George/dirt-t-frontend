@@ -59,9 +59,10 @@ export default function TermsOfService() {
     {
       number: "2",
       title: "User Accounts",
-      content: "To access certain features of our platform, you must create an account. You are responsible for maintaining the security of your account credentials and for all activities that occur under your account.",
+      content: "To access certain features of our platform, you must create an account. By using DirtTrails, you confirm that you are legally capable of entering into a binding agreement and that all information provided during registration or booking is accurate and truthful. You are responsible for maintaining the security of your account credentials and for all activities that occur under your account.",
       subsections: [
         "Account creation required for advanced operations",
+        "Legal capacity and truthful information required",
         "User responsible for security",
         "Immediate notification of breaches",
       ]
@@ -69,34 +70,70 @@ export default function TermsOfService() {
     {
       number: "3",
       title: "Booking and Payment",
-      content: "When you make a booking through our platform, you enter into a direct contract with the service provider. Payment processing is handled securely through third-party payment providers. All fees and applicable taxes are clearly displayed before payment.",
+      content: "All reservations made through the platform constitute a binding booking agreement between the Client and the selected service provider. DirtTrails facilitates bookings, payments, and communication between parties but does not own or operate accommodation providers listed on the platform. Clients agree to pay all applicable charges including accommodation costs, service fees, taxes, tourism levies, and incidental expenses incurred during their stay.",
       subsections: [
         "Direct contract with provider",
+        "DirtTrails is a facilitation platform",
         "Secure payment processing",
-        "Transparent fee structure",
+        "Transparent fees, taxes, and levies",
         "Confirmation upon payment"
+      ]
+    },
+    {
+      number: "3A",
+      title: "Pricing and Confirmed Bookings",
+      content: "Prices may occasionally change due to operational costs, government taxation, currency fluctuations, or seasonal demand. However, confirmed and fully paid bookings are not affected by later price adjustments.",
+      subsections: [
+        "Prices may vary before confirmation",
+        "Operational and regulatory factors may affect pricing",
+        "Confirmed fully paid bookings are protected",
+        "Displayed final charges apply at payment"
       ]
     },
     {
       number: "4",
       title: "Cancellation and Refunds",
-      content: "Cancellation policies vary by service provider and are clearly stated during the booking process. Generally, cancellations made 24-48 hours in advance may be eligible for partial refunds, subject to provider policies.",
+      content: "Cancellation and refund eligibility depends on cancellation timing and the operational costs already incurred by the service provider. Policies vary by provider and are displayed during booking. Failure to appear for a confirmed reservation without notice may be treated as a no-show and charges may apply.",
       subsections: [
         "Provider-specific policies",
-        "24-48 hour advance notice preferred",
-        "Partial refunds possible",
+        "Cancellation timing affects eligibility",
+        "Operational costs may reduce refund amounts",
         "No refunds for no-shows"
+      ]
+    },
+    {
+      number: "4A",
+      title: "Payments, Chargebacks, and Disputes",
+      content: "Payments made through cards, digital wallets, or online payment systems constitute legally valid transactions. In case of chargebacks or disputes, DirtTrails may provide booking confirmations, payment records, and communication history to financial institutions. Fraudulent or unjustified chargebacks may result in suspension of the user account and recovery of outstanding amounts.",
+      subsections: [
+        "Card and wallet payments are valid transactions",
+        "Records may be shared for dispute handling",
+        "Fraudulent chargebacks may lead to suspension",
+        "Outstanding amounts may be recovered"
       ]
     },
     {
       number: "5",
       title: "User Conduct",
-      content: "You agree to use the platform responsibly and not engage in any unlawful activities. This includes not attempting to gain unauthorized access to our systems or interfere with the platform's proper functioning.",
+      content: "Clients must behave respectfully and lawfully while using services booked through the platform. Hotels or service providers may terminate services immediately in cases of misconduct including harassment, violence, illegal activity, property damage, or disruptive behavior. Where termination occurs due to client misconduct after reasons are communicated, refunds may not be issued.",
       subsections: [
         "Lawful use only",
+        "No harassment, violence, or illegal activity",
+        "Service providers may terminate services for misconduct",
+        "Refunds may be denied for misconduct-related termination",
         "No system interference",
-        "Respect other users",
         "Report violations"
+      ]
+    },
+    {
+      number: "5A",
+      title: "Health, Safety, and Emergency Access",
+      content: "Clients are responsible for disclosing relevant medical conditions, allergies, or dietary restrictions that may affect participation in activities or food consumption during their stay. In emergency situations where a Client is unconscious, intoxicated, or unable to communicate, authorized personnel may access identification or emergency contact information solely for safety or medical assistance.",
+      subsections: [
+        "Disclose relevant medical and dietary information",
+        "Assist safe participation in booked services",
+        "Emergency contact access limited to safety purposes",
+        "No broader data use under emergency access"
       ]
     },
     {
@@ -113,12 +150,13 @@ export default function TermsOfService() {
     {
       number: "7",
       title: "Privacy Policy",
-      content: "Your privacy is important to us. Our Privacy Policy, which governs your use of the platform, explains how we collect, use, and protect your personal information. Please review it carefully.",
+      content: "Personal data collected through the platform may include identification details, contact information, and booking information necessary for service delivery. Data is processed in accordance with international and national privacy laws including GDPR, the UK Data Protection Act 2018, CCPA, PIPEDA (Canada), Uganda's Data Protection and Privacy Act 2019, and other applicable privacy regulations.",
       subsections: [
         "Data collection practices",
         "Information usage policies",
         "Security measures",
-        "User rights and choices"
+        "User rights and choices",
+        "Compliance with major international privacy frameworks"
       ]
     },
     {
@@ -135,21 +173,23 @@ export default function TermsOfService() {
     {
       number: "9",
       title: "Limitation of Liability",
-      content: "In no event shall DirtTrails be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with your use of the platform or services booked through it.",
+      content: "DirtTrails is responsible for operating the booking platform and coordinating reservations, while accommodation providers remain responsible for safety, staff conduct, and services delivered within their premises. Each party is responsible for actions within its operational control and may be liable for damages caused by negligence or misconduct.",
       subsections: [
         "Limited liability scope",
-        "No consequential damages",
-        "Maximum liability caps",
+        "Operational-control responsibility model",
+        "Provider responsibility for on-premise service delivery",
+        "Potential liability for negligence or misconduct",
         "Force majeure exceptions"
       ]
     },
     {
       number: "10",
       title: "Governing Law",
-      content: "These terms are governed by the laws of the Republic of Uganda. Any disputes arising from these terms or your use of the platform shall be resolved in the courts of Uganda.",
+      content: "These Terms are interpreted under internationally recognized principles of electronic commerce and contract law, including the United Nations Convention on the Use of Electronic Communications in International Contracts, the UNCITRAL Model Law on Electronic Commerce, and the United Nations Guidelines for Consumer Protection, together with applicable national laws in jurisdictions where the platform operates.",
       subsections: [
-        "Ugandan law applies",
-        "Court jurisdiction in Uganda",
+        "International e-commerce and contract law principles",
+        "UNCITRAL and UN consumer protection guidance",
+        "Applicable national law by operating jurisdiction",
         "Dispute resolution process",
         "Applicable legal framework"
       ]
@@ -157,8 +197,9 @@ export default function TermsOfService() {
     {
       number: "11",
       title: "Changes to Terms",
-      content: "We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting on the platform. Continued use of the platform constitutes acceptance of modified terms.",
+      content: "By selecting 'Accept', you confirm that you have read, understood, and agreed to these Terms and Conditions. We reserve the right to modify these terms at any time. Changes are effective upon posting, and continued use of the platform constitutes acceptance of modified terms.",
       subsections: [
+        "Acceptance is confirmed when user selects 'Accept'",
         "Right to modify terms",
         "Immediate effect upon posting",
         "User notification methods",
@@ -178,19 +219,36 @@ export default function TermsOfService() {
     }
   ]
 
+  const summaryTerms = [
+    "By selecting 'Accept', you agree to the Terms and Conditions governing the use of the DirtTrails platform and all services accessed through the application.",
+    "DirtTrails operates a digital platform that connects travelers ('Clients') with licensed hotels and tourism service providers.",
+    "All reservations made through the platform constitute a binding booking agreement between the Client and the selected service provider.",
+    "DirtTrails facilitates bookings, payments, and communication, but does not own or operate listed accommodation providers.",
+    "Clients agree to pay all applicable charges including accommodation costs, service fees, taxes, tourism levies, and incidental expenses.",
+    "Prices may change due to operational costs, taxation, currency fluctuations, or seasonal demand; confirmed and fully paid bookings are not affected by later price adjustments.",
+    "Cancellation and refund eligibility depends on cancellation timing and provider-incurred operational costs; no-show charges may apply.",
+    "Payments through cards, digital wallets, and online systems are legally valid. Booking and payment records may be used to resolve chargebacks and disputes.",
+    "Fraudulent or unjustified chargebacks may result in account suspension and recovery of outstanding amounts.",
+    "Clients must act lawfully and respectfully. Providers may terminate services in cases such as harassment, violence, illegal activity, property damage, or disruptive behavior.",
+    "Clients should disclose relevant medical conditions, allergies, or dietary restrictions. Emergency access to identification or contact data is limited to safety or medical assistance.",
+    "Personal data is processed under applicable privacy laws including GDPR, UK DPA 2018, CCPA, PIPEDA, Uganda's Data Protection and Privacy Act 2019, and other relevant regulations.",
+    "DirtTrails is responsible for platform operation and reservation coordination, while providers are responsible for safety and service delivery within their premises.",
+    "These Terms are interpreted in line with international electronic commerce and contract principles, including UNCITRAL and related UN frameworks, together with applicable national laws."
+  ]
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-black border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-14">
           <div className="text-center">
-            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Terms of Service</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4 leading-snug antialiased">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900 mb-3 tracking-tight antialiased">Terms of Service</h1>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-4 leading-relaxed antialiased">
               Please read these terms carefully before using the DirtTrails platform.
             </p>
             <div className="flex items-center justify-center space-x-2 text-gray-500">
-              <Clock className="h-5 w-5" />
-              <span className="text-sm font-semibold tracking-tight antialiased">
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-medium tracking-tight antialiased">
                 Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
               </span>
             </div>
@@ -198,30 +256,49 @@ export default function TermsOfService() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Key Terms Overview */}
-        <div className="mb-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">Key Terms Overview</h2>
-            <p className="text-lg text-gray-600 leading-snug antialiased">Important points you should know about using DirtTrails</p>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        {/* Terms Summary */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-8 mb-10 sm:mb-14">
+          <div className="mb-6">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2 tracking-tight antialiased">Dirt-Trails App Terms and Conditions (Summary)</h2>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed antialiased">
+              This summary highlights key terms. The detailed sections below provide the full governing terms and conditions.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <ul className="space-y-3">
+            {summaryTerms.map((item, index) => (
+              <li key={index} className="flex items-start text-gray-700">
+                <CheckCircle className="h-4 w-4 text-emerald-600 mr-2.5 mt-0.5 flex-shrink-0" />
+                <span className="text-sm sm:text-base leading-relaxed antialiased">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Key Terms Overview */}
+        <div className="mb-10 sm:mb-14">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-3 tracking-tight antialiased">Key Terms Overview</h2>
+            <p className="text-base text-gray-600 leading-relaxed antialiased">Important points you should know about using DirtTrails</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {keyTerms.map((term, index) => (
-              <div key={index} className="bg-white shadow-sm border border-gray-200 p-8 hover:shadow-md transition-shadow duration-200">
+              <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-black flex items-center justify-center">
-                      <term.icon className="h-6 w-6 text-white" />
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                      <term.icon className="h-5 w-5 text-gray-700" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">{term.title}</h3>
-                    <p className="text-gray-700 mb-4 leading-snug antialiased">{term.description}</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight antialiased">{term.title}</h3>
+                    <p className="text-gray-700 mb-4 leading-relaxed antialiased">{term.description}</p>
                     <ul className="space-y-2">
                       {term.details.map((detail, idx) => (
                         <li key={idx} className="flex items-center text-gray-700 text-sm">
-                          <CheckCircle className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" />
+                          <CheckCircle className="h-4 w-4 text-emerald-600 mr-2 flex-shrink-0" />
                           <span className="leading-snug antialiased">{detail}</span>
                         </li>
                       ))}
@@ -234,31 +311,31 @@ export default function TermsOfService() {
         </div>
 
         {/* Detailed Terms */}
-        <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">Detailed Terms and Conditions</h2>
-            <p className="text-lg text-gray-700 leading-snug antialiased">Complete terms governing your use of DirtTrails</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-8 mb-10 sm:mb-14">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-3 tracking-tight antialiased">Detailed Terms and Conditions</h2>
+            <p className="text-base text-gray-700 leading-relaxed antialiased">Complete terms governing your use of DirtTrails</p>
           </div>
 
-          <div className="space-y-12">
+          <div className="space-y-8 sm:space-y-10">
             {detailedSections.map((section, index) => (
-              <div key={index} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
+              <div key={index} className="border-b border-gray-100 pb-6 sm:pb-8 last:border-b-0 last:pb-0">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-semibold text-gray-600">{section.number}</span>
+                    <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-semibold text-white">{section.number}</span>
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">{section.title}</h3>
-                    <p className="text-gray-700 leading-snug antialiased mb-6">{section.content}</p>
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 tracking-tight antialiased">{section.title}</h3>
+                    <p className="text-gray-700 leading-relaxed antialiased mb-5">{section.content}</p>
 
-                    <div className="bg-gray-50 p-6">
-                      <h4 className="font-bold text-black mb-3 tracking-tight antialiased">Key Points:</h4>
+                    <div className="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-100">
+                      <h4 className="font-semibold text-gray-900 mb-3 tracking-tight antialiased">Key Points:</h4>
                       <ul className="space-y-2">
                         {section.subsections.map((subsection, idx) => (
                           <li key={idx} className="flex items-start text-gray-700">
-                            <CheckCircle className="h-5 w-5 text-gray-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <CheckCircle className="h-4 w-4 text-emerald-600 mr-2.5 mt-0.5 flex-shrink-0" />
                             <span className="leading-snug antialiased">{subsection}</span>
                           </li>
                         ))}
@@ -272,17 +349,17 @@ export default function TermsOfService() {
         </div>
 
         {/* Agreement and Contact */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
           {/* Agreement Section */}
-          <div className="bg-white border border-gray-200 p-8">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
             <div className="flex items-start space-x-3">
-              <AlertCircle className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">Agreement to Terms</h3>
-                <p className="text-gray-700 leading-snug antialiased mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight antialiased">Agreement to Terms</h3>
+                <p className="text-gray-700 leading-relaxed antialiased mb-3">
                   By accessing and using DirtTrails, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
                 </p>
-                <p className="text-gray-600 text-sm leading-snug antialiased">
+                <p className="text-gray-600 text-sm leading-relaxed antialiased">
                   If you do not agree to these terms, please discontinue use of our platform immediately.
                 </p>
               </div>
@@ -290,12 +367,12 @@ export default function TermsOfService() {
           </div>
 
           {/* Contact Section */}
-          <div className="bg-white border border-gray-200 p-8">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
             <div className="flex items-start space-x-3">
-              <FileText className="h-6 w-6 text-gray-600 flex-shrink-0 mt-0.5" />
+              <FileText className="h-5 w-5 text-gray-700 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-xl font-bold text-black mb-3 tracking-tight antialiased">Questions About Terms?</h3>
-                <p className="text-gray-700 leading-snug antialiased mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight antialiased">Questions About Terms?</h3>
+                <p className="text-gray-700 leading-relaxed antialiased mb-4">
                   If you have questions about these terms or need clarification on any section, our legal team is here to help.
                 </p>
                 <div className="space-y-2 text-sm text-gray-700">
@@ -309,11 +386,11 @@ export default function TermsOfService() {
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-16 pt-8 border-t border-gray-200">
-          <p className="text-gray-500 mb-2 leading-snug antialiased">
+        <div className="text-center mt-10 sm:mt-14 pt-6 sm:pt-8 border-t border-gray-200">
+          <p className="text-gray-500 mb-2 leading-relaxed antialiased text-sm">
             These terms were last updated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
           </p>
-          <p className="text-gray-600 text-sm leading-snug antialiased">
+          <p className="text-gray-600 text-sm leading-relaxed antialiased">
             We reserve the right to update these terms at any time. Continued use of DirtTrails constitutes acceptance of any changes.
           </p>
         </div>

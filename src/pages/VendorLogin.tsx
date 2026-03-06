@@ -27,6 +27,7 @@ export default function VendorLogin() {
   const [yearsInBusiness, setYearsInBusiness] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -334,6 +335,7 @@ export default function VendorLogin() {
     setYearsInBusiness('')
     setPassword('')
     setConfirmPassword('')
+    setAgreedToTerms(false)
     setError('')
   }
 
@@ -805,6 +807,24 @@ export default function VendorLogin() {
                           </button>
                         </div>
                       </div>
+
+                      <div className="flex items-start gap-2">
+                        <input
+                          id="vendorAgreeTerms"
+                          name="vendorAgreeTerms"
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => setAgreedToTerms(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <label htmlFor="vendorAgreeTerms" className="text-xs text-gray-600 leading-relaxed">
+                          I agree to the{' '}
+                          <a href="/terms" className="text-emerald-700 hover:text-emerald-800 underline">
+                            Terms and Conditions
+                          </a>
+                          .
+                        </label>
+                      </div>
                     </div>
                   )}
 
@@ -831,7 +851,7 @@ export default function VendorLogin() {
                     ) : (
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !agreedToTerms}
                         className="flex-1 bg-emerald-600 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
