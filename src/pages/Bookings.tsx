@@ -110,18 +110,18 @@ export default function Bookings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-          <p className="text-gray-600 mt-2">Manage your travel bookings and reservations</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">My Bookings</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Manage your travel bookings and reservations</p>
         </div>
 
         {/* Bookings List */}
@@ -142,7 +142,7 @@ export default function Bookings() {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-4 sm:p-6 rounded-lg">
+              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-4 sm:p-6 rounded-2xl">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <div className="flex items-start space-x-3">
@@ -154,7 +154,7 @@ export default function Bookings() {
                         />
                       )}
                       <div className="flex-1">
-                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-0">
+                        <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-0">
                           {booking.services?.title || 'Service'}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
@@ -201,12 +201,12 @@ export default function Bookings() {
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <Link
                         to={`/booking/${booking.id}`}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm text-center w-full sm:w-auto"
+                        className="bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors text-sm text-center w-full sm:w-auto"
                       >
                         View Details
                       </Link>
                       {booking.status === 'pending' && (
-                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm w-full sm:w-auto">
+                        <button className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-colors text-sm w-full sm:w-auto">
                           Cancel
                         </button>
                       )}

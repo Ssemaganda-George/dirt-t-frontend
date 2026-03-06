@@ -113,23 +113,23 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account preferences and settings</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Settings</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Manage your account preferences and settings</p>
         </div>
 
         {/* Success Message */}
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-600 px-4 py-3 flex items-center">
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-xl flex items-center text-sm">
             <CheckCircle className="h-5 w-5 mr-2" />
             {success}
           </div>
@@ -137,18 +137,18 @@ export default function Settings() {
 
         <div className="space-y-6">
           {/* Profile Settings */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <SettingsIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Profile Information</h3>
-                  <p className="text-gray-600">Update your personal information and preferences</p>
+                  <p className="text-sm text-gray-600">Update your personal information and preferences</p>
                 </div>
               </div>
               <Link
                 to="/edit-profile"
-                className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition-colors"
+                className="w-full sm:w-auto text-center bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors"
               >
                 Edit Profile
               </Link>
@@ -156,14 +156,14 @@ export default function Settings() {
           </div>
 
           {/* Notification Settings */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
             <div className="flex items-center mb-4">
               <Bell className="h-6 w-6 text-gray-400 mr-3" />
               <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex items-start justify-between py-3 border-b border-gray-200 gap-3">
                 <div>
                   <p className="font-medium text-gray-900">Email notifications for bookings</p>
                   <p className="text-sm text-gray-600">Receive updates about your bookings and reservations</p>
@@ -179,7 +179,7 @@ export default function Settings() {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex items-start justify-between py-3 border-b border-gray-200 gap-3">
                 <div>
                   <p className="font-medium text-gray-900">Email promotions and offers</p>
                   <p className="text-sm text-gray-600">Receive special offers and promotional emails</p>
@@ -195,7 +195,7 @@ export default function Settings() {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex items-start justify-between py-3 border-b border-gray-200 gap-3">
                 <div>
                   <p className="font-medium text-gray-900">Push notifications for bookings</p>
                   <p className="text-sm text-gray-600">Get instant notifications about booking updates</p>
@@ -211,7 +211,7 @@ export default function Settings() {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between py-3">
+              <div className="flex items-start justify-between py-3 gap-3">
                 <div>
                   <p className="font-medium text-gray-900">Push notifications for promotions</p>
                   <p className="text-sm text-gray-600">Receive push notifications for special offers</p>
@@ -230,13 +230,13 @@ export default function Settings() {
           </div>
 
           {/* Privacy & Security */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <Shield className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Privacy & Security</h3>
-                  <p className="text-gray-600">Manage your privacy settings and account security</p>
+                  <p className="text-sm text-gray-600">Manage your privacy settings and account security</p>
                 </div>
               </div>
               <button className="text-blue-600 hover:text-blue-700 font-medium">
@@ -246,13 +246,13 @@ export default function Settings() {
           </div>
 
           {/* Payment Methods */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <CreditCard className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Payment Methods</h3>
-                  <p className="text-gray-600">Manage your saved payment methods</p>
+                  <p className="text-sm text-gray-600">Manage your saved payment methods</p>
                 </div>
               </div>
               <button className="text-blue-600 hover:text-blue-700 font-medium">
@@ -262,13 +262,13 @@ export default function Settings() {
           </div>
 
           {/* Language & Region */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <Globe className="h-4 w-4 md:h-5 md:w-5 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Language & Region</h3>
-                  <p className="text-gray-600">Change your language and regional preferences</p>
+                  <p className="text-sm text-gray-600">Change your language and regional preferences</p>
                 </div>
               </div>
               <button className="text-blue-600 hover:text-blue-700 font-medium">
@@ -278,13 +278,13 @@ export default function Settings() {
           </div>
 
           {/* Help & Support */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <HelpCircle className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Help & Support</h3>
-                  <p className="text-gray-600">Get help with your account and bookings</p>
+                  <p className="text-sm text-gray-600">Get help with your account and bookings</p>
                 </div>
               </div>
               <Link
@@ -297,18 +297,18 @@ export default function Settings() {
           </div>
 
           {/* Sign Out */}
-          <div className="bg-white shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center">
                 <LogOut className="h-6 w-6 text-red-400 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Sign Out</h3>
-                  <p className="text-gray-600">Sign out of your account on all devices</p>
+                  <p className="text-sm text-gray-600">Sign out of your account on all devices</p>
                 </div>
               </div>
               <button
                 onClick={handleSignOut}
-                className="bg-red-600 text-white px-4 py-2 hover:bg-red-700 transition-colors"
+                className="w-full sm:w-auto bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-colors"
               >
                 Sign Out
               </button>

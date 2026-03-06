@@ -72,18 +72,18 @@ export default function Saved() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Saved Items</h1>
-          <p className="text-gray-600 mt-2">Your favorite services and experiences</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Saved Items</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Your favorite services and experiences</p>
         </div>
 
         {/* Saved Items Grid */}
@@ -96,7 +96,7 @@ export default function Saved() {
             </p>
             <Link
               to="/"
-              className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors inline-block"
+              className="bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-colors inline-block"
             >
               Explore Services
             </Link>
@@ -104,7 +104,7 @@ export default function Saved() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedItems.map((item) => (
-              <div key={item.id} className="bg-white shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 {item.services?.images?.[0] && (
                   <div className="relative">
                     <img
@@ -137,7 +137,7 @@ export default function Saved() {
                     </div>
                     <Link
                       to={`/service/${item.services?.slug || item.service_id}`}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                      className="bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors text-sm"
                     >
                       View Details
                     </Link>

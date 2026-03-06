@@ -103,6 +103,7 @@ const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
 const Saved = lazy(() => import('./pages/Saved'))
+const TouristWallet = lazy(() => import('./pages/Wallet'))
 const UserSettings = lazy(() => import('./pages/Settings'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
 
@@ -192,6 +193,16 @@ function App() {
             }
           >
             <Route index element={<Saved />} />
+          </Route>
+          <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <PublicLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<TouristWallet />} />
           </Route>
           <Route
             path="/settings"

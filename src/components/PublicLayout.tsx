@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -234,6 +234,14 @@ export default function PublicLayout() {
                             {t('saved_items') || 'Saved Items'}
                           </Link>
                           <Link
+                            to="/wallet"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <Wallet className="h-3.5 w-3.5 mr-2" />
+                            My Wallet
+                          </Link>
+                          <Link
                             to="/settings"
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
@@ -252,27 +260,6 @@ export default function PublicLayout() {
 
                           {/* Divider */}
                           <div className="border-t border-gray-100 my-1"></div>
-
-                          {/* Business Section */}
-                          <div className="px-3 py-1.5">
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('for_businesses') || 'For Businesses'}</h4>
-                          </div>
-                          <Link
-                            to="/vendor-login"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('list_my_business')}
-                          </Link>
-                          <Link
-                            to="/partner"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('partner_with')}
-                          </Link>
 
                           <button
                             onClick={() => {
