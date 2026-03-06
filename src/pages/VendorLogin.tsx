@@ -28,6 +28,9 @@ export default function VendorLogin() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [showStepValidationErrors, setShowStepValidationErrors] = useState(false)
+  const [showPostSignupBenefits, setShowPostSignupBenefits] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -306,14 +309,17 @@ export default function VendorLogin() {
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
       setError('')
+      setShowStepValidationErrors(false)
       setCurrentStep(currentStep + 1)
     } else {
+      setShowStepValidationErrors(true)
       setError('Please fill in all required fields correctly.')
     }
   }
 
   const handlePrevStep = () => {
     setError('')
+    setShowStepValidationErrors(false)
     setCurrentStep(currentStep - 1)
   }
 
@@ -336,8 +342,44 @@ export default function VendorLogin() {
     setPassword('')
     setConfirmPassword('')
     setAgreedToTerms(false)
+    setShowStepValidationErrors(false)
     setError('')
   }
+
+  const getFieldClass = (invalid: boolean) => {
+    if (invalid) {
+      return 'w-full border border-red-400 px-4 py-3 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors'
+    }
+    return 'w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors'
+  }
+
+  const getSelectClass = (invalid: boolean) => {
+    if (invalid) {
+      return 'w-full border border-red-400 px-4 py-3 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors'
+    }
+    return 'w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors'
+  }
+
+  const getLabelClass = (invalid: boolean) => {
+    return `block text-sm font-medium mb-2 tracking-tight antialiased ${invalid ? 'text-red-600' : 'text-gray-700'}`
+  }
+
+  const stepOneHasErrors = showStepValidationErrors && currentStep === 1
+  const fullNameInvalid = stepOneHasErrors && fullName.trim() === ''
+  const emailInvalid = stepOneHasErrors && (email.trim() === '' || !email.includes('@'))
+  const personalCityInvalid = stepOneHasErrors && personalCity.trim() === ''
+
+  const stepTwoHasErrors = showStepValidationErrors && currentStep === 2
+  const businessNameInvalid = stepTwoHasErrors && businessName.trim() === ''
+  const businessTypeInvalid = stepTwoHasErrors && businessType === ''
+  const businessDescriptionInvalid = stepTwoHasErrors && businessDescription.trim() === ''
+  const businessCityInvalid = stepTwoHasErrors && businessCity.trim() === ''
+  const businessAddressInvalid = stepTwoHasErrors && businessAddress.trim() === ''
+  const businessPhoneInvalid = stepTwoHasErrors && businessPhone.trim() === ''
+
+  const stepThreeHasErrors = showStepValidationErrors && currentStep === 3
+  const passwordInvalid = stepThreeHasErrors && password.length < 6
+  const confirmPasswordInvalid = stepThreeHasErrors && (confirmPassword === '' || password !== confirmPassword)
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -359,6 +401,7 @@ export default function VendorLogin() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccessMessage('')
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -413,7 +456,13 @@ export default function VendorLogin() {
         }
       }
 
-      navigate('/', { replace: true })
+      setSuccessMessage('Business account created successfully. Review the information below while your account is being prepared.')
+      setShowPostSignupBenefits(true)
+      setIsSignUp(false)
+      setCurrentStep(1)
+      setShowStepValidationErrors(false)
+      setPassword('')
+      setConfirmPassword('')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
@@ -455,6 +504,12 @@ export default function VendorLogin() {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
                 {error}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 text-sm">
+                {successMessage}
               </div>
             )}
 
@@ -523,54 +578,57 @@ export default function VendorLogin() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (currentStep > 1) {
+                        setError('')
+                        setShowStepValidationErrors(false)
+                        setCurrentStep(currentStep - 1)
+                        return
+                      }
+
                       setIsSignUp(false)
                       resetForm()
                     }}
-                    className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                   >
                     ← Back
                   </button>
 
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                      {error}
-                    </div>
-                  )}
-
                   {/* Step 1: Personal Information */}
                   {currentStep === 1 && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Your Full Names</label>
+                        <label className={getLabelClass(fullNameInvalid)}>Your Full Names</label>
                         <input
                           type="text"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          className={getFieldClass(fullNameInvalid)}
                           placeholder="Your full name"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Your Personal Email</label>
+                        <label className={getLabelClass(emailInvalid)}>Your Personal Email</label>
                         <input
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                          className={getFieldClass(emailInvalid)}
                           placeholder="your@email.com"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Home city *</label>
-                        <CitySearchInput
-                          city={personalCity}
-                          onSelect={(c, co) => { setPersonalCity(c); setPersonalCountry(co) }}
-                          placeholder="Search your city..."
-                        />
+                        <label className={getLabelClass(personalCityInvalid)}>Home city *</label>
+                        <div className={personalCityInvalid ? 'rounded-xl border border-red-400 p-0.5' : ''}>
+                          <CitySearchInput
+                            city={personalCity}
+                            onSelect={(c, co) => { setPersonalCity(c); setPersonalCountry(co) }}
+                            placeholder="Search your city..."
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -583,29 +641,29 @@ export default function VendorLogin() {
                         <p className="text-gray-600 text-sm antialiased">Tell us about your business</p>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="border-t pt-4">
+                      <div className="space-y-5">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                           <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Basic Information</h5>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business name *</label>
+                              <label className={getLabelClass(businessNameInvalid)}>Business name *</label>
                               <input
                                 type="text"
                                 value={businessName}
                                 onChange={(e) => setBusinessName(e.target.value)}
-                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                className={getFieldClass(businessNameInvalid)}
                                 placeholder="Enter your business name"
                                 required
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business type *</label>
+                              <label className={getLabelClass(businessTypeInvalid)}>Business type *</label>
                               <select
                                 value={businessType}
                                 onChange={(e) => setBusinessType(e.target.value)}
-                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                className={getSelectClass(businessTypeInvalid)}
                                 required
                               >
                                 <option value="">Select business type</option>
@@ -618,11 +676,11 @@ export default function VendorLogin() {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business description *</label>
+                              <label className={getLabelClass(businessDescriptionInvalid)}>Business description *</label>
                               <textarea
                                 value={businessDescription}
                                 onChange={(e) => setBusinessDescription(e.target.value)}
-                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                className={getFieldClass(businessDescriptionInvalid)}
                                 placeholder="Describe your business, services offered, and what makes you unique..."
                                 rows={4}
                                 required
@@ -631,38 +689,40 @@ export default function VendorLogin() {
                           </div>
                         </div>
 
-                        <div className="border-t pt-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                           <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Location & Contact</h5>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business city *</label>
-                              <CitySearchInput
-                                city={businessCity}
-                                onSelect={(c) => setBusinessCity(c)}
-                                placeholder="City"
-                              />
+                              <label className={getLabelClass(businessCityInvalid)}>Business city *</label>
+                              <div className={businessCityInvalid ? 'rounded-xl border border-red-400 p-0.5' : ''}>
+                                <CitySearchInput
+                                  city={businessCity}
+                                  onSelect={(c) => setBusinessCity(c)}
+                                  placeholder="City"
+                                />
+                              </div>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business address *</label>
+                              <label className={getLabelClass(businessAddressInvalid)}>Business address *</label>
                               <input
                                 type="text"
                                 value={businessAddress}
                                 onChange={(e) => setBusinessAddress(e.target.value)}
-                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                className={getFieldClass(businessAddressInvalid)}
                                 placeholder="Street address"
                                 required
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business phone *</label>
+                              <label className={getLabelClass(businessPhoneInvalid)}>Business phone *</label>
                               <div className="flex flex-col sm:flex-row gap-2">
                                 <div className="relative business-phone-country-dropdown w-full sm:w-auto sm:flex-shrink-0">
                                   <button
                                     type="button"
-                                    className="border border-gray-300 px-3 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white flex items-center justify-between w-full sm:min-w-[90px] text-sm font-medium"
+                                    className={`${businessPhoneInvalid ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'} border px-3 py-3 rounded-xl focus:ring-2 transition-colors bg-white flex items-center justify-between w-full sm:min-w-[90px] text-sm font-medium`}
                                     onClick={() => setBusinessPhoneCountryDropdownOpen(!businessPhoneCountryDropdownOpen)}
                                   >
                                     <span className="truncate">
@@ -707,7 +767,7 @@ export default function VendorLogin() {
                                   type="tel"
                                   value={businessPhone}
                                   onChange={(e) => setBusinessPhone(e.target.value)}
-                                  className="flex-1 border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                  className={`${businessPhoneInvalid ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'} flex-1 border px-4 py-3 rounded-xl focus:ring-2 transition-colors`}
                                   placeholder="700 000 000"
                                   required
                                 />
@@ -738,7 +798,7 @@ export default function VendorLogin() {
                           </div>
                         </div>
 
-                        <div className="border-t pt-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                           <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Business Operations</h5>
 
                           <div className="space-y-4">
@@ -765,15 +825,15 @@ export default function VendorLogin() {
 
                   {/* Step 3: Account Setup */}
                   {currentStep === 3 && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Password</label>
+                        <label className={getLabelClass(passwordInvalid)}>Password</label>
                         <div className="relative">
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                            className={getFieldClass(passwordInvalid)}
                             placeholder="Create a password (min 6 characters)"
                             required
                           />
@@ -788,13 +848,13 @@ export default function VendorLogin() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Confirm Password</label>
+                        <label className={getLabelClass(confirmPasswordInvalid)}>Confirm Password</label>
                         <div className="relative">
                           <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors pr-12"
+                            className={`${getFieldClass(confirmPasswordInvalid)} pr-12`}
                             placeholder="Confirm your password"
                             required
                           />
@@ -829,22 +889,12 @@ export default function VendorLogin() {
                   )}
 
                   {/* Navigation Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-7 sm:mt-8">
-                    {currentStep > 1 && (
-                      <button
-                        type="button"
-                        onClick={handlePrevStep}
-                        className="flex-1 bg-gray-100 text-gray-700 py-3.5 px-4 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      >
-                        ← Previous
-                      </button>
-                    )}
-
+                  <div className="flex flex-row gap-3 mt-7 sm:mt-8">
                     {currentStep < 3 ? (
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="flex-1 bg-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="w-full min-w-0 whitespace-nowrap bg-gray-900 text-white py-3.5 px-3 sm:px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
                       >
                         Next
                       </button>
@@ -852,7 +902,7 @@ export default function VendorLogin() {
                       <button
                         type="submit"
                         disabled={loading || !agreedToTerms}
-                        className="flex-1 bg-emerald-600 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full min-w-0 whitespace-nowrap bg-emerald-600 text-white py-3.5 px-3 sm:px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
                       </button>
@@ -877,36 +927,38 @@ export default function VendorLogin() {
           </div>
         </div>
 
-        {/* Benefits Section */}
+        {/* Benefits Section - shown only after successful business account creation */}
+        {showPostSignupBenefits && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8">
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 sm:mb-8 tracking-tight antialiased">Why Join Our Business Network?</h2>
 
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
-            <div className="text-center p-4 sm:p-6">
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                <User className="h-7 w-7 text-gray-700" />
-              </div>
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <User className="h-7 w-7 text-gray-700" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Easy Management</h3>
                 <p className="text-gray-600 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
-            </div>
-
-            <div className="text-center p-4 sm:p-6">
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                <Store className="h-7 w-7 text-gray-700" />
               </div>
+
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <Store className="h-7 w-7 text-gray-700" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Grow Your Business</h3>
                 <p className="text-gray-600 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
-            </div>
-
-            <div className="text-center p-4 sm:p-6">
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                <Shield className="h-7 w-7 text-gray-700" />
               </div>
+
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <Shield className="h-7 w-7 text-gray-700" />
+                </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Secure & Reliable</h3>
                 <p className="text-gray-600 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
