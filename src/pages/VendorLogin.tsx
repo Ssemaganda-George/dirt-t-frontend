@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { getServiceClient } from '../lib/serviceClient'
@@ -7,7 +7,7 @@ import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 
 export default function VendorLogin() {
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(true)
   const [currentStep, setCurrentStep] = useState(1)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,6 +36,25 @@ export default function VendorLogin() {
 
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const openSignUp = searchParams.get('signup')
+
+    if (openSignUp === 'false') {
+      setIsSignUp(false)
+      setCurrentStep(1)
+      setError('')
+      return
+    }
+
+    if (openSignUp === 'true') {
+      setIsSignUp(true)
+      setCurrentStep(1)
+      setError('')
+    }
+  }, [location.search])
 
   // Countries array for phone codes
   const countries = [
@@ -403,14 +422,14 @@ export default function VendorLogin() {
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="text-center">
-            <Store className="h-20 w-20 text-white mx-auto mb-6" />
-            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Business Portal</h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed antialiased">
+            <Store className="h-12 w-12 sm:h-14 sm:w-14 text-gray-900 mx-auto mb-3 sm:mb-4" />
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2 sm:mb-3 tracking-tight antialiased">Business Portal</h1>
+            <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto leading-relaxed antialiased">
               Join our network of trusted service providers. Manage your listings, bookings, and grow your business with DirtTrails.
             </p>
           </div>
@@ -418,46 +437,15 @@ export default function VendorLogin() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Benefits Section */}
-        <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
-          <h2 className="text-3xl font-black text-black mb-8 tracking-tight antialiased">Why Join Our Business Network?</h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <User className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Easy Management</h3>
-              <p className="text-gray-700 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <Store className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Grow Your Business</h3>
-              <p className="text-gray-700 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Secure & Reliable</h3>
-              <p className="text-gray-700 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
-            </div>
-          </div>
-        </div>
-
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Authentication Section */}
-        <div className="bg-white shadow-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8 mb-8 sm:mb-12">
           <div className="max-w-md mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 tracking-tight antialiased">
                 {isSignUp ? 'Create Business Account' : 'Business Sign In'}
               </h2>
-              <p className="text-gray-700 leading-snug antialiased">
+              <p className="text-gray-600 leading-snug antialiased">
                 {isSignUp ? 'Join our network of trusted service providers' : 'Access your business dashboard and manage your business'}
               </p>
             </div>
@@ -470,27 +458,27 @@ export default function VendorLogin() {
 
             {!isSignUp ? (
               // Sign In Form
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                    className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     placeholder="your@email.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
+                      className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors pr-12"
                       placeholder="Enter your password"
                       required
                     />
@@ -507,7 +495,7 @@ export default function VendorLogin() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-5 px-10 rounded-xl font-black text-xl hover:bg-gray-800 active:bg-gray-900 focus:bg-gray-800 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full bg-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   {loading ? 'Signing in...' : 'Sign In to Business Portal'}
                 </button>
@@ -519,7 +507,7 @@ export default function VendorLogin() {
                       setIsSignUp(true)
                       resetForm()
                     }}
-                    className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-sm text-emerald-700 font-medium hover:text-emerald-800 transition-colors"
                   >
                     Don't have an account? Create one
                   </button>
@@ -527,8 +515,19 @@ export default function VendorLogin() {
               </form>
             ) : (
               // Sign Up Form - Multi-step Process
-              <div className="space-y-6">
-                <form onSubmit={handleSignUpSubmit} className="space-y-6">
+              <div className="space-y-5 sm:space-y-6">
+                <form onSubmit={handleSignUpSubmit} className="space-y-5 sm:space-y-6">
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(false)
+                      resetForm()
+                    }}
+                    className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    ← Back
+                  </button>
 
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
@@ -540,31 +539,31 @@ export default function VendorLogin() {
                   {currentStep === 1 && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Your Full Names</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Your Full Names</label>
                         <input
                           type="text"
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           placeholder="Your full name"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Your Personal Email</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Your Personal Email</label>
                         <input
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                          className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                           placeholder="your@email.com"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Home city *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Home city *</label>
                         <CitySearchInput
                           city={personalCity}
                           onSelect={(c, co) => { setPersonalCity(c); setPersonalCountry(co) }}
@@ -578,33 +577,33 @@ export default function VendorLogin() {
                   {currentStep === 2 && (
                     <div className="space-y-6">
                       <div className="text-center mb-4">
-                        <h4 className="text-lg font-bold text-black mb-2 tracking-tight antialiased">Business Details</h4>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight antialiased">Business Details</h4>
                         <p className="text-gray-600 text-sm antialiased">Tell us about your business</p>
                       </div>
 
                       <div className="space-y-4">
                         <div className="border-t pt-4">
-                          <h5 className="text-md font-semibold text-black mb-4 tracking-tight antialiased">Basic Information</h5>
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Basic Information</h5>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business name *</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business name *</label>
                               <input
                                 type="text"
                                 value={businessName}
                                 onChange={(e) => setBusinessName(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="Enter your business name"
                                 required
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business type *</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business type *</label>
                               <select
                                 value={businessType}
                                 onChange={(e) => setBusinessType(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 required
                               >
                                 <option value="">Select business type</option>
@@ -617,11 +616,11 @@ export default function VendorLogin() {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business description *</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business description *</label>
                               <textarea
                                 value={businessDescription}
                                 onChange={(e) => setBusinessDescription(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="Describe your business, services offered, and what makes you unique..."
                                 rows={4}
                                 required
@@ -631,11 +630,11 @@ export default function VendorLogin() {
                         </div>
 
                         <div className="border-t pt-4">
-                          <h5 className="text-md font-semibold text-black mb-4 tracking-tight antialiased">Location & Contact</h5>
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Location & Contact</h5>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business city *</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business city *</label>
                               <CitySearchInput
                                 city={businessCity}
                                 onSelect={(c) => setBusinessCity(c)}
@@ -644,24 +643,24 @@ export default function VendorLogin() {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business address *</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business address *</label>
                               <input
                                 type="text"
                                 value={businessAddress}
                                 onChange={(e) => setBusinessAddress(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="Street address"
                                 required
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business phone *</label>
-                              <div className="flex gap-2">
-                                <div className="relative business-phone-country-dropdown flex-shrink-0">
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business phone *</label>
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <div className="relative business-phone-country-dropdown w-full sm:w-auto sm:flex-shrink-0">
                                   <button
                                     type="button"
-                                    className="border border-gray-300 px-3 py-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors bg-white flex items-center justify-between min-w-[90px] text-sm font-medium"
+                                    className="border border-gray-300 px-3 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white flex items-center justify-between w-full sm:min-w-[90px] text-sm font-medium"
                                     onClick={() => setBusinessPhoneCountryDropdownOpen(!businessPhoneCountryDropdownOpen)}
                                   >
                                     <span className="truncate">
@@ -672,7 +671,7 @@ export default function VendorLogin() {
                                     </svg>
                                   </button>
                                   {businessPhoneCountryDropdownOpen && (
-                                    <div className="absolute top-full left-0 z-50 w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                    <div className="absolute top-full left-0 z-50 w-full sm:w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                       <div className="p-2 border-b">
                                         <input
                                           type="text"
@@ -706,7 +705,7 @@ export default function VendorLogin() {
                                   type="tel"
                                   value={businessPhone}
                                   onChange={(e) => setBusinessPhone(e.target.value)}
-                                  className="flex-1 border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                  className="flex-1 border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                   placeholder="700 000 000"
                                   required
                                 />
@@ -714,23 +713,23 @@ export default function VendorLogin() {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business email</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business email</label>
                               <input
                                 type="email"
                                 value={businessEmail}
                                 onChange={(e) => setBusinessEmail(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="business@email.com"
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Website/Social media</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Website/Social media</label>
                               <input
                                 type="url"
                                 value={businessWebsite}
                                 onChange={(e) => setBusinessWebsite(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                                 placeholder="https://yourwebsite.com or @socialhandle"
                               />
                             </div>
@@ -738,15 +737,15 @@ export default function VendorLogin() {
                         </div>
 
                         <div className="border-t pt-4">
-                          <h5 className="text-md font-semibold text-black mb-4 tracking-tight antialiased">Business Operations</h5>
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Business Operations</h5>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Years in business</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Years in business</label>
                               <select
                                 value={yearsInBusiness}
                                 onChange={(e) => setYearsInBusiness(e.target.value)}
-                                className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                               >
                                 <option value="">Select years in business</option>
                                 <option value="0-1">0-1 years</option>
@@ -766,13 +765,13 @@ export default function VendorLogin() {
                   {currentStep === 3 && (
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Password</label>
                         <div className="relative">
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                            className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                             placeholder="Create a password (min 6 characters)"
                             required
                           />
@@ -787,13 +786,13 @@ export default function VendorLogin() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Confirm Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Confirm Password</label>
                         <div className="relative">
                           <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
+                            className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors pr-12"
                             placeholder="Confirm your password"
                             required
                           />
@@ -810,14 +809,14 @@ export default function VendorLogin() {
                   )}
 
                   {/* Navigation Buttons */}
-                  <div className="flex space-x-4 mt-8">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-7 sm:mt-8">
                     {currentStep > 1 && (
                       <button
                         type="button"
                         onClick={handlePrevStep}
-                        className="flex-1 bg-gray-300 text-gray-800 py-5 px-8 rounded-xl font-bold text-lg hover:bg-gray-400 active:bg-gray-500 focus:bg-gray-400 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        className="flex-1 bg-gray-100 text-gray-700 py-3.5 px-4 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
                       >
-                        Previous
+                        ← Previous
                       </button>
                     )}
 
@@ -825,7 +824,7 @@ export default function VendorLogin() {
                       <button
                         type="button"
                         onClick={handleNextStep}
-                        className="flex-1 bg-black text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-gray-800 active:bg-gray-900 focus:bg-gray-800 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        className="flex-1 bg-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
                       >
                         Next
                       </button>
@@ -833,7 +832,7 @@ export default function VendorLogin() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 bg-green-600 text-white py-5 px-8 rounded-xl font-black text-xl hover:bg-green-700 active:bg-green-800 focus:bg-green-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="flex-1 bg-emerald-600 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
                       </button>
@@ -847,7 +846,7 @@ export default function VendorLogin() {
                         setIsSignUp(false)
                         resetForm()
                       }}
-                      className="bg-blue-600 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl active:shadow-2xl focus:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="text-sm text-emerald-700 font-medium hover:text-emerald-800 transition-colors"
                     >
                       Already have an account? Sign in
                     </button>
@@ -855,6 +854,37 @@ export default function VendorLogin() {
                 </form>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Benefits Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 sm:mb-8 tracking-tight antialiased">Why Join Our Business Network?</h2>
+
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
+            <div className="text-center p-4 sm:p-6">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                <User className="h-7 w-7 text-gray-700" />
+              </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Easy Management</h3>
+                <p className="text-gray-600 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
+            </div>
+
+            <div className="text-center p-4 sm:p-6">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                <Store className="h-7 w-7 text-gray-700" />
+              </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Grow Your Business</h3>
+                <p className="text-gray-600 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
+            </div>
+
+            <div className="text-center p-4 sm:p-6">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                <Shield className="h-7 w-7 text-gray-700" />
+              </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Secure & Reliable</h3>
+                <p className="text-gray-600 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
+            </div>
           </div>
         </div>
       </div>
