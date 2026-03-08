@@ -33,22 +33,35 @@ export async function calculateCommission(
   let commissionAmount = 0;
 
   if (vendor.current_tier_id) {
-    // Get tier details from pricing_tiers
-    const { data: tier, error: tierError } = await supabase
+    // Try pricing_tiers first
+    let tier: { commission_type?: string; commission_value?: number } | null = null;
+    const { data: pt } = await supabase
       .from('pricing_tiers')
       .select('commission_type, commission_value')
       .eq('id', vendor.current_tier_id)
       .eq('is_active', true)
-      .lte('effective_from', new Date().toISOString().split('T')[0])
-      .or(`effective_until.is.null,effective_until.gte.${new Date().toISOString().split('T')[0]}`)
-      .single();
+      .maybeSingle();
+    if (pt) tier = pt;
 
-    if (tier && !tierError) {
-      if (tier.commission_type === 'flat') {
-        commissionAmount = tier.commission_value;
+    // Fallback: vendor_tiers (vendors may point here; now supports flat)
+    if (!tier) {
+      const { data: vt } = await supabase
+        .from('vendor_tiers')
+        .select('commission_type, commission_value')
+        .eq('id', vendor.current_tier_id)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (vt && (vt.commission_type || vt.commission_value != null)) tier = vt;
+    }
+
+    if (tier) {
+      const commissionType = tier.commission_type || 'percentage';
+      const commissionValue = Number(tier.commission_value ?? 0);
+      if (commissionType === 'flat') {
+        commissionAmount = commissionValue;
         commissionRate = servicePrice > 0 ? commissionAmount / servicePrice : 0;
       } else {
-        commissionRate = tier.commission_value / 100;
+        commissionRate = commissionValue > 1 ? commissionValue / 100 : commissionValue;
         commissionAmount = servicePrice * commissionRate;
       }
     }

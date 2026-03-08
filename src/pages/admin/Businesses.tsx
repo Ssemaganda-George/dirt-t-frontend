@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { formatDate } from '../../lib/utils'
+import { formatDate, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2, AlertCircle, UserCog } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { deleteUser } from '../../lib/database'
@@ -568,7 +568,7 @@ export default function Businesses() {
           manual_tier_assigned_at: new Date().toISOString(),
           manual_tier_expires_at: tierForm.expiresAt || null,
           manual_tier_reason: tierForm.reason,
-          current_commission_rate: selectedTier.commission_rate,
+          current_commission_rate: selectedTier.commission_type === 'flat' ? 0 : (selectedTier.commission_rate ?? (Number(selectedTier.commission_value || 0) / 100)),
           current_tier_id: tierForm.tierId
         })
         .eq('id', tierVendor.vendor.id)
@@ -631,7 +631,11 @@ export default function Businesses() {
           manual_tier_expires_at: null,
           manual_tier_reason: null,
           current_tier_id: automaticTier?.id || null,
-          current_commission_rate: automaticTier?.commission_rate || 0.15
+          current_commission_rate: automaticTier?.commission_type === 'flat'
+          ? 0
+          : (automaticTier?.commission_rate ?? (automaticTier?.commission_value != null
+              ? (Number(automaticTier.commission_value) > 1 ? Number(automaticTier.commission_value) / 100 : Number(automaticTier.commission_value))
+              : 0.15))
         })
         .eq('id', user.vendor.id)
 
@@ -1280,7 +1284,7 @@ export default function Businesses() {
                     <option value="">Select a tier...</option>
                     {availableTiers.map((tier) => (
                       <option key={tier.id} value={tier.id}>
-                        {tier.name} ({tier.commission_rate}% commission)
+                        {tier.name} ({formatTierCommission(tier)})
                       </option>
                     ))}
                   </select>

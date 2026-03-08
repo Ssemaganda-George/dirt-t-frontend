@@ -24,6 +24,21 @@ export function formatCurrency(amount: number, currency: string = 'UGX'): string
   }
 }
 
+/** Format tier commission for display (supports percentage and flat) */
+export function formatTierCommission(tier: {
+  commission_type?: 'percentage' | 'flat';
+  commission_value?: number;
+  commission_rate?: number;
+}, currency = 'UGX'): string {
+  if (tier.commission_type === 'flat' && tier.commission_value != null) {
+    return `${tier.commission_value.toLocaleString()} ${currency} flat`;
+  }
+  const pct = tier.commission_value != null
+    ? (tier.commission_value > 1 ? tier.commission_value : tier.commission_value * 100)
+    : (tier.commission_rate != null ? tier.commission_rate * 100 : 0);
+  return `${pct}% commission`;
+}
+
 // Convert between currencies using a simple static rates table (base: UGX)
 export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string) {
   const exchangeRates: { [key: string]: number } = {

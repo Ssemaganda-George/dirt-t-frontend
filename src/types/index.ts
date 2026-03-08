@@ -19,6 +19,8 @@ export interface VendorTier {
   id: string;
   name: string;
   commission_rate: number;
+  commission_type?: 'percentage' | 'flat';
+  commission_value?: number;
   min_monthly_bookings: number;
   min_rating?: number;
   priority_order: number;

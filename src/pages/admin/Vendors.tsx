@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { formatDate, getStatusColor } from '../../lib/utils'
+import { formatDate, getStatusColor, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, Store, UserCog } from 'lucide-react'
 import { getAllVendors, updateVendorStatus, Vendor } from '../../lib/database'
 import { getActiveTiers } from '../../lib/commissionService'
@@ -116,7 +116,7 @@ export default function Vendors() {
         await supabase
           .from('vendors')
           .update({
-            current_commission_rate: selectedTier.commission_rate,
+            current_commission_rate: selectedTier.commission_type === 'flat' ? 0 : (selectedTier.commission_rate ?? (Number(selectedTier.commission_value || 0) / 100)),
             current_tier_id: selectedTier.id
           })
           .eq('id', tierVendor.id)
@@ -424,7 +424,7 @@ export default function Vendors() {
                     <option value="">Select a tier...</option>
                     {availableTiers.map((tier) => (
                       <option key={tier.id} value={tier.id}>
-                        {tier.name} ({tier.commission_rate}% commission)
+                        {tier.name} ({formatTierCommission(tier)})
                       </option>
                     ))}
                   </select>
