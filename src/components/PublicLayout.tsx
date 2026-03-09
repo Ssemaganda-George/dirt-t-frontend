@@ -44,7 +44,14 @@ export default function PublicLayout() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
+
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
   const navigate = useNavigate()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const userDropdownRef = useRef<HTMLDivElement>(null)
@@ -107,9 +114,11 @@ export default function PublicLayout() {
       {/* Header */}
       {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        location.pathname.includes('/scan/') 
-          ? 'bg-transparent shadow-none' 
-          : 'bg-white shadow-sm'
+        location.pathname.includes('/scan/')
+          ? 'bg-transparent shadow-none'
+          : scrolled
+            ? 'bg-white/95 backdrop-blur-md shadow-sm'
+            : 'bg-white shadow-sm'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -119,7 +128,7 @@ export default function PublicLayout() {
                 ? 'text-white drop-shadow-lg' 
                 : 'text-gray-900'
             }`}>
-              <span className="text-2xl font-bold">DirtTrails</span>
+              <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
                   Event Verification

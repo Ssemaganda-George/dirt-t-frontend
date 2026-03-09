@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
@@ -651,8 +651,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative min-h-[280px] md:min-h-[400px] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700">
-        <div className="absolute inset-0 bg-black/30"></div>
+      <div className="relative min-h-[60vh] md:min-h-[72vh] bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
+        {/* Background media carousel */}
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
             <div
@@ -667,109 +667,65 @@ export default function Home() {
                   muted
                   playsInline
                   className="w-full h-full object-cover"
-                  style={{ opacity: 0.6 }}
                   key={currentSlide === idx ? media.url : undefined}
                 />
               ) : (
                 <div
-                  className="w-full h-full"
-                  style={{
-                    backgroundImage: `url(${media.url})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    width: '100%',
-                    height: '100%',
-                    opacity: 0.2
-                  }}
-                ></div>
+                  className="w-full h-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${media.url})` }}
+                />
               )}
             </div>
           ))
         )}
-        
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-4 py-12 md:py-16 z-20 transform -translate-y-6 md:-translate-y-8">
-          <h1 className="text-3xl md:text-6xl font-bold text-white mb-4 md:mb-6 text-center text-heading leading-tight">
-            {t('hero_title')}
-          </h1>
-          <p className="text-base md:text-xl text-white/90 mb-0 text-center max-w-3xl text-elegant leading-relaxed">
-            {t('hero_subtitle')}
-          </p>
-        </div>
-      </div>
 
-      {/* Filters moved up to appear immediately after the hero section */}
-      {!searchQuery && (
-        <div className="mt-6">{/* small gap after hero */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide pb-2">
-              <button
-                onClick={() => handleCategorySelect('all')}
-                className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                  selectedCategories.includes('all')
-                    ? 'text-gray-900'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <div className="flex flex-col items-center px-1">
-                  {selectedCategories.includes('all') && (
-                    <span className="block h-1 w-8 bg-emerald-600 rounded-full mb-1"></span>
-                  )}
-                  <span className="text-sm">All</span>
-                </div>
-              </button>
-              <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
-                {categories.slice(1).map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={`text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                      selectedCategories.includes(category.id) && !selectedCategories.includes('all')
-                        ? 'text-gray-900'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center px-1">
-                      {selectedCategories.includes(category.id) && !selectedCategories.includes('all') && (
-                        <span className="block h-1 w-8 bg-emerald-600 rounded-full mb-1"></span>
-                      )}
-                      <span className="text-sm">{category.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Gradient overlay — strong at bottom for legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 z-20" />
+
+        {/* Hero content + embedded search */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 md:pb-14 px-4 z-30">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight mb-3">
+              {t('hero_title')}
+            </h1>
+            <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
+              {t('hero_subtitle')}
+            </p>
           </div>
-        </div>
-      )}
 
-      {/* Fixed Search Bar - Always Visible */}
-      <div className="fixed top-20 left-0 right-0 z-[60] w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
-          <div className="w-full max-w-4xl mx-auto bg-white rounded-full shadow-lg p-2 relative">
-            <div className="flex items-center gap-1">
+          {/* Search bar embedded in hero */}
+          <div className="w-full max-w-2xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-1">
               <div className="flex-1 flex items-center px-3">
-                <Search className="h-4 w-4 text-gray-400 mr-2" />
+                <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
                 <input
                   type="text"
                   placeholder={t('search_placeholder')}
-                  className="w-full py-1.5 md:py-2 text-gray-900 placeholder-gray-500 focus:outline-none text-xs md:text-sm font-thin"
+                  className="w-full py-2 text-gray-900 placeholder-gray-400 focus:outline-none text-sm"
                   value={searchQuery}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    console.log('Search input changed:', newValue);
-                    setSearchQuery(newValue);
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="ml-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                    aria-label="Clear search"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
               {/* Filter Dropdown Trigger */}
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1 bg-gray-700 hover:bg-gray-900 text-white px-2 md:px-4 py-1.5 md:py-2 rounded-full font-thin transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 text-xs"
-                  title="Filter services by category - click to select multiple categories"
+                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white px-3 md:px-5 py-2.5 rounded-xl font-medium transition-colors text-sm"
+                  title="Filter services by category"
                 >
                   <Filter className="w-3.5 h-3.5" />
-                  <span className="text-xs hidden sm:inline">
+                  <span className="hidden sm:inline">
                     {selectedCategories.includes('all')
                       ? 'All'
                       : selectedCategories.length === 1
@@ -781,11 +737,11 @@ export default function Home() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
                     {/* Header */}
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h3 className="font-medium text-gray-900 text-xs">{t('choose_travel_needs')}</h3>
-                        <p className="text-xs text-gray-500">{t('select_one_or_more')}</p>
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">{t('select_one_or_more')}</p>
                     </div>
 
                     {/* Categories List */}
@@ -796,21 +752,21 @@ export default function Home() {
                           setSelectedCategories(['all'])
                           setIsDropdownOpen(false)
                         }}
-                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                          selectedCategories.includes('all') ? 'bg-blue-50' : ''
+                        className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                          selectedCategories.includes('all') ? 'bg-emerald-50' : ''
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                             selectedCategories.includes('all')
-                              ? 'bg-blue-500 border-blue-500'
+                              ? 'bg-emerald-600 border-emerald-600'
                               : 'border-gray-300'
                           }`}>
                             {selectedCategories.includes('all') && (
                               <Check className="w-2.5 h-2.5 text-white" />
                             )}
                           </div>
-                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
                             {t('show_all_travel_needs')}
                           </span>
                         </div>
@@ -821,21 +777,21 @@ export default function Home() {
                         <button
                           key={category.id}
                           onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors ${
-                            selectedCategories.includes(category.id) ? 'bg-blue-50' : ''
+                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors ${
+                            selectedCategories.includes(category.id) ? 'bg-emerald-50' : ''
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                               selectedCategories.includes(category.id)
-                                ? 'bg-blue-500 border-blue-500'
+                                ? 'bg-emerald-600 border-emerald-600'
                                 : 'border-gray-300'
                             }`}>
                               {selectedCategories.includes(category.id) && (
                                 <Check className="w-2.5 h-2.5 text-white" />
                               )}
                             </div>
-                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
                               {category.name}
                             </span>
                           </div>
@@ -844,14 +800,14 @@ export default function Home() {
                     </div>
 
                     {/* Footer */}
-                    <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500">
                           {selectedCategories.includes('all') ? t('all_listings') : `${selectedCategories.length} selected`}
                         </span>
                         <button
                           onClick={() => setIsDropdownOpen(false)}
-                          className="text-xs text-blue-600 font-medium hover:text-blue-700"
+                          className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
                         >
                           {t('done')}
                         </button>
@@ -865,9 +821,39 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Category Filters Section relocated to just below the fixed search bar */}
+      {/* Category filter pills */}
+      {!searchQuery && (
+        <div className="border-b border-gray-100 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-4">
+              {categories.map((category) => {
+                const isActive = category.id === 'all'
+                  ? selectedCategories.includes('all')
+                  : selectedCategories.includes(category.id) && !selectedCategories.includes('all')
+                const Icon = category.icon
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategorySelect(category.id)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gray-900 text-white shadow-sm'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+                    }`}
+                  >
+                    {Icon && <Icon className="h-3.5 w-3.5" />}
+                    {category.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-16 md:pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 md:pb-20">
 
         {/* Results Header */}
         <div className="mb-4">
@@ -883,13 +869,12 @@ export default function Home() {
               )}
             </div>
 
-          {/* Category Filters Section relocated to just below the fixed search bar */}
         </div>
 
         {/* Content Grid */}
         {isLoading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-emerald-600"></div>
           </div>
         ) : (
           // If searching or filtering by categories, show the standard grid of results.
@@ -918,9 +903,16 @@ export default function Home() {
                 const servicesForCatToRender = swapColumnsOnRefresh ? servicesForCat.slice().reverse() : servicesForCat
                 return (
                   <div key={category.id}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900">{getDailyTitleForCategory(category.id, category.name)}</h3>
-                      {/* <span className="text-sm text-gray-500">{servicesForCat.length} options</span> */}
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">
+                        {getDailyTitleForCategory(category.id, category.name)}
+                      </h3>
+                      <Link
+                        to={`/category/${category.id}`}
+                        className="flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors whitespace-nowrap"
+                      >
+                        View all <ChevronRight className="h-4 w-4" />
+                      </Link>
                     </div>
 
                     <div className="relative">
@@ -950,10 +942,20 @@ export default function Home() {
         )}
 
         {!isLoading && currentItemCount === 0 && (
-          <div className="text-center py-20">
-            <Search className="h-20 w-20 mx-auto text-gray-300 mb-6" />
-            <h3 className="text-2xl font-semibold text-gray-900 mb-3">{t('no_results')}</h3>
-            <p className="text-gray-500 text-lg">{t('adjust_search')}</p>
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center py-20">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <Search className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('no_results')}</h3>
+            <p className="text-gray-500 text-base max-w-sm">{t('adjust_search')}</p>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-6 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 transition-colors"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1080,8 +1082,8 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
   return (
     <div onClick={onClick} className="group block cursor-pointer">
       <div className="w-full">
-        {/* Standalone square image tile */}
-        <div className="aspect-square rounded-xl overflow-hidden shadow-sm bg-gray-100 relative">
+        {/* Image tile */}
+        <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-sm bg-gray-100 relative group-hover:shadow-md transition-shadow duration-300">
           {/* Category badge */}
           {service.service_categories?.name && (
             <div className="absolute top-3 left-3 px-2 py-0.5 sm:px-2 sm:py-0.5 bg-white/95 rounded-full shadow-sm text-[10px] sm:text-[11px] font-semibold text-gray-800 max-w-[68%] truncate">
@@ -1106,9 +1108,9 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
 
         {/* Compact info block below the image (Airbnb-like) */}
         <div className="mt-2 px-0">
-          <h3 className={`font-medium text-gray-900 leading-tight mb-0 ${
+          <h3 className={`font-semibold text-gray-900 leading-tight mb-0 ${
             service.service_categories?.name?.toLowerCase() === 'tour_packages' || service.service_categories?.name?.toLowerCase() === 'tours'
-              ? 'text-[11px] md:text-xs line-clamp-2' 
+              ? 'text-[11px] md:text-xs line-clamp-2'
               : 'text-xs md:text-sm line-clamp-1 truncate'
           }`}>
             {service.title}
@@ -1136,7 +1138,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
                     locale={selectedLanguage || 'en-US'}
                     className="text-sm md:text-base font-normal text-gray-800 leading-none"
                     currencyClassName="text-[10px] text-gray-600 mr-1"
-                    amountClassName="text-[12px] sm:text-[13px] font-normal text-black"
+                    amountClassName="text-[12px] sm:text-[13px] font-semibold text-black"
                   />
                 }
                 <span className="text-[9px] md:text-[10px] text-gray-500 ml-1 whitespace-nowrap">
