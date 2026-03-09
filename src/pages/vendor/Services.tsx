@@ -3639,7 +3639,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 <div className="flex flex-wrap gap-2">
                   {(form.images as string[]).map((src, idx) => (
                     <div key={idx} className="relative group">
-                      <img src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                      <img loading="lazy" decoding="async" src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
                       <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                     </div>
                   ))}

@@ -1485,6 +1485,8 @@ export default function ServiceDetail() {
                 service.images.map((image, index) => (
                   <div key={index} className="flex-shrink-0 w-full snap-center">
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={image}
                       alt={`${service.title} ${index + 1}`}
                       className="w-full h-full object-cover cursor-pointer"
@@ -1495,6 +1497,8 @@ export default function ServiceDetail() {
               ) : (
                 <div className="flex-shrink-0 w-full snap-center">
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
                     alt={service.title}
                     className="w-full h-full object-cover"
@@ -1595,6 +1599,8 @@ export default function ServiceDetail() {
               {/* Main Image Display */}
               <div className="relative mb-4">
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
                   alt={service.title}
                   className="w-full h-[520px] object-cover rounded-lg shadow-lg cursor-pointer"
@@ -1684,6 +1690,8 @@ export default function ServiceDetail() {
                           }`}
                         >
                           <img
+                            loading="lazy"
+                            decoding="async"
                             src={image}
                             alt={`${service.title} ${index + 1}`}
                             className="w-full h-full object-cover"
@@ -1989,6 +1997,8 @@ export default function ServiceDetail() {
 
           {/* Image */}
           <img
+            loading="eager"
+            decoding="async"
             src={service.images[lightboxIndex]}
             alt={`${service.title} ${lightboxIndex + 1}`}
             className="max-h-[90vh] max-w-[90vw] object-contain select-none"

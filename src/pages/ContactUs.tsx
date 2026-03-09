@@ -56,7 +56,7 @@ export default function ContactUs() {
       icon: Mail,
       title: 'Email Support',
       description: 'Send us a detailed message',
-      details: ['support@dirtrails.ug', '12-24 hour response', 'Detailed inquiries'],
+      details: ['safaris.dirtrails@gmail.com', '12-24 hour response', 'Detailed inquiries'],
       action: 'Send Email',
       primary: false
     },

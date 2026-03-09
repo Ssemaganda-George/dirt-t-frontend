@@ -147,11 +147,13 @@ export default function Bookings() {
                   <div className="flex-1">
                     <div className="flex items-start space-x-3">
                       {booking.services?.images?.[0] && (
-                        <img
-                          src={booking.services.images[0]}
-                          alt={booking.services.title}
-                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md"
-                        />
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={booking.services.images[0]}
+                            alt={booking.services.title}
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md"
+                          />
                       )}
                       <div className="flex-1">
                         <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-0">

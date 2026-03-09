@@ -470,11 +470,13 @@ export default function ServiceInquiry() {
           {/* Service Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-              <img
-                src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                alt={service.title}
-                className="w-full h-32 object-cover rounded-lg mb-4"
-              />
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                  alt={service.title}
+                  className="w-full h-32 object-cover rounded-lg mb-4"
+                />
               <h3 className="font-semibold text-gray-900 mb-2">{service.title}</h3>
               <p className="text-sm text-gray-600 mb-2">{service.location}</p>
               <p className="text-sm text-gray-500">{service.service_categories.name}</p>

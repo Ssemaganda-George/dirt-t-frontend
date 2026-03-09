@@ -776,6 +776,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0">
             <img
+              loading="lazy"
+              decoding="async"
               src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
               alt={service.title}
               className="w-full sm:w-20 md:w-24 h-40 sm:h-20 md:h-24 object-cover rounded-lg"

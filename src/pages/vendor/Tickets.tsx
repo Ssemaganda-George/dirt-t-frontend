@@ -189,7 +189,7 @@ export default function VendorTickets() {
                 const eventImage = ticket.services?.primary_image_url;
                 return eventImage ? `
                   <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                    <img src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
+                    <img loading="lazy" decoding="async" src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
                   </div>
                 ` : `
                   <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
@@ -243,7 +243,7 @@ export default function VendorTickets() {
             <!-- Right Section - QR Code & Price -->
             <div style="flex-shrink: 0; text-align: center;">
               <div style="background: #f8fafc; border: 1px solid #e5e7eb; padding: 6px; margin-bottom: 4px; display: inline-block;">
-                <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
+                <img loading="lazy" decoding="async" src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
               </div>
               <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
               <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</div>

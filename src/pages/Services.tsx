@@ -321,9 +321,11 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         {/* Image Container */}
         <div className="relative">
           <img
+            loading="lazy"
+            decoding="async"
             src={displayImage}
             alt={service.title}
-            className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-44 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
           />
           
           {/* Save Button */}
@@ -367,7 +369,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           </div>
 
           {/* Title */}
-          <h3 className="font-bold text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-2 min-h-[3rem]">
+          <h3 className="font-bold text-sm sm:text-base text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-2 min-h-[3rem]">
             {service.title}
           </h3>
 
@@ -384,7 +386,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           {/* Price */}
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-500">From</span>
-              <span className="text-xl font-bold text-gray-900">
+              <span className="text-lg sm:text-xl font-bold text-gray-900">
               {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
             </span>
             <span className="text-xs text-gray-500">
@@ -430,6 +432,8 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
       {/* Hero Image */}
       <div className="relative h-96 bg-gray-900">
         <img
+          loading="lazy"
+          decoding="async"
           src={displayImage}
           alt={service.title}
           className="w-full h-full object-cover opacity-90"

@@ -441,9 +441,11 @@ function ServiceCard({ service }: ServiceCardProps) {
   return (
     <Link to={`/service/${service.slug || service.id}`} className="group">
       <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
-        {/* Image Container - Fixed height */}
-        <div className="relative h-48 overflow-hidden">
+        {/* Image Container - smaller on mobile for tighter cards */}
+        <div className="relative h-36 sm:h-48 overflow-hidden">
           <img
+            loading="lazy"
+            decoding="async"
             src={imageUrl}
             alt={service.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

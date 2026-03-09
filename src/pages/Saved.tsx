@@ -108,6 +108,8 @@ export default function Saved() {
                 {item.services?.images?.[0] && (
                   <div className="relative">
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={item.services.images[0]}
                       alt={item.services.title}
                       className="w-full h-48 object-cover"

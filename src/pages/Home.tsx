@@ -274,7 +274,17 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const slideInterval = useRef<NodeJS.Timeout | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true) // Start with autoplay enabled
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
+    try {
+      if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
+      const mobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      return !(mobileUA || coarsePointer || prefersReducedMotion)
+    } catch (e) {
+      return false
+    }
+  })
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
@@ -356,20 +366,27 @@ export default function Home() {
     fetchCategories()
     fetchHeroMediaList()
     
-    // Try to enable autoplay and handle any browser restrictions
+    // Try to enable autoplay on non-mobile devices and when user hasn't requested reduced motion
     const ensureAutoPlay = () => {
-      setAutoPlayEnabled(true)
-      // Try to play any current video after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        if (videoRef.current) {
-          const playPromise = videoRef.current.play()
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {
-              // Autoplay failed, will retry on slide change
-            })
+      try {
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+        if (prefersReducedMotion || isMobile) return
+        setAutoPlayEnabled(true)
+        // Try to play any current video after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          if (videoRef.current) {
+            const playPromise = videoRef.current.play()
+            if (playPromise !== undefined) {
+              playPromise.catch(() => {
+                // Autoplay failed, will retry on slide change or user interaction
+              })
+            }
           }
-        }
-      }, 100)
+        }, 100)
+      } catch (e) {
+        // ignore
+      }
     }
     
     // Try autoplay after a brief delay to ensure component is mounted
@@ -672,7 +689,9 @@ export default function Home() {
                   src={media.url}
                   autoPlay={autoPlayEnabled}
                   muted
+                  loop
                   playsInline
+                  preload="metadata"
                   className="w-full h-full object-cover"
                   style={{ opacity: 0.6 }}
                   key={currentSlide === idx ? media.url : undefined}
@@ -899,7 +918,7 @@ export default function Home() {
         ) : (
           // If searching or filtering by categories, show the standard grid of results.
           (searchQuery || !selectedCategories.includes('all')) ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 sm:gap-x-6 gap-y-6 sm:gap-y-9 mb-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-4 gap-y-4 sm:gap-y-6 mb-12">
               {(
                 swapColumnsOnRefresh ? [...currentItems].reverse() : currentItems
               ).map((service: Service) => (
@@ -1084,7 +1103,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
   return (
     <div onClick={onClick} className="group block cursor-pointer">
       <div className="w-full mx-auto">
-        <div className="aspect-square rounded-2xl overflow-hidden shadow-sm bg-gray-100 relative border border-gray-200/80">
+      <div className="aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden shadow-sm bg-gray-100 relative border border-gray-200/80">
           {/* Category badge */}
           {service.service_categories?.name && (
             <div className="absolute top-3 left-3 px-2 py-1 bg-white/95 rounded-full shadow-sm text-[11px] font-semibold text-gray-800 max-w-[72%] truncate">
@@ -1092,6 +1111,8 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
             </div>
           )}
           <img
+            loading="lazy"
+            decoding="async"
             src={imageUrl}
             alt={service.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1178,6 +1199,8 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
       {/* Hero Image */}
       <div className="relative h-96 bg-gray-900">
         <img
+          loading="lazy"
+          decoding="async"
           src={imageUrl}
           alt={service.title}
           className="w-full h-full object-cover opacity-90"
@@ -1263,7 +1286,7 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                     {service.flight_number && (
                       <div>
                         <span className="text-sm text-gray-500">Flight Number</span>
