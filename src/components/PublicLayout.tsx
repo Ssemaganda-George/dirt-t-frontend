@@ -145,8 +145,8 @@ export default function PublicLayout() {
                     to={item.href}
                     className={`text-sm font-medium transition-colors ${
                       location.pathname === item.href
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-700 hover:text-blue-600'
+                        ? 'text-emerald-600 border-b-2 border-emerald-600'
+                        : 'text-gray-700 hover:text-emerald-600'
                     }`}
                   >
                     {t(item.name)}
@@ -157,11 +157,11 @@ export default function PublicLayout() {
 
             {/* Right side actions */}
             {!location.pathname.includes('/scan/') && (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-4">
                 {/* Search Button - Hidden on mobile, only in bottom nav */}
                 <button
                   onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   title={t('search')}
                 >
                   <Search className="h-5 w-5 text-gray-600" />
@@ -178,7 +178,7 @@ export default function PublicLayout() {
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-blue-600 relative">
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative">
                   <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -192,9 +192,9 @@ export default function PublicLayout() {
                   <div className="relative" ref={userDropdownRef}>
                     <button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
+                      <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center shadow-md">
                         <span className="text-sm font-bold text-white">
                           {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
                         </span>
@@ -301,7 +301,7 @@ export default function PublicLayout() {
                   <div className="relative" ref={guestDropdownRef}>
                     <button
                       onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
                       <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />

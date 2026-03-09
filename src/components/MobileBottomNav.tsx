@@ -19,7 +19,6 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
       { labelKey: 'support', href: '/support', icon: HelpCircle, isModal: true },
     ]
 
-    // Add bookings for logged-in tourists
     if (user && profile?.role === 'tourist') {
       baseNavigation.splice(2, 0, { labelKey: 'bookings', href: '/bookings', icon: Calendar })
     }
@@ -31,54 +30,50 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
   const { t } = usePreferences()
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div className="flex justify-around items-center h-16">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-[0_-1px_12px_rgba(0,0,0,0.08)]">
+      <div className="flex justify-around items-stretch h-16" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {navigation.map((item) => {
           const isActive = location.pathname === item.href && !item.isModal && !item.isSearch
           const isSearchActive = item.isSearch && location.pathname === '/'
+          const active = isActive || isSearchActive
+
+          const content = (
+            <>
+              {/* Active indicator bar */}
+              <span className={`absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full transition-all duration-200 ${
+                active ? 'bg-emerald-600 opacity-100' : 'opacity-0'
+              }`} />
+              <item.icon className={`h-5 w-5 transition-colors duration-200 ${
+                active ? 'text-emerald-600' : 'text-gray-400'
+              }`} />
+              <span className={`text-[10px] font-semibold mt-0.5 tracking-wide transition-colors duration-200 ${
+                active ? 'text-emerald-600' : 'text-gray-400'
+              }`}>
+                {t(item.labelKey)}
+              </span>
+            </>
+          )
+
+          const baseClass = `relative flex flex-col items-center justify-center flex-1 pt-3 pb-2 gap-0.5 transition-colors duration-150 ${
+            item.isModal || item.isSearch ? 'cursor-pointer' : ''
+          }`
+
+          if (item.isModal || item.isSearch) {
+            return (
+              <div
+                key={item.labelKey}
+                onClick={item.isModal ? onSupportClick : onSearchClick}
+                className={baseClass}
+              >
+                {content}
+              </div>
+            )
+          }
+
           return (
-            <div
-              key={item.labelKey}
-              onClick={item.isModal ? onSupportClick : item.isSearch ? onSearchClick : undefined}
-              className={`flex flex-col items-center justify-center flex-1 py-2 px-1 transition-colors ${
-                item.isModal || item.isSearch ? 'cursor-pointer' : ''
-              } ${
-                isActive || isSearchActive
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              {item.isModal || item.isSearch ? (
-                <div className="flex flex-col items-center">
-                  <item.icon className={`h-5 w-5 mb-1 ${
-                    isActive || isSearchActive ? 'text-blue-600' : 'text-gray-600'
-                  }`} />
-                  <span className={`text-xs font-medium ${
-                    isActive || isSearchActive ? 'text-blue-600' : 'text-gray-600'
-                  }`}>
-                    {t(item.labelKey)}
-                  </span>
-                </div>
-              ) : (
-                <Link
-                  to={item.href}
-                  className={`flex flex-col items-center ${
-                    isActive || isSearchActive ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                  }`}
-                >
-                  <item.icon
-                    className={`h-5 w-5 mb-1 ${
-                      isActive || isSearchActive ? 'text-blue-600' : 'text-gray-600'
-                    }`}
-                  />
-                  <span className={`text-xs font-medium ${
-                    isActive || isSearchActive ? 'text-blue-600' : 'text-gray-600'
-                  }`}>
-                    {t(item.labelKey)}
-                  </span>
-                </Link>
-              )}
-            </div>
+            <Link key={item.labelKey} to={item.href} className={baseClass}>
+              {content}
+            </Link>
           )
         })}
       </div>
