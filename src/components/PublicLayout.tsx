@@ -427,57 +427,85 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="hidden md:block bg-gray-950 text-white">
+        {/* Top CTA strip */}
+        <div className="border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <div className="mb-4">
-                <span className="text-xl font-bold">DirtTrails</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Discover Uganda's hidden gems and create unforgettable experiences with local service providers.
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-1">For Businesses</p>
+              <p className="text-lg font-bold text-white">Reach thousands of travellers in Uganda</p>
+            </div>
+            <Link
+              to="/vendor-login"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
+            >
+              List your business
+            </Link>
+          </div>
+        </div>
+
+        {/* Main footer grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+            {/* Brand column */}
+            <div className="md:col-span-4">
+              <p className="text-2xl font-bold tracking-tight mb-1">DirtTrails<span className="text-emerald-500">.</span></p>
+              <p className="text-gray-400 text-sm leading-relaxed mt-3 max-w-xs">
+                Discover Uganda's hidden gems and create unforgettable experiences with trusted local service providers.
               </p>
+              <div className="mt-6 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-900/50 text-emerald-400 text-xs font-medium border border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Active in Uganda
+                </span>
+              </div>
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Explore</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/" className="hover:text-white">Home</Link></li>
-                <li><Link to="/category/flights" className="hover:text-white">Flights</Link></li>
-                <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
-                <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
-                <li><Link to="/category/events" className="hover:text-white">Events</Link></li>
-                <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
-                <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
+
+            {/* Links */}
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Explore</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/" className="text-gray-400 hover:text-white transition-colors">Home</Link></li>
+                <li><Link to="/category/hotels" className="text-gray-400 hover:text-white transition-colors">Stays</Link></li>
+                <li><Link to="/category/tours" className="text-gray-400 hover:text-white transition-colors">Tours</Link></li>
+                <li><Link to="/category/events" className="text-gray-400 hover:text-white transition-colors">Events</Link></li>
+                <li><Link to="/category/restaurants" className="text-gray-400 hover:text-white transition-colors">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="text-gray-400 hover:text-white transition-colors">Transport</Link></li>
+                <li><Link to="/category/shops" className="text-gray-400 hover:text-white transition-colors">Shops</Link></li>
               </ul>
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
-                <li><Link to="/contact" className="hover:text-white">Contact Us</Link></li>
-                <li><Link to="/safety" className="hover:text-white">Safety</Link></li>
-                <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
-                <li><Link to="/travel-insurance" className="hover:text-white">Travel Insurance</Link></li>
-                <li><Link to="/visa-processing" className="hover:text-white">Visa Processing</Link></li>
-                <li><Link to="/internet-connectivity" className="hover:text-white">Internet & Connectivity</Link></li>
+
+            <div className="md:col-span-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Support</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/safety" className="text-gray-400 hover:text-white transition-colors">Safety</Link></li>
+                <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="text-gray-400 hover:text-white transition-colors">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="text-gray-400 hover:text-white transition-colors">Visa Processing</Link></li>
               </ul>
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">For Businesses</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/vendor-login" className="hover:text-white">List My Business</Link></li>
-                <li><Link to="/refer-business" className="hover:text-white">Refer a Business</Link></li>
-                <li><Link to="/hospitality-class" className="hover:text-white">Join a Hospitality Class</Link></li>
-                <li><Link to="/partner" className="hover:text-white">Partner with DirtTrails</Link></li>
+
+            <div className="md:col-span-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Business</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/vendor-login" className="text-gray-400 hover:text-white transition-colors">List My Business</Link></li>
+                <li><Link to="/refer-business" className="text-gray-400 hover:text-white transition-colors">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="text-gray-400 hover:text-white transition-colors">Hospitality Class</Link></li>
+                <li><Link to="/partner" className="text-gray-400 hover:text-white transition-colors">Partner with Us</Link></li>
               </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
+
+          {/* Bottom bar */}
+          <div className="border-t border-white/10 mt-14 pt-8 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <Link to="/privacy" className="hover:text-gray-400 transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
+              <Link to="/cookies" className="hover:text-gray-400 transition-colors">Cookies</Link>
+            </div>
           </div>
         </div>
       </footer>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package } from 'lucide-react'
+import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, X } from 'lucide-react'
 import { formatCurrency } from '../lib/utils'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { Link } from 'react-router-dom'
@@ -18,39 +18,48 @@ export default function CategoryPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
 
-  // Map URL categories to database category IDs
   const categoryMapping: { [key: string]: string } = {
     'hotels': 'cat_hotels',
     'tours': 'cat_tour_packages',
     'restaurants': 'cat_restaurants',
     'transport': 'cat_transport',
     'activities': 'cat_activities',
-    // also accept the public-facing "events" slug and map it to the same DB category
     'events': 'cat_activities',
     'flights': 'cat_flights',
     'shops': 'cat_shops'
   }
 
   const categoryNames: { [key: string]: string } = {
-    'hotels': 'Accommodation',
-    'tours': 'Tour Packages',
+    'hotels': 'Stays',
+    'tours': 'Tours',
     'restaurants': 'Restaurants',
     'transport': 'Transport',
     'activities': 'Events',
     'events': 'Events',
     'flights': 'Flights',
     'shops': 'Shops',
-    'services': 'Services'
+    'services': 'All Services'
   }
 
-  // Get dynamic category filters based on current category
+  // Category accent colors
+  const categoryAccents: { [key: string]: string } = {
+    'hotels': 'from-indigo-900 to-indigo-700',
+    'tours': 'from-emerald-900 to-teal-700',
+    'restaurants': 'from-orange-900 to-amber-700',
+    'transport': 'from-slate-900 to-slate-700',
+    'activities': 'from-purple-900 to-violet-700',
+    'events': 'from-purple-900 to-violet-700',
+    'flights': 'from-sky-900 to-cyan-700',
+    'shops': 'from-rose-900 to-pink-700',
+    'services': 'from-gray-900 to-gray-700'
+  }
+
   const getCategoryFilters = () => {
     if (category === 'services') {
-      // On services page, show all category filters
       return [
         { key: 'all', label: 'All' },
         { key: 'flights', label: 'Flights' },
-        { key: 'hotels', label: 'Accommodation' },
+        { key: 'hotels', label: 'Stays' },
         { key: 'tours', label: 'Tours' },
         { key: 'restaurants', label: 'Restaurants' },
         { key: 'transport', label: 'Transport' },
@@ -58,7 +67,6 @@ export default function CategoryPage() {
         { key: 'shops', label: 'Shops' }
       ]
     } else if (category && categoryMapping[category]) {
-      // On specific category pages, show category-specific filters
       const categoryId = categoryMapping[category]
       switch (categoryId) {
         case 'cat_flights':
@@ -66,12 +74,12 @@ export default function CategoryPage() {
             { key: 'all', label: 'All Flights' },
             { key: 'domestic', label: 'Domestic' },
             { key: 'international', label: 'International' },
-            { key: 'business', label: 'Business Class' },
+            { key: 'business', label: 'Business' },
             { key: 'economy', label: 'Economy' }
           ]
         case 'cat_hotels':
           return [
-            { key: 'all', label: 'All Hotels' },
+            { key: 'all', label: 'All Stays' },
             { key: 'budget', label: 'Budget' },
             { key: 'midrange', label: 'Mid-range' },
             { key: 'luxury', label: 'Luxury' },
@@ -88,7 +96,7 @@ export default function CategoryPage() {
         case 'cat_restaurants':
           return [
             { key: 'all', label: 'All Restaurants' },
-            { key: 'local', label: 'Local Cuisine' },
+            { key: 'local', label: 'Local' },
             { key: 'international', label: 'International' },
             { key: 'fine', label: 'Fine Dining' },
             { key: 'casual', label: 'Casual' }
@@ -117,36 +125,26 @@ export default function CategoryPage() {
   }
 
   const categoryFilters = getCategoryFilters()
-
   const categoryName = categoryNames[category || ''] || 'Services'
+  const accentGradient = categoryAccents[category || ''] || 'from-gray-900 to-gray-700'
 
   useEffect(() => {
     if (allServices) {
       let filtered = allServices
-
-      // Filter by category if specified (but not for 'services' which shows all)
       if (category && category !== 'all' && category !== 'services') {
         const targetCategoryId = categoryMapping[category]
         if (targetCategoryId) {
           filtered = allServices.filter(service => service.category_id === targetCategoryId)
         }
       }
-
-      // Filter by approval status (only show approved services to tourists, admin services don't need approval)
       filtered = filtered.filter(service => {
-        // Admin services don't require approval (no vendor info)
-        if (!service.vendors) {
-          return service.status !== 'inactive'
-        }
-        // Vendor services need to be approved and vendor not suspended
+        if (!service.vendors) return service.status !== 'inactive'
         return service.status === 'approved' && service.vendors.status !== 'suspended'
       })
-
       setFilteredServices(filtered)
     }
   }, [allServices, category])
 
-  // Reset category filter when category changes
   useEffect(() => {
     setSelectedCategoryFilter('all')
   }, [category])
@@ -157,80 +155,70 @@ export default function CategoryPage() {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
                          (service.vendors?.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-
     const matchesPrice = service.price >= priceRange[0] && service.price <= priceRange[1]
-
-    // Filter by selected category filter
     let matchesCategoryFilter = true
     if (category === 'services') {
-      // On services page: filter by main categories
-      matchesCategoryFilter = selectedCategoryFilter === 'all' || 
+      matchesCategoryFilter = selectedCategoryFilter === 'all' ||
                              service.category_id === categoryMapping[selectedCategoryFilter]
     } else {
-      // On specific category pages: filter by sub-categories (for now, just 'all' works)
       matchesCategoryFilter = selectedCategoryFilter === 'all'
     }
-
     return matchesSearch && matchesPrice && matchesCategoryFilter
   })
 
   const sortedServices = [...searchFilteredServices].sort((a, b) => {
     switch (sortBy) {
-      case 'price-low':
-        return a.price - b.price
-      case 'price-high':
-        return b.price - a.price
-      case 'rating':
-        return 0 // Would sort by actual rating
-      default:
-        return 0 // Recommended order
+      case 'price-low': return a.price - b.price
+      case 'price-high': return b.price - a.price
+      default: return 0
     }
   })
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{categoryName} in Uganda</h1>
-          
-          {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-4">
+      {/* Category header banner */}
+      <div className={`bg-gradient-to-r ${accentGradient} py-10 md:py-14`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">Uganda</p>
+          <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
+            {categoryName}
+          </h1>
+          <p className="text-white/60 mt-2 text-sm md:text-base">
+            {sortedServices.length > 0
+              ? `${sortedServices.length} option${sortedServices.length !== 1 ? 's' : ''} available`
+              : 'Browse available options'}
+          </p>
+        </div>
+      </div>
+
+      {/* Sticky search + filter bar */}
+      <div className="bg-white border-b border-gray-100 sticky top-16 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center gap-3">
+            {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder={t('search_placeholder')}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-            
-            {/* Category Filters for Mobile - Dynamic based on current category */}
-            {category && categoryFilters.length > 1 && (
-              <div className="md:hidden">
-                <div className="flex gap-0.5 overflow-x-auto pb-0.5 scrollbar-hide">
-                  {categoryFilters.map((filter) => (
-                    <button
-                      key={filter.key}
-                      onClick={() => setSelectedCategoryFilter(filter.key)}
-                      className={`flex items-center px-1 py-0.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors min-h-[24px] ${
-                        selectedCategoryFilter === filter.key
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex gap-2">
+
+            {/* Sort */}
+            <div className="relative hidden md:block">
               <select
-                className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="appearance-none pl-4 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -239,100 +227,131 @@ export default function CategoryPage() {
                 <option value="price-high">Price: High to Low</option>
                 <option value="rating">Highest Rated</option>
               </select>
-              
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <SlidersHorizontal className="h-5 w-5 mr-2" />
-                Filters
-              </button>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
+
+            {/* Filters toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                showFilters
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">Filters</span>
+            </button>
           </div>
 
-          {/* Filters Panel */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Sub-category pills */}
+          {categoryFilters.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pt-3 pb-1">
+              {categoryFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  onClick={() => setSelectedCategoryFilter(filter.key)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+                    selectedCategoryFilter === filter.key
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Filters panel */}
+        {showFilters && (
+          <div className="border-t border-gray-100 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
                     Price Range (UGX)
                   </label>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <input
                       type="number"
                       placeholder="Min"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       value={priceRange[0]}
                       onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
                     />
-                    <span>-</span>
+                    <span className="text-gray-400 text-sm">—</span>
                     <input
                       type="number"
                       placeholder="Max"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       value={priceRange[1]}
                       onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
                     />
                   </div>
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
                     Location
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                    <option>All locations</option>
-                    <option>Kampala</option>
-                    <option>Jinja</option>
-                    <option>Entebbe</option>
-                    <option>Murchison Falls</option>
-                  </select>
+                  <div className="relative">
+                    <select className="w-full appearance-none px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <option>All locations</option>
+                      <option>Kampala</option>
+                      <option>Jinja</option>
+                      <option>Entebbe</option>
+                      <option>Murchison Falls</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
                     Rating
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                    <option>Any rating</option>
-                    <option>4+ stars</option>
-                    <option>3+ stars</option>
-                  </select>
+                  <div className="relative">
+                    <select className="w-full appearance-none px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <option>Any rating</option>
+                      <option>4+ stars</option>
+                      <option>3+ stars</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Results */}
+      {/* Results grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-600">
-            {sortedServices.length} {categoryName.toLowerCase()} found
-          </p>
-        </div>
-
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-emerald-600"></div>
+          </div>
+        ) : sortedServices.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <Search className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No results found</h3>
+            <p className="text-gray-500 text-sm max-w-sm">Try adjusting your search or filters</p>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-5 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 transition-colors"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8">
             {sortedServices.map((service) => (
               <ServiceCard key={service.id} service={service} />
             ))}
-          </div>
-        )}
-
-        {!loading && sortedServices.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
           </div>
         )}
       </div>
@@ -349,15 +368,13 @@ function ServiceCard({ service }: ServiceCardProps) {
   const [reviewCount, setReviewCount] = useState<number>(0)
   const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
 
-  // Fetch service rating and review count
   useEffect(() => {
     const fetchRating = async () => {
       try {
         const ratingData = await getServiceAverageRating(service.id)
         setRating(ratingData.average || 0)
         setReviewCount(ratingData.count || 0)
-      } catch (error) {
-        console.error('Error fetching service rating:', error)
+      } catch {
         setRating(0)
         setReviewCount(0)
       }
@@ -365,155 +382,86 @@ function ServiceCard({ service }: ServiceCardProps) {
     fetchRating()
   }, [service.id])
 
-  // Helper function to render icons (handles both string and component icons)
-  const renderIcon = (icon: any, className: string = "h-4 w-4") => {
-    if (typeof icon === 'string') {
-      return <span className={className}>{icon}</span>
-    }
-    const IconComponent = icon
-    return <IconComponent className={className} />
-  }
-
-  // Get category-specific information
-  const getCategoryInfo = () => {
+  const getCategoryBadge = () => {
     switch (service.category_id) {
-      case 'cat_hotels':
-        return {
-          icon: Hotel,
-          label: 'Accommodation',
-          primaryInfo: service.duration_hours ? `${service.duration_hours} nights` : 'Accommodation',
-          secondaryInfo: service.max_capacity ? `Up to ${service.max_capacity} guests` : null
-        }
-      case 'cat_tour_packages':
-        return {
-          icon: Map,
-          label: 'Tour Package',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h tour` : 'Full day tour',
-          secondaryInfo: service.max_capacity ? `Max ${service.max_capacity} people` : null
-        }
-      case 'cat_transport':
-        return {
-          icon: Car,
-          label: 'Transport',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h rental` : 'Vehicle rental',
-          secondaryInfo: service.max_capacity ? `Seats ${service.max_capacity}` : null
-        }
-      case 'cat_restaurants':
-        return {
-          icon: Utensils,
-          label: 'Restaurant',
-          primaryInfo: 'Dining experience',
-          secondaryInfo: service.max_capacity ? `Capacity ${service.max_capacity}` : null
-        }
-      case 'cat_activities':
-        return {
-          icon: Target,
-          label: 'Event',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h event` : 'Adventure',
-          secondaryInfo: service.max_capacity ? `Group size ${service.max_capacity}` : null
-        }
-      case 'cat_flights':
-        return {
-          icon: Plane,
-          label: 'Flight',
-          primaryInfo: service.duration_hours ? `${service.duration_hours}h flight` : 'Flight booking',
-          secondaryInfo: service.max_capacity ? `Class: ${service.max_capacity}` : null
-        }
-      case 'cat_shops':
-        return {
-          icon: ShoppingBag,
-          label: 'Shop',
-          primaryInfo: 'Retail shopping',
-          secondaryInfo: service.max_capacity ? `Store capacity ${service.max_capacity}` : null
-        }
-      default:
-        return {
-          icon: Package,
-          label: 'Service',
-          primaryInfo: 'Experience',
-          secondaryInfo: null
-        }
+      case 'cat_hotels': return { label: 'Stay', Icon: Hotel }
+      case 'cat_tour_packages': return { label: 'Tour', Icon: Map }
+      case 'cat_transport': return { label: 'Transport', Icon: Car }
+      case 'cat_restaurants': return { label: 'Restaurant', Icon: Utensils }
+      case 'cat_activities': return { label: 'Event', Icon: Target }
+      case 'cat_flights': return { label: 'Flight', Icon: Plane }
+      case 'cat_shops': return { label: 'Shop', Icon: ShoppingBag }
+      default: return { label: 'Service', Icon: Package }
     }
   }
 
-  const categoryInfo = getCategoryInfo()
+  const getUnitLabel = () => {
+    switch (service.category_id) {
+      case 'cat_transport': return 'per day'
+      case 'cat_hotels': return 'per night'
+      case 'cat_shops': return 'per item'
+      case 'cat_restaurants': return 'per meal'
+      case 'cat_activities': return 'per ticket'
+      case 'cat_tour_packages': return 'per guest'
+      default: return 'per person'
+    }
+  }
+
+  const { label, Icon } = getCategoryBadge()
 
   return (
-    <Link to={`/service/${service.slug || service.id}`} className="group">
-      <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full flex flex-col">
-        {/* Image Container - Fixed height */}
-        <div className="relative h-48 overflow-hidden">
-          <img
-            src={imageUrl}
-            alt={service.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-
-          {/* Category Badge */}
-          <div className="absolute top-3 left-3">
-            <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
-              {renderIcon(categoryInfo.icon, "h-4 w-4")}
-              <span className="text-xs font-semibold text-gray-800">{categoryInfo.label}</span>
-            </div>
-          </div>
-
-          {/* Rating Badge */}
-          <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium">
-              <Star className="h-3 w-3 fill-current text-yellow-400" />
-              <span className="text-gray-900">{rating > 0 ? rating.toFixed(1) : '0'}</span>
-              {reviewCount > 0 && (
-                <span className="text-gray-600 ml-0.5">({reviewCount})</span>
-              )}
-            </div>
-          </div>
+    <Link to={`/service/${service.slug || service.id}`} className="group block">
+      {/* Image */}
+      <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 relative shadow-sm group-hover:shadow-md transition-shadow duration-300 mb-2.5">
+        {/* Category badge */}
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-white/95 px-2.5 py-1 rounded-full shadow-sm">
+          <Icon className="h-3 w-3 text-gray-700" />
+          <span className="text-[11px] font-semibold text-gray-800">{label}</span>
         </div>
 
-        {/* Content - Flexible height to maintain consistent card height */}
-        <div className="flex-1 p-4 flex flex-col">
-          {/* Location */}
-          {service.location && (
-            <div className="flex items-center text-sm text-gray-600 mb-2">
-              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">{service.location}</span>
-            </div>
-          )}
+        <img
+          src={imageUrl}
+          alt={service.title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
 
-          {/* Title */}
-          <h3 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors line-clamp-2 min-h-[2.5rem]">
-            {service.title}
-          </h3>
-
-          {/* Category-specific info */}
-          <div className="mb-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-              <span>{categoryInfo.primaryInfo}</span>
-            </div>
-            {categoryInfo.secondaryInfo && (
-              <div className="text-sm text-gray-600">
-                {categoryInfo.secondaryInfo}
-              </div>
-            )}
+        {/* Rating badge top-right */}
+        {(rating > 0 || reviewCount > 0) && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+            <span className="text-[11px] font-semibold text-white">{rating > 0 ? rating.toFixed(1) : '0'}</span>
           </div>
+        )}
+      </div>
 
-          {/* Description - Limited lines */}
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">
-            {service.description}
-          </p>
+      {/* Info */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-1 group-hover:text-emerald-700 transition-colors">
+          {service.title}
+        </h3>
 
-          {/* Footer with vendor and price */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div className="text-xs text-gray-500 truncate flex-1 min-w-0">
-              by {service.vendors?.business_name || 'Vendor'}
-            </div>
-            <div className="text-right ml-2">
-              <div className="text-lg font-bold text-gray-900">
-                {formatCurrency(service.price, service.currency)}
-              </div>
-              <div className="text-xs text-gray-500">per person</div>
-            </div>
+        {service.location && (
+          <div className="flex items-center gap-1 mt-0.5 text-gray-500">
+            <MapPin className="h-3 w-3 flex-shrink-0" />
+            <span className="text-xs truncate">{service.location}</span>
           </div>
+        )}
+
+        <div className="flex items-baseline gap-1 mt-1.5">
+          <span className="text-[10px] text-gray-500">From</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {formatCurrency(service.price, service.currency)}
+          </span>
+          <span className="text-[10px] text-gray-500">{getUnitLabel()}</span>
         </div>
+
+        {reviewCount > 0 && (
+          <div className="flex items-center gap-1 mt-0.5">
+            <Star className="h-3 w-3 text-emerald-600 fill-emerald-600" />
+            <span className="text-xs text-gray-600">{rating.toFixed(1)}</span>
+            <span className="text-xs text-gray-400">({reviewCount})</span>
+          </div>
+        )}
       </div>
     </Link>
   )
