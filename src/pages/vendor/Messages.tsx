@@ -213,7 +213,7 @@ export default function VendorMessages() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
@@ -225,16 +225,16 @@ export default function VendorMessages() {
         <div className="lg:col-span-2">
           {selectedConversation ? (
             /* Chat Interface */
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: '520px' }}>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
               {/* Chat Header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 >
                   <ChevronLeft className="w-4 h-4 text-gray-500" />
                 </button>
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+                <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-semibold">
                   {selectedConversation === 'admin' ? 'A' : 'C'}
                 </div>
                 <div>
@@ -278,7 +278,7 @@ export default function VendorMessages() {
                             {showAvatar && (
                               <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                  isVendor ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                                  isVendor ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600'
                                 }`}>
                                   {isVendor ? 'Y' : (message.sender_name?.[0] || 'U')}
                                 </div>
@@ -288,7 +288,7 @@ export default function VendorMessages() {
                             <div className={`flex flex-col ${isVendor ? 'items-end' : 'items-start'}`}>
                               <div className={`px-3 py-2 rounded-xl text-sm ${
                                 isVendor
-                                  ? 'bg-blue-600 text-white rounded-br-sm'
+                                  ? 'bg-gray-900 text-white rounded-br-sm'
                                   : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                               }`}>
                                 <p className="whitespace-pre-wrap">{message.message}</p>
@@ -331,7 +331,7 @@ export default function VendorMessages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 resize-none"
                     rows={1}
                     style={{ minHeight: '38px', maxHeight: '100px' }}
                     onInput={(e) => {
@@ -343,9 +343,9 @@ export default function VendorMessages() {
                   <button
                     onClick={handleNewMessage}
                     disabled={!newMessageContent.trim() || sendingMessage}
-                    className={`px-3 py-2 rounded-lg transition flex items-center ${
+                    className={`min-h-[38px] px-3 py-2 rounded-lg transition-all flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                       newMessageContent.trim() && !sendingMessage
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-gray-900 text-white hover:bg-gray-800'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -371,9 +371,9 @@ export default function VendorMessages() {
                   <button
                     key={tab.key}
                     onClick={() => setFilter(tab.key as any)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                       filter === tab.key
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-gray-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
@@ -453,7 +453,7 @@ export default function VendorMessages() {
                       <div
                         key={conversation.id}
                         onClick={() => setSelectedConversation(conversation.id)}
-                        className="bg-white rounded-xl border border-gray-200 p-4 hover:bg-gray-50/50 cursor-pointer transition group"
+                        className="bg-white rounded-xl border border-gray-200 p-4 hover:bg-gray-50/50 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-gray-900/20"
                       >
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">

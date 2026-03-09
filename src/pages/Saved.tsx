@@ -61,7 +61,7 @@ export default function Saved() {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchSavedItems}
-            className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition-colors"
+            className="min-h-[44px] bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             Try Again
           </button>
@@ -72,23 +72,23 @@ export default function Saved() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Saved Items</h1>
-          <p className="text-gray-600 mt-2">Your favorite services and experiences</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Saved Items</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Your favorite services and experiences</p>
         </div>
 
         {/* Saved Items Grid */}
         {savedItems.length === 0 ? (
-          <div className="bg-white shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-12 text-center">
             <Heart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No saved items yet</h3>
             <p className="text-gray-600 mb-6">
@@ -96,7 +96,7 @@ export default function Saved() {
             </p>
             <Link
               to="/"
-              className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors inline-block"
+              className="inline-flex items-center justify-center min-h-[48px] bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               Explore Services
             </Link>
@@ -104,17 +104,19 @@ export default function Saved() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {savedItems.map((item) => (
-              <div key={item.id} className="bg-white shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={item.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 {item.services?.images?.[0] && (
                   <div className="relative">
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={item.services.images[0]}
                       alt={item.services.title}
                       className="w-full h-48 object-cover"
                     />
                     <button
                       onClick={() => removeSavedItem(item.service_id)}
-                      className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
+                      className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                     >
                       <Heart className="h-5 w-5 text-red-500 fill-current" />
                     </button>
@@ -137,7 +139,7 @@ export default function Saved() {
                     </div>
                     <Link
                       to={`/service/${item.services?.slug || item.service_id}`}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                      className="bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                     >
                       View Details
                     </Link>
@@ -149,12 +151,12 @@ export default function Saved() {
         )}
 
         {/* Coming Soon Notice */}
-        <div className="mt-12 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div className="mt-12 bg-gray-50 border border-gray-200 rounded-2xl p-6">
           <div className="flex items-start">
-            <Heart className="h-6 w-6 text-blue-600 mt-0.5 mr-3" />
+            <Heart className="h-6 w-6 text-gray-700 mt-0.5 mr-3" />
             <div>
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Saved Items Feature</h3>
-              <p className="text-blue-700">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Saved Items Feature</h3>
+              <p className="text-gray-600">
                 The saved items functionality is coming soon! You'll be able to save your favorite services,
                 create wishlists, and get notified about special offers on items you love.
               </p>

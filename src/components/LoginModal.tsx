@@ -16,6 +16,7 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanPage = false, serviceId }: LoginModalProps) {
   const [isSignUp, setIsSignUp] = useState(false)
+  const [showAccountTypePrompt, setShowAccountTypePrompt] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -27,9 +28,22 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
 
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
+
+  const resetAuthFields = () => {
+    setError('')
+    setEmail('')
+    setPassword('')
+    setConfirmPassword('')
+    setFirstName('')
+    setLastName('')
+    setHomeCity('')
+    setHomeCountry('')
+    setAgreedToTerms(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -119,12 +133,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black p-4">
-      <div className="max-w-sm w-full max-h-[90vh] bg-white rounded-2xl shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 sm:p-4">
+      <div className="max-w-md w-full max-h-[92vh] sm:max-h-[90vh] bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 relative overflow-hidden">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+          className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-10 p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
           aria-label="Close modal"
         >
           <XMarkIcon className="h-5 w-5 text-gray-600" />
@@ -133,8 +147,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
           <div className="p-4 sm:p-6">
 
         {/* Header */}
-        <div className="text-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1 text-heading">
+        <div className="text-center mb-4 sm:mb-5">
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1 text-heading">
             Dirt Trails
           </h2>
           <p className="text-gray-600 text-sm text-elegant">
@@ -142,8 +156,46 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
           </p>
         </div>
 
+        {showAccountTypePrompt ? (
+          <div className="space-y-4 pb-2">
+            <p className="text-sm text-gray-700 text-center font-medium">Select the account to create</p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowAccountTypePrompt(false)
+                setIsSignUp(true)
+                resetAuthFields()
+              }}
+              className="w-full min-h-[48px] rounded-xl border border-gray-900 bg-gray-900 px-4 py-3.5 text-sm font-semibold text-white hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+            >
+              Tourist
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowAccountTypePrompt(false)
+                onClose()
+                navigate('/vendor-login?signup=true')
+              }}
+              className="w-full min-h-[48px] rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+            >
+              Business
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAccountTypePrompt(false)}
+              className="w-full text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md py-1"
+            >
+              ← Back to sign in
+            </button>
+          </div>
+        ) : (
+        <>
         {/* Form */}
-        <form className="space-y-4" onSubmit={isSignUp ? handleSignUpSubmit : handleSubmit}>
+        <form className="space-y-4 sm:space-y-5" onSubmit={isSignUp ? handleSignUpSubmit : handleSubmit}>
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -151,7 +203,21 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
           )}
 
           {isSignUp && (
-            <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(false)
+                setShowAccountTypePrompt(true)
+                resetAuthFields()
+              }}
+              className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              ← Back
+            </button>
+          )}
+
+          {isSignUp && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                   First name
@@ -161,7 +227,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   name="firstName"
                   type="text"
                   required
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Enter your first name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -176,7 +242,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   name="lastName"
                   type="text"
                   required
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Enter your last name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -195,7 +261,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               type="email"
               autoComplete="email"
               required
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
               placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -223,7 +289,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               {!isSignUp && (
                 <button
                   type="button"
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="text-xs text-gray-700 hover:text-gray-900 font-medium transition-colors"
                   onClick={() => {
                     // TODO: Implement forgot password functionality
                     alert('Forgot password functionality coming soon!');
@@ -240,7 +306,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 type={showPassword ? 'text' : 'password'}
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
                 required
-                className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -271,7 +337,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 pr-10 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-400 transition-colors"
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -291,58 +357,87 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             </div>
           )}
 
+          {isSignUp && (
+            <div className="flex items-start gap-2">
+              <input
+                id="agreeTerms"
+                name="agreeTerms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-500"
+              />
+              <label htmlFor="agreeTerms" className="text-xs text-gray-600 leading-relaxed">
+                I agree to the{' '}
+                <a href="/terms" className="text-gray-900 hover:text-gray-700 underline">
+                  Terms and Conditions
+                </a>
+                .
+              </label>
+            </div>
+          )}
+
           {/* Sign in button */}
-          <div className="flex justify-center">
+          <div>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || (isSignUp && !agreedToTerms)}
+              className="w-full min-h-[48px] px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}
             </button>
           </div>
+
+          {!isSignUp && (
+            <button
+              type="button"
+              onClick={() => setShowAccountTypePrompt(true)}
+              className="w-full min-h-[48px] rounded-xl border border-gray-900 bg-white px-4 py-3.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+            >
+              New here? Create your account — Sign up
+            </button>
+          )}
+
         </form>
 
         {/* Divider */}
-        <div className="relative mt-3">
+        <div className="relative mt-4">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300" />
           </div>
-          <div className="relative flex justify-center text-sm">
+          <div className="relative flex justify-center text-xs">
             <span className="px-2 bg-white text-gray-500">or</span>
           </div>
         </div>
 
         {/* Continue with Google */}
-        <div className="mt-3">
+        <div className="mt-4">
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center px-3 py-2 text-sm border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full min-h-[48px] flex items-center justify-center px-4 py-3.5 text-sm border border-gray-300 rounded-xl font-medium text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             Continue with Google
           </button>
         </div>
 
         {/* Toggle between sign in and sign up */}
-        <div className="mt-3 text-center pb-4">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setError('')
-              setEmail('')
-              setPassword('')
-              setConfirmPassword('')
-              setFirstName('')
-              setLastName('')
-              setHomeCity('')
-              setHomeCountry('')
-            }}
-            className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-          >
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </button>
-        </div>
+        {isSignUp && (
+          <div className="mt-4 pb-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(false)
+                setShowAccountTypePrompt(false)
+                resetAuthFields()
+              }}
+              className="w-full text-center text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 rounded-md py-1"
+            >
+              Already have an account? Sign in
+            </button>
+          </div>
+        )}
+        </>
+        )}
           </div>
         </div>
       </div>

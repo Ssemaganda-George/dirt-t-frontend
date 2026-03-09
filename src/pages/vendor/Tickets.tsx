@@ -189,7 +189,7 @@ export default function VendorTickets() {
                 const eventImage = ticket.services?.primary_image_url;
                 return eventImage ? `
                   <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                    <img src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
+                    <img loading="lazy" decoding="async" src="${eventImage}" alt="Event Flier" style="width: 100%; height: 100%; object-fit: cover;" />
                   </div>
                 ` : `
                   <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px;">🎫</div>
@@ -243,7 +243,7 @@ export default function VendorTickets() {
             <!-- Right Section - QR Code & Price -->
             <div style="flex-shrink: 0; text-align: center;">
               <div style="background: #f8fafc; border: 1px solid #e5e7eb; padding: 6px; margin-bottom: 4px; display: inline-block;">
-                <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
+                <img loading="lazy" decoding="async" src="${qrCodeDataUrl}" alt="QR Code" style="width: 60px; height: 60px; display: block;" />
               </div>
               <div style="font-size: 9px; color: #6b7280; margin-bottom: 4px;">Scan for Entry</div>
               <div style="font-size: 12px; font-weight: 700; color: #374151;">${formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</div>
@@ -368,14 +368,14 @@ export default function VendorTickets() {
               placeholder="Search by code, event, buyer name, email, or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full min-h-[40px] pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             />
           </div>
           <div className="flex gap-2">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-h-[40px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               <option value="all">All Status</option>
               <option value="issued">Active</option>
@@ -384,7 +384,7 @@ export default function VendorTickets() {
             </select>
             <button
               onClick={clearFilters}
-              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50"
+              className="min-h-[40px] px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >Clear</button>
           </div>
         </div>
@@ -396,8 +396,8 @@ export default function VendorTickets() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Code</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Code</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                   <select value={selectedEventFilter} onChange={(e) => setSelectedEventFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">All Events</option>
                     {Array.from(new Set(tickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
@@ -405,7 +405,7 @@ export default function VendorTickets() {
                     ))}
                   </select>
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                   <select value={selectedTypeFilter} onChange={(e) => setSelectedTypeFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">All Types</option>
                     {Array.from(new Set(tickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
@@ -413,9 +413,9 @@ export default function VendorTickets() {
                     ))}
                   </select>
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Issued</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Price</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Issued</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Price</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                   <select value={selectedStatusFilter} onChange={(e) => setSelectedStatusFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">Status</option>
                     <option value="issued">Active</option>
@@ -423,52 +423,52 @@ export default function VendorTickets() {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">
                   <select value={selectedAttendanceFilter} onChange={(e) => setSelectedAttendanceFilter(e.target.value)} className="text-xs font-medium text-gray-500 bg-transparent border-none focus:ring-0 cursor-pointer p-0">
                     <option value="all">Attendance</option>
                     <option value="attended">Attended</option>
                     <option value="not-attended">Not Attended</option>
                   </select>
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tableFilteredTickets.map((ticket) => (
                 <tr key={ticket.id} className="group border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{ticket.code}</td>
-                  <td className="px-5 py-3 text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{ticket.ticket_types?.title || 'Ticket'}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(ticket.issued_at)}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{ticket.code}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500">{ticket.ticket_types?.title || 'Ticket'}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500">{formatDateTime(ticket.issued_at)}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
+                  <td className="px-4 py-2.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                       ticket.status === 'issued' ? 'bg-emerald-50 text-emerald-700'
                         : ticket.status === 'used' ? 'bg-gray-100 text-gray-600'
                           : 'bg-red-50 text-red-700'
                     }`}>{ticket.status}</span>
                   </td>
-                  <td className="px-5 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-2.5 text-sm text-gray-500">
                     {ticket.status === 'used' ? (
                       <span className="text-xs text-emerald-600 font-medium">✓ Attended</span>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => downloadTicket(ticket)}
-                      className="text-xs font-medium text-gray-600 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-xs font-medium text-gray-600 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                     >View</button>
                   </td>
                 </tr>
               ))}
               {tableFilteredTickets.length > 0 && (
                 <tr className="border-t border-gray-200 bg-gray-50/50">
-                  <td colSpan={4} className="px-5 py-3 text-sm font-medium text-gray-500 text-right">
+                  <td colSpan={4} className="px-4 py-2.5 text-sm font-medium text-gray-500 text-right">
                     Total ({tableFilteredTickets.length} ticket{tableFilteredTickets.length !== 1 ? 's' : ''}):
                   </td>
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">
+                  <td className="px-4 py-2.5 text-sm font-semibold text-gray-900">
                     {(() => {
                       const total = tableFilteredTickets.reduce((sum, ticket) => {
                         const price = ticket.ticket_types?.price || 0;
@@ -488,7 +488,7 @@ export default function VendorTickets() {
         {/* Mobile Card View */}
         <div className="block md:hidden divide-y divide-gray-100">
           {tableFilteredTickets.map((ticket) => (
-            <div key={ticket.id} className="p-4">
+            <div key={ticket.id} className="p-3.5">
               <div className="flex justify-between items-start gap-2 mb-1">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900">{ticket.services?.title || 'Event'}</p>
@@ -502,14 +502,14 @@ export default function VendorTickets() {
               </div>
               <div className="flex justify-between items-center mt-2">
                 <p className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</p>
-                <button onClick={() => downloadTicket(ticket)} className="text-xs font-medium text-gray-600 hover:text-gray-900">View</button>
+                <button onClick={() => downloadTicket(ticket)} className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded">View</button>
               </div>
             </div>
           ))}
         </div>
 
         {tableFilteredTickets.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-10">
             <p className="text-sm font-medium text-gray-900">No tickets found</p>
             <p className="text-xs text-gray-500 mt-1">No tickets match your current filters</p>
           </div>

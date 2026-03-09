@@ -170,7 +170,7 @@ export default function VendorBookings() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/vendor/availability')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
           >
             Availability
           </button>
@@ -192,7 +192,7 @@ export default function VendorBookings() {
               placeholder="Search by service, customer, status, or booking ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full min-h-[40px] pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 focus:border-transparent"
             />
           </div>
           {/* Filter Row */}
@@ -200,7 +200,7 @@ export default function VendorBookings() {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-h-[40px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -211,7 +211,7 @@ export default function VendorBookings() {
             <select
               value={serviceFilter}
               onChange={e => setServiceFilter(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 min-h-[40px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               <option value="all">All Services</option>
               {services.map(s => (
@@ -227,7 +227,7 @@ export default function VendorBookings() {
         {/* Mobile Card View */}
         <div className="block md:hidden divide-y divide-gray-100">
           {filteredBookings.length === 0 ? (
-            <div className="px-6 py-12 text-center">
+            <div className="px-6 py-10 text-center">
               <p className="text-sm font-medium text-gray-900">No bookings yet</p>
               <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
             </div>
@@ -260,24 +260,24 @@ export default function VendorBookings() {
                   {b.status === 'pending' && (
                     <div className="flex gap-2">
                       <button
-                        className="flex-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700"
+                        className="flex-1 min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                         onClick={() => handleStatusChange(b.id, 'confirmed')}
                       >Accept</button>
                       <button
-                        className="flex-1 px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50"
+                        className="flex-1 min-h-[36px] px-3 py-1.5 bg-white border border-gray-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20"
                         onClick={() => openRejectionModal(b)}
                       >Reject</button>
                     </div>
                   )}
                   {b.status === 'confirmed' && b.payment_status === 'paid' && (
                     <button
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700"
+                      className="min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       onClick={() => handleStatusChange(b.id, 'completed')}
                     >Mark Complete</button>
                   )}
                   <button
                     onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
-                    className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                    className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                   >View Details</button>
                 </div>
               </div>
@@ -290,12 +290,12 @@ export default function VendorBookings() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Booked</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Guests</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Service</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Booked</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Guests</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Amount</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -305,11 +305,11 @@ export default function VendorBookings() {
                   className="group border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer"
                   onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
                 >
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{b.guests}</td>
-                  <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
-                  <td className="px-5 py-3">
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500">{b.guests}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
+                  <td className="px-4 py-2.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                       getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
                         ? 'bg-emerald-50 text-emerald-700'
@@ -320,7 +320,7 @@ export default function VendorBookings() {
                       {getVendorDisplayStatus(b.status, b.payment_status)}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {b.status === 'pending' && (
                         <>
@@ -346,7 +346,7 @@ export default function VendorBookings() {
               ))}
               {filteredBookings.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={6} className="px-4 py-10 text-center">
                     <p className="text-sm font-medium text-gray-900">No bookings yet</p>
                     <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
                   </td>
@@ -360,31 +360,31 @@ export default function VendorBookings() {
       {/* Saved Cart Items */}
       {cartState.items.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100">
+          <div className="px-4 py-2.5 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
           </div>
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Service</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Amount</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Saved</th>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Service</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Category</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Amount</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Saved</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {cartState.items.map((item) => (
                   <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2.5">
                       <p className="text-sm font-medium text-gray-900">{item.service.title}</p>
                       <p className="text-xs text-gray-500">{item.service.vendors.business_name}</p>
                     </td>
-                    <td className="px-5 py-3 text-sm text-gray-500 capitalize">{item.category}</td>
-                    <td className="px-5 py-3 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
-                    <td className="px-5 py-3 text-sm text-gray-500">{formatDateTime(item.savedAt)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2.5 text-sm text-gray-500 capitalize">{item.category}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-500">{formatDateTime(item.savedAt)}</td>
+                    <td className="px-4 py-2.5">
                       <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{item.status}</span>
                     </td>
                   </tr>
@@ -418,7 +418,7 @@ export default function VendorBookings() {
               <h3 className="text-base font-semibold text-gray-900">Booking Receipt</h3>
               <button
                 onClick={() => setShowBookingDetails(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg"
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >✕</button>
             </div>
             <div className="p-4">
@@ -433,13 +433,13 @@ export default function VendorBookings() {
 
       {/* Rejection Reason Modal */}
       {showRejectionModal && bookingToReject && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-base font-semibold text-gray-900">Reject Booking</h3>
               <button 
                 onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
-                className="text-gray-400 hover:text-gray-600 text-lg"
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >✕</button>
             </div>
             <div className="px-6 py-4 space-y-4">
@@ -450,19 +450,19 @@ export default function VendorBookings() {
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="e.g., Not available on that date, Fully booked..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                   rows={4}
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => { setShowRejectionModal(false); setBookingToReject(null); setRejectionReason('') }}
-                  className="flex-1 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+                  className="flex-1 min-h-[40px] px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 >Cancel</button>
                 <button
                   onClick={() => handleRejectBooking(bookingToReject.id, rejectionReason)}
                   disabled={!rejectionReason.trim()}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="flex-1 min-h-[40px] px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >Reject</button>
               </div>
             </div>
@@ -497,23 +497,23 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h3 className="text-base font-semibold text-gray-900">Add Booking</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          <button onClick={onClose} className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">✕</button>
         </div>
         <form className="px-6 py-4 space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(form) }}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Service</label>
-            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select value={form.service_id as any} onChange={(e) => setForm(prev => ({ ...prev, service_id: e.target.value }))} className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
               {services.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Guests</label>
-              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="number" min={1} value={form.guests as any} onChange={(e) => setForm(prev => ({ ...prev, guests: Number(e.target.value) }))} className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
-              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select value={form.status as any} onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value as Booking['status'] }))} className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
@@ -523,12 +523,12 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Total Amount</label>
-            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="number" value={form.total_amount as any} onChange={(e) => setForm(prev => ({ ...prev, total_amount: Number(e.target.value) }))} className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20" />
             <p className="text-xs text-gray-500 mt-1">Currency: {form.currency}</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Create booking</button>
+            <button type="button" onClick={onClose} className="min-h-[40px] px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">Cancel</button>
+            <button type="submit" className="min-h-[40px] px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">Create booking</button>
           </div>
         </form>
       </div>

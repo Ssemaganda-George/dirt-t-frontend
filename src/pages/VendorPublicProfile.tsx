@@ -78,7 +78,7 @@ export default function VendorPublicProfile() {
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                 <div className="relative flex-shrink-0">
                   {vendor.avatar_url ? (
-                    <img src={vendor.avatar_url} alt={`${vendor.business_name} avatar`} className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 border-white object-cover shadow" />
+                    <img loading="lazy" decoding="async" src={vendor.avatar_url} alt={`${vendor.business_name} avatar`} className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 border-white object-cover shadow" />
                   ) : (
                     <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 border-white bg-white flex items-center justify-center text-2xl sm:text-3xl font-bold text-indigo-700 shadow">{(vendor.business_name || 'V').charAt(0)}</div>
                   )}

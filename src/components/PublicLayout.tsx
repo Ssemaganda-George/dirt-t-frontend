@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -121,11 +121,11 @@ export default function PublicLayout() {
             : 'bg-white shadow-sm'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 md:h-[72px]">
             {/* Logo */}
             <Link to="/" className={`flex items-center transition-colors duration-300 ${
-              location.pathname.includes('/scan/') 
-                ? 'text-white drop-shadow-lg' 
+              location.pathname.includes('/scan/')
+                ? 'text-white drop-shadow-lg'
                 : 'text-gray-900'
             }`}>
               <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
@@ -138,7 +138,7 @@ export default function PublicLayout() {
 
             {/* Desktop Navigation */}
             {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex space-x-8 mt-6">
+              <nav className="hidden md:flex items-center space-x-7">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
@@ -169,7 +169,7 @@ export default function PublicLayout() {
 
                 <button
                   onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
                   title={t('preferences')}
                 >
                   <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
@@ -178,7 +178,7 @@ export default function PublicLayout() {
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative">
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full hover:bg-gray-100 transition-colors">
                   <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -192,7 +192,7 @@ export default function PublicLayout() {
                   <div className="relative" ref={userDropdownRef}>
                     <button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center shadow-md">
                         <span className="text-sm font-bold text-white">
@@ -243,6 +243,14 @@ export default function PublicLayout() {
                             {t('saved_items') || 'Saved Items'}
                           </Link>
                           <Link
+                            to="/wallet"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <Wallet className="h-3.5 w-3.5 mr-2" />
+                            My Wallet
+                          </Link>
+                          <Link
                             to="/settings"
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
@@ -262,27 +270,6 @@ export default function PublicLayout() {
                           {/* Divider */}
                           <div className="border-t border-gray-100 my-1"></div>
 
-                          {/* Business Section */}
-                          <div className="px-3 py-1.5">
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('for_businesses') || 'For Businesses'}</h4>
-                          </div>
-                          <Link
-                            to="/vendor-login"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('list_my_business')}
-                          </Link>
-                          <Link
-                            to="/partner"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('partner_with')}
-                          </Link>
-
                           <button
                             onClick={() => {
                               setShowUserDropdown(false)
@@ -301,7 +288,7 @@ export default function PublicLayout() {
                   <div className="relative" ref={guestDropdownRef}>
                     <button
                       onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
                       <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
                       <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />

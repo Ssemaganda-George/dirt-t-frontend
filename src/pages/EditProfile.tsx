@@ -303,6 +303,8 @@ export default function EditProfile() {
                 {profilePicture ? (
                   <div className="relative">
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={profilePicture}
                       alt="Profile preview"
                       className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"
@@ -317,6 +319,8 @@ export default function EditProfile() {
                   </div>
                 ) : profile?.avatar_url ? (
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={profile.avatar_url}
                     alt="Current profile"
                     className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"

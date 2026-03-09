@@ -106,9 +106,9 @@ export default function VendorInquiries() {
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key as any)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+            className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
               filter === tab.key
-                ? 'bg-blue-600 text-white'
+                ? 'bg-gray-900 text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -167,7 +167,7 @@ export default function VendorInquiries() {
                   {inquiry.status === 'unread' && (
                     <button
                       onClick={() => handleStatusChange(inquiry.id, 'read')}
-                      className="text-xs font-medium text-gray-700 hover:underline"
+                      className="text-xs font-medium text-gray-700 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                     >
                       Mark Read
                     </button>
@@ -175,7 +175,7 @@ export default function VendorInquiries() {
                   {inquiry.status === 'read' && (
                     <button
                       onClick={() => setSelectedInquiry(inquiry)}
-                      className="text-xs font-medium text-gray-900 hover:underline"
+                      className="text-xs font-medium text-gray-900 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                     >
                       Respond
                     </button>
@@ -183,7 +183,7 @@ export default function VendorInquiries() {
                   {inquiry.status !== 'archived' && (
                     <button
                       onClick={() => handleStatusChange(inquiry.id, 'archived')}
-                      className="text-xs font-medium text-gray-400 hover:text-gray-600 hover:underline"
+                      className="text-xs font-medium text-gray-400 hover:text-gray-600 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                     >
                       Archive
                     </button>
@@ -202,7 +202,7 @@ export default function VendorInquiries() {
           <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900">Respond to Inquiry</h3>
-              <button onClick={() => setSelectedInquiry(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+              <button onClick={() => setSelectedInquiry(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -230,7 +230,7 @@ export default function VendorInquiries() {
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Your Response</label>
                 <textarea
                   rows={4}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 resize-none"
                   placeholder="Type your response to the customer..."
                   value={responseMessage}
                   onChange={(e) => setResponseMessage(e.target.value)}
@@ -240,14 +240,14 @@ export default function VendorInquiries() {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setSelectedInquiry(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                  className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleRespond(selectedInquiry)}
                   disabled={responding || !responseMessage.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {responding ? 'Sending...' : 'Send Response'}
                 </button>

@@ -527,6 +527,8 @@ export default function ScanEventPage() {
         }`}>
           {service.images && service.images.length > 0 && (
             <img
+              loading="lazy"
+              decoding="async"
               src={service.images[0]}
               alt={service.title}
               className="w-full h-full object-cover"

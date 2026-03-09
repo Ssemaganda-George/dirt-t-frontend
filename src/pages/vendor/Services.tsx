@@ -753,7 +753,7 @@ export default function VendorServices() {
           ) : (
             <div className="divide-y divide-slate-100">
               {paginatedServices.map(s => (
-                <div key={s.id} className="p-6 hover:bg-slate-50/50 transition-colors duration-200 group">
+                <div key={s.id} className="p-5 hover:bg-slate-50/50 transition-colors duration-200 group">
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-base font-semibold text-slate-900 truncate mb-1 group-hover:text-blue-600 transition-colors">
@@ -838,21 +838,21 @@ export default function VendorServices() {
           <table className="w-full">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-200">
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500">Loading services...</td></tr>
+                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-slate-500">Loading services...</td></tr>
               ) : error ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</td></tr>
+                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-5 py-14 text-center">
                     <p className="text-sm text-slate-500">No services found.</p>
                     <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-slate-900 hover:underline">Create your first service →</button>
                   </td>
@@ -860,11 +860,11 @@ export default function VendorServices() {
               ) : (
                 paginatedServices.map(s => (
                   <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{s.title}</p>
                       <p className="text-xs text-slate-500 truncate max-w-xs mt-0.5">{s.description}</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className="text-sm text-slate-600">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
                         <div className="mt-1">
@@ -889,12 +889,12 @@ export default function VendorServices() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className="text-sm font-semibold text-slate-900">
                         {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
                         s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                         s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
@@ -903,7 +903,7 @@ export default function VendorServices() {
                         {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           onClick={() => { handleOpenEdit(s) }}
@@ -3535,7 +3535,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
           >
             <X className="h-5 w-5" />
           </button>
@@ -3639,7 +3639,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 <div className="flex flex-wrap gap-2">
                   {(form.images as string[]).map((src, idx) => (
                     <div key={idx} className="relative group">
-                      <img src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                      <img loading="lazy" decoding="async" src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
                       <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                     </div>
                   ))}
@@ -3654,13 +3654,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm"
+              className="min-h-[44px] px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-8 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="min-h-[44px] px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               {initial?.id ? 'Save Changes' : 'Create Service'}
             </button>
@@ -3687,7 +3687,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                   setShowMapModal(false)
                   setMapModalInitialCoords(null)
                 }}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >
                 <X className="h-5 w-5" />
               </button>

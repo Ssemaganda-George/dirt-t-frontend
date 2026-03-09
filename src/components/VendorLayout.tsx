@@ -145,8 +145,8 @@ export default function VendorLayout() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white border-r border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 border-b border-gray-100">
-            <span className="text-sm font-semibold text-blue-600 tracking-tight">DirtTrails</span>
-            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+            <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails</span>
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
               <X className="h-4 w-4 text-gray-500" />
             </button>
           </div>
@@ -172,14 +172,14 @@ export default function VendorLayout() {
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
+                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                             isActive
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
+                          <item.icon className={`h-4 w-4 ${isActive ? 'text-gray-200' : 'text-gray-400'}`} />
                           {item.name}
                         </Link>
                       )
@@ -199,11 +199,11 @@ export default function VendorLayout() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100">
             {!sidebarCollapsed && (
-              <span className="text-sm font-semibold text-blue-600 tracking-tight">DirtTrails Business</span>
+              <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails Business</span>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? (
@@ -242,15 +242,15 @@ export default function VendorLayout() {
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
+                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                             isActive
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           title={sidebarCollapsed ? item.name : ''}
                         >
                           <item.icon className={`${sidebarCollapsed ? 'mx-auto' : ''} h-4 w-4 ${
-                            isActive ? 'text-blue-200' : 'text-gray-400'
+                            isActive ? 'text-gray-200' : 'text-gray-400'
                           }`} />
                           {!sidebarCollapsed && item.name}
                         </Link>
@@ -271,7 +271,7 @@ export default function VendorLayout() {
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-700 lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 lg:hidden">
               <Menu className="h-5 w-5" />
             </button>
 
@@ -281,7 +281,7 @@ export default function VendorLayout() {
               {/* Global Search */}
               <button
                 onClick={() => setShowGlobalSearch(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                className="p-2 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 title="Search (⌘K)"
               >
                 <Search className="h-4 w-4 text-gray-500" />
@@ -290,7 +290,7 @@ export default function VendorLayout() {
               {/* Preferences */}
               <button
                 onClick={() => setShowPreferences(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm"
+                className="flex min-h-[36px] items-center gap-1.5 px-2.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 title="Preferences"
               >
                 <Globe className="h-3.5 w-3.5 text-gray-500" />
@@ -301,9 +301,9 @@ export default function VendorLayout() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition"
+                  className="flex min-h-[36px] items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                 >
-                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-full bg-gray-900 flex items-center justify-center">
                     <span className="text-xs font-semibold text-white">{profile?.full_name?.charAt(0).toUpperCase() || 'V'}</span>
                   </div>
                   <div className="hidden sm:block text-left">
@@ -324,7 +324,7 @@ export default function VendorLayout() {
                       <Link
                         to="/vendor/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       >
                         <User className="h-4 w-4 text-gray-400" />
                         Profile
@@ -332,7 +332,7 @@ export default function VendorLayout() {
                       <Link
                         to="/vendor/settings"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       >
                         <Settings className="h-4 w-4 text-gray-400" />
                         Settings
@@ -344,7 +344,7 @@ export default function VendorLayout() {
                           setDropdownOpen(false)
                           handleSignOut()
                         }}
-                        className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                        className="flex items-center gap-2.5 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20"
                       >
                         <LogOut className="h-4 w-4" />
                         Log out
@@ -384,13 +384,13 @@ export default function VendorLayout() {
             <div className="flex gap-2">
               <button
                 onClick={cancelSignOut}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                className="flex-1 min-h-[40px] px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmSignOut}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+                className="flex-1 min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20"
               >
                 Log out
               </button>

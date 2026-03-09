@@ -80,8 +80,8 @@ export default function Settings() {
               </div>
               <button
                 onClick={() => handleNotificationChange(item.key, !(notifications as any)[item.key])}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${
-                  (notifications as any)[item.key] ? 'bg-blue-600' : 'bg-gray-200'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+                  (notifications as any)[item.key] ? 'bg-gray-900' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -104,7 +104,7 @@ export default function Settings() {
             <select
               value={preferences.language}
               onChange={(e) => handlePreferenceChange('language', e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 bg-white"
             >
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -117,7 +117,7 @@ export default function Settings() {
             <select
               value={preferences.timezone}
               onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 bg-white"
             >
               <option value="UTC">UTC</option>
               <option value="EAT">East Africa Time</option>
@@ -131,7 +131,7 @@ export default function Settings() {
             <select
               value={preferences.theme}
               onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 bg-white"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -143,7 +143,7 @@ export default function Settings() {
             <select
               value={preferences.currency}
               onChange={(e) => handlePreferenceChange('currency', e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 bg-white"
             >
               <option value="UGX">UGX (Ugandan Shilling)</option>
               <option value="USD">USD (US Dollar)</option>
@@ -158,13 +158,13 @@ export default function Settings() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Security</h3>
         <div className="flex flex-wrap gap-3">
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
             Change Password
           </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
             Enable Two-Factor Authentication
           </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
             View Login History
           </button>
         </div>

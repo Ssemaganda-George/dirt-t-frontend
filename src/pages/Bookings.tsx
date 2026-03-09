@@ -99,7 +99,7 @@ export default function Bookings() {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchBookings}
-            className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition-colors"
+            className="min-h-[44px] bg-gray-900 text-white px-4 py-2 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             Try Again
           </button>
@@ -110,23 +110,23 @@ export default function Bookings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/profile"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 mb-4 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-          <p className="text-gray-600 mt-2">Manage your travel bookings and reservations</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">My Bookings</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Manage your travel bookings and reservations</p>
         </div>
 
         {/* Bookings List */}
         {bookings.length === 0 ? (
-          <div className="bg-white shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings yet</h3>
             <p className="text-gray-600 mb-6">
@@ -134,7 +134,7 @@ export default function Bookings() {
             </p>
             <Link
               to="/"
-              className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors inline-block"
+              className="inline-flex items-center justify-center min-h-[48px] bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
             >
               Explore Services
             </Link>
@@ -142,19 +142,21 @@ export default function Bookings() {
         ) : (
           <div className="space-y-4">
             {bookings.map((booking) => (
-              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-4 sm:p-6 rounded-lg">
+              <div key={booking.id} className="bg-white shadow-sm border border-gray-200 p-4 sm:p-6 rounded-2xl">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <div className="flex items-start space-x-3">
                       {booking.services?.images?.[0] && (
-                        <img
-                          src={booking.services.images[0]}
-                          alt={booking.services.title}
-                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md"
-                        />
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={booking.services.images[0]}
+                            alt={booking.services.title}
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md"
+                          />
                       )}
                       <div className="flex-1">
-                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-0">
+                        <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-0">
                           {booking.services?.title || 'Service'}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
@@ -201,12 +203,12 @@ export default function Bookings() {
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <Link
                         to={`/booking/${booking.id}`}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm text-center w-full sm:w-auto"
+                        className="bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out text-sm text-center w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
                       >
                         View Details
                       </Link>
                       {booking.status === 'pending' && (
-                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm w-full sm:w-auto">
+                        <button className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2">
                           Cancel
                         </button>
                       )}

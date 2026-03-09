@@ -1232,8 +1232,8 @@ export function Bookings() {
               <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div className="flex flex-col items-center">
-              {ticketImageUrl ? (
-                <img src={ticketImageUrl} alt="Ticket" className="max-w-full h-auto" />
+                {ticketImageUrl ? (
+                <img loading="lazy" decoding="async" src={ticketImageUrl} alt="Ticket" className="max-w-full h-auto" />
               ) : (
                 <p className="text-sm text-gray-500">No image available</p>
               )}

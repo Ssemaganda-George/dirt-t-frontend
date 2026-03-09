@@ -38,6 +38,8 @@ const VendorEvents = lazy(() => import('./pages/vendor/Events'))
 const VendorVisitorActivity = lazy(() => import('./pages/vendor/VisitorActivity'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Businesses = lazy(() => import('./pages/admin/Businesses'))
+const AdminVendors = lazy(() => import('./pages/admin/Vendors'))
+const AdminVendorDetail = lazy(() => import('./pages/admin/VendorDetail.tsx'))
 const Messages = lazy(() => import('./pages/admin/Messages'))
 const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
@@ -101,6 +103,7 @@ const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
 const Saved = lazy(() => import('./pages/Saved'))
+const TouristWallet = lazy(() => import('./pages/Wallet'))
 const UserSettings = lazy(() => import('./pages/Settings'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
 
@@ -192,6 +195,16 @@ function App() {
             <Route index element={<Saved />} />
           </Route>
           <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <PublicLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<TouristWallet />} />
+          </Route>
+          <Route
             path="/settings"
             element={
               <ProtectedRoute requiredRole="tourist">
@@ -268,6 +281,8 @@ function App() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="wallets" element={<Transactions />} />
+            <Route path="vendors" element={<AdminVendors />} />
+            <Route path="vendors/:id" element={<AdminVendorDetail />} />
             <Route path="dirt-trails-wallet" element={<DirtTrailsWallet />} />
             <Route path="finance" element={<Finance />} />
             <Route path="vendor-messages" element={

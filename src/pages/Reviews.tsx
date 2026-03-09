@@ -129,6 +129,8 @@ export default function Reviews() {
                 <div className="flex items-start space-x-4">
                   {review.services?.[0]?.images?.[0] && (
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={review.services[0].images[0]}
                       alt={review.services[0].title}
                       className="w-16 h-16 object-cover rounded-md"

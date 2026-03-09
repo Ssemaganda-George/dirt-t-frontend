@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
+import { PageSkeleton } from '../components/SkeletonLoader'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
@@ -273,7 +274,17 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const slideInterval = useRef<NodeJS.Timeout | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true) // Start with autoplay enabled
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
+    try {
+      if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
+      const mobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      return !(mobileUA || coarsePointer || prefersReducedMotion)
+    } catch (e) {
+      return false
+    }
+  })
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
@@ -306,6 +317,27 @@ export default function Home() {
   // Combined loading state
   const isLoading = servicesLoading
 
+  // Local control for full-page skeleton timing: keep the full skeleton visible
+  // for a maximum of 2 seconds so the page layout appears promptly.
+  const [showFullSkeleton, setShowFullSkeleton] = useState(true)
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    if (isLoading) {
+      // Ensure we start by showing the full skeleton, but hide it after 2s
+      setShowFullSkeleton(true)
+      timer = setTimeout(() => setShowFullSkeleton(false), 2000)
+    } else {
+      // Data loaded — hide full skeleton immediately
+      setShowFullSkeleton(false)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [isLoading])
+
+
   const handleCategorySelect = (categoryId: string) => {
     if (categoryId === 'all') {
       setSelectedCategories(['all'])
@@ -334,20 +366,27 @@ export default function Home() {
     fetchCategories()
     fetchHeroMediaList()
     
-    // Try to enable autoplay and handle any browser restrictions
+    // Try to enable autoplay on non-mobile devices and when user hasn't requested reduced motion
     const ensureAutoPlay = () => {
-      setAutoPlayEnabled(true)
-      // Try to play any current video after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        if (videoRef.current) {
-          const playPromise = videoRef.current.play()
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {
-              // Autoplay failed, will retry on slide change
-            })
+      try {
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+        if (prefersReducedMotion || isMobile) return
+        setAutoPlayEnabled(true)
+        // Try to play any current video after a short delay to ensure DOM is ready
+        setTimeout(() => {
+          if (videoRef.current) {
+            const playPromise = videoRef.current.play()
+            if (playPromise !== undefined) {
+              playPromise.catch(() => {
+                // Autoplay failed, will retry on slide change or user interaction
+              })
+            }
           }
-        }
-      }, 100)
+        }, 100)
+      } catch (e) {
+        // ignore
+      }
     }
     
     // Try autoplay after a brief delay to ensure component is mounted
@@ -525,7 +564,7 @@ export default function Home() {
         { id: 'cat_transport', name: 'Transport', icon: Car },
         { id: 'cat_activities', name: 'Events', icon: Target },
         { id: 'cat_tour_packages', name: 'Tours', icon: Map },
-        { id: 'cat_restaurants', name: 'Food', icon: Utensils },
+        { id: 'cat_restaurants', name: 'Restaurants', icon: Utensils },
         { id: 'cat_shops', name: 'Shops', icon: ShoppingBag }
       ])
     }
@@ -557,16 +596,6 @@ export default function Home() {
              containsQuery(service.location) ||
              containsQuery(service.vendors?.business_name) ||
              containsQuery(service.service_categories?.name);
-
-      // Debug: Log which basic field matched
-      if (searchQuery && result) {
-        console.log('Search match found for query:', searchQuery, 'in service:', service.title);
-        if (containsQuery(service.title)) console.log('  - Match in TITLE');
-        if (containsQuery(service.description)) console.log('  - Match in DESCRIPTION');
-        if (containsQuery(service.location)) console.log('  - Match in LOCATION');
-        if (containsQuery(service.vendors?.business_name)) console.log('  - Match in VENDOR NAME');
-        if (containsQuery(service.service_categories?.name)) console.log('  - Match in CATEGORY NAME');
-      }
 
       // If no match in basic fields, check additional fields and category synonyms
       if (!result) {
@@ -610,11 +639,6 @@ export default function Home() {
                  (query.includes('activity') && service.category_id === 'cat_activities') ||
                  (query.includes('event') && service.category_id === 'cat_activities') ||
                  (query.includes('experience') && service.category_id === 'cat_activities');
-
-        // Debug: Log which additional field matched
-        if (searchQuery && result) {
-          console.log('Match in ADDITIONAL FIELD or CATEGORY SYNONYM for query:', searchQuery, 'service:', service.title);
-        }
       }
 
       return result;
@@ -629,15 +653,15 @@ export default function Home() {
     return shouldInclude;
   })
 
-  // Debug: Log filtering results
-  useEffect(() => {
-    if (searchQuery) {
-      console.log('Search query:', searchQuery, 'Total services:', allServices.length, 'Filtered services:', filteredServices.length);
-    }
-  }, [searchQuery, filteredServices.length, allServices.length]);
-
   const currentItems = filteredServices
   const currentItemCount = currentItems.length
+
+  // If services are still loading, show the full-page home skeleton, but only
+  // while `showFullSkeleton` is true (max ~2s). After that we'll render the
+  // page layout and let list-level placeholders handle the remaining loading.
+  if (isLoading && showFullSkeleton) {
+    return <PageSkeleton type="home" />
+  }
 
   if (selectedService) {
     return (
@@ -649,7 +673,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div className="relative min-h-[60vh] md:min-h-[72vh] bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
         {/* Background media carousel */}
@@ -665,7 +689,9 @@ export default function Home() {
                   src={media.url}
                   autoPlay={autoPlayEnabled}
                   muted
+                  loop
                   playsInline
+                  preload="metadata"
                   className="w-full h-full object-cover"
                   key={currentSlide === idx ? media.url : undefined}
                 />
@@ -879,7 +905,7 @@ export default function Home() {
         ) : (
           // If searching or filtering by categories, show the standard grid of results.
           (searchQuery || !selectedCategories.includes('all')) ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-10 mb-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-3 sm:gap-x-4 gap-y-4 sm:gap-y-6 mb-12">
               {(
                 swapColumnsOnRefresh ? [...currentItems].reverse() : currentItems
               ).map((service: Service) => (
@@ -892,7 +918,7 @@ export default function Home() {
             </div>
           ) : (
             // Otherwise, show 6 category rows (one row per category). Each row scrolls horizontally if it has more items than fit.
-            <div className="space-y-10">
+            <div className="space-y-12">
               {getDailyCategoryOrder(categories.slice(1, 7)).map((category) => {
                 const servicesForCat = allServices.filter((s: Service) => 
                   s.category_id === category.id && 
@@ -916,9 +942,9 @@ export default function Home() {
                     </div>
 
                     <div className="relative">
-                      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                      <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
                         {servicesForCatToRender.map((service: Service) => (
-                          <div key={service.id} className="snap-start flex-shrink-0 w-[40%] sm:w-[34%] md:w-[30%] lg:w-[20%] xl:w-[16%]">
+                          <div key={service.id} className="snap-start flex-shrink-0 w-[68%] sm:w-[46%] md:w-[32%] lg:w-[23%] xl:w-[19%]">
                             <ServiceCard
                               service={service}
                               onClick={() => navigate(`/service/${service.slug || service.id}`)}
@@ -928,7 +954,7 @@ export default function Home() {
                       </div>
 
                       {/* Scroll hint arrow (non-interactive) */}
-                      <div className="absolute top-2 right-2 pointer-events-none">
+                      <div className="absolute top-1/2 -translate-y-1/2 right-2 pointer-events-none hidden md:block">
                         <div className="bg-white/90 dark:bg-black/60 rounded-full p-1 shadow-sm">
                           <ChevronRight className="h-4 w-4 text-gray-500 dark:text-gray-200" />
                         </div>
@@ -1067,14 +1093,13 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
       location = service.location
     }
     
-    if (!location) return <span className="text-[10px] md:text-[11px]">Location TBA</span>
+    if (!location) return <span className="text-sm">Location TBA</span>
     
     const preposition = getLocationPreposition(service.service_categories?.name)
     
     return (
-      <span>
-        <span className="text-[8px] md:text-[9px]">{preposition}</span>
-        <span className="text-[10px] md:text-[11px] ml-0.5">{location}</span>
+      <span className="truncate block">
+        {preposition} {location}
       </span>
     )
   }
@@ -1086,11 +1111,13 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
         <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-sm bg-gray-100 relative group-hover:shadow-md transition-shadow duration-300">
           {/* Category badge */}
           {service.service_categories?.name && (
-            <div className="absolute top-3 left-3 px-2 py-0.5 sm:px-2 sm:py-0.5 bg-white/95 rounded-full shadow-sm text-[10px] sm:text-[11px] font-semibold text-gray-800 max-w-[68%] truncate">
+            <div className="absolute top-3 left-3 px-2 py-1 bg-white/95 rounded-full shadow-sm text-[11px] font-semibold text-gray-800 max-w-[72%] truncate">
               {getCategoryBadge(service.service_categories?.name)}
             </div>
           )}
           <img
+            loading="lazy"
+            decoding="async"
             src={imageUrl}
             alt={service.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1099,10 +1126,10 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           {/* Save Button (kept) */}
           <button
             onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved) }}
-            className="absolute top-3 right-3 p-1 sm:p-1.5 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
+            className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
             aria-label={isSaved ? 'Unsave' : 'Save'}
           >
-            <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+            <Heart className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
           </button>
         </div>
 
@@ -1115,12 +1142,12 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           }`}>
             {service.title}
           </h3>
-          <div className="flex items-center justify-between">
-            <div className="text-gray-500 truncate">
+          <div className="flex items-center justify-between mt-1 mb-1.5">
+            <div className="text-gray-500 text-sm truncate pr-2">
               {getLocationText(service)}
             </div>
-            <div className="flex items-center gap-1 text-xs text-gray-600 flex-shrink-0">
-              <Star className="h-3 w-3 text-emerald-600 fill-current" />
+            <div className="flex items-center gap-1 text-xs text-gray-700 flex-shrink-0 ml-2">
+              <Star className="h-3 w-3 text-gray-900 fill-current" />
               <span className="leading-none">{rating > 0 ? rating.toFixed(1) : '0'}</span>
               {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
             </div>
@@ -1184,6 +1211,8 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
       {/* Hero Image */}
       <div className="relative h-96 bg-gray-900">
         <img
+          loading="lazy"
+          decoding="async"
           src={imageUrl}
           alt={service.title}
           className="w-full h-full object-cover opacity-90"
@@ -1269,7 +1298,7 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                     {service.flight_number && (
                       <div>
                         <span className="text-sm text-gray-500">Flight Number</span>

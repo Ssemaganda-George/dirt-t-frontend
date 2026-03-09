@@ -730,7 +730,7 @@ export function FlightsBookings() {
               </button>
             </div>
             <div className="flex justify-center">
-              <img src={ticketImageUrl} alt="Ticket QR Code" className="max-w-full h-auto" />
+              <img loading="lazy" decoding="async" src={ticketImageUrl} alt="Ticket QR Code" className="max-w-full h-auto" />
             </div>
           </div>
         </div>

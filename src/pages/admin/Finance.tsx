@@ -4,6 +4,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { useState } from 'react';
 import { usePreferences } from '../../contexts/PreferencesContext'
+import type { Transaction } from '../../lib/database';
 import { supabase } from '../../lib/supabaseClient';
 
 export function Finance() {
@@ -13,6 +14,8 @@ export function Finance() {
   const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
   const [paymentNotes, setPaymentNotes] = useState<{[key: string]: string}>({});
   const [dateRange, setDateRange] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Filter transactions by date range
   const getFilteredTransactions = () => {
@@ -721,7 +724,7 @@ export function Finance() {
                       {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {transaction.payment_method.replace('_', ' ')}
+                      <button onClick={() => setSelectedTransaction(transaction)} className="text-blue-600 hover:underline">{transaction.payment_method.replace('_', ' ')}</button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(transaction.status)}
@@ -740,6 +743,46 @@ export function Finance() {
               </tbody>
             </table>
           </div>
+
+          {/* Payment details modal */}
+          {selectedTransaction && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedTransaction(null)} />
+              <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold">Payment Details</h2>
+                  <button onClick={() => setSelectedTransaction(null)} className="text-gray-500 hover:text-black">Close</button>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                  <p className="text-sm text-gray-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_', ' ')}</span></p>
+                  <div className="mt-4">
+                    {selectedTransaction.payout_meta ? (
+                      selectedTransaction.payout_meta.type === 'bank' ? (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.name || selectedTransaction.payout_meta.account_name}</div>
+                          <div className="text-sm text-gray-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy account number</button></div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.provider || 'Mobile Money'}</div>
+                          {selectedTransaction.payout_meta.name && (
+                            <div className="text-sm text-gray-700">Account name: <span className="font-medium">{selectedTransaction.payout_meta.name}</span>
+                              <button className="ml-3 text-gray-500" onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.name || '')}>Copy</button>
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy phone number</button></div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-sm text-gray-500">No payout details available for this transaction.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {currentTransactions.length === 0 && (
             <div className="text-center py-12">

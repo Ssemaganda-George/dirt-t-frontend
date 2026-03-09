@@ -368,7 +368,7 @@ export default function TicketReceiptPage() {
                 <div className="flex flex-col items-center justify-center pl-2.5">
                   <div className="flex-shrink-0 mb-1">
                     {qrMap[t.id] ? (
-                      <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-16 h-16 border border-gray-200 rounded" />
+                      <img loading="lazy" decoding="async" src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-16 h-16 border border-gray-200 rounded" />
                     ) : (
                       <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
                     )}

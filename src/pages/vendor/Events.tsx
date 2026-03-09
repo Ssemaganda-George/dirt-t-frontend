@@ -252,8 +252,10 @@ export default function VendorEvents() {
           <div key={event.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-200">
             {/* Event Image */}
             <div className="h-32 md:h-36 bg-gray-200 relative">
-              {event.primary_image_url ? (
+                {event.primary_image_url ? (
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={event.primary_image_url}
                   alt={event.title}
                   className="w-full h-full object-cover"

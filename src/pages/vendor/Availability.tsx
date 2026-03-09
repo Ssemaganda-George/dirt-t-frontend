@@ -270,7 +270,7 @@ export default function VendorAvailability() {
               </div>
               <button
                 onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >
                 <X className="w-4 h-4 text-gray-500" />
               </button>
@@ -307,7 +307,7 @@ export default function VendorAvailability() {
                       </p>
                       <button
                         onClick={() => setSelectedBookingObj(b)}
-                        className="text-xs font-medium text-gray-900 hover:underline"
+                        className="text-xs font-medium text-gray-900 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
                       >
                         View details
                       </button>
@@ -327,7 +327,7 @@ export default function VendorAvailability() {
           <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl overflow-y-auto max-h-[85vh]">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-sm font-semibold text-gray-900">Booking Details</h2>
-              <button onClick={() => setSelectedBookingObj(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+              <button onClick={() => setSelectedBookingObj(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
