@@ -102,7 +102,7 @@ export default function Wallet() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setBookings((data as Booking[]) || [])
+      setBookings((data as unknown as Booking[]) || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load wallet activity')
     } finally {
@@ -174,7 +174,7 @@ export default function Wallet() {
       type: 'spend' as const,
       amount: booking.total_amount,
       currency: booking.currency,
-      title: booking.services?.title || 'Service booking',
+      title: booking.services?.[0]?.title || 'Service booking',
       created_at: booking.created_at
     }))
 

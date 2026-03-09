@@ -579,9 +579,7 @@ export default function VendorLogin() {
                     type="button"
                     onClick={() => {
                       if (currentStep > 1) {
-                        setError('')
-                        setShowStepValidationErrors(false)
-                        setCurrentStep(currentStep - 1)
+                        handlePrevStep()
                         return
                       }
 
