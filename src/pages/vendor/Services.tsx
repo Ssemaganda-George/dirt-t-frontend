@@ -3549,9 +3549,9 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
-        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
+        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Plus className="h-5 w-5 text-white" />
@@ -3569,10 +3569,10 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </button>
         </div>
         <form
-          className="flex-1 px-8 py-6 space-y-8 overflow-y-auto"
+          className="flex-1 px-2 sm:px-8 py-4 sm:py-6 space-y-8 overflow-y-auto w-full"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           onSubmit={(e) => { 
             e.preventDefault(); 
-            
             if (form.category_id === 'cat_activities') {
               if (!form.event_datetime?.trim()) {
                 alert('Event Date & Time is required for events');
@@ -3583,7 +3583,6 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 return;
               }
             }
-            
             onSubmit(form) 
           }}
         >
@@ -3678,17 +3677,17 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
           {renderCategorySpecificFields()}
 
-          <div className="flex justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-8 px-8 py-6 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-2 sm:-mx-8 px-2 sm:px-8 py-4 sm:py-6 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="min-h-[44px] px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               {initial?.id ? 'Save Changes' : 'Create Service'}
             </button>

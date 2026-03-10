@@ -548,11 +548,19 @@ export default function Home() {
       // Add "All" category at the beginning
       const allCategories = [
         { id: 'all', name: t('all_listings'), icon: Map },
-        ...sortedCategories.map(cat => ({
-          id: cat.id,
-          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Homes & Stays' : cat.name,
-          icon: cat.icon || MapPinIcon
-        }))
+        ...sortedCategories.map(cat => {
+          // If the category.icon is stored as a string (emoji) in the DB,
+          // convert it to a small React component that renders the emoji safely.
+          const IconComponent = typeof cat.icon === 'string'
+            ? (() => <span className="text-lg leading-none">{cat.icon}</span>)
+            : (cat.icon || MapPinIcon)
+
+          return {
+            id: cat.id,
+            name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Homes & Stays' : cat.name,
+            icon: IconComponent
+          }
+        })
       ]
       setCategories(allCategories)
     } catch (error) {

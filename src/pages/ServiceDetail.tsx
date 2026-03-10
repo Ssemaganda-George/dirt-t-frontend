@@ -28,6 +28,10 @@ import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryK
 import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
+    recording_allowed?: boolean
+    transportation_included?: boolean
+    meals_included?: boolean
+    certificates_provided?: boolean
   id: string
   slug?: string
   title: string
@@ -139,6 +143,10 @@ interface ServiceDetail {
   event_highlights?: string[]
   event_inclusions?: string[]
   event_prerequisites?: string[]
+  group_discounts?: boolean
+  photography_allowed?: boolean
+  safety_gear_required?: boolean
+  event_notes?: string
 }
 
 export default function ServiceDetail() {
@@ -1235,6 +1243,93 @@ export default function ServiceDetail() {
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Event Highlights */}
+            {service.event_highlights && service.event_highlights.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Event Highlights</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_highlights.map((highlight, idx) => (
+                    <li key={idx}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* What's Included */}
+            {service.event_inclusions && service.event_inclusions.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">What's Included</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_inclusions.map((inclusion, idx) => (
+                    <li key={idx}>{inclusion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Prerequisites */}
+            {service.event_prerequisites && service.event_prerequisites.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Prerequisites</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_prerequisites.map((prereq, idx) => (
+                    <li key={idx}>{prereq}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Event Features */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.group_discounts && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Group Discounts Available</span>
+                </div>
+              )}
+              {service.photography_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Photography Allowed</span>
+                </div>
+              )}
+              {service.recording_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Recording Allowed</span>
+                </div>
+              )}
+              {service.transportation_included && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Transportation Included</span>
+                </div>
+              )}
+              {service.meals_included && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Meals Included</span>
+                </div>
+              )}
+              {service.certificates_provided && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Certificates Provided</span>
+                </div>
+              )}
+              {service.safety_gear_required && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-yellow-500 mr-2" />
+                  <span className="text-sm text-gray-700">Safety Gear Required</span>
+                </div>
+              )}
+              {service.event_notes && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Notes:</span> {service.event_notes}
                 </div>
               )}
             </div>
