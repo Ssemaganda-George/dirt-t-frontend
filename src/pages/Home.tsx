@@ -298,7 +298,7 @@ export default function Home() {
   const navigate = useNavigate()
 
   // Use the reactive useServices hook
-  const { services: allServices, loading: servicesLoading } = useServices()
+  const { services: allServices, loading: servicesLoading } = useServices(undefined, { includeExpired: false })
 
   const { t } = usePreferences()
 
@@ -545,14 +545,24 @@ export default function Home() {
         return aPriority - bPriority
       })
       
-      // Add "All" category at the beginning
+      // Force Lucide icons for all main categories, ignore DB icon if string/emoji
+      const iconMap: Record<string, any> = {
+        cat_hotels: Hotel,
+        cat_transport: Car,
+        cat_activities: Target,
+        cat_tour_packages: Map,
+        cat_restaurants: Utensils,
+        cat_shops: ShoppingBag
+      }
       const allCategories = [
         { id: 'all', name: t('all_listings'), icon: Map },
-        ...sortedCategories.map(cat => ({
-          id: cat.id,
-          name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Homes & Stays' : cat.name,
-          icon: cat.icon || MapPinIcon
-        }))
+        ...sortedCategories.map(cat => {
+          return {
+            id: cat.id,
+            name: cat.id === 'cat_activities' ? 'Events' : cat.id === 'cat_hotels' ? 'Homes & Stays' : cat.name,
+            icon: iconMap[cat.id] || MapPinIcon
+          }
+        })
       ]
       setCategories(allCategories)
     } catch (error) {

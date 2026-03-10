@@ -76,6 +76,16 @@ export default function VendorServices() {
   const [ticketTypes, setTicketTypes] = useState<{ [serviceId: string]: any[] }>({})
   const itemsPerPage = 10
 
+  // Helper: determine if an event is more than 24 hours past its event datetime
+  function isPast24HoursAfterEvent(service: Service | any): boolean {
+    const eventDateTimeStr = (service as any).event_datetime || (service as any).event_date;
+    if (!eventDateTimeStr) return false;
+    const eventDate = new Date(eventDateTimeStr);
+    if (isNaN(eventDate.getTime())) return false;
+    const now = Date.now();
+    return now > eventDate.getTime() + 24 * 60 * 60 * 1000;
+  }
+
   // Debounce search query for better performance
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -307,21 +317,22 @@ export default function VendorServices() {
         cancellation_policy: data.cancellation_policy || ''
       } as any)
 
-      // Persist ticket types if provided (internal ticketing)
       try {
-        const ticketTypes: any[] = (data as any).ticket_types || []
-        for (const tt of ticketTypes) {
-          // Ensure numeric values
-          const metadata = { ...(tt.metadata || {}) }
-          await createTicketType(created.id, {
-            title: tt.title,
-            description: tt.description || '',
-            price: Number(tt.price || 0),
-            quantity: Number(tt.quantity || 0),
-            metadata,
-            sale_start: normalizeDateTimeLocalToISO(tt.sale_start) ?? undefined,
-            sale_end: normalizeDateTimeLocalToISO(tt.sale_end) ?? undefined
-          })
+        // Persist ticket types (if any) for events
+        const tickets = (data as any).ticket_types || []
+        if (tickets.length > 0 && created?.id) {
+          for (const t of tickets) {
+            const payload = {
+              title: t.title || t.name || 'Ticket',
+              description: t.description || '',
+              price: Number(t.price) || 0,
+              quantity: Number(t.quantity) || 0,
+              metadata: t.metadata || {},
+              sale_start: normalizeDateTimeLocalToISO(t.sale_start) || t.sale_start || null,
+              sale_end: normalizeDateTimeLocalToISO(t.sale_end) || t.sale_end || null
+            }
+            await createTicketType(created.id, payload)
+          }
         }
       } catch (ticketErr) {
         console.warn('Failed to persist ticket types:', ticketErr)
@@ -761,13 +772,19 @@ export default function VendorServices() {
                       </h3>
                       <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">{s.description}</p>
                     </div>
-                    <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                      s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                      'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
-                    </span>
+                    {(() => {
+                      const autoDeactivated = isPast24HoursAfterEvent(s);
+                      const available = s.status === 'approved' && !autoDeactivated;
+                      return (
+                        <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                          available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {available ? 'Live' : s.status === 'rejected' ? 'Rejected' : (autoDeactivated ? 'Unavailable' : 'Pending')}
+                        </span>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-4 mb-4 text-sm">
@@ -871,21 +888,26 @@ export default function VendorServices() {
                           {s.scan_enabled ? (
                             <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">Scan link ↗</a>
                           ) : (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                  alert('Activation request submitted.')
-                                } catch (err) {
-                                  console.error('Failed to create activation request:', err)
-                                  alert('Failed to submit request.')
-                                }
-                              }}
-                              className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
-                            >
-                              Request scan activation
-                            </button>
-                          )}
+                                <div>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                        alert('Activation request submitted.')
+                                      } catch (err) {
+                                        console.error('Failed to create activation request:', err)
+                                        alert('Failed to submit request.')
+                                      }
+                                    }}
+                                    className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
+                                  >
+                                    Request scan activation
+                                  </button>
+                                  {isPast24HoursAfterEvent(s) && (
+                                    <div className="text-[11px] text-gray-500 italic mt-1">Auto-deactivated after 24h</div>
+                                  )}
+                                </div>
+                              )}
                         </div>
                       )}
                     </td>
@@ -895,13 +917,19 @@ export default function VendorServices() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                        s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
-                        {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
-                      </span>
+                      {(() => {
+                        const autoDeactivated = isPast24HoursAfterEvent(s);
+                        const available = s.status === 'approved' && !autoDeactivated;
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                            available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {available ? 'Live' : s.status === 'rejected' ? 'Rejected' : (autoDeactivated ? 'Unavailable' : 'Pending')}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -3521,9 +3549,9 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
-        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
+        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Plus className="h-5 w-5 text-white" />
@@ -3541,10 +3569,10 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
           </button>
         </div>
         <form
-          className="flex-1 px-8 py-6 space-y-8 overflow-y-auto"
+          className="flex-1 px-2 sm:px-8 py-4 sm:py-6 space-y-8 overflow-y-auto w-full"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           onSubmit={(e) => { 
             e.preventDefault(); 
-            
             if (form.category_id === 'cat_activities') {
               if (!form.event_datetime?.trim()) {
                 alert('Event Date & Time is required for events');
@@ -3555,7 +3583,6 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 return;
               }
             }
-            
             onSubmit(form) 
           }}
         >
@@ -3650,17 +3677,17 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
 
           {renderCategorySpecificFields()}
 
-          <div className="flex justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-8 px-8 py-6 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-2 sm:-mx-8 px-2 sm:px-8 py-4 sm:py-6 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="min-h-[44px] px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               {initial?.id ? 'Save Changes' : 'Create Service'}
             </button>

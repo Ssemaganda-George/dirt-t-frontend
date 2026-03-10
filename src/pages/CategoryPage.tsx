@@ -10,7 +10,7 @@ import type { Service } from '../types'
 
 export default function CategoryPage() {
   const { category } = useParams<{ category: string }>()
-  const { services: allServices, loading } = useServices()
+  const { services: allServices, loading } = useServices(undefined, { includeExpired: false })
   const [filteredServices, setFilteredServices] = useState<Service[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('recommended')
@@ -42,17 +42,7 @@ export default function CategoryPage() {
   }
 
   // Category accent colors
-  const categoryAccents: { [key: string]: string } = {
-    'hotels': 'from-indigo-900 to-indigo-700',
-    'tours': 'from-emerald-900 to-teal-700',
-    'restaurants': 'from-orange-900 to-amber-700',
-    'transport': 'from-slate-900 to-slate-700',
-    'activities': 'from-purple-900 to-violet-700',
-    'events': 'from-purple-900 to-violet-700',
-    'flights': 'from-sky-900 to-cyan-700',
-    'shops': 'from-rose-900 to-pink-700',
-    'services': 'from-gray-900 to-gray-700'
-  }
+  // ...existing code...
 
   const getCategoryFilters = () => {
     if (category === 'services') {
@@ -126,7 +116,8 @@ export default function CategoryPage() {
 
   const categoryFilters = getCategoryFilters()
   const categoryName = categoryNames[category || ''] || 'Services'
-  const accentGradient = categoryAccents[category || ''] || 'from-gray-900 to-gray-700'
+  // Use a single solid green for all headers
+  const accentGradient = 'bg-emerald-700'
 
   useEffect(() => {
     if (allServices) {
@@ -177,9 +168,8 @@ export default function CategoryPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Category header banner */}
-      <div className={`bg-gradient-to-r ${accentGradient} py-10 md:py-14`}>
+      <div className={`${accentGradient} py-10 md:py-14`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">Uganda</p>
           <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
             {categoryName}
           </h1>

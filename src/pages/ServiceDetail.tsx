@@ -29,116 +29,123 @@ import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
   id: string
-  slug?: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location: string
-  duration_hours: number
-  max_capacity: number
-  amenities: string[]
-  vendors?: {
-    business_name: string
-    business_description: string
-    business_phone: string
-    business_email: string
-    business_address: string
-    id?: string
-    user_id?: string
-  } | null
-  vendor_id?: string
-  scan_enabled?: boolean
-  service_categories: {
-    name: string
-  }
-
-  // Service-specific fields
-  duration_days?: number
-  star_rating?: number
-  room_types?: string[]
-  check_in_time?: string
-  check_out_time?: string
-  facilities?: string[]
-  breakfast_included?: boolean
-  wifi_available?: boolean
-  parking_available?: boolean
-  pet_friendly?: boolean
-  generator_backup?: boolean
-  smoking_allowed?: boolean
-  children_allowed?: boolean
-  disabled_access?: boolean
-  concierge_service?: boolean
-  total_rooms?: number
-  minimum_stay?: number
-  maximum_guests?: number
-  hotel_policies?: string[]
-  difficulty_level?: string
-  minimum_age?: number
-  languages_offered?: string[]
-  included_items?: string[]
-  excluded_items?: string[]
-  itinerary?: string[]
-  meeting_point?: string
-  end_point?: string
-  transportation_included?: boolean
-  meals_included?: string[]
-  guide_included?: boolean
-  accommodation_included?: boolean
-  vehicle_type?: string
-  vehicle_capacity?: number
-  driver_included?: boolean
-  air_conditioning?: boolean
-  pickup_locations?: string[]
-  dropoff_locations?: string[]
-  route_description?: string
-  license_required?: string
-  booking_notice_hours?: number
-  gps_tracking?: boolean
-  fuel_included?: boolean
-  tolls_included?: boolean
-  insurance_included?: boolean
-  usb_charging?: boolean
-  child_seat?: boolean
-  roof_rack?: boolean
-  towing_capacity?: boolean
-  four_wheel_drive?: boolean
-  automatic_transmission?: boolean
-  reservations_required?: boolean
-  transport_terms?: string
-  airline?: string
-  flight_number?: string
-  departure_city?: string
-  arrival_city?: string
-  flight_class?: string
-  cuisine_type?: string
-  average_cost_per_person?: number
-  outdoor_seating?: boolean
-  menu_items?: string[]
-  dietary_options?: string[]
-  opening_hours?: any
-  live_music?: boolean
-  private_dining?: boolean
-  alcohol_served?: boolean
-  activity_type?: string
-  skill_level_required?: string
-  equipment_provided?: string[]
-  languages_spoken?: string[]
-  specialties?: string[]
-  certifications?: string[]
-  years_experience?: number
-  service_area?: string
-
-  // Event-specific fields
-  event_datetime?: string
-  event_location?: string
-  event_status?: string
-  registration_deadline?: string
-  max_participants?: number
-  event_highlights?: string[]
-  event_inclusions?: string[]
-  event_prerequisites?: string[]
+    slug?: string
+    title: string
+    description: string
+    price: number
+    currency: string
+    images: string[]
+    location: string
+    duration_hours: number
+    max_capacity: number
+    amenities: string[]
+    vendors?: {
+      business_name: string
+      business_description: string
+      business_phone: string
+      business_email: string
+      business_address: string
+      id?: string
+      user_id?: string
+    } | null
+    vendor_id?: string
+    scan_enabled?: boolean
+    service_categories: {
+      name: string
+    }
+  
+    // Service-specific fields
+    duration_days?: number
+    star_rating?: number
+    room_types?: string[]
+    check_in_time?: string
+    check_out_time?: string
+    facilities?: string[]
+    breakfast_included?: boolean
+    wifi_available?: boolean
+    parking_available?: boolean
+    pet_friendly?: boolean
+    generator_backup?: boolean
+    smoking_allowed?: boolean
+    children_allowed?: boolean
+    disabled_access?: boolean
+    concierge_service?: boolean
+    total_rooms?: number
+    minimum_stay?: number
+    maximum_guests?: number
+    hotel_policies?: string[]
+    difficulty_level?: string
+    minimum_age?: number
+    languages_offered?: string[]
+    included_items?: string[]
+    excluded_items?: string[]
+    itinerary?: string[]
+    meeting_point?: string
+    end_point?: string
+    transportation_included?: boolean
+    meals_included?: string[]
+    guide_included?: boolean
+    accommodation_included?: boolean
+    vehicle_type?: string
+    vehicle_capacity?: number
+    driver_included?: boolean
+    air_conditioning?: boolean
+    pickup_locations?: string[]
+    dropoff_locations?: string[]
+    route_description?: string
+    license_required?: string
+    booking_notice_hours?: number
+    gps_tracking?: boolean
+    fuel_included?: boolean
+    tolls_included?: boolean
+    insurance_included?: boolean
+    usb_charging?: boolean
+    child_seat?: boolean
+    roof_rack?: boolean
+    towing_capacity?: boolean
+    four_wheel_drive?: boolean
+    automatic_transmission?: boolean
+    reservations_required?: boolean
+    transport_terms?: string
+    airline?: string
+    flight_number?: string
+    departure_city?: string
+    arrival_city?: string
+    flight_class?: string
+    cuisine_type?: string
+    average_cost_per_person?: number
+    outdoor_seating?: boolean
+    menu_items?: string[]
+    dietary_options?: string[]
+    opening_hours?: any
+    live_music?: boolean
+    private_dining?: boolean
+    alcohol_served?: boolean
+    activity_type?: string
+    skill_level_required?: string
+    equipment_provided?: string[]
+    languages_spoken?: string[]
+    specialties?: string[]
+    certifications?: string[]
+    years_experience?: number
+    service_area?: string
+  
+    // Event-specific fields
+    event_datetime?: string
+    event_location?: string
+    event_status?: string
+    registration_deadline?: string
+    max_participants?: number
+    event_highlights?: string[]
+    event_inclusions?: string[]
+    event_prerequisites?: string[]
+    group_discounts?: boolean
+    photography_allowed?: boolean
+    recording_allowed?: boolean
+    meals_included_flag?: boolean
+    certificates_provided?: boolean
+    safety_gear_required?: boolean
+    event_notes?: string
 }
 
 export default function ServiceDetail() {
@@ -310,6 +317,15 @@ export default function ServiceDetail() {
       return () => container.removeEventListener('scroll', handleScroll)
     }
   }, [service?.images?.length])
+
+  // Keep selectedImage in sync with the carousel index so desktop scrolling updates the main selected image
+  useEffect(() => {
+    if (service?.images && service.images.length > 0) {
+      const idx = Math.min(Math.max(0, currentImageIndex), service.images.length - 1)
+      const img = service.images[idx]
+      if (img && img !== selectedImage) setSelectedImage(img)
+    }
+  }, [currentImageIndex, service?.images])
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1229,6 +1245,93 @@ export default function ServiceDetail() {
                 </div>
               )}
             </div>
+
+            {/* Event Highlights */}
+            {service.event_highlights && service.event_highlights.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Event Highlights</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_highlights.map((highlight, idx) => (
+                    <li key={idx}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* What's Included */}
+            {service.event_inclusions && service.event_inclusions.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">What's Included</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_inclusions.map((inclusion, idx) => (
+                    <li key={idx}>{inclusion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Prerequisites */}
+            {service.event_prerequisites && service.event_prerequisites.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Prerequisites</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_prerequisites.map((prereq, idx) => (
+                    <li key={idx}>{prereq}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Event Features */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.group_discounts && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Group Discounts Available</span>
+                </div>
+              )}
+              {service.photography_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Photography Allowed</span>
+                </div>
+              )}
+              {service.recording_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Recording Allowed</span>
+                </div>
+              )}
+              {service.transportation_included && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Transportation Included</span>
+                </div>
+              )}
+              {service.meals_included_flag && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Meals Included</span>
+                </div>
+              )}
+              {service.certificates_provided && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Certificates Provided</span>
+                </div>
+              )}
+              {service.safety_gear_required && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-yellow-500 mr-2" />
+                  <span className="text-sm text-gray-700">Safety Gear Required</span>
+                </div>
+              )}
+              {service.event_notes && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Notes:</span> {service.event_notes}
+                </div>
+              )}
+            </div>
           </div>
         )
 
@@ -1473,11 +1576,11 @@ export default function ServiceDetail() {
 
       {/* Mobile Image with Header Overlay */}
       <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
-        <div className="relative h-[60vh]">
+        <div className="relative h-[95vw] min-h-[400px] max-h-[650px] rounded-b-2xl shadow-lg overflow-hidden">
           {/* Scrollable Image Container */}
           <div 
             ref={scrollContainerRef}
-            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" 
+            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth bg-gray-200" 
             style={{ scrollBehavior: 'smooth' }}
           >
             <div className="flex w-full h-full">
@@ -1489,7 +1592,8 @@ export default function ServiceDetail() {
                       decoding="async"
                       src={image}
                       alt={`${service.title} ${index + 1}`}
-                      className="w-full h-full object-cover cursor-pointer"
+                      className="w-full h-full object-cover cursor-pointer rounded-b-2xl"
+                      style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
                       onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
                     />
                   </div>
@@ -1501,83 +1605,82 @@ export default function ServiceDetail() {
                     decoding="async"
                     src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
                     alt={service.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-b-2xl"
+                    style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
                   />
                 </div>
               )}
             </div>
           </div>
-          
           {/* Mobile Header Overlay */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-            <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+          <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between z-10">
+            <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center space-x-2">
-              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
                 <Heart className="h-5 w-5" />
               </button>
-              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
                 <Share2 className="h-5 w-5" />
               </button>
               <button 
                 onClick={handleSaveToCart}
-                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all"
+                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all"
               >
                 <ShoppingCart className="h-5 w-5" />
               </button>
             </div>
           </div>
-
           {/* Image Counter */}
           {service.images && service.images.length > 0 && (
-            <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-sm z-10 border border-gray-200 shadow-sm">
+            <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-xs z-10 border border-gray-200 shadow-md">
               {currentImageIndex + 1} / {service.images.length}
             </div>
           )}
-
           {/* Event hero overlay for Activities/Events - compact & mobile-optimized card */}
           {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-            <div className="absolute left-3 right-3 bottom-5 z-20">
-              <div className="w-full bg-gradient-to-r from-black/80 via-black/50 to-transparent text-white px-3 py-3 rounded-lg shadow-lg">
-                <div className="flex items-start justify-between gap-2">
+            <div className="absolute left-2 right-2 bottom-2 z-20">
+              <div className="w-full bg-gradient-to-r from-black/90 via-black/60 to-transparent text-white px-2 py-2 rounded-lg shadow-lg border border-white/10 backdrop-blur-sm">
+                <div className="flex items-start justify-between gap-1">
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] uppercase tracking-wide text-gray-200 font-semibold mb-0">{service.service_categories?.name || 'Event'}</div>
-                    <h2 className="text-base font-semibold leading-tight truncate">{service.title}</h2>
-                    <div className="mt-1 flex items-center text-xs text-gray-200 space-x-2">
+                    <div className="text-[9px] uppercase tracking-wide text-gray-200 font-semibold mb-0">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-xs font-semibold leading-tight truncate">{service.title}</h2>
+                    <div className="mt-0.5 flex items-center text-[10px] text-gray-200 space-x-1">
                       {service.duration_hours && (
                         <div className="flex items-center truncate">
-                          <Clock className="h-3.5 w-3.5 mr-1.5" />
+                          <Clock className="h-3 w-3 mr-1" />
                           <span>{service.duration_hours}h</span>
                         </div>
                       )}
                       {(service.location || service.event_location) && (
                         <div className="flex items-center truncate">
-                          <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                          <MapPin className="h-3 w-3 mr-1" />
                           <span className="truncate">{service.event_location || service.location}</span>
                         </div>
                       )}
                     </div>
                   </div>
-
-                    <div className="flex-shrink-0 text-right pl-2">
-                      <div className="text-[10px] text-gray-300">From</div>
-                      <div className="text-lg font-semibold inline-flex items-baseline">
-                        {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-                        <span className="text-sm font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
-                      </div>
-                      {/* Mobile-only Buy Tickets CTA (keeps purchase action accessible on mobile hero for events/activities) */}
-                      <button
-                        onClick={() => {
-                          const el = document.querySelector('[data-tickets-section]')
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                        }}
-                        aria-label="Buy Tickets"
-                        className="mt-2 w-28 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md shadow-sm transition-colors md:hidden"
-                      >
-                        Buy Tickets
-                      </button>
+                  <div className="flex-shrink-0 text-right pl-1 flex flex-col items-end">
+                    <div className="text-[9px] text-gray-300">From</div>
+                    <div className="text-base font-semibold">
+                      {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
                     </div>
+                    <div className="text-[9px] font-normal text-gray-200 whitespace-nowrap align-middle -mt-0.5">
+                      {getUnitLabel(service.service_categories?.name || '')}
+                    </div>
+                    {/* Mobile-only Buy Tickets CTA (smaller button) */}
+                    <button
+                      onClick={() => {
+                        const el = document.querySelector('[data-tickets-section]')
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }}
+                      aria-label="Buy Tickets"
+                      className="mt-1 w-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 rounded shadow-md transition-colors md:hidden sticky bottom-0"
+                    >
+                      Buy Tickets
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1596,20 +1699,40 @@ export default function ServiceDetail() {
           <div className="lg:col-span-2">
             {/* Image Gallery - Desktop */}
             <div className="mb-8 hidden md:block">
-              {/* Main Image Display */}
+              {/* Main Image Display (desktop) - horizontally scrollable so users can browse without opening preview */}
               <div className="relative mb-4">
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                  alt={service.title}
-                  className="w-full h-[520px] object-cover rounded-lg shadow-lg cursor-pointer"
-                  onClick={() => {
-                    const idx = service.images?.indexOf(selectedImage || service.images?.[0] || '') ?? 0
-                    setLightboxIndex(Math.max(0, idx))
-                    setLightboxOpen(true)
-                  }}
-                />
+                <div
+                  ref={scrollContainerRef}
+                  className="w-full h-[520px] overflow-x-auto snap-x snap-mandatory scroll-smooth hidden md:block"
+                  style={{ scrollBehavior: 'smooth' }}
+                >
+                  <div className="flex w-full h-full">
+                    {service.images && service.images.length > 0 ? (
+                      service.images.map((image, index) => (
+                        <div key={index} className="flex-shrink-0 w-full snap-center">
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={image}
+                            alt={`${service.title} ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer rounded-lg shadow-lg"
+                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex-shrink-0 w-full snap-center">
+                        <img
+                          loading="lazy"
+                          decoding="async"
+                          src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                          alt={service.title}
+                          className="w-full h-full object-cover rounded-lg shadow-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Desktop Header Overlay – inside image */}
                 <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
@@ -1712,7 +1835,7 @@ export default function ServiceDetail() {
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
-            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''}`}>
+            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''} md:overflow-visible`}>
               {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
                   <div data-tickets-section>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
