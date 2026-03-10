@@ -41,7 +41,7 @@ serve(async (req) => {
       )
     }
 
-    let body: { amount: number; phone_number: string; order_id: string; description?: string; user_id?: string }
+    let body: { amount: number; phone_number: string; order_id?: string; booking_id?: string; description?: string; user_id?: string }
     try {
       body = await req.json()
     } catch {
@@ -51,10 +51,17 @@ serve(async (req) => {
       )
     }
 
-    const { amount, phone_number, order_id, description, user_id } = body
-    if (!amount || !phone_number || !order_id) {
+    const { amount, phone_number, order_id, booking_id, description, user_id } = body
+    if (!amount || !phone_number) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: amount, phone_number, order_id" }),
+        JSON.stringify({ error: "Missing required fields: amount, phone_number" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
+    // Either order_id (events/tickets) or booking_id (hotel/activity/tour/restaurant) must be provided
+    if (!order_id && !booking_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: order_id or booking_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       )
     }
@@ -88,7 +95,7 @@ serve(async (req) => {
       phone_number: formattedPhone,
       country: "UG",
       reference,
-      description: description || `Order #${order_id} payment`,
+      description: description || (order_id ? `Order #${order_id} payment` : `Booking #${booking_id} payment`),
       callback_url: webhookUrl,
     }
 
@@ -150,7 +157,8 @@ serve(async (req) => {
     const { data: paymentRow, error: insertError } = await supabase
       .from("payments")
       .insert({
-        order_id: order_id,
+        ...(order_id ? { order_id } : {}),
+        ...(booking_id ? { booking_id } : {}),
         user_id: user_id || null,
         amount: amountInt,
         phone_number: formattedPhone,

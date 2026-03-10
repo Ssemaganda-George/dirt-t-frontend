@@ -99,6 +99,31 @@ async function sendVendorSignupEmail(payload: VendorSignupEmailPayload) {
   return res.json()
 }
 
+async function notifyAdminNewAccount(payload: {
+  userId: string
+  email: string
+  fullName: string
+  role: 'tourist' | 'vendor'
+  businessName?: string
+}) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+  if (!supabaseUrl) return
+  const res = await fetch(`${supabaseUrl}/functions/v1/notify-admin-new-account`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'apikey': supabaseAnonKey,
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    console.warn('Admin notification failed:', res.status, text)
+  }
+}
+
 async function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -360,6 +385,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Unexpected error creating tourist during sign up:', err)
       }
+      // Notify admin of new tourist registration
+      notifyAdminNewAccount({ userId: u.id, email, fullName: `${firstName} ${lastName}`, role: 'tourist' }).catch(console.error)
     }
 
     if (role === 'vendor') {
@@ -378,6 +405,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Unexpected error creating vendor during sign up:', err);
       }
       sendVendorSignupEmail({ userId: u.id, email, fullName: `${firstName} ${lastName}` }).catch(console.error)
+      // Notify admin of new vendor registration pending approval
+      notifyAdminNewAccount({ userId: u.id, email, fullName: `${firstName} ${lastName}`, role: 'vendor' }).catch(console.error)
     }
 
     // Do not fetch profile into context yet; user will load it after verified sign-in.
