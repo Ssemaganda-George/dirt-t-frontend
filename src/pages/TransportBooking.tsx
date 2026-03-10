@@ -687,48 +687,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     return Math.ceil(diffHours / 24) || 1
   }
 
-  // Generate and download a simple HTML receipt for the booking
-  const downloadReceipt = (result: any) => {
-    try {
-      const receiptHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Receipt ${result.id}</title>
-        <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;margin:20px;color:#111}h1{font-size:18px}table{width:100%;border-collapse:collapse}td{padding:8px;border-bottom:1px solid #eee}</style>
-        </head><body>
-        <h1>Booking Receipt</h1>
-        <p><strong>Reference:</strong> ${result.id}</p>
-        <h2>Service</h2>
-        <table>
-          <tr><td>Title</td><td>${service.title}</td></tr>
-          <tr><td>Provider</td><td>${service.vendors?.business_name || 'N/A'}</td></tr>
-          <tr><td>Location</td><td>${service.location}</td></tr>
-        </table>
-        <h2>Trip</h2>
-        <table>
-          <tr><td>Pick-up</td><td>${bookingData.startDate || ''} ${bookingData.startTime ? 'at ' + bookingData.startTime : ''}</td></tr>
-          <tr><td>Drop-off</td><td>${bookingData.endDate || ''} ${bookingData.endTime ? 'at ' + bookingData.endTime : ''}</td></tr>
-          <tr><td>Passengers</td><td>${bookingData.passengers}</td></tr>
-        </table>
-        <h2>Payment</h2>
-        <table>
-          <tr><td>Total</td><td>${formatCurrencyWithConversion(totalPrice, service.currency)}</td></tr>
-          <tr><td>Method</td><td>${bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</td></tr>
-        </table>
-        <p style="margin-top:18px;font-size:13px;color:#555">Thank you for booking with us.</p>
-        </body></html>`
-
-      const blob = new Blob([receiptHtml], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `receipt-${result.id}.html`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error('Failed to generate receipt:', e)
-      alert('Failed to download receipt.')
-    }
-  }
+  // ...existing code...
 
   // Generate and download a PDF receipt using jsPDF
   const downloadReceiptPDF = (result: any) => {

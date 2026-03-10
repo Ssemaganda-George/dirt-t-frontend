@@ -42,17 +42,7 @@ export default function CategoryPage() {
   }
 
   // Category accent colors
-  const categoryAccents: { [key: string]: string } = {
-    'hotels': 'from-indigo-900 to-indigo-700',
-    'tours': 'from-emerald-900 to-teal-700',
-    'restaurants': 'from-orange-900 to-amber-700',
-    'transport': 'from-slate-900 to-slate-700',
-    'activities': 'from-purple-900 to-violet-700',
-    'events': 'from-purple-900 to-violet-700',
-    'flights': 'from-sky-900 to-cyan-700',
-    'shops': 'from-rose-900 to-pink-700',
-    'services': 'from-gray-900 to-gray-700'
-  }
+  // ...existing code...
 
   const getCategoryFilters = () => {
     if (category === 'services') {

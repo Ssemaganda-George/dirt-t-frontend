@@ -28,125 +28,124 @@ import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryK
 import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
-    recording_allowed?: boolean
-    transportation_included?: boolean
-    meals_included?: boolean
-    certificates_provided?: boolean
   id: string
-  slug?: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location: string
-  duration_hours: number
-  max_capacity: number
-  amenities: string[]
-  vendors?: {
-    business_name: string
-    business_description: string
-    business_phone: string
-    business_email: string
-    business_address: string
-    id?: string
-    user_id?: string
-  } | null
-  vendor_id?: string
-  scan_enabled?: boolean
-  service_categories: {
-    name: string
-  }
-
-  // Service-specific fields
-  duration_days?: number
-  star_rating?: number
-  room_types?: string[]
-  check_in_time?: string
-  check_out_time?: string
-  facilities?: string[]
-  breakfast_included?: boolean
-  wifi_available?: boolean
-  parking_available?: boolean
-  pet_friendly?: boolean
-  generator_backup?: boolean
-  smoking_allowed?: boolean
-  children_allowed?: boolean
-  disabled_access?: boolean
-  concierge_service?: boolean
-  total_rooms?: number
-  minimum_stay?: number
-  maximum_guests?: number
-  hotel_policies?: string[]
-  difficulty_level?: string
-  minimum_age?: number
-  languages_offered?: string[]
-  included_items?: string[]
-  excluded_items?: string[]
-  itinerary?: string[]
-  meeting_point?: string
-  end_point?: string
-  transportation_included?: boolean
-  meals_included?: string[]
-  guide_included?: boolean
-  accommodation_included?: boolean
-  vehicle_type?: string
-  vehicle_capacity?: number
-  driver_included?: boolean
-  air_conditioning?: boolean
-  pickup_locations?: string[]
-  dropoff_locations?: string[]
-  route_description?: string
-  license_required?: string
-  booking_notice_hours?: number
-  gps_tracking?: boolean
-  fuel_included?: boolean
-  tolls_included?: boolean
-  insurance_included?: boolean
-  usb_charging?: boolean
-  child_seat?: boolean
-  roof_rack?: boolean
-  towing_capacity?: boolean
-  four_wheel_drive?: boolean
-  automatic_transmission?: boolean
-  reservations_required?: boolean
-  transport_terms?: string
-  airline?: string
-  flight_number?: string
-  departure_city?: string
-  arrival_city?: string
-  flight_class?: string
-  cuisine_type?: string
-  average_cost_per_person?: number
-  outdoor_seating?: boolean
-  menu_items?: string[]
-  dietary_options?: string[]
-  opening_hours?: any
-  live_music?: boolean
-  private_dining?: boolean
-  alcohol_served?: boolean
-  activity_type?: string
-  skill_level_required?: string
-  equipment_provided?: string[]
-  languages_spoken?: string[]
-  specialties?: string[]
-  certifications?: string[]
-  years_experience?: number
-  service_area?: string
-
-  // Event-specific fields
-  event_datetime?: string
-  event_location?: string
-  event_status?: string
-  registration_deadline?: string
-  max_participants?: number
-  event_highlights?: string[]
-  event_inclusions?: string[]
-  event_prerequisites?: string[]
-  group_discounts?: boolean
-  photography_allowed?: boolean
-  safety_gear_required?: boolean
-  event_notes?: string
+    slug?: string
+    title: string
+    description: string
+    price: number
+    currency: string
+    images: string[]
+    location: string
+    duration_hours: number
+    max_capacity: number
+    amenities: string[]
+    vendors?: {
+      business_name: string
+      business_description: string
+      business_phone: string
+      business_email: string
+      business_address: string
+      id?: string
+      user_id?: string
+    } | null
+    vendor_id?: string
+    scan_enabled?: boolean
+    service_categories: {
+      name: string
+    }
+  
+    // Service-specific fields
+    duration_days?: number
+    star_rating?: number
+    room_types?: string[]
+    check_in_time?: string
+    check_out_time?: string
+    facilities?: string[]
+    breakfast_included?: boolean
+    wifi_available?: boolean
+    parking_available?: boolean
+    pet_friendly?: boolean
+    generator_backup?: boolean
+    smoking_allowed?: boolean
+    children_allowed?: boolean
+    disabled_access?: boolean
+    concierge_service?: boolean
+    total_rooms?: number
+    minimum_stay?: number
+    maximum_guests?: number
+    hotel_policies?: string[]
+    difficulty_level?: string
+    minimum_age?: number
+    languages_offered?: string[]
+    included_items?: string[]
+    excluded_items?: string[]
+    itinerary?: string[]
+    meeting_point?: string
+    end_point?: string
+    transportation_included?: boolean
+    meals_included?: string[]
+    guide_included?: boolean
+    accommodation_included?: boolean
+    vehicle_type?: string
+    vehicle_capacity?: number
+    driver_included?: boolean
+    air_conditioning?: boolean
+    pickup_locations?: string[]
+    dropoff_locations?: string[]
+    route_description?: string
+    license_required?: string
+    booking_notice_hours?: number
+    gps_tracking?: boolean
+    fuel_included?: boolean
+    tolls_included?: boolean
+    insurance_included?: boolean
+    usb_charging?: boolean
+    child_seat?: boolean
+    roof_rack?: boolean
+    towing_capacity?: boolean
+    four_wheel_drive?: boolean
+    automatic_transmission?: boolean
+    reservations_required?: boolean
+    transport_terms?: string
+    airline?: string
+    flight_number?: string
+    departure_city?: string
+    arrival_city?: string
+    flight_class?: string
+    cuisine_type?: string
+    average_cost_per_person?: number
+    outdoor_seating?: boolean
+    menu_items?: string[]
+    dietary_options?: string[]
+    opening_hours?: any
+    live_music?: boolean
+    private_dining?: boolean
+    alcohol_served?: boolean
+    activity_type?: string
+    skill_level_required?: string
+    equipment_provided?: string[]
+    languages_spoken?: string[]
+    specialties?: string[]
+    certifications?: string[]
+    years_experience?: number
+    service_area?: string
+  
+    // Event-specific fields
+    event_datetime?: string
+    event_location?: string
+    event_status?: string
+    registration_deadline?: string
+    max_participants?: number
+    event_highlights?: string[]
+    event_inclusions?: string[]
+    event_prerequisites?: string[]
+    group_discounts?: boolean
+    photography_allowed?: boolean
+    recording_allowed?: boolean
+    meals_included_flag?: boolean
+    certificates_provided?: boolean
+    safety_gear_required?: boolean
+    event_notes?: string
 }
 
 export default function ServiceDetail() {
@@ -1309,7 +1308,7 @@ export default function ServiceDetail() {
                   <span className="text-sm text-gray-700">Transportation Included</span>
                 </div>
               )}
-              {service.meals_included && (
+              {service.meals_included_flag && (
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
                   <span className="text-sm text-gray-700">Meals Included</span>
