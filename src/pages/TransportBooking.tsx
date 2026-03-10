@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
 import { jsPDF } from 'jspdf'
@@ -323,6 +323,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
   const [bookingResult, setBookingResult] = useState<any | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [pollingMessage, setPollingMessage] = useState('')
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
+  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
@@ -568,76 +575,212 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         return
       }
 
-      // If completing booking (step 1), create the actual booking
+      // If completing booking (step 1), handle payment then create booking
       if (currentStep === 1) {
         setBookingError(null)
-        // Prepare booking data for localStorage (vendor panel)
-        const bookingDataToSave = {
-          service_id: service.id,
-          vendor_id: service.vendor_id || 'vendor_demo',
-          booking_date: new Date().toISOString(),
-          service_date: bookingData.startDate,
-          guests: bookingData.passengers,
-          total_amount: totalPrice,
-          currency: service.currency,
-          status: 'confirmed' as const,
-          payment_status: 'paid' as const, // keep vendor demo as paid
-          special_requests: bookingData.specialRequests,
-          // Add transport-specific data
-          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-          driver_option: bookingData.driverOption,
-          return_trip: bookingData.returnTrip,
-          start_time: bookingData.startTime,
-          end_time: bookingData.endTime,
-          end_date: bookingData.endDate
-        }
-        // Save to vendor localStorage for demo panel
-        createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
 
-        // Prepare booking data for Supabase (admin/vendor visibility)
-        console.log('TransportBooking: Creating booking with user:', user)
-        console.log('TransportBooking: User ID:', user?.id)
-        const bookingDataToInsert = {
-          service_id: service.id,
-          tourist_id: user?.id,
-          vendor_id: service.vendor_id || 'vendor_demo',
-          booking_date: new Date().toISOString(),
-          service_date: bookingData.startDate,
-          guests: bookingData.passengers,
-          total_amount: totalPrice,
-          currency: service.currency,
-          status: 'confirmed' as const,
-          payment_status: 'pending' as const, // always pending for admin
-          special_requests: bookingData.specialRequests,
-          // Guest booking fields
-          guest_name: profile ? undefined : bookingData.contactName,
-          guest_email: profile ? undefined : bookingData.contactEmail,
-          guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
-          // Transport-specific fields
-          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-          driver_option: bookingData.driverOption,
-          return_trip: bookingData.returnTrip,
-          start_time: bookingData.startTime,
-          end_time: bookingData.endTime,
-          end_date: bookingData.endDate
-        }
-        try {
-          const result = await createDatabaseBooking(bookingDataToInsert)
-          if (result && result.id) {
-            setBookingResult(result)
-            setBookingConfirmed(true)
-            setCurrentStep(currentStep + 1)
-          } else {
-            setBookingError('Booking could not be confirmed. Please try again.')
+        if (bookingData.paymentMethod === 'mobile') {
+          // Validate phone number
+          const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
+          const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+          if (!phone || phone.length < 12) {
+            setBookingError('Please enter a valid mobile money phone number (e.g. 0712345678).')
+            return
           }
-        } catch (error: any) {
-          setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
+          if (!bookingData.mobileProvider) {
+            setBookingError('Please select a mobile money provider (MTN or Airtel).')
+            return
+          }
+
+          setIsPaymentProcessing(true)
+          setPollingMessage('Initiating payment…')
+
+          try {
+            const { data: session } = await supabase.auth.getSession()
+            const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+            const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                amount: Math.round(totalPrice),
+                phone_number: phone,
+                booking_id: tempRef,
+                description: `${service.title} transport booking`,
+                user_id: session?.session?.user?.id || undefined,
+              }),
+            })
+
+            const result = await collectRes.json().catch(() => ({})) as {
+              success?: boolean
+              error?: string
+              data?: { reference: string; status: string }
+            }
+
+            if (!collectRes.ok || !result?.success || !result?.data?.reference) {
+              throw new Error(result?.error || 'Payment initiation failed')
+            }
+
+            const ref = result.data.reference
+            setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+            const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
+              try {
+                const res = await fetch(
+                  `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
+                  { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+                )
+                const data = await res.json().catch(() => ({})) as { status?: string }
+                if (data?.status === 'completed') return 'completed'
+                if (data?.status === 'failed') return 'failed'
+                return null
+              } catch { return null }
+            }
+
+            const finalise = async () => {
+              setPollingMessage('Payment confirmed! Creating booking…')
+              await createTransportBooking('paid')
+            }
+
+            const channel = supabase
+              .channel(`payment_trp_${ref}`)
+              .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
+                async (payload) => {
+                  const row = payload.new as { status: string }
+                  if (row.status === 'completed') {
+                    channel.unsubscribe()
+                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                    await finalise()
+                  } else if (row.status === 'failed') {
+                    channel.unsubscribe()
+                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                    setPollingMessage('')
+                    setIsPaymentProcessing(false)
+                    setBookingError('Payment was not completed or was declined. Please try again.')
+                  }
+                })
+              .subscribe()
+
+            const immediate = await checkStatus()
+            if (immediate === 'completed') {
+              channel.unsubscribe()
+              await finalise()
+              return
+            } else if (immediate === 'failed') {
+              channel.unsubscribe()
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              setBookingError('Payment was not completed or was declined. Please try again.')
+              return
+            }
+
+            backupPollRef.current = setInterval(async () => {
+              const status = await checkStatus()
+              if (status === 'completed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                await finalise()
+              } else if (status === 'failed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                setPollingMessage('')
+                setIsPaymentProcessing(false)
+                setBookingError('Payment was not completed or was declined. Please try again.')
+              }
+            }, 4000)
+            setTimeout(() => {
+              if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            }, 120000)
+
+          } catch (err: any) {
+            console.error('Payment error:', err)
+            setPollingMessage('')
+            setIsPaymentProcessing(false)
+            setBookingError(err?.message || 'Payment failed. Please try again.')
+          }
+          return
         }
-        return // Only advance step if booking is successful
+
+        // Non-mobile-money: create booking directly
+        await createTransportBooking('pending')
+        return
       }
       setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const createTransportBooking = async (paymentStatus: 'paid' | 'pending') => {
+    try {
+      // Save to vendor localStorage for demo panel
+      createVendorBooking(service.vendor_id || 'vendor_demo', {
+        service_id: service.id,
+        vendor_id: service.vendor_id || 'vendor_demo',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.startDate,
+        guests: bookingData.passengers,
+        total_amount: totalPrice,
+        currency: service.currency,
+        status: 'confirmed' as const,
+        special_requests: bookingData.specialRequests,
+        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+        driver_option: bookingData.driverOption,
+        return_trip: bookingData.returnTrip,
+        start_time: bookingData.startTime,
+        end_time: bookingData.endTime,
+        end_date: bookingData.endDate
+      })
+
+      const result = await createDatabaseBooking({
+        service_id: service.id,
+        tourist_id: user?.id,
+        vendor_id: service.vendor_id || 'vendor_demo',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.startDate,
+        guests: bookingData.passengers,
+        total_amount: totalPrice,
+        currency: service.currency,
+        status: 'confirmed' as const,
+        payment_status: paymentStatus as any,
+        special_requests: bookingData.specialRequests,
+        guest_name: profile ? undefined : bookingData.contactName,
+        guest_email: profile ? undefined : bookingData.contactEmail,
+        guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
+        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+        driver_option: bookingData.driverOption,
+        return_trip: bookingData.returnTrip,
+        start_time: bookingData.startTime,
+        end_time: bookingData.endTime,
+        end_date: bookingData.endDate
+      })
+
+      if (result && result.id) {
+        // Send booking confirmation email with PDF
+        fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({ booking_id: result.id }),
+        }).catch(err => console.warn('Failed to send booking email:', err))
+
+        setBookingResult(result)
+        setBookingConfirmed(true)
+        setPollingMessage('')
+        setIsPaymentProcessing(false)
+        setCurrentStep(2)
+      } else {
+        setBookingError('Booking could not be confirmed. Please try again.')
+        setIsPaymentProcessing(false)
+      }
+    } catch (error: any) {
+      setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
+      setIsPaymentProcessing(false)
     }
   }
 
@@ -1035,19 +1178,43 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 )}
               </div>
 
-              {/* Mobile Money Provider */}
+              {/* Mobile Money Phone + Provider */}
               {bookingData.paymentMethod === 'mobile' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    value={bookingData.mobileProvider}
-                    onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                  >
-                    <option value="">Select provider</option>
-                    <option value="MTN">MTN Mobile Money</option>
-                    <option value="Airtel">Airtel Money</option>
-                  </select>
+                <div className="space-y-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="0712345678 or +256712345678"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'MTN')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
+                        <span className="text-sm font-medium">MTN</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'Airtel')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
+                        <span className="text-sm font-medium">Airtel</span>
+                      </button>
+                    </div>
+                  </div>
+                  {pollingMessage && (
+                    <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -1632,16 +1799,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <button
                 onClick={handleNext}
                 disabled={
+                  isPaymentProcessing ||
                   !bookingData.startDate ||
                   !bookingData.endDate ||
                   (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
                   !bookingData.contactName ||
                   !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card'
+                  bookingData.paymentMethod === 'card' ||
+                  (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
                 }
                 className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium"
               >
-                Complete Booking
+                {isPaymentProcessing ? (pollingMessage ? 'Waiting for payment…' : 'Processing...') : 'Pay with Mobile Money'}
               </button>
             </div>
 
@@ -1656,16 +1825,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <button
                 onClick={handleNext}
                 disabled={
+                  isPaymentProcessing ||
                   !bookingData.startDate ||
                   !bookingData.endDate ||
                   (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
                   !bookingData.contactName ||
                   !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card'
+                  bookingData.paymentMethod === 'card' ||
+                  (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                Complete Booking
+                {isPaymentProcessing ? (pollingMessage ? 'Waiting for payment…' : 'Processing...') : 'Pay with Mobile Money'}
               </button>
             </div>
           </div>

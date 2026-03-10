@@ -570,7 +570,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
   const finaliseBooking = async (paymentStatus: 'paid' | 'pending') => {
     try {
-      await createBooking({
+      const result = await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
         booking_date: new Date().toISOString(),
@@ -586,6 +586,17 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         guest_email: user ? undefined : bookingData.contactEmail,
         guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`
       })
+      // Send booking confirmation email with PDF attachment
+      if (result?.id) {
+        fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({ booking_id: result.id }),
+        }).catch(err => console.warn('Failed to send booking email:', err))
+      }
       setPollingMessage('')
       setCurrentStep(5)
     } catch (error) {
