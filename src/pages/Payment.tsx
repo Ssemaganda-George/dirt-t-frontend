@@ -128,6 +128,12 @@ export default function PaymentPage() {
       return
     }
 
+    // Save ticket email to order so webhook can send ticket email even if user leaves the page
+    const emailToSave = (ticketEmail || order?.guest_email || '').trim()
+    if (emailToSave) {
+      await supabase.from('orders').update({ guest_email: emailToSave, updated_at: new Date().toISOString() }).eq('id', orderId)
+    }
+
     setProcessing(true)
     setPollingMessage('')
     setPaymentReference(null)
@@ -401,7 +407,9 @@ export default function PaymentPage() {
                     <div className="absolute inset-0 bg-black opacity-40"></div>
                     <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 z-10">
                       <h2 className="text-xl font-semibold text-gray-900 mb-2">Payment successful</h2>
-                      <p className="text-sm text-gray-700 mb-4">Your receipt is ready. Click OK to view your receipt.</p>
+                      <p className="text-sm text-gray-700 mb-4">
+                        Your receipt is ready. We&apos;ve also sent your ticket(s) to your email—check your inbox. Click OK to view your receipt.
+                      </p>
                       <div className="flex justify-end">
                         <button
                           type="button"

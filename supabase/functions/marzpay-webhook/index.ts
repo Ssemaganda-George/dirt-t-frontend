@@ -195,6 +195,40 @@ serve(async (req) => {
           console.warn("Webhook: ticket booking failed", ticketErr)
         }
       }
+
+      // Send ticket email to customer (order has guest_email; otherwise use profile email)
+      let recipientEmail = (order as any).guest_email?.trim() || null
+      if (!recipientEmail && (order as any).user_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", (order as any).user_id)
+          .maybeSingle()
+        recipientEmail = (profile as any)?.email?.trim() || null
+      }
+      if (recipientEmail) {
+        const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+        const sendOrderEmailsUrl = `${baseUrl}/functions/v1/send-order-emails`
+        fetch(sendOrderEmailsUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ order_id: orderId, recipient_email: recipientEmail }),
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const text = await res.text()
+              console.warn("Webhook: send-order-emails failed", res.status, text)
+            } else {
+              console.log("Webhook: ticket email sent to", recipientEmail)
+            }
+          })
+          .catch((e) => console.warn("Webhook: send-order-emails error", e.message))
+      } else {
+        console.warn("Webhook: no recipient email for order", orderId, "- ticket email not sent")
+      }
     }
 
     const amountFmt = (collection?.amount as any)?.formatted || `${payment.amount} UGX`
