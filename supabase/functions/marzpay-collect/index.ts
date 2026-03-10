@@ -7,6 +7,12 @@ const APP_URL = Deno.env.get("APP_URL") || Deno.env.get("FRONTEND_URL") || "http
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isValidUUID(value: string): boolean {
+  return typeof value === "string" && UUID_REGEX.test(value.trim())
+}
+
 function generateReference(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -154,12 +160,18 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+    // payments.booking_id, order_id, user_id are UUID columns with FKs; only set when valid UUID
+    // Frontend may send temporary booking ref (e.g. "bk-...") before the booking exists — omit in that case
+    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
+    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
+    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+
     const { data: paymentRow, error: insertError } = await supabase
       .from("payments")
       .insert({
-        ...(order_id ? { order_id } : {}),
-        ...(booking_id ? { booking_id } : {}),
-        user_id: user_id || null,
+        ...(paymentOrderId ? { order_id: paymentOrderId } : {}),
+        ...(paymentBookingId ? { booking_id: paymentBookingId } : {}),
+        user_id: paymentUserId,
         amount: amountInt,
         phone_number: formattedPhone,
         reference: ref,
