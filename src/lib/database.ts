@@ -3384,6 +3384,42 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
   }
 }
 
+export async function getTouristMessages(touristId: string, filter?: 'unread' | 'vendor' | 'admin') {
+  try {
+    let query = supabase
+      .from('messages')
+      .select(`*, sender:profiles!messages_sender_id_fkey(id, full_name, email), recipient:profiles!messages_recipient_id_fkey(id, full_name, email)`)    
+      .order('created_at', { ascending: false })
+
+    if (filter === 'unread') {
+      query = query
+        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+        .eq('status', 'unread')
+    } else if (filter === 'vendor') {
+      // Messages involving tourist where other party is vendor/admin/system
+      query = query
+        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+        .in('sender_role', ['vendor', 'admin', 'system'])
+    } else if (filter === 'admin') {
+      query = query.or(`and(sender_id.eq.${touristId},recipient_role.eq.admin),and(recipient_id.eq.${touristId},sender_role.eq.admin)`)    
+    } else {
+      query = query.or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching tourist messages:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getTouristMessages:', error)
+    throw error
+  }
+}
+
 export async function sendMessage(messageData: {
   sender_id: string
   sender_role: string

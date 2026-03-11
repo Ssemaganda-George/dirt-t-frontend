@@ -110,6 +110,7 @@ const Saved = lazy(() => import('./pages/Saved'))
 const TouristWallet = lazy(() => import('./pages/Wallet'))
 const UserSettings = lazy(() => import('./pages/Settings'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
+const MessagesPage = lazy(() => import('./pages/Messages'))
 
 // Scroll to top component
 function ScrollToTop() {
@@ -231,6 +232,16 @@ function App() {
             }
           >
             <Route index element={<EditProfile />} />
+          </Route>
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <PublicLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<MessagesPage />} />
           </Route>
           
           {/* Vendor Routes */}

@@ -1,9 +1,10 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
+import MobileBottomNav from './MobileBottomNav'
 import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
@@ -268,8 +269,8 @@ export default function VendorLayout() {
       <div className={`transition-all duration-300 ${
         sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'
       }`}>
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        {/* Top bar (fixed) */}
+        <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
             <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 lg:hidden">
               <Menu className="h-5 w-5" />
@@ -357,8 +358,8 @@ export default function VendorLayout() {
           </div>
         </div>
 
-        {/* Page content */}
-        <main className="py-6">
+        {/* Page content (add top padding to account for fixed header) */}
+        <main className="pt-16 py-6">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <Outlet />
           </div>
@@ -369,6 +370,15 @@ export default function VendorLayout() {
       <PanelSearchModal
         isOpen={showGlobalSearch}
         onClose={() => setShowGlobalSearch(false)}
+      />
+
+      {/* Mobile Bottom Navigation (show for vendor pages too) */}
+      <MobileBottomNav
+        onSupportClick={() => {
+          const navigate = useNavigate()
+          navigate('/vendor/messages')
+        }}
+        onSearchClick={() => setShowGlobalSearch(true)}
       />
 
       {/* Preferences Modal */}
