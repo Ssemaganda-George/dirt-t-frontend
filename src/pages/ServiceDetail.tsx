@@ -671,7 +671,7 @@ export default function ServiceDetail() {
                   <span className="text-sm font-medium text-gray-700">Room Types:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {service.room_types.map((room, index) => (
-                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800">
                         {room}
                       </span>
                     ))}
@@ -1998,7 +1998,7 @@ export default function ServiceDetail() {
                       service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
                       ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
                       !selectedDate
-                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    } className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
@@ -2060,7 +2060,7 @@ export default function ServiceDetail() {
                 <div className="text-xl font-bold leading-none mb-1 text-white drop-shadow-sm">
                   {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
                 </div>
-                <div className="text-xs text-blue-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
+                <div className="text-xs text-emerald-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
               </div>
             </button>
 

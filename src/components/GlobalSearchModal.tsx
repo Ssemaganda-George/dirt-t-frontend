@@ -395,14 +395,14 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
     <div className="fixed inset-0 z-[70] bg-black bg-opacity-50 flex items-start justify-center pt-4 sm:pt-16 px-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden border border-gray-200">
         {/* Search Header */}
-        <div className="flex items-center border-b border-gray-200 p-4 sm:p-6 bg-gray-50">
-          <div className="flex items-center flex-1 bg-white rounded-lg border border-gray-300 px-4 py-3 sm:py-3 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+        <div className="flex flex-col sm:flex-row items-center border-b border-gray-200 p-3 sm:p-6 bg-gray-50">
+          <div className="flex items-center flex-1 w-full bg-white rounded-lg border border-emerald-200 px-3 py-2 sm:px-4 sm:py-3 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500">
             <Search className="h-5 w-5 text-gray-400 mr-3 flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
               placeholder="Search DirtTrails..."
-              className="flex-1 text-base sm:text-base outline-none placeholder-gray-500 text-gray-900 bg-transparent min-w-0"
+              className="flex-1 text-sm sm:text-base outline-none placeholder-gray-500 text-gray-900 bg-transparent min-w-0 w-full"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -410,7 +410,8 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
           </div>
           <button
             onClick={onClose}
-            className="ml-3 sm:ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 touch-manipulation"
+            className="mt-3 sm:mt-0 sm:ml-3 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 touch-manipulation"
+            aria-label="Close search"
           >
             <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
           </button>
@@ -449,7 +450,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                       key={`service-${service.id}`}
                       to={`/service/${service.slug}`}
                       onClick={onClose}
-                      className="block p-4 sm:p-3 hover:bg-gray-50 transition-all duration-200 border-l-4 border-transparent hover:border-blue-400 touch-manipulation"
+                      className="block p-4 sm:p-3 hover:bg-gray-50 transition-all duration-200 border-l-4 border-transparent hover:border-emerald-400 touch-manipulation"
                     >
                       <div className="flex items-start space-x-3">
                         {/* Service Image */}
@@ -462,7 +463,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <MapPin className="h-5 w-5 text-blue-400" />
+                              <MapPin className="h-5 w-5 text-emerald-400" />
                             </div>
                           )}
                         </div>
@@ -476,13 +477,13 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                                 {service.title}
                               </h3>
                               {service.service_categories?.name && (
-                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                                <span className="inline-block bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-xs font-medium">
                                   {service.service_categories.name}
                                 </span>
                               )}
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <div className="text-lg font-medium text-blue-400">
+                              <div className="text-lg font-medium text-emerald-400">
                                 {formatCurrencyWithConversion(service.price, service.currency)}
                               </div>
                               {service.duration_hours && (
