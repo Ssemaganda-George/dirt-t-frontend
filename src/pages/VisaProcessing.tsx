@@ -217,7 +217,7 @@ export default function VisaProcessing() {
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-6 w-6 text-black mr-4" />
-                  <span className="text-gray-700 font-medium">visas@dirtrails.com</span>
+                  <span className="text-gray-700 font-medium">safaris.dirttrails@gmail.com</span>
                 </div>
               </div>
             </div>

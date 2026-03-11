@@ -55,7 +55,7 @@ export default function Safety() {
       contacts: [
         { name: "24/7 Support Hotline", number: "+256 414 123 456" },
         { name: "Emergency WhatsApp", number: "+256759918649" },
-        { name: "Email Support", number: "emergency@dirtrails.com" }
+        { name: "Email Support", number: "safaris.dirttrails@gmail.com" }
       ]
     }
   ]

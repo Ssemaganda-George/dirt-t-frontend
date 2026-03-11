@@ -436,6 +436,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         </>
         )}
           </div>
+
+          <div className="p-4 sm:p-6 border-t border-gray-100">
+            <p className="text-[11px] leading-4 text-center text-gray-500">
+              By continuing you agree to our{' '}
+              <a href="/terms" className="underline hover:text-gray-600">Terms</a>{' '}
+              and{' '}
+              <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
+            </p>
+          </div>
+
         </div>
       </div>
 

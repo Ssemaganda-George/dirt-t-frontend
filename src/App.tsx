@@ -96,6 +96,7 @@ const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const ContactUs = lazy(() => import('./pages/ContactUs'))
 const Safety = lazy(() => import('./pages/Safety'))
 const TermsOfService = lazy(() => import('./pages/TermsOfService'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TravelInsurance = lazy(() => import('./pages/TravelInsurance'))
 const VisaProcessing = lazy(() => import('./pages/VisaProcessing'))
 const InternetConnectivity = lazy(() => import('./pages/InternetConnectivity'))
@@ -161,6 +162,7 @@ function App() {
             <Route path="contact" element={<ContactUs />} />
             <Route path="safety" element={<Safety />} />
             <Route path="terms" element={<TermsOfService />} />
+            <Route path="privacy" element={<PrivacyPolicy />} />
             <Route path="travel-insurance" element={<TravelInsurance />} />
             <Route path="visa-processing" element={<VisaProcessing />} />
             <Route path="internet-connectivity" element={<InternetConnectivity />} />
