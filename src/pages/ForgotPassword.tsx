@@ -8,8 +8,8 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState<string | null>(null)
   const navigate = useNavigate()
   const [method, setMethod] = useState<'email' | 'sms'>('email')
-  const [phoneCountry, setPhoneCountry] = useState('+256')
-  const [phone, setPhone] = useState('')
+  const [phoneCountry] = useState('+256')
+  const [phone] = useState('')
   
   const [resendCountdown, setResendCountdown] = useState<number>(0)
 
