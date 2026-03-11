@@ -23,6 +23,7 @@ const UserDashboard = lazy(() => import('./pages/Dashboard'))
 const Login = lazy(() => import('./pages/Login'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const VerifyOtp = lazy(() => import('./pages/VerifyOtp'))
 const VendorLogin = lazy(() => import('./pages/VendorLogin'))
 const VendorPending = lazy(() => import('./pages/VendorPending'))
 const VendorDashboard = lazy(() => import('./pages/vendor/Dashboard'))
@@ -173,6 +174,7 @@ function App() {
           
           {/* Auth Routes */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/login" element={<Login />} />
           <Route path="/vendor-pending" element={<VendorPending />} />

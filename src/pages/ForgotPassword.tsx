@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
-import PhoneModal from '../components/PhoneModal'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -39,6 +38,7 @@ export default function ForgotPassword() {
         if (res?.error) throw res.error
         setMessage('We sent a reset link — check your inbox.')
         setResendCountdown(60)
+            // keep user on the same page for email flow
       } else {
         // SMS path: send OTP to phone to allow the user to verify identity
         let country = (phoneCountry || '').trim()
@@ -56,6 +56,9 @@ export default function ForgotPassword() {
         }
         setMessage('OTP sent to your phone — check your messages.')
         setResendCountdown(60)
+        // navigate to OTP verification screen with phone in location state
+        const phoneE164ToUse = phoneE164
+        navigate('/verify-otp', { state: { phone: phoneE164ToUse } })
       }
     } catch (err: any) {
       console.error('reset password error', err)
@@ -88,14 +91,12 @@ export default function ForgotPassword() {
                 )}
               </div>
             ) : (
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                  <PhoneModal
-                    phone={phone}
-                    countryCode={phoneCountry}
-                    onPhoneChange={(p) => setPhone(p)}
-                    onCountryCodeChange={(c) => setPhoneCountry(c)}
-                  />
+                <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-100 text-sm text-gray-700">
+                  <p className="font-medium">SMS coming soon</p>
+                  <p className="mt-2">We're still configuring SMS support. Please use the Email option to reset your password for now.</p>
+                  <div className="pt-4">
+                    <button type="button" disabled className="w-full inline-flex items-center justify-center px-4 py-3 bg-gray-300 text-white rounded-lg text-sm font-medium">SMS coming soon</button>
+                  </div>
                 </div>
             )}
 
