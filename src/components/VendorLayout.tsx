@@ -1,10 +1,9 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
-import MobileBottomNav from './MobileBottomNav'
 import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
@@ -370,15 +369,6 @@ export default function VendorLayout() {
       <PanelSearchModal
         isOpen={showGlobalSearch}
         onClose={() => setShowGlobalSearch(false)}
-      />
-
-      {/* Mobile Bottom Navigation (show for vendor pages too) */}
-      <MobileBottomNav
-        onSupportClick={() => {
-          const navigate = useNavigate()
-          navigate('/vendor/messages')
-        }}
-        onSearchClick={() => setShowGlobalSearch(true)}
       />
 
       {/* Preferences Modal */}
