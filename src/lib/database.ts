@@ -3357,11 +3357,11 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
         .or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
         .eq('status', 'unread')
     } else if (filter === 'customer') {
-      // Only messages from tourists to vendor
+      // Messages from tourists, admin, or system (OTP) to vendor
       query = query
         .eq('recipient_id', vendorId)
         .eq('recipient_role', 'vendor')
-        .eq('sender_role', 'tourist')
+        .in('sender_role', ['tourist', 'admin', 'system'])
     } else if (filter === 'admin') {
       // All messages between vendor and admin (sent or received)
       query = query.or(`and(sender_id.eq.${vendorId},recipient_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.admin)`)
