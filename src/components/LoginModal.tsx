@@ -290,10 +290,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
                 <button
                   type="button"
                   className="text-xs text-gray-700 hover:text-gray-900 font-medium transition-colors"
-                  onClick={() => {
-                    // TODO: Implement forgot password functionality
-                    alert('Forgot password functionality coming soon!');
-                  }}
+                  onClick={() => navigate('/forgot-password')}
                 >
                   Forgot password?
                 </button>
