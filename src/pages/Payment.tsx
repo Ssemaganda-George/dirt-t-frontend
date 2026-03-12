@@ -194,37 +194,7 @@ export default function PaymentPage() {
         // show success dialog — user will be able to go to receipt when they click OK
         setProcessing(false)
         setPaymentSuccess(true)
-
-        // Trigger server-side function to send tickets to the provided email (do not block UX)
-        ;(async () => {
-          try {
-            const recipient = ticketEmail || order?.guest_email
-            if (!recipient) {
-              console.warn('[Payment] No recipient email available to send tickets')
-              return
-            }
-
-            console.log('[Payment] Calling send-order-emails edge function', { orderId, recipient })
-            const resp = await fetch(`${supabaseUrl}/functions/v1/send-order-emails`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-                'apikey': supabaseAnonKey,
-              },
-              body: JSON.stringify({ order_id: orderId, recipient_email: recipient }),
-            })
-
-            if (!resp.ok) {
-              const text = await resp.text()
-              console.error('[Payment] send-order-emails failed:', resp.status, text)
-            } else {
-              console.log('[Payment] send-order-emails succeeded')
-            }
-          } catch (e) {
-            console.error('[Payment] Error calling send-order-emails:', e)
-          }
-        })()
+        // Email is sent by the webhook after tickets are created — no need to call it here
       }
 
       const handleFailed = () => {
