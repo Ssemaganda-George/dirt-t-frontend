@@ -25,6 +25,7 @@ import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
 import { usePreferences } from '../contexts/PreferencesContext'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 
 const navigation = [
   {
@@ -172,6 +173,8 @@ export default function Layout() {
     setShowLogoutConfirm(false)
   }
 
+  const { unreadCount } = useUnreadMessages()
+
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
       const newSet = new Set(prev)
@@ -308,6 +311,24 @@ export default function Layout() {
               >
                 <Search className="h-4 w-4 text-gray-500" />
               </button>
+
+              {/* Messages icon for admin top bar */}
+              {profile?.role === 'admin' && (
+                <Link
+                  to="/admin/messages"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition"
+                  title={t('messages')}
+                >
+                  <div className="relative">
+                    <MessageSquare className="h-4 w-4 text-gray-500" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )}
 
               {/* Preferences */}
               <button

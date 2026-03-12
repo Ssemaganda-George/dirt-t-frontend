@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare } from 'lucide-react'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -37,6 +38,7 @@ const getRegionName = (code: string) => {
 }
 
 export default function PublicLayout() {
+  const { unreadCount } = useUnreadMessages()
   const [showPreferences, setShowPreferences] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
@@ -152,6 +154,8 @@ export default function PublicLayout() {
                     {t(item.name)}
                   </Link>
                 ))}
+
+                {/* Desktop messages text link removed — icon lives beside Search */}
               </nav>
             )}
 
@@ -166,6 +170,22 @@ export default function PublicLayout() {
                 >
                   <Search className="h-5 w-5 text-gray-600" />
                 </button>
+
+                {/* Messages icon for desktop - visible only to authenticated users */}
+                {user && (
+                  <Link
+                    to="/messages"
+                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
+                    title={t('messages')}
+                  >
+                    <MessageSquare className="h-5 w-5 text-gray-600" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                  </Link>
+                )}
 
                 <button
                   onClick={() => setShowPreferences(true)}

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Home, HelpCircle, Search, Calendar, MessageSquare } from 'lucide-react'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 
@@ -11,22 +12,29 @@ interface MobileBottomNavProps {
 export default function MobileBottomNav({ onSupportClick, onSearchClick }: MobileBottomNavProps) {
   const location = useLocation()
   const { user, profile } = useAuth()
+  const { unreadCount } = useUnreadMessages()
   const { t } = usePreferences()
 
-  const baseNavigation = [
+  const baseNavigation: Array<any> = [
     { labelKey: 'home', href: '/', icon: Home },
     { labelKey: 'find', href: '/search', icon: Search, isSearch: true },
-    { labelKey: 'messages', href: '/messages', icon: MessageSquare },
-    { labelKey: 'support', href: '/support', icon: HelpCircle, isModal: true },
   ]
 
-  if (user && profile?.role === 'tourist') {
-    baseNavigation.splice(3, 0, { labelKey: 'bookings', href: '/bookings', icon: Calendar })
+  // Only show messages to authenticated users
+  if (user) {
+    baseNavigation.push({ labelKey: 'messages', href: '/messages', icon: MessageSquare })
   }
+
+  // Bookings are shown for logged-in tourists
+  if (user && profile?.role === 'tourist') {
+    baseNavigation.push({ labelKey: 'bookings', href: '/bookings', icon: Calendar })
+  }
+
+  baseNavigation.push({ labelKey: 'support', href: '/support', icon: HelpCircle, isModal: true })
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-[0_-1px_12px_rgba(0,0,0,0.06)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-[0_-1px_12px_rgba(0,0,0,0.06)] md:hidden"
       role="navigation"
       aria-label="Main"
     >
@@ -49,6 +57,11 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
                 aria-hidden
               />
               <item.icon className={`h-5 w-5 transition-colors duration-150 ${iconClass}`} aria-hidden />
+              {item.labelKey === 'messages' && unreadCount > 0 && (
+                <span className="absolute -top-3 -right-3 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
               <span className={`text-[10px] font-semibold mt-0.5 tracking-wide transition-colors duration-150 ${textClass}`}>{label}</span>
             </>
           )

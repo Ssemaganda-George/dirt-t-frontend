@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -45,7 +46,7 @@ const navigation = [
 ]
 
 export default function VendorLayout() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, vendor } = useAuth()
   const { selectedRegion, selectedCurrency } = usePreferences()
   const location = useLocation()
   const [showPreferences, setShowPreferences] = useState(false)
@@ -125,6 +126,8 @@ export default function VendorLayout() {
   const cancelSignOut = () => {
     setShowLogoutConfirm(false)
   }
+
+  const { unreadCount } = useUnreadMessages()
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -286,6 +289,22 @@ export default function VendorLayout() {
               >
                 <Search className="h-4 w-4 text-gray-500" />
               </button>
+
+              {/* Messages icon for vendor top bar */}
+              {(profile || vendor) && (
+                <Link
+                  to="/vendor/messages"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 relative"
+                  title="Messages"
+                >
+                  <MessageSquare className="h-4 w-4 text-gray-500" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               {/* Preferences */}
               <button
