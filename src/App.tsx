@@ -103,6 +103,9 @@ const InternetConnectivity = lazy(() => import('./pages/InternetConnectivity'))
 const ReferBusiness = lazy(() => import('./pages/ReferBusiness'))
 const ReferralForm = lazy(() => import('./pages/ReferralForm'))
 const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
+const Geotagging = lazy(() => import('./pages/conservation/Geotagging'))
+const TreePlanting = lazy(() => import('./pages/conservation/TreePlanting'))
+const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculator'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
@@ -170,6 +173,9 @@ function App() {
             <Route path="refer-business" element={<ReferBusiness />} />
             <Route path="referral-form" element={<ReferralForm />} />
             <Route path="hospitality-class" element={<HospitalityClass />} />
+            <Route path="conservation/geotagging" element={<Geotagging />} />
+            <Route path="conservation/tree-planting" element={<TreePlanting />} />
+            <Route path="conservation/carbon" element={<CarbonCalculator />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />

@@ -477,7 +477,17 @@ export default function PublicLayout() {
               </ul>
             </div>
 
-            <div className="md:col-span-3">
+            {/* Conservation column */}
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Conservation</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/conservation/geotagging" className="text-gray-400 hover:text-white transition-colors">Geotagging &amp; Monitoring</Link></li>
+                <li><Link to="/conservation/tree-planting" className="text-gray-400 hover:text-white transition-colors">Tree Planting Initiatives</Link></li>
+                <li><Link to="/conservation/carbon" className="text-gray-400 hover:text-white transition-colors">Calculate My Carbon</Link></li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Support</h4>
               <ul className="space-y-3 text-sm">
                 <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
@@ -489,7 +499,7 @@ export default function PublicLayout() {
               </ul>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Business</h4>
               <ul className="space-y-3 text-sm">
                 <li><Link to="/vendor-login" className="text-gray-400 hover:text-white transition-colors">List My Business</Link></li>

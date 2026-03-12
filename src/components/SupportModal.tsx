@@ -56,6 +56,21 @@ const businessServices = [
   }
 ]
 
+const conservationServices = [
+  {
+    name: 'Geotagging & Monitoring',
+    href: '/conservation/geotagging'
+  },
+  {
+    name: 'Tree Planting Initiatives',
+    href: '/conservation/tree-planting'
+  },
+  {
+    name: 'Calculate My Carbon',
+    href: '/conservation/carbon'
+  }
+]
+
 export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
   if (!isOpen) return null
 
@@ -88,6 +103,23 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             <h3 className="text-lg font-bold text-black mb-4">Support</h3>
             <div className="space-y-2">
               {supportServices.map((service) => (
+                <Link
+                  key={service.name}
+                  to={service.href}
+                  onClick={onClose}
+                  className="block py-2 text-base font-medium text-black hover:text-blue-600 transition-colors duration-200"
+                >
+                  {service.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+          {/* Conservation */}
+          <div className="h-px bg-gray-300 mb-6"></div>
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-black mb-4">Conservation</h3>
+            <div className="space-y-2">
+              {conservationServices.map((service) => (
                 <Link
                   key={service.name}
                   to={service.href}
