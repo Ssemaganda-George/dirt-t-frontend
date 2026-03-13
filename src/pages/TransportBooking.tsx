@@ -39,6 +39,16 @@ interface ServiceDetail {
   vehicle_capacity?: number
   driver_included?: boolean
   fuel_included?: boolean
+  // Optional transport/fuel metadata (may be present for transport services)
+  avgSpeedKmph?: number
+  fuel_km_per_liter?: number
+  fuelKmPerL?: number
+  fuel_consumption_per_100km?: number
+  price_within_town?: number
+  price_upcountry?: number
+  vehicle_engine?: string
+  vehicle_ccs?: number
+  fuel_type?: string
   pickup_locations?: string[]
   dropoff_locations?: string[]
 }
@@ -1116,7 +1126,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+  const handleInputChange = (field: string, value: string | number | boolean | undefined) => {
     // Clear blocked error on change
     setBlockedError(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
