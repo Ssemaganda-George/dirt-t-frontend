@@ -70,7 +70,7 @@ serve(async (req) => {
 
   const { data: payments, error: payErr } = await supabase
     .from("payments")
-    .select("id, order_id, amount, phone_number")
+    .select("id, order_id, booking_id, amount, phone_number")
     .eq("reference", reference)
 
   const payment = payments?.[0]
@@ -92,6 +92,75 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     })
     .eq("reference", reference)
+
+  // If this payment completed and is linked to a booking, mark the booking paid/confirmed
+  if (paymentStatus === "completed" && payment.booking_id) {
+    const bookingId = payment.booking_id
+    try {
+      const { data: booking, error: bookingFetchErr } = await supabase
+        .from("bookings")
+        .select("id, vendor_id, tourist_id, currency, total_amount")
+        .eq("id", bookingId)
+        .single()
+
+      if (!booking || bookingFetchErr) {
+        console.warn("Webhook: booking not found for payment.booking_id", bookingId)
+      } else {
+        await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            payment_status: "paid",
+            payment_reference: reference,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId)
+
+        try {
+          await supabase.rpc("create_transaction_atomic", {
+            p_vendor_id: booking.vendor_id,
+            p_amount: payment.amount,
+            p_transaction_type: "payment",
+            p_booking_id: bookingId,
+            p_tourist_id: booking.tourist_id || null,
+            p_currency: booking.currency || "UGX",
+            p_status: "completed",
+            p_payment_method: "mobile_money",
+            p_reference: reference,
+          })
+        } catch (txErr) {
+          console.warn("Webhook: create_transaction_atomic failed for booking", bookingId, txErr)
+        }
+
+        // Trigger booking emails (use service role key)
+        try {
+          const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+          const sendBookingEmailsUrl = `${baseUrl}/functions/v1/send-booking-emails`
+          fetch(sendBookingEmailsUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({ booking_id: bookingId }),
+          })
+            .then(async (res) => {
+              if (!res.ok) {
+                const text = await res.text()
+                console.warn("Webhook: send-booking-emails failed", res.status, text)
+              } else {
+                console.log("Webhook: booking email triggered for", bookingId)
+              }
+            })
+            .catch((e) => console.warn("Webhook: send-booking-emails error", e?.message))
+        } catch (e) {
+          console.warn("Webhook: failed to call send-booking-emails", e?.message)
+        }
+      }
+    } catch (err) {
+      console.warn("Webhook: error handling booking-linked payment", err)
+    }
+  }
 
   if (paymentStatus === "completed" && payment.order_id) {
     const orderId = payment.order_id

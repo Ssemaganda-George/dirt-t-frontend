@@ -855,17 +855,32 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               }),
             })
 
-            const result = await collectRes.json().catch(() => ({})) as {
-              success?: boolean
-              error?: string
-              data?: { reference: string; status: string }
+            let resultBody: any = {}
+            try {
+              const text = await collectRes.text()
+              try { resultBody = JSON.parse(text) } catch { resultBody = { raw: text } }
+            } catch (e) {
+              resultBody = { error: 'Failed to read response body' }
             }
 
-            if (!collectRes.ok || !result?.success || !result?.data?.reference) {
-              throw new Error(result?.error || 'Payment initiation failed')
+            if (!collectRes.ok) {
+              const msg = resultBody?.error || resultBody?.message || resultBody?.raw || JSON.stringify(resultBody)
+              console.error('marzpay-collect failed', collectRes.status, msg)
+              setBookingError(`Payment initiation failed: ${msg}`)
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              return
             }
 
-            const ref = result.data.reference
+            const ref = resultBody?.data?.reference || resultBody?.reference || (resultBody?.data && resultBody.data.reference)
+            if (!ref) {
+              const msg = resultBody?.error || resultBody?.message || 'No payment reference returned'
+              console.error('marzpay-collect missing reference', msg, resultBody)
+              setBookingError(`Payment initiation failed: ${msg}`)
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              return
+            }
             setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
             const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
@@ -1074,6 +1089,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         trip_destination: (bookingData as any).tripDestination || null,
         trip_destination_lat: destinationLocation?.lat ?? null,
         trip_destination_lng: destinationLocation?.lng ?? null,
+        trip_destination_extra: (typeof (bookingData as any).tripDestinationExtra === 'number' && !isNaN((bookingData as any).tripDestinationExtra)) ? (bookingData as any).tripDestinationExtra : 0.0,
         trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
         trip_return_option: (bookingData as any).tripReturnOption || null,
         journey_estimated_hours: (_estHours as number) || null,
