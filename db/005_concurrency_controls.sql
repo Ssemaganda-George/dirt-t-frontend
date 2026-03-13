@@ -586,6 +586,8 @@ CREATE OR REPLACE FUNCTION delete_service_atomic(
 ) RETURNS jsonb AS $$
 DECLARE
   v_service record;
+  v_order_ids uuid[];
+  v_payment_count integer := 0;
   v_result jsonb;
 BEGIN
   -- Lock the service row for update to prevent concurrent operations
@@ -609,6 +611,26 @@ BEGIN
   DELETE FROM public.tickets WHERE service_id = p_service_id;
 
   -- 2. Delete order_items that reference ticket_types of this service
+  -- First collect order ids that reference ticket_types for this service
+  SELECT ARRAY(SELECT DISTINCT oi.order_id
+               FROM public.order_items oi
+               JOIN public.ticket_types tt ON tt.id = oi.ticket_type_id
+               WHERE tt.service_id = p_service_id) INTO v_order_ids;
+
+  -- If any orders reference those ticket items, ensure there are no payments attached
+  IF v_order_ids IS NOT NULL AND array_length(v_order_ids,1) > 0 THEN
+    SELECT COUNT(*) INTO v_payment_count FROM public.payments WHERE order_id = ANY(v_order_ids);
+    IF v_payment_count > 0 THEN
+      -- If the service is still pending approval and the vendor is requesting deletion, allow cleanup
+      IF v_service.status = 'pending' AND (p_is_admin OR (p_vendor_id IS NOT NULL AND v_service.vendor_id = p_vendor_id)) THEN
+        -- Remove payments associated with those orders so vendor can remove their pending listing
+        DELETE FROM public.payments WHERE order_id = ANY(v_order_ids);
+      ELSE
+        RETURN jsonb_build_object('success', false, 'error', format('Cannot delete service: %s payment(s) exist for related orders. Resolve payments before deletion.', v_payment_count));
+      END IF;
+    END IF;
+  END IF;
+
   DELETE FROM public.order_items
   WHERE ticket_type_id IN (
     SELECT id FROM public.ticket_types WHERE service_id = p_service_id
@@ -654,7 +676,19 @@ CREATE OR REPLACE FUNCTION create_booking_atomic(
   p_guest_email text DEFAULT NULL,
   p_guest_phone text DEFAULT NULL,
   p_pickup_location text DEFAULT NULL,
-  p_dropoff_location text DEFAULT NULL
+  p_dropoff_location text DEFAULT NULL,
+  p_trip_setoff text DEFAULT NULL,
+  p_trip_setoff_lat double precision DEFAULT NULL,
+  p_trip_setoff_lng double precision DEFAULT NULL,
+  p_trip_destination text DEFAULT NULL,
+  p_trip_destination_lat double precision DEFAULT NULL,
+  p_trip_destination_lng double precision DEFAULT NULL,
+  p_trip_stopovers jsonb DEFAULT NULL,
+  p_trip_return_option text DEFAULT NULL,
+  p_journey_estimated_hours numeric DEFAULT NULL,
+  p_journey_estimated_distance numeric DEFAULT NULL,
+  p_journey_estimated_fuel numeric DEFAULT NULL,
+  p_journey_summary text DEFAULT NULL
 ) RETURNS jsonb AS $$
 DECLARE
   v_service record;
@@ -712,6 +746,18 @@ BEGIN
     guest_phone,
     pickup_location,
     dropoff_location,
+    trip_setoff,
+    trip_setoff_lat,
+    trip_setoff_lng,
+    trip_destination,
+    trip_destination_lat,
+    trip_destination_lng,
+    trip_stopovers,
+    trip_return_option,
+    journey_estimated_hours,
+    journey_estimated_distance,
+    journey_estimated_fuel,
+    journey_summary,
     is_guest_booking,
     created_at,
     updated_at
@@ -732,6 +778,18 @@ BEGIN
     p_guest_phone,
     p_pickup_location,
     p_dropoff_location,
+    p_trip_setoff,
+    p_trip_setoff_lat,
+    p_trip_setoff_lng,
+    p_trip_destination,
+    p_trip_destination_lat,
+    p_trip_destination_lng,
+    p_trip_stopovers,
+    p_trip_return_option,
+    p_journey_estimated_hours,
+    p_journey_estimated_distance,
+    p_journey_estimated_fuel,
+    p_journey_summary,
     CASE WHEN p_tourist_id IS NULL THEN true ELSE false END,
     now(),
     now()
@@ -836,7 +894,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add comments for booking management functions
-COMMENT ON FUNCTION create_booking_atomic(uuid, uuid, date, integer, numeric, uuid, date, text, text, text, text, text, text, text) IS 'Atomically creates a booking with capacity validation and prevents overbooking';
+COMMENT ON FUNCTION create_booking_atomic(uuid, uuid, date, integer, numeric, uuid, date, text, text, text, text, text, text, text, text, double precision, double precision, text, double precision, double precision, double precision, jsonb, text, numeric, numeric, numeric, text) IS 'Atomically creates a booking with capacity validation and prevents overbooking';
 COMMENT ON FUNCTION update_booking_status_atomic(uuid, text, text) IS 'Atomically updates booking status with row locking to prevent concurrent modifications';
 COMMENT ON FUNCTION check_service_availability(uuid, date, integer) IS 'Checks if a service has available capacity for a specific date and number of guests';
 

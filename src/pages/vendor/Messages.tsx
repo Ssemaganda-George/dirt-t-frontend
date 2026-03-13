@@ -70,18 +70,21 @@ export default function VendorMessages() {
   }
 
   useEffect(() => {
+    console.debug('VendorMessages page: SUPABASE_URL=', import.meta.env.VITE_SUPABASE_URL, 'profileId=', profile?.id, 'vendorId=', vendor?.id)
     fetchMessages()
     fetchMessageCounts()
   }, [filter])
 
   const fetchMessageCounts = async () => {
     try {
+      console.debug('VendorMessages: fetching message counts for', profile?.id || vendor?.id)
       const [customerData, adminData, unreadData] = await Promise.all([
         getVendorMessages(profile?.id || '', 'customer'),
         getVendorMessages(profile?.id || '', 'admin'),
         getVendorMessages(profile?.id || '', 'unread')
       ])
 
+      console.debug('VendorMessages: message counts fetched', { customer: customerData.length, admin: adminData.length, unread: unreadData.length })
       setMessageCounts({
         customer: customerData.length,
         admin: adminData.length,
@@ -89,6 +92,7 @@ export default function VendorMessages() {
       })
     } catch (error) {
       console.error('Error fetching message counts:', error)
+      try { console.debug('Error fetching message counts detail:', JSON.stringify(error)) } catch (e) {}
     }
   }
 
@@ -117,13 +121,16 @@ export default function VendorMessages() {
         filterParam = 'admin'
       }
 
+      console.debug('VendorMessages: calling getVendorMessages', { vendorId, filterParam })
       const data = await getVendorMessages(vendorId, filterParam)
+      console.debug('VendorMessages: getVendorMessages returned', data?.length)
       
       // Update state and cache
       setMessages(data)
       saveMessagesToCache(vendorId, filter, data)
     } catch (error) {
       console.error('Error fetching messages:', error)
+      try { console.debug('Error fetching messages detail:', JSON.stringify(error)) } catch (e) {}
       // If server fails and no cache, show empty state
       if (!messages.length) {
         setMessages([])
@@ -147,14 +154,17 @@ export default function VendorMessages() {
         return;
       }
 
-      const newMsg = await sendMessage({
+      const payload = {
         sender_id: profile?.id || '',
         sender_role: 'vendor',
         recipient_id: adminRecipientId,
         recipient_role: 'admin',
         subject: '', // No subject for vendor to admin
         message: newMessageContent
-      })
+      }
+      console.debug('VendorMessages: sending message payload', payload)
+      const newMsg = await sendMessage(payload)
+      console.debug('VendorMessages: sendMessage returned', newMsg)
 
       // Optimistically add the new message to the chat trail only if filter is 'admin'
       setMessages((prev) => {

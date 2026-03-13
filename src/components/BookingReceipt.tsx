@@ -91,6 +91,20 @@ export default function BookingReceipt({ booking, showActions = false, onClose }
                 <span className="text-gray-600">Category:</span>
                 <span className="font-medium text-right">{booking.service?.service_categories?.name || 'N/A'}</span>
               </div>
+              {booking.service?.service_categories?.name === 'transport' && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Service Area*</span>
+                  <span className="font-medium text-right">
+                    {booking.service?.price_within_town != null && (
+                      <div>{`Within Town · ${formatCurrency(Number(booking.service.price_within_town), booking.service?.currency || 'UGX')}`}</div>
+                    )}
+                    {booking.service?.price_upcountry != null && (
+                      <div>{`Upcountry · ${formatCurrency(Number(booking.service.price_upcountry), booking.service?.currency || 'UGX')}`}</div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-1">Select whether this trip is within town or upcountry to see the correct price.</div>
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Date:</span>
                 <span className="font-medium text-right">{booking.service_date ? new Date(booking.service_date).toLocaleDateString() : 'Not set'}</span>

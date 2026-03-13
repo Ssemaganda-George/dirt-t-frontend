@@ -161,12 +161,14 @@ export function Transactions() {
           >
             Refresh
           </button>
-          <a
-            href="/admin/finance"
-            className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition"
-          >
-            Finance Processing
-          </a>
+            <a href="/admin/tourist-wallets" className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">Tourist Wallets</a>
+            <a href="/admin/conservation-wallet" className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition">Conservation Wallet</a>
+            <a
+              href="/admin/finance"
+              className="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition"
+            >
+              Finance Processing
+            </a>
         </div>
       </div>
 

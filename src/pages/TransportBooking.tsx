@@ -8,6 +8,8 @@ import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import SimilarServicesCarousel from '../components/SimilarServicesCarousel'
+import CityPickerModal from '../components/CityPickerModal'
+import MapModal from '../components/MapModal'
 
 interface ServiceDetail {
   id: string
@@ -188,6 +190,7 @@ const countries = [
   { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
   { code: '+504', name: 'Honduras', flag: '🇭🇳' },
   { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+  
   { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
   { code: '+507', name: 'Panama', flag: '🇵🇦' },
   { code: '+508', name: 'Saint Pierre and Miquelon', flag: '🇵🇲' },
@@ -339,6 +342,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     passengers: 1,
     returnTrip: false,
     specialRequests: '',
+    tripSetoff: '',
+    tripStopovers: '',
+    tripDestination: '',
+    tripReturnOption: '',
+    // Journey estimation inputs
+    avgSpeedKmph: 60,
+    fuelConsumptionPer100Km: 10,
     contactName: '',
     contactEmail: '',
     contactPhone: '',
@@ -352,6 +362,84 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     driverOption: service.driver_included ? 'with-driver' : 'self-drive'
   })
 
+  const [journeyStep, setJourneyStep] = useState<'setoff' | 'stopovers' | 'destination'>('setoff')
+
+  // Whether the user has saved the journey summary
+  const [journeySaved, setJourneySaved] = useState(false)
+
+  const buildJourneySummary = () => {
+    const parts: string[] = []
+    if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
+    if (stopovers && stopovers.length > 0) parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
+    else if ((bookingData as any).tripStopovers) parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
+    if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
+    if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
+
+    const coordDistance = computeTotalDistanceKm()
+    if (coordDistance > 0) {
+      const { hours, liters } = computeEstimatesFromDistance(
+        coordDistance,
+        Number((bookingData as any).avgSpeedKmph || 60),
+        Number((bookingData as any).fuelConsumptionPer100Km || 10),
+        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+      )
+      parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
+      parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
+      parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+      const routeCheck = detectAbnormalRoute()
+      if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
+    } else {
+      const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+      if (estHours > 0) {
+        const { distanceKm, liters } = estimateFuel(
+          estHours,
+          Number((bookingData as any).avgSpeedKmph || 60),
+          Number((bookingData as any).fuelConsumptionPer100Km || 10),
+          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+        )
+        parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
+        if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
+        parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+      }
+    }
+
+    return parts.join('\n')
+  }
+
+  const saveJourney = () => {
+    const summary = buildJourneySummary()
+    setBookingData(prev => ({ ...prev, journeySummary: summary }))
+    setJourneySaved(true)
+  }
+
+  // Spinner state for return option calculation
+  const [isCalculatingReturn, setIsCalculatingReturn] = useState(false)
+  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleReturnOptionChange = (option: 'return' | 'drop') => {
+    // Set the selection immediately so the radio updates, then show a brief spinner
+    setBookingData(prev => ({ ...prev, tripReturnOption: option }))
+    setIsCalculatingReturn(true)
+    if (calcTimeoutRef.current) {
+      clearTimeout(calcTimeoutRef.current)
+      calcTimeoutRef.current = null
+    }
+    calcTimeoutRef.current = setTimeout(() => {
+      setIsCalculatingReturn(false)
+      calcTimeoutRef.current = null
+    }, 5000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (calcTimeoutRef.current) {
+        clearTimeout(calcTimeoutRef.current)
+        calcTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  const hasDestination = Boolean((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())
   // Blocked dates (single-booking categories)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
@@ -408,16 +496,107 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
 
+  // City picker modal for selecting destination
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false)
+
+  const handleCitySelect = (city: string, country: string) => {
+    const label = `${city}, ${country}`
+    handleInputChange('tripDestination', label)
+    // Try to geocode the selected city to get coordinates so distance estimates can use them
+    ;(async () => {
+      try {
+        const q = encodeURIComponent(label)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${q}&limit=1`
+        const res = await fetch(url, { headers: { Accept: 'application/json' } })
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data) && data.length > 0) {
+            const d = data[0]
+            setDestinationLocation({ lat: Number(d.lat), lng: Number(d.lon), label: d.display_name || label })
+          }
+        }
+      } catch (e) {
+        // ignore geocode failures — estimates will fall back to time-based calculation
+        console.warn('City geocode failed', e)
+      }
+    })()
+    setIsCityModalOpen(false)
+  }
+
+  // Map modal state used for picking set-off / stopovers / destination
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
+  const [mapModalMode, setMapModalMode] = useState<'setoff' | 'stopover' | 'destination' | null>(null)
+  const [mapInitialMarker, setMapInitialMarker] = useState<{ lat: number; lng: number; label?: string } | undefined>(undefined)
+
+  // set-off location stored separately for lat/lng; keep bookingData.tripSetoff string for compatibility
+  const [setoffLocation, setSetoffLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
+
+  // destination location stored separately when selected on map
+  const [destinationLocation, setDestinationLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
+  
+  // Map search/autocomplete state
+  const [activeSearchTarget, setActiveSearchTarget] = useState<'setoff' | 'destination' | 'stopover' | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<any>>([])
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // stopovers as structured array with duration (hours)
+  const [stopovers, setStopovers] = useState<Array<{ id: string; lat: number; lng: number; label: string; durationHours: number }>>([])
+
+  const openMapFor = (mode: 'setoff' | 'stopover' | 'destination') => {
+    setMapModalMode(mode)
+    setIsMapModalOpen(true)
+    // set initial marker depending on existing data
+    if (mode === 'setoff' && setoffLocation) setMapInitialMarker({ lat: setoffLocation.lat, lng: setoffLocation.lng, label: setoffLocation.label })
+    else if (mode === 'destination' && destinationLocation) setMapInitialMarker({ lat: destinationLocation.lat, lng: destinationLocation.lng, label: destinationLocation.label })
+    else setMapInitialMarker(undefined)
+  }
+
+  const handleMapSelect = (lat: number, lng: number, label?: string) => {
+    const place = label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    if (mapModalMode === 'setoff') {
+      setSetoffLocation({ lat, lng, label: place })
+      handleInputChange('tripSetoff', place)
+    } else if (mapModalMode === 'destination') {
+      // store both a human readable label and structured coords when selecting destination on map
+      // call handleInputChange first (which will clear any previous coords), then set structured coords
+      handleInputChange('tripDestination', place)
+      setDestinationLocation({ lat, lng, label: place })
+    } else if (mapModalMode === 'stopover') {
+      const id = `s_${Date.now().toString(36).slice(2,8)}`
+      const next = [...stopovers, { id, lat, lng, label: place, durationHours: 1 }]
+      setStopovers(next)
+      // store serialized stopovers in bookingData.tripStopovers for persistence
+      handleInputChange('tripStopovers', JSON.stringify(next))
+    }
+    // clear modal mode
+    setMapModalMode(null)
+  }
+
+  const removeStopover = (id: string) => {
+    const next = stopovers.filter(s => s.id !== id)
+    setStopovers(next)
+    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
+  }
+
+  const updateStopoverDuration = (id: string, hours: number) => {
+    const next = stopovers.map(s => s.id === id ? { ...s, durationHours: hours } : s)
+    setStopovers(next)
+    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
+  }
+
   // Pre-fill dates from navigation state if available
   useEffect(() => {
     if (location.state) {
       const { startDate, endDate, selectedDate } = location.state as any
+      const { transportZone: incomingZone } = location.state as any
       if (startDate && endDate) {
         setBookingData(prev => ({
           ...prev,
           startDate,
           endDate
         }))
+        if (incomingZone) setTransportZone(incomingZone)
       } else if (selectedDate) {
         setBookingData(prev => ({
           ...prev,
@@ -430,6 +609,58 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
       setSelectedImage(service.images[0])
+    }
+  }, [service])
+
+  // Populate booking defaults from service transport metadata (fuel, engine, etc.)
+  useEffect(() => {
+    if (!service) return
+    try {
+      const fuelKmPerL = (service as any).fuel_km_per_liter ?? (service as any).fuelKmPerL ?? null
+      const fuelPer100Km = (service as any).fuel_consumption_per_100km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : null)
+      // If the service provides fuel metadata, prefer it and override defaults so estimates use vendor values
+      if (fuelKmPerL || fuelPer100Km) {
+        setBookingData(prev => ({
+          ...prev,
+          avgSpeedKmph: service?.avgSpeedKmph ?? prev.avgSpeedKmph ?? 60,
+          fuelConsumptionPer100Km: fuelPer100Km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : prev.fuelConsumptionPer100Km ?? 10),
+          fuel_km_per_liter: fuelKmPerL ?? (prev as any).fuel_km_per_liter,
+          fuelKmPerL: fuelKmPerL ?? (prev as any).fuelKmPerL
+        }))
+      }
+    } catch (e) {
+      console.warn('Failed to populate booking defaults from service:', e)
+    }
+  }, [service])
+
+  function getTransportUnitPrice(): number | null {
+    const rawWithin = (service as any).price_within_town
+    const rawUp = (service as any).price_upcountry
+    const within = rawWithin !== undefined && rawWithin !== null ? Number(rawWithin) : undefined
+    const up = rawUp !== undefined && rawUp !== null ? Number(rawUp) : undefined
+    const fallback = service.price !== undefined && service.price !== null ? Number(service.price) : null
+    if (service.service_categories?.name?.toLowerCase() !== 'transport') return fallback
+    if (transportZone === 'within') return !isNaN(within as number) ? (within as number) : fallback
+    if (transportZone === 'upcountry') return !isNaN(up as number) ? (up as number) : fallback
+    // No selection: if only one exists, return that, otherwise fallback to service.price
+    if (!isNaN(within as number) && (isNaN(up as number) || up === undefined)) return within as number
+    if (!isNaN(up as number) && (isNaN(within as number) || within === undefined)) return up as number
+    return fallback
+  }
+
+  const [transportZone, setTransportZone] = useState<'within' | 'upcountry' | ''>('')
+
+  // Auto-default transport zone when only one transport price exists
+  useEffect(() => {
+    try {
+      const hasWithin = typeof (service as any).price_within_town === 'number' && (service as any).price_within_town !== null
+      const hasUp = typeof (service as any).price_upcountry === 'number' && (service as any).price_upcountry !== null
+      if (service.service_categories?.name?.toLowerCase() === 'transport') {
+        if (hasWithin && !hasUp) setTransportZone('within')
+        else if (!hasWithin && hasUp) setTransportZone('upcountry')
+      }
+    } catch (e) {
+      // ignore
     }
   }, [service])
 
@@ -714,6 +945,36 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const createTransportBooking = async (paymentStatus: 'paid' | 'pending') => {
     try {
+      // Compute journey estimates (prefer coords) and prepare persisted journey fields
+      const _coordDistance = computeTotalDistanceKm()
+      let _estHours = 0
+      let _estDistance = 0
+      let _estLiters = 0
+      if (_coordDistance > 0) {
+        const res = computeEstimatesFromDistance(
+          _coordDistance,
+          Number((bookingData as any).avgSpeedKmph || 60),
+          Number((bookingData as any).fuelConsumptionPer100Km || 10),
+          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+        )
+        _estHours = res.hours
+        _estLiters = res.liters
+        _estDistance = _coordDistance
+      } else {
+        const _estH = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+        if (_estH > 0) {
+          const res = estimateFuel(
+            _estH,
+            Number((bookingData as any).avgSpeedKmph || 60),
+            Number((bookingData as any).fuelConsumptionPer100Km || 10),
+            Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+          )
+          _estHours = _estH
+          _estDistance = res.distanceKm
+          _estLiters = res.liters
+        }
+      }
+
       // Save to vendor localStorage for demo panel
       createVendorBooking(service.vendor_id || 'vendor_demo', {
         service_id: service.id,
@@ -724,15 +985,66 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         total_amount: totalPrice,
         currency: service.currency,
         status: 'confirmed' as const,
-        special_requests: bookingData.specialRequests,
+        special_requests: (() => {
+          const parts = [] as string[]
+          if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
+          if (stopovers && stopovers.length > 0) {
+            parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
+          } else if ((bookingData as any).tripStopovers) {
+            parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
+          }
+          if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
+          if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
+          const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+          // Prefer coordinate-based distance estimates when possible
+          const coordDistance = computeTotalDistanceKm()
+          if (coordDistance > 0) {
+            const { hours, liters } = computeEstimatesFromDistance(
+              coordDistance,
+              Number((bookingData as any).avgSpeedKmph || 60),
+              Number((bookingData as any).fuelConsumptionPer100Km || 10),
+              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+            )
+            parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
+            parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
+            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+            // Route sanity check
+            const routeCheck = detectAbnormalRoute()
+            if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
+          } else if (estHours > 0) {
+            const { distanceKm, liters } = estimateFuel(
+              estHours,
+              Number((bookingData as any).avgSpeedKmph || 60),
+              Number((bookingData as any).fuelConsumptionPer100Km || 10),
+              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+            )
+            parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
+            if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
+            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+          }
+          if (bookingData.specialRequests) parts.push(bookingData.specialRequests)
+          return parts.join('\n')
+        })(),
         pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
         dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
         driver_option: bookingData.driverOption,
         return_trip: bookingData.returnTrip,
         start_time: bookingData.startTime,
         end_time: bookingData.endTime,
-        end_date: bookingData.endDate
-      })
+        end_date: bookingData.endDate,
+        trip_setoff: (bookingData as any).tripSetoff || null,
+        trip_setoff_lat: setoffLocation?.lat ?? null,
+        trip_setoff_lng: setoffLocation?.lng ?? null,
+        trip_destination: (bookingData as any).tripDestination || null,
+        trip_destination_lat: destinationLocation?.lat ?? null,
+        trip_destination_lng: destinationLocation?.lng ?? null,
+        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
+        trip_return_option: (bookingData as any).tripReturnOption || null,
+        journey_estimated_hours: _estHours || null,
+        journey_estimated_distance: _estDistance || null,
+        journey_estimated_fuel: _estLiters || null,
+        journey_summary: (bookingData as any).journeySummary || buildJourneySummary()
+      } as any)
 
       const result = await createDatabaseBooking({
         service_id: service.id,
@@ -745,7 +1057,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         currency: service.currency,
         status: 'confirmed' as const,
         payment_status: paymentStatus as any,
-        special_requests: bookingData.specialRequests,
+        special_requests: `${(bookingData as any).tripSetoff ? 'Set-off: ' + (bookingData as any).tripSetoff + '\n' : ''}${stopovers && stopovers.length > 0 ? 'Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; ') + '\n' : ((bookingData as any).tripStopovers ? 'Stop-overs: ' + (bookingData as any).tripStopovers + '\n' : '')}${(bookingData as any).tripDestination ? 'Destination: ' + (bookingData as any).tripDestination + '\n' : ''}${(bookingData as any).tripReturnOption ? 'Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave') + '\n\n' : ''}${bookingData.specialRequests || ''}`,
+        trip_setoff: (bookingData as any).tripSetoff || null,
+        trip_setoff_lat: setoffLocation?.lat ?? null,
+        trip_setoff_lng: setoffLocation?.lng ?? null,
+        trip_destination: (bookingData as any).tripDestination || null,
+        trip_destination_lat: destinationLocation?.lat ?? null,
+        trip_destination_lng: destinationLocation?.lng ?? null,
+        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
+        trip_return_option: (bookingData as any).tripReturnOption || null,
+        journey_estimated_hours: (_estHours as number) || null,
+        journey_estimated_distance: (_estDistance as number) || null,
+        journey_estimated_fuel: (_estLiters as number) || null,
+        journey_summary: (bookingData as any).journeySummary || buildJourneySummary(),
         guest_name: profile ? undefined : bookingData.contactName,
         guest_email: profile ? undefined : bookingData.contactEmail,
         guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
@@ -756,7 +1080,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         start_time: bookingData.startTime,
         end_time: bookingData.endTime,
         end_date: bookingData.endDate
-      })
+      } as any)
 
       if (result && result.id) {
         // Send booking confirmation email with PDF
@@ -797,6 +1121,14 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     setBlockedError(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
 
+    // If user edited destination or setoff as text or via city picker, clear any previously stored coordinates
+    if (field === 'tripDestination') {
+      setDestinationLocation(null)
+    }
+    if (field === 'tripSetoff') {
+      setSetoffLocation(null)
+    }
+
     // Validate blocked dates immediately when startDate changes
     if (field === 'startDate' && value && blockedDates.has(value as string)) {
       setBlockedError('Selected start date is unavailable for booking (another transport/accommodation is already booked).')
@@ -829,6 +1161,197 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     // Round up to the next day if more than 24 hours
     return Math.ceil(diffHours / 24) || 1
   }
+
+  const calculateHours = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
+    if (!startDate || !endDate) return 0
+    const start = new Date(`${startDate}T${startTime}`)
+    const end = new Date(`${endDate}T${endTime}`)
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
+    const diffMs = end.getTime() - start.getTime()
+    if (diffMs <= 0) return 0
+    return diffMs / (1000 * 60 * 60)
+  }
+
+  const FUEL_ERROR_PCT = 0.15 // 15% buffer for extreme conditions
+
+  const estimateFuel = (hours: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
+    if (!hours || !avgSpeedKmph) return { distanceKm: 0, liters: 0 }
+    const distance = hours * avgSpeedKmph
+    let liters = 0
+    if (fuelKmPerL && fuelKmPerL > 0) {
+      liters = distance / fuelKmPerL
+    } else if (fuelPer100Km && fuelPer100Km > 0) {
+      liters = (distance * fuelPer100Km) / 100
+    }
+    liters = liters * (1 + (errorPct || 0))
+    return { distanceKm: distance, liters }
+  }
+
+  // Haversine distance between two points (km)
+  const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const toRad = (v: number) => (v * Math.PI) / 180
+    const R = 6371 // Earth radius km
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  // Build waypoints from setoff, stopovers, destination and compute total distance (optionally doubling for return)
+  const computeTotalDistanceKm = (): number => {
+    const pts: Array<{ lat: number; lng: number }> = []
+    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
+    if (stopovers && stopovers.length > 0) {
+      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
+    }
+    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
+
+    if (pts.length < 2) return 0
+
+    let total = 0
+    for (let i = 0; i < pts.length - 1; i++) {
+      total += haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
+    }
+
+    // If the user selected 'return', approximate by doubling the outbound distance
+    // If driver needs to return (either explicit return or drop-and-leave where driver returns), double outbound distance
+    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
+    return total
+  }
+
+  const computeEstimatesFromDistance = (distanceKm: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
+    if (!distanceKm || !avgSpeedKmph) return { hours: 0, liters: 0 }
+    const hours = distanceKm / avgSpeedKmph
+    let liters = 0
+    if (fuelKmPerL && fuelKmPerL > 0) {
+      liters = distanceKm / fuelKmPerL
+    } else if (fuelPer100Km && fuelPer100Km > 0) {
+      liters = (distanceKm * fuelPer100Km) / 100
+    }
+    liters = liters * (1 + (errorPct || 0))
+    return { hours, liters }
+  }
+
+  // Detect abnormal routing: large legs, huge detours vs direct distance, or very long totals
+  const detectAbnormalRoute = () => {
+    const pts: Array<{ lat: number; lng: number }> = []
+    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
+    if (stopovers && stopovers.length > 0) {
+      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
+    }
+    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
+
+    const reasons: string[] = []
+    if (pts.length < 2) return { abnormal: false, reasons }
+
+    const direct = (setoffLocation && destinationLocation) ? haversineKm(setoffLocation.lat, setoffLocation.lng, destinationLocation.lat, destinationLocation.lng) : 0
+    let total = 0
+    for (let i = 0; i < pts.length - 1; i++) {
+      const leg = haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
+      total += leg
+      if (leg > 2000) reasons.push(`Very long leg: ${leg.toFixed(1)} km between waypoint ${i + 1} and ${i + 2}`)
+    }
+    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
+
+    if (direct > 0 && total > direct * 3) reasons.push(`Total route ${total.toFixed(1)} km is > 3× direct distance ${direct.toFixed(1)} km`)
+    if (total > 5000) reasons.push(`Total route unusually long: ${total.toFixed(0)} km`)
+
+    return { abnormal: reasons.length > 0, reasons }
+  }
+
+  // Perform a debounced Nominatim search for suggestions
+  const performSearch = async (q: string) => {
+    if (!q || q.trim().length < 2) {
+      setSearchResults([])
+      return
+    }
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(q)}&limit=6`
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setSearchResults(data.map((d: any) => ({ place_id: d.place_id, display_name: d.display_name, lat: d.lat, lon: d.lon })))
+      } else {
+        setSearchResults([])
+      }
+    } catch (e) {
+      console.warn('Map search failed', e)
+      setSearchResults([])
+    }
+  }
+
+  // Trigger debounced search when query changes
+  useEffect(() => {
+    if (!activeSearchTarget) return
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery)
+    }, 300)
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [searchQuery, activeSearchTarget])
+
+  const selectSuggestion = (target: 'setoff' | 'destination' | 'stopover', item: any) => {
+    const label = item.display_name || `${item.lat}, ${item.lon}`
+    if (target === 'setoff') {
+      setSetoffLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
+      handleInputChange('tripSetoff', label)
+    } else if (target === 'destination') {
+      setDestinationLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
+      handleInputChange('tripDestination', label)
+    } else {
+      // add a stopover entry
+      const id = `s_${Date.now().toString(36).slice(2,8)}`
+      const next = [...stopovers, { id, lat: Number(item.lat), lng: Number(item.lon), label, durationHours: 1 }]
+      setStopovers(next)
+      handleInputChange('tripStopovers', JSON.stringify(next))
+    }
+    setSearchResults([])
+    setActiveSearchTarget(null)
+    setSearchQuery('')
+  }
+
+  // Geocode a free-text place label using Nominatim (returns {lat,lng,display_name} or null)
+  const geocodeLabel = async (label: string) => {
+    if (!label || !label.trim()) return null
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(label)}&limit=1`
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!Array.isArray(data) || data.length === 0) return null
+      const d = data[0]
+      return { lat: Number(d.lat), lng: Number(d.lon), display_name: d.display_name }
+    } catch (e) {
+      console.warn('geocodeLabel error', e)
+      return null
+    }
+  }
+
+  // Ensure coordinates exist for setoff/destination when user provides text labels
+  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    // debounce to avoid rapid geocoding while typing
+    if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current)
+    geocodeTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (!setoffLocation && (bookingData as any).tripSetoff && (bookingData as any).tripSetoff.toString().trim().length > 3) {
+          const res = await geocodeLabel((bookingData as any).tripSetoff)
+          if (res) setSetoffLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripSetoff })
+        }
+        if (!destinationLocation && (bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim().length > 3) {
+          const res = await geocodeLabel((bookingData as any).tripDestination)
+          if (res) setDestinationLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripDestination })
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 400)
+    return () => { if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current) }
+  }, [(bookingData as any).tripSetoff, (bookingData as any).tripDestination, stopovers.length])
 
   // ...existing code...
 
@@ -880,6 +1403,85 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       doc.text(`Drop-off: ${dropoff}`, left + 10, y)
       y += 14
       doc.text(`Passengers: ${bookingData.passengers}`, left + 10, y)
+      y += 14
+      // Trip details (set-off, stop-overs, destination)
+      if ((bookingData as any).tripSetoff) {
+        doc.text(`Set-off: ${(bookingData as any).tripSetoff}`, left + 10, y)
+        y += 14
+      }
+      if (stopovers && stopovers.length > 0) {
+        for (const s of stopovers) {
+          doc.text(`Stop-over: ${s.label} (${s.durationHours}h)`, left + 10, y)
+          y += 14
+        }
+      } else if ((bookingData as any).tripStopovers) {
+        doc.text(`Stop-overs: ${(bookingData as any).tripStopovers}`, left + 10, y)
+        y += 14
+      }
+      if ((bookingData as any).tripDestination) {
+        doc.text(`Destination: ${(bookingData as any).tripDestination}`, left + 10, y)
+        y += 14
+      }
+      if ((bookingData as any).tripReturnOption) {
+        const opt = (bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'
+        doc.text(`Return option: ${opt}`, left + 10, y)
+        y += 14
+      }
+      // Estimated hours and fuel
+      // Estimated hours, distance and fuel (prefer coordinate-based)
+      const coordDistance = computeTotalDistanceKm()
+      if (coordDistance > 0) {
+        const { hours, liters } = computeEstimatesFromDistance(
+          coordDistance,
+          Number((bookingData as any).avgSpeedKmph || 60),
+          Number((bookingData as any).fuelConsumptionPer100Km || 10),
+          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+        )
+        doc.text(`Estimated hours: ${hours.toFixed(1)} hrs`, left + 10, y)
+        y += 14
+        doc.text(`Estimated distance: ${coordDistance.toFixed(1)} km`, left + 10, y)
+        y += 14
+        doc.text(`Estimated fuel: ${liters.toFixed(1)} L`, left + 10, y)
+        y += 14
+        // draw any route anomalies
+        try {
+          const routeCheck = detectAbnormalRoute()
+          if (routeCheck.abnormal) {
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(9)
+            doc.setTextColor(Math.round(0.8 * 255), Math.round(0.2 * 255), Math.round(0.2 * 255))
+            let ay = y
+            for (const line of routeCheck.reasons) {
+              doc.text(`Route warning: ${line}`, left + 10, ay)
+              ay += 12
+            }
+            y = ay
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(10)
+            doc.setTextColor(0, 0, 0)
+          }
+        } catch (e) {
+          // ignore PDF drawing errors
+        }
+      } else {
+        const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+        if (estHours > 0) {
+          const { distanceKm, liters } = estimateFuel(
+            estHours,
+            Number((bookingData as any).avgSpeedKmph || 60),
+            Number((bookingData as any).fuelConsumptionPer100Km || 10),
+            Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+          )
+          doc.text(`Estimated hours: ${estHours.toFixed(1)} hrs`, left + 10, y)
+          y += 14
+          if (distanceKm > 0) {
+            doc.text(`Estimated distance: ${distanceKm.toFixed(1)} km`, left + 10, y)
+            y += 14
+          }
+          doc.text(`Estimated fuel: ${liters.toFixed(1)} L`, left + 10, y)
+          y += 14
+        }
+      }
       y += 20
 
       // Payment section
@@ -913,12 +1515,20 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   const totalPrice = (() => {
-    const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-    const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0 // 30% extra for driver only if not already included
-    return basePrice + driverCost
+    // compute using transport-specific unit price when available
+    const unit = getTransportUnitPrice()
+    const days = calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+    const base = (unit || 0) * days
+    const driverCostLocal = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? base * 0.3 : 0
+    return base + driverCostLocal
   })()
+  // Expose basePrice and driverCost for UI breakdown
+  const [unitPrice, setUnitPrice] = useState<number | null>(() => getTransportUnitPrice())
+  useEffect(() => {
+    setUnitPrice(getTransportUnitPrice())
+  }, [transportZone, service])
 
-  const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+  const basePrice = (unitPrice || service.price || 0) * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
   const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
 
   const renderStepContent = () => {
@@ -1031,14 +1641,347 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                rows={2}
-                placeholder="Any special requirements..."
-                value={bookingData.specialRequests}
-                onChange={(e) => handleInputChange('specialRequests', e.target.value)}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Journey Design</label>
+              <div className="mb-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('setoff')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Set-off
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('stopovers')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Stop-overs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('destination')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Destination
+                  </button>
+                </div>
+
+                <div className="p-3 border border-gray-200 rounded-lg bg-white">
+                  {journeyStep === 'setoff' && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Set-off</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Enter start point and time (e.g., Kampala, 08:00)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          value={(bookingData as any).tripSetoff}
+                          onFocus={() => { setActiveSearchTarget('setoff'); setSearchQuery((bookingData as any).tripSetoff || '') }}
+                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                          onChange={(e) => { handleInputChange('tripSetoff', e.target.value); setSearchQuery(e.target.value) }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => openMapFor('setoff')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                        >
+                          Map
+                        </button>
+
+                        {activeSearchTarget === 'setoff' && searchResults && searchResults.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                            {searchResults.map(r => (
+                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('setoff', r)}>
+                                {r.display_name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {setoffLocation && <p className="text-xs text-gray-500 mt-2">Picked: {setoffLocation.label}</p>}
+                    </div>
+                  )}
+
+                  {journeyStep === 'stopovers' && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Stop-overs</label>
+                      <div className="space-y-2">
+                        {stopovers.length === 0 && <p className="text-xs text-gray-400">No stop-overs added yet.</p>}
+                        <div className="mt-2">
+                          <label className="sr-only">Add stop-over by typing</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Type to search stop-over..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                              onFocus={() => { setActiveSearchTarget('stopover'); setSearchQuery('') }}
+                              onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                              value={activeSearchTarget === 'stopover' ? searchQuery : ''}
+                              onChange={(e) => { setSearchQuery(e.target.value) }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => openMapFor('stopover')}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                            >
+                              Map
+                            </button>
+
+                            {activeSearchTarget === 'stopover' && searchResults && searchResults.length > 0 && (
+                              <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                                {searchResults.map(r => (
+                                  <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('stopover', r)}>
+                                    {r.display_name}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                        {stopovers.map(s => (
+                          <div key={s.id} className="flex items-center gap-2">
+                            <div className="flex-1 text-sm">
+                              <div className="font-medium">{s.label}</div>
+                              <div className="text-xs text-gray-500">{s.lat.toFixed(5)}, {s.lng.toFixed(5)}</div>
+                            </div>
+                            <div className="w-28">
+                              <label className="text-xs text-gray-500">Duration (hrs)</label>
+                              <input type="number" min={0} step={0.5} value={s.durationHours} onChange={(e) => updateStopoverDuration(s.id, Number(e.target.value || 0))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm" />
+                            </div>
+                            <button type="button" onClick={() => removeStopover(s.id)} className="text-red-600 text-sm">Remove</button>
+                          </div>
+                        ))}
+
+                        
+                      </div>
+                    </div>
+                  )}
+
+                  {journeyStep === 'destination' && !journeySaved && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Destination</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Final drop-off destination"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          value={(bookingData as any).tripDestination}
+                          onFocus={() => { setActiveSearchTarget('destination'); setSearchQuery((bookingData as any).tripDestination || '') }}
+                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                          onChange={(e) => { handleInputChange('tripDestination', e.target.value); setSearchQuery(e.target.value) }}
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openMapFor('destination')}
+                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                          >
+                            Map
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsCityModalOpen(true)}
+                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                          >
+                            List
+                          </button>
+                        </div>
+
+                        {activeSearchTarget === 'destination' && searchResults && searchResults.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                            {searchResults.map(r => (
+                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('destination', r)}>
+                                {r.display_name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">Return option</label>
+                        <div className="flex gap-3 items-center">
+                          <label className="inline-flex items-center text-sm">
+                            <input
+                              type="radio"
+                              name="tripReturnOption"
+                              value="return"
+                              checked={(bookingData as any).tripReturnOption === 'return'}
+                              onChange={() => handleReturnOptionChange('return')}
+                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
+                              className="mr-2"
+                            />
+                            Return back to set-off point
+                          </label>
+                          <label className="inline-flex items-center text-sm">
+                            <input
+                              type="radio"
+                              name="tripReturnOption"
+                              value="drop"
+                              checked={(bookingData as any).tripReturnOption === 'drop'}
+                              onChange={() => handleReturnOptionChange('drop')}
+                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
+                              className="mr-2"
+                            />
+                            Drop and leave
+                          </label>
+
+                        {/* Require a destination before allowing return-option selection */}
+                        {!(bookingData as any).tripDestination || !(bookingData as any).tripDestination.toString().trim() ? (
+                          <p className="text-xs text-gray-500 mt-2">Enter or select a destination first to enable return options.</p>
+                        ) : null}
+                        </div>
+
+                        {/** Show estimation inputs and results only after user explicitly selects a return option and a destination exists */}
+                        {hasDestination ? (
+                          (bookingData as any).tripReturnOption ? (
+                            isCalculatingReturn ? (
+                              <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
+                                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                <span>Calculating journey estimates…</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Average speed (km/h)</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={(bookingData as any).avgSpeedKmph}
+                                      onChange={(e) => handleInputChange('avgSpeedKmph', Number(e.target.value || 0))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Fuel efficiency (km / L)</label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step={0.1}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={(bookingData as any).fuel_km_per_liter ?? (bookingData as any).fuelKmPerL ?? ((bookingData as any).fuelConsumptionPer100Km ? Number((100 / (bookingData as any).fuelConsumptionPer100Km).toFixed(2)) : '')}
+                                      onChange={(e) => {
+                                        const kmPerL = e.target.value ? Number(e.target.value) : undefined
+                                        const per100km = kmPerL ? Number((100 / kmPerL).toFixed(2)) : undefined
+                                        handleInputChange('fuel_km_per_liter', kmPerL)
+                                        // keep legacy field in sync for any code paths relying on it
+                                        handleInputChange('fuelConsumptionPer100Km', per100km ?? 0)
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 text-sm text-gray-700">
+                                  {(() => {
+                                    // Prefer coordinate-based estimates when coordinates are available
+                                    const coordDistance = computeTotalDistanceKm()
+                                    if (coordDistance > 0) {
+                                      const { hours, liters } = computeEstimatesFromDistance(
+                                        coordDistance,
+                                        Number((bookingData as any).avgSpeedKmph || 60),
+                                        Number((bookingData as any).fuelConsumptionPer100Km || 10),
+                                        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+                                      )
+                                      return (
+                                          <div className="space-y-1">
+                                            <div>Estimated hours: <span className="font-medium">{hours > 0 ? `${hours.toFixed(1)} hrs` : '—'}</span></div>
+                                            <div>Estimated distance: <span className="font-medium">{coordDistance > 0 ? `${coordDistance.toFixed(1)} km` : '—'}</span></div>
+                                            <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
+                                            {(() => {
+                                              const rc = detectAbnormalRoute()
+                                              if (rc.abnormal) return (<div className="mt-2 text-xs text-red-700">Route warning: {rc.reasons.join(' ; ')}</div>)
+                                              return null
+                                            })()}
+                                          </div>
+                                        )
+                                    }
+                                    const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+                                    const { distanceKm, liters } = estimateFuel(
+                                      estHours,
+                                      Number((bookingData as any).avgSpeedKmph || 60),
+                                      Number((bookingData as any).fuelConsumptionPer100Km || 10),
+                                      Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+                                    )
+                                    return (
+                                      <div className="space-y-1">
+                                        <div>Estimated hours: <span className="font-medium">{estHours > 0 ? `${estHours.toFixed(1)} hrs` : '—'}</span></div>
+                                        <div>Estimated distance: <span className="font-medium">{distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—'}</span></div>
+                                        <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                              </>
+                            )
+                          ) : (
+                            <div className="mt-3 text-sm text-gray-500">Select a return option to run journey estimates.</div>
+                          )
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+
+                  
+
+                  {journeySaved ? (
+                    <div className="mt-4 p-4 border rounded-md bg-gray-50">
+                      <div className="text-sm whitespace-pre-line text-gray-800">{(bookingData as any).journeySummary || buildJourneySummary()}</div>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => { setJourneySaved(false); setJourneyStep('destination') }}
+                          className="px-3 py-2 bg-yellow-500 text-white rounded-md"
+                        >
+                          Edit trip
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between mt-3">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (journeyStep === 'setoff') setJourneyStep('setoff')
+                            else if (journeyStep === 'stopovers') setJourneyStep('setoff')
+                            else setJourneyStep('stopovers')
+                          }}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md mr-2"
+                        >
+                          Back
+                        </button>
+                      </div>
+                      <div>
+                        {/** Disable Next on Destination until a return option is selected */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (journeyStep === 'setoff') setJourneyStep('stopovers')
+                            else if (journeyStep === 'stopovers') setJourneyStep('destination')
+                            else saveJourney()
+                          }}
+                          disabled={journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)}
+                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white'}`}
+                        >
+                          {journeyStep === 'destination' ? 'Save my trip' : 'Next'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  rows={2}
+                  placeholder="Any special requirements..."
+                  value={bookingData.specialRequests}
+                  onChange={(e) => handleInputChange('specialRequests', e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Contact Information Section */}
@@ -1708,6 +2651,21 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
         </div>
       </div>
+      {/* City Picker Modal */}
+      <CityPickerModal
+        isOpen={isCityModalOpen}
+        onClose={() => setIsCityModalOpen(false)}
+        onSelect={handleCitySelect}
+        selectedCity={(bookingData as any).tripDestination || ''}
+      />
+
+      {/* Map Modal (used for set-off / stopovers / destination) */}
+      <MapModal
+        isOpen={isMapModalOpen}
+        onClose={() => { setIsMapModalOpen(false); setMapModalMode(null) }}
+        onSelect={handleMapSelect}
+        initialMarker={mapInitialMarker}
+      />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32">
 
@@ -1771,14 +2729,40 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg sm:text-xl font-bold text-gray-900">
-                    {formatCurrencyWithConversion(totalPrice, service.currency)}
+                    {service.service_categories?.name?.toLowerCase() === 'transport'
+                      ? formatCurrencyWithConversion(unitPrice || service.price, service.currency)
+                      : formatCurrencyWithConversion(totalPrice, service.currency)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    One way {bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}
+                    {service.service_categories?.name?.toLowerCase() === 'transport'
+                      ? `per day ${bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`
+                      : `One way ${bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`}
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Transport zone selector (move above Trip Dates & Times) */}
+            {service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Service Area *</label>
+                <div className="flex items-center gap-4 text-sm mb-2">
+                  {(service as any).price_within_town !== undefined && (
+                    <label className="inline-flex items-center">
+                      <input type="radio" name="transportZoneTop" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                      <span>Within Town {typeof (service as any).price_within_town === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_within_town, service.currency)}` : ''}</span>
+                    </label>
+                  )}
+                  {(service as any).price_upcountry !== undefined && (
+                    <label className="inline-flex items-center">
+                      <input type="radio" name="transportZoneTop" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                      <span>Upcountry {typeof (service as any).price_upcountry === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_upcountry, service.currency)}` : ''}</span>
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">Select whether this trip is within town or upcountry to see the correct price.</p>
+              </div>
+            )}
 
             {/* Step Content */}
             <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
@@ -1802,6 +2786,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   isPaymentProcessing ||
                   !bookingData.startDate ||
                   !bookingData.endDate ||
+                  (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
                   (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
                   !bookingData.contactName ||
                   !bookingData.contactEmail ||
@@ -1828,6 +2813,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   isPaymentProcessing ||
                   !bookingData.startDate ||
                   !bookingData.endDate ||
+                  (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
                   (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
                   !bookingData.contactName ||
                   !bookingData.contactEmail ||

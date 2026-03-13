@@ -32,10 +32,14 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
       })));
 
       setFormData(({
-        title: service.title,
-        description: service.description,
-        price: service.price,
-        currency: service.currency,
+      title: service.title,
+      description: service.description,
+      price: service.price,
+      // support pricing categories (within town / upcountry) while
+      // falling back to legacy `price` when those fields are absent
+      price_within_town: (service as any).price_within_town ?? service.price,
+      price_upcountry: (service as any).price_upcountry ?? service.price,
+      currency: service.currency,
         location: service.location,
         duration_hours: service.duration_hours,
         max_capacity: service.max_capacity,
@@ -340,40 +344,88 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    id="price"
-                    value={formData.price || ''}
-                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value))}
-                    min="0"
-                    step="0.01"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    required
-                  />
-                </div>
+              {isTransportService ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="price_within_town" className="block text-sm font-medium text-gray-700">
+                      Within Town Price
+                    </label>
+                    <input
+                      type="number"
+                      id="price_within_town"
+                      value={(formData as any).price_within_town ?? ''}
+                      onChange={(e) => handleInputChange('price_within_town' as any, e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                      min="0"
+                      step="0.01"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
+                  </div>
 
-                <div>
-                  <label htmlFor="currency" className="block text-sm font-medium text-gray-700">
-                    Currency
-                  </label>
-                  <select
-                    id="currency"
-                    value={formData.currency || 'USD'}
-                    onChange={(e) => handleInputChange('currency', e.target.value)}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                    <option value="GBP">GBP</option>
-                    <option value="UGX">UGX</option>
-                  </select>
+                  <div>
+                    <label htmlFor="price_upcountry" className="block text-sm font-medium text-gray-700">
+                      Upcountry Price
+                    </label>
+                    <input
+                      type="number"
+                      id="price_upcountry"
+                      value={(formData as any).price_upcountry ?? ''}
+                      onChange={(e) => handleInputChange('price_upcountry' as any, e.target.value === '' ? undefined : parseFloat(e.target.value))}
+                      min="0"
+                      step="0.01"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="currency" className="block text-sm font-medium text-gray-700">
+                      Currency
+                    </label>
+                    <select
+                      id="currency"
+                      value={formData.currency || 'USD'}
+                      onChange={(e) => handleInputChange('currency' as any, e.target.value)}
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="UGX">UGX</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price</label>
+                    <input
+                      type="number"
+                      id="price"
+                      value={formData.price || ''}
+                      onChange={(e) => handleInputChange('price' as any, parseFloat(e.target.value))}
+                      min="0"
+                      step="0.01"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="currency" className="block text-sm font-medium text-gray-700">Currency</label>
+                    <select
+                      id="currency"
+                      value={formData.currency || 'USD'}
+                      onChange={(e) => handleInputChange('currency' as any, e.target.value)}
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="UGX">UGX</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Event / Activity-specific fields */}
               {(service?.category_id === 'cat_activities' || (formData.ticket_types && formData.ticket_types.length > 0)) && (

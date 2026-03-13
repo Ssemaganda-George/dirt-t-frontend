@@ -72,6 +72,8 @@ const navigation = [
     category: 'Finance',
     items: [
       { labelKey: 'dirt_trails_wallet', href: '/admin/dirt-trails-wallet', icon: CreditCard },
+        { labelKey: 'tourist_wallets', href: '/admin/tourist-wallets', icon: Users },
+        { labelKey: 'conservation_wallet', href: '/admin/conservation-wallet', icon: CreditCard },
       { labelKey: 'business_wallets', href: '/admin/wallets', icon: CreditCard },
       { labelKey: 'finance', href: '/admin/finance', icon: DollarSign }
     ]

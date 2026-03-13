@@ -53,6 +53,7 @@ export default function CityPickerModal({ isOpen, onClose, onSelect, selectedCit
           <div>
             <h3 className="text-base font-bold text-gray-900">Select your city</h3>
             <p className="text-xs text-gray-400">Country will be filled automatically</p>
+            <p className="text-xs text-gray-500 mt-1">Typing targets: Set-off · Stop-overs · Destination · Add stop-over (map). Use Back / Next to navigate.</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-5 h-5" />

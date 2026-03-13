@@ -158,7 +158,6 @@ export async function getUserPreferences(): Promise<UserPreferences | null> {
       return null
     }
 
-    // Don't manually filter by user_id since RLS will handle it
     const { data, error } = await supabase
       .from('user_preferences')
       .select('*')
@@ -507,6 +506,11 @@ export interface Service {
   pickup_locations?: string[]
   dropoff_locations?: string[]
   route_description?: string
+  vehicle_features?: string[]
+  vehicle_ccs?: number
+  vehicle_engine?: string
+  fuel_type?: string
+  fuel_km_per_liter?: number
   driver_included?: boolean
   air_conditioning?: boolean
   gps_tracking?: boolean
@@ -1135,6 +1139,9 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   contact_info?: { phone?: string; email?: string; website?: string }
   booking_requirements?: string
   cancellation_policy?: string
+  // Transport pricing (new)
+  price_within_town?: number
+  price_upcountry?: number
 }>): Promise<any> {
   try {
     // Whitelist of columns that actually exist in the database
@@ -1156,9 +1163,12 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       'guide_included', 'accommodation_included',
       // Transport fields
       'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
+      'vehicle_features', 'vehicle_ccs', 'vehicle_engine', 'fuel_type', 'fuel_km_per_liter',
       'license_required', 'booking_notice_hours', 'usb_charging', 'child_seat', 'roof_rack',
       'towing_capacity', 'four_wheel_drive', 'automatic_transmission', 'transport_terms',
       'driver_included', 'air_conditioning', 'gps_tracking', 'fuel_included', 'tolls_included',
+      // Transport pricing
+      'price_within_town', 'price_upcountry',
       'insurance_included', 'reservations_required',
       // Restaurant fields
       'cuisine_type', 'opening_hours', 'menu_items', 'dietary_options', 'average_cost_per_person',
@@ -1212,14 +1222,21 @@ export async function updateService(serviceId: string, vendorId: string | undefi
 
   // Always include updated_at
   filteredUpdates.updated_at = new Date().toISOString();
+  // Build RPC payload omitting updated_at because the RPC implementation can be strict
+  const rpcUpdates = { ...filteredUpdates };
+  delete (rpcUpdates as any).updated_at;
 
-  console.log('Valid updates:', filteredUpdates);
-
-  // Try atomic RPC first, fall back to direct update if RPC fails (e.g. PGRST203 overload issue)
   try {
+    try {
+      console.log('Valid updates:', JSON.stringify(filteredUpdates));
+    } catch (e) {
+      console.log('Valid updates: (could not stringify)', filteredUpdates);
+    }
+
+    // Try atomic RPC first, fall back to direct update if RPC fails (e.g. type mismatches)
     const result = await supabase.rpc('update_service_atomic', {
       p_service_id: serviceId,
-      p_updates: filteredUpdates,
+      p_updates: rpcUpdates,
       p_vendor_id: vendorId
     });
 
@@ -1232,19 +1249,15 @@ export async function updateService(serviceId: string, vendorId: string | undefi
     }
   } catch (rpcError: any) {
     console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message, rpcError);
-    
-    // Fallback: direct table update
+
+    // Fallback: direct table update (include updated_at)
     const updateQuery = supabase
       .from('services')
       .update(filteredUpdates)
       .eq('id', serviceId);
 
-    // If vendorId is provided, also filter by it for authorization
-    if (vendorId) {
-      updateQuery.eq('vendor_id', vendorId);
-    }
+    if (vendorId) updateQuery.eq('vendor_id', vendorId);
 
-    // Use select().single() so we get the updated row back and detect zero-row updates
     const { data: directUpdated, error: directError } = await updateQuery.select().single();
     if (directError) {
       console.error('updateService: direct update error (no rows updated?):', directError);
@@ -1298,21 +1311,31 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       }
     });
     if (mismatches.length > 0) {
-      console.warn('updateService: mismatch between sent updates and DB for keys:', mismatches, { sent: filteredUpdates, got: data });
-      // Retry with direct update to ensure changes are applied
-      try {
-        console.warn('updateService: attempting direct update retry due to mismatch...');
-        const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
-        if (vendorId) directQuery.eq('vendor_id', vendorId);
-        const { data: retryData, error: retryError } = await directQuery.select().single();
-        if (retryError) {
-          console.error('updateService: direct retry error:', retryError);
-        } else {
-          console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
-          return retryData;
+      // Ignore updated_at mismatches caused by formatting differences
+      const filteredMismatches = mismatches.filter(k => k !== 'updated_at');
+      if (filteredMismatches.length > 0) {
+        try {
+          console.warn('updateService: mismatch between sent updates and DB for keys:', filteredMismatches, 'details:', JSON.stringify({ sent: filteredUpdates, got: data }));
+        } catch (e) {
+          console.warn('updateService: mismatch between sent updates and DB for keys:', filteredMismatches, { sent: filteredUpdates, got: data });
         }
-      } catch (retryErr) {
-        console.error('updateService: error during direct retry:', retryErr);
+        // Retry with direct update to ensure changes are applied
+        try {
+          console.warn('updateService: attempting direct update retry due to mismatch...');
+          const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
+          if (vendorId) directQuery.eq('vendor_id', vendorId);
+          const { data: retryData, error: retryError } = await directQuery.select().single();
+          if (retryError) {
+            console.error('updateService: direct retry error:', retryError);
+          } else {
+            console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
+            return retryData;
+          }
+        } catch (retryErr) {
+          console.error('updateService: error during direct retry:', retryErr);
+        }
+      } else {
+        console.log('updateService: only timestamp mismatch (ignored)');
       }
     }
   } catch (e) {
@@ -2681,6 +2704,19 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
     p_guest_phone: bookingData.guest_phone || null,
     p_pickup_location: bookingData.pickup_location || null,
     p_dropoff_location: bookingData.dropoff_location || null
+    ,
+    p_trip_setoff: (bookingData as any).trip_setoff || (bookingData as any).tripSetoff || null,
+    p_trip_setoff_lat: (bookingData as any).trip_setoff_lat ?? (bookingData as any).tripSetoffLat ?? null,
+    p_trip_setoff_lng: (bookingData as any).trip_setoff_lng ?? (bookingData as any).tripSetoffLng ?? null,
+    p_trip_destination: (bookingData as any).trip_destination || (bookingData as any).tripDestination || null,
+    p_trip_destination_lat: (bookingData as any).trip_destination_lat ?? (bookingData as any).tripDestinationLat ?? null,
+    p_trip_destination_lng: (bookingData as any).trip_destination_lng ?? (bookingData as any).tripDestinationLng ?? null,
+    p_trip_stopovers: (bookingData as any).trip_stopovers ? JSON.stringify((bookingData as any).trip_stopovers) : ((bookingData as any).tripStopovers ? JSON.stringify((bookingData as any).tripStopovers) : null),
+    p_trip_return_option: (bookingData as any).trip_return_option || (bookingData as any).tripReturnOption || null,
+    p_journey_estimated_hours: (bookingData as any).journey_estimated_hours ?? (bookingData as any).journeyEstimatedHours ?? null,
+    p_journey_estimated_distance: (bookingData as any).journey_estimated_distance ?? (bookingData as any).journeyEstimatedDistance ?? null,
+    p_journey_estimated_fuel: (bookingData as any).journey_estimated_fuel ?? (bookingData as any).journeyEstimatedFuel ?? null,
+    p_journey_summary: (bookingData as any).journey_summary || (bookingData as any).journeySummary || null
   });
 
   if (result.error) throw result.error;

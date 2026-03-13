@@ -28,6 +28,7 @@ export default function Messages() {
   const [messages, setMessages] = useState<Record<string, Message[]>>({})
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [compose, setCompose] = useState('')
+  const [sendMessageError, setSendMessageError] = useState<string | null>(null)
 
   // Fetch real messages for tourist and map to threads
   useEffect(() => {
@@ -35,7 +36,10 @@ export default function Messages() {
 
     const load = async () => {
       try {
+        console.debug('Messages page: SUPABASE_URL=', import.meta.env.VITE_SUPABASE_URL, 'userId=', user.id)
+        console.debug('Messages page: calling getTouristMessages for user', user.id)
         const rows: any[] = await getTouristMessages(user.id)
+        console.debug('Messages page: getTouristMessages returned', rows?.length)
 
         // Group messages by conversation partner (other profile id + role)
         const grouped: Record<string, any[]> = {}
@@ -52,19 +56,24 @@ export default function Messages() {
           const msgs = grouped[key]
           const last = msgs[0]
           const other = last.sender_id === user.id ? last.recipient : last.sender
-          const type: Thread['type'] = last.sender_role === 'vendor' || last.recipient_role === 'vendor' ? 'vendor' : last.sender_role === 'admin' || last.recipient_role === 'admin' ? 'admin' : 'inquiry'
+          const type: Thread['type'] = last.sender_role === 'vendor' || last.recipient_role === 'vendor'
+            ? 'vendor'
+            : last.sender_role === 'admin' || last.recipient_role === 'admin'
+            ? 'admin'
+            : 'inquiry'
+
           return {
             id: key,
             title: other?.full_name || other?.business_name || type,
             type,
             lastMessageAt: last.created_at,
-            unread: msgs.filter(m => m.status === 'unread' && m.recipient_id === user.id).length
+            unread: msgs.filter((m: any) => m.status === 'unread' && m.recipient_id === user.id).length
           }
         }).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
 
         const newMessages: Record<string, Message[]> = {}
         Object.entries(grouped).forEach(([key, msgs]) => {
-          newMessages[key] = msgs.map((m) => ({ id: m.id, threadId: key, author: m.sender?.full_name || m.sender_role, body: m.message, createdAt: m.created_at }))
+          newMessages[key] = (msgs as any[]).map((m) => ({ id: m.id, threadId: key, author: m.sender?.full_name || m.sender_role, body: m.message, createdAt: m.created_at }))
         })
 
         setThreads(newThreads)
@@ -83,6 +92,7 @@ export default function Messages() {
   const handleSendMessage = async () => {
     if (!activeThreadId || !compose.trim() || !user?.id) return
 
+    setSendMessageError(null)
     const [role, otherId] = activeThreadId.split('_')
     const recipientRole = role
     const recipientId = otherId
@@ -104,6 +114,7 @@ export default function Messages() {
       setCompose('')
     } catch (err) {
       console.error('Failed to send message', err)
+      setSendMessageError((err as Error)?.message || 'Failed to send message. Please try again.')
     }
   }
 
@@ -160,6 +171,9 @@ export default function Messages() {
                   <input value={compose} onChange={(e) => setCompose(e.target.value)} placeholder="Write a reply..." className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
                   <button onClick={handleSendMessage} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm">Send</button>
                 </div>
+                {sendMessageError && (
+                  <p className="text-xs text-red-700 mt-2">{sendMessageError}</p>
+                )}
               </div>
             </>
           )}

@@ -207,6 +207,15 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
 
     // Check category-specific pricing fields
     const categoryName = service?.service_categories?.name?.toLowerCase()
+    // Transport: prefer specialised within/upcountry prices if provided
+    if (categoryName === 'transport') {
+      const within = Number(service?.price_within_town ?? NaN)
+      const upcountry = Number(service?.price_upcountry ?? NaN)
+      const candidates: number[] = []
+      if (Number.isFinite(within) && within > 0) candidates.push(within)
+      if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+      if (candidates.length > 0) return Math.min(...candidates)
+    }
     if (categoryName === 'restaurants' && service?.average_cost_per_person) {
       const price = Number(service.average_cost_per_person)
       if (Number.isFinite(price)) return price

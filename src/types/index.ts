@@ -134,6 +134,14 @@ export interface Service {
   dropoff_locations?: string[]
   route_description?: string
   driver_included?: boolean
+  price_within_town?: number
+  price_upcountry?: number
+  vehicle_engine?: string
+  vehicle_ccs?: number
+  fuel_type?: string
+  fuel_consumption_per_100km?: number
+  fuel_km_per_liter?: number
+  vehicle_features?: string[]
   air_conditioning?: boolean
   gps_tracking?: boolean
   fuel_included?: boolean

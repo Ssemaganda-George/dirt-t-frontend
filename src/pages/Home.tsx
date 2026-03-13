@@ -1392,9 +1392,21 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-sm text-gray-600">{t('from')}</span>
-                  <span className="text-3xl font-bold text-gray-900">
-                    {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
-                  </span>
+                    <span className="text-3xl font-bold text-gray-900">
+                      {(() => {
+                        if ((service as any)?.service_categories?.name?.toLowerCase() === 'transport') {
+                          const within = Number((service as any).price_within_town ?? NaN)
+                          const upcountry = Number((service as any).price_upcountry ?? NaN)
+                          const candidates: number[] = []
+                          if (Number.isFinite(within) && within > 0) candidates.push(within)
+                          if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+                          if (candidates.length > 0) {
+                            return formatCurrencyWithConversion(Math.min(...candidates), service.currency, selectedCurrency, selectedLanguage)
+                          }
+                        }
+                        return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)
+                      })()}
+                    </span>
                 </div>
                 <p className="text-sm text-gray-600">{t('per_person')}</p>
               </div>

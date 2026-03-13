@@ -181,6 +181,23 @@ export default function ServiceDetail() {
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [transportZone, setTransportZone] = useState<'within' | 'upcountry' | ''>('')
+
+  // Auto-default transportZone when only one transport price is provided
+  useEffect(() => {
+    if (!service) return
+    const cat = service.service_categories?.name?.toLowerCase()
+    if (cat !== 'transport') return
+    if (transportZone) return
+
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    const hasWithin = Number.isFinite(within) && within > 0
+    const hasUpcountry = Number.isFinite(upcountry) && upcountry > 0
+
+    if (hasWithin && !hasUpcountry) setTransportZone('within')
+    else if (hasUpcountry && !hasWithin) setTransportZone('upcountry')
+  }, [service, transportZone])
   const [checkInDate, setCheckInDate] = useState('')
   const [checkOutDate, setCheckOutDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
@@ -205,6 +222,21 @@ export default function ServiceDetail() {
   const bookingRef = useRef<HTMLDivElement>(null)
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
+  // Transport unit price (kept as top-level hook to preserve hook order)
+  const [unitPrice, setUnitPrice] = useState<number>(0)
+  useEffect(() => {
+    if (!service) return
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    if (transportZone === 'within' && Number.isFinite(within)) { setUnitPrice(within); return }
+    if (transportZone === 'upcountry' && Number.isFinite(upcountry)) { setUnitPrice(upcountry); return }
+
+    const candidates: number[] = []
+    if (Number.isFinite(within) && within > 0) candidates.push(within)
+    if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+    if (candidates.length > 0) { setUnitPrice(Math.min(...candidates)); return }
+    setUnitPrice(Number(service.price) || 0)
+  }, [transportZone, service])
   const { user, profile } = useAuth()
   const { addToCart } = useCart()
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -432,7 +464,7 @@ export default function ServiceDetail() {
     
     // Pass selected dates and guests via navigation state
     const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
-      ? { startDate, endDate, guests }
+      ? { startDate, endDate, guests, transportZone }
       : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
       ? { checkInDate, checkOutDate, guests, rooms: 1 }
       : { selectedDate, guests }
@@ -1340,23 +1372,7 @@ export default function ServiceDetail() {
     }
   }
 
-  if (isLoading) {
-    return <PageSkeleton type="serviceDetail" />
-  }
-
-  if (!service) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
-          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
-          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
-            Return to home
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  
 
   // Calculate number of days for transport services based on actual time difference
   const calculateDays = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
@@ -1385,11 +1401,66 @@ export default function ServiceDetail() {
     return diffDays || 1
   }
 
-  const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
-    ? service.price * calculateDays(startDate, startTime, endDate, endTime)
-    : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-    ? service.price * calculateNights(checkInDate, checkOutDate)
-    : service.price * guests
+  if (isLoading) {
+    return <PageSkeleton type="serviceDetail" />
+  }
+
+  if (!service) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
+          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
+            Return to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const getTransportUnitPrice = () => {
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    if (transportZone === 'within' && Number.isFinite(within)) return within
+    if (transportZone === 'upcountry' && Number.isFinite(upcountry)) return upcountry
+    // fallback to any provided transport price
+    const candidates: number[] = []
+    if (Number.isFinite(within) && within > 0) candidates.push(within)
+    if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+    if (candidates.length > 0) return Math.min(...candidates)
+    return Number(service!.price) || 0
+  }
+
+  const totalPrice = service!.service_categories?.name?.toLowerCase() === 'transport'
+    ? getTransportUnitPrice() * calculateDays(startDate, startTime, endDate, endTime)
+    : ['hotels', 'hotel', 'accommodation'].includes(service!.service_categories?.name?.toLowerCase() || '')
+    ? service!.price * calculateNights(checkInDate, checkOutDate)
+    : service!.price * guests
+
+  
+
+  const displayUnit = service!.service_categories?.name?.toLowerCase() === 'transport'
+    ? (unitPrice ?? getDisplayPrice(service!, ticketTypes))
+    : getDisplayPrice(service!, ticketTypes)
+
+  if (isLoading) {
+    return <PageSkeleton type="serviceDetail" />
+  }
+
+  if (!service) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
+          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
+            Return to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   // Shared info sections used by both mobile and desktop to keep flow uniform
   const InfoSections = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -1900,7 +1971,7 @@ export default function ServiceDetail() {
               ) : (
                 <div>
                   <div className="text-center mb-6">
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}</div>
+                      <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(displayUnit, service.currency)}</div>
                       <div className="text-xs text-gray-500">
                         {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
                          ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
@@ -1914,13 +1985,26 @@ export default function ServiceDetail() {
                     {service.service_categories?.name?.toLowerCase() === 'transport' ? (
                       <>
                         <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Service Type</label>
+                          <div className="flex gap-3 mb-2">
+                            <label className="inline-flex items-center text-sm">
+                              <input type="radio" name="transportZone" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                              Within Town
+                            </label>
+                            <label className="inline-flex items-center text-sm">
+                              <input type="radio" name="transportZone" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                              Upcountry
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-3">Choose town or upcountry pricing before selecting dates.</p>
+
                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                           </div>
                         </div>
                         <div>
@@ -1928,9 +2012,9 @@ export default function ServiceDetail() {
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                           </div>
                         </div>
                       </>
@@ -1979,10 +2063,10 @@ export default function ServiceDetail() {
                     <div className="flex justify-between items-center mb-2 text-xs">
                       <span className="text-gray-600">
                         {service.service_categories?.name?.toLowerCase() === 'transport' 
-                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                          ? `${formatCurrencyWithConversion(getTransportUnitPrice(), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
                           : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
-                          : `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                          ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                          : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
                       </span>
                       <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
@@ -1993,9 +2077,9 @@ export default function ServiceDetail() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 mb-3">
+                    <div className="flex gap-2 mb-3">
                     <button onClick={handleBooking} disabled={
-                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
+                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate || !transportZone :
                       ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
                       !selectedDate
                     } className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
@@ -2058,7 +2142,7 @@ export default function ServiceDetail() {
               <div className="relative z-10">
                 <div className="text-xs text-blue-100 font-medium uppercase tracking-wider mb-1">From</div>
                 <div className="text-xl font-bold leading-none mb-1 text-white drop-shadow-sm">
-                  {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
+                  {service ? formatCurrencyWithConversion(displayUnit, service.currency) : '—'}
                 </div>
                 <div className="text-xs text-emerald-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
               </div>

@@ -8,7 +8,7 @@ import { Plus, X, Search, Map } from 'lucide-react'
 import SearchMap from '../../components/SearchMap'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
-import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
+import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType, getServiceById } from '../../lib/database'
 
 function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]: any[] }, selectedCurrency: string, selectedLanguage: string) {
   // For events/activities with ticket types, show ticket prices
@@ -261,6 +261,9 @@ export default function VendorServices() {
         pickup_locations: data.pickup_locations || [],
         dropoff_locations: data.dropoff_locations || [],
         route_description: data.route_description || '',
+        // Transport pricing categories
+        price_within_town: (data as any).price_within_town ?? undefined,
+        price_upcountry: (data as any).price_upcountry ?? undefined,
 
         // Restaurant fields
         cuisine_type: data.cuisine_type || '',
@@ -386,6 +389,8 @@ export default function VendorServices() {
       if (updates.pickup_locations !== undefined) validUpdates.pickup_locations = updates.pickup_locations
       if (updates.dropoff_locations !== undefined) validUpdates.dropoff_locations = updates.dropoff_locations
       if (updates.route_description !== undefined) validUpdates.route_description = updates.route_description
+      if ((updates as any).price_within_town !== undefined) validUpdates.price_within_town = (updates as any).price_within_town
+      if ((updates as any).price_upcountry !== undefined) validUpdates.price_upcountry = (updates as any).price_upcountry
       if (updates.license_required !== undefined) validUpdates.license_required = updates.license_required
       if (updates.booking_notice_hours !== undefined) validUpdates.booking_notice_hours = updates.booking_notice_hours
       if (updates.air_conditioning !== undefined) validUpdates.air_conditioning = updates.air_conditioning
@@ -397,6 +402,11 @@ export default function VendorServices() {
       if (updates.usb_charging !== undefined) validUpdates.usb_charging = updates.usb_charging
       if (updates.child_seat !== undefined) validUpdates.child_seat = updates.child_seat
       if (updates.roof_rack !== undefined) validUpdates.roof_rack = updates.roof_rack
+      if (updates.vehicle_features !== undefined) validUpdates.vehicle_features = updates.vehicle_features
+      if (updates.vehicle_ccs !== undefined) validUpdates.vehicle_ccs = updates.vehicle_ccs
+      if (updates.vehicle_engine !== undefined) validUpdates.vehicle_engine = updates.vehicle_engine
+      if (updates.fuel_type !== undefined) validUpdates.fuel_type = updates.fuel_type
+      if (updates.fuel_km_per_liter !== undefined) validUpdates.fuel_km_per_liter = updates.fuel_km_per_liter
       if (updates.towing_capacity !== undefined) validUpdates.towing_capacity = updates.towing_capacity
       if (updates.four_wheel_drive !== undefined) validUpdates.four_wheel_drive = updates.four_wheel_drive
       if (updates.automatic_transmission !== undefined) validUpdates.automatic_transmission = updates.automatic_transmission
@@ -514,17 +524,47 @@ export default function VendorServices() {
   // Load ticket types for a service and open the edit form
   const handleOpenEdit = async (s: Service) => {
     try {
+      // Prefer server-side getter that can apply owner scoping and returns full service
+      let fresh: any = null
+      try {
+        fresh = await getServiceById(s.id, { vendorId: vendorId || undefined, includeUnapproved: true })
+      } catch (fetchErr) {
+        console.warn('getServiceById failed, falling back to inline fetch:', fetchErr)
+      }
+
+      // If getServiceById didn't return, fallback to direct supabase select
+      if (!fresh) {
+        const { data: direct, error: directErr } = await supabase
+          .from('services')
+          .select(`*, vendors ( id, business_name, business_description, business_email, status ), service_categories ( id, name, icon )`)
+          .eq('id', s.id)
+          .single()
+        if (directErr) console.warn('Direct service fetch failed:', directErr)
+        fresh = direct || null
+      }
+
       // try to fetch ticket types from DB (if any) so the form is fully populated
       const types = await getTicketTypes(s.id)
-      // Convert ISO/timestamptz values to datetime-local format for the inputs
-      const mapped = (types || []).map((t: any) => ({
-        ...t,
-        sale_start: formatISOToDatetimeLocal(t.sale_start),
-        sale_end: formatISOToDatetimeLocal(t.sale_end)
-      }))
-      setEditing({ ...s, ticket_types: mapped })
+      const mapped = (types || []).map((t: any) => ({ ...t, sale_start: formatISOToDatetimeLocal(t.sale_start), sale_end: formatISOToDatetimeLocal(t.sale_end) }))
+
+      const toUse = fresh || s
+      // Log transport-related fields explicitly for debugging (avoids collapsed [Object])
+      try {
+        console.log('Opening edit form with service:', JSON.stringify({
+          id: toUse?.id,
+          vehicle_engine: (toUse as any)?.vehicle_engine,
+          vehicle_ccs: (toUse as any)?.vehicle_ccs,
+          fuel_type: (toUse as any)?.fuel_type,
+          fuel_km_per_liter: (toUse as any)?.fuel_km_per_liter,
+          price_within_town: (toUse as any)?.price_within_town,
+          price_upcountry: (toUse as any)?.price_upcountry
+        }, null, 2))
+      } catch (e) {
+        console.log('Opening edit form with service (raw):', toUse)
+      }
+      setEditing({ ...toUse, ticket_types: mapped } as Service)
     } catch (err) {
-      console.warn('Failed to load ticket types for edit, falling back to service object:', err)
+      console.warn('Failed to load service for edit, falling back to provided object:', err)
       setEditing(s)
     } finally {
       setShowForm(true)
@@ -1053,11 +1093,11 @@ export default function VendorServices() {
 
 function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Partial<Service>; vendorId: string | null; onClose: () => void; onSubmit: (payload: Partial<Service>) => void }) {
   const { categories } = useServiceCategories()
-  const [form, setForm] = useState<Partial<Service>>({
+  const baseForm: any = {
     title: initial?.title || '',
     description: initial?.description || '',
     category_id: initial?.category_id || categories[0]?.id || '',
-    price: initial?.price || 0,
+    price: initial?.price ?? 0,
     currency: initial?.currency || 'UGX',
     images: initial?.images || [],
     location: initial?.location || '',
@@ -1100,6 +1140,10 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     // Transport fields
     vehicle_type: initial?.vehicle_type || '',
     vehicle_capacity: initial?.vehicle_capacity || undefined,
+    vehicle_engine: initial?.vehicle_engine || '',
+    vehicle_ccs: initial?.vehicle_ccs || undefined,
+    fuel_type: initial?.fuel_type || '',
+    fuel_km_per_liter: initial?.fuel_km_per_liter || undefined,
     pickup_locations: initial?.pickup_locations || [],
     dropoff_locations: initial?.dropoff_locations || [],
     route_description: initial?.route_description || '',
@@ -1192,7 +1236,15 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
     contact_info: initial?.contact_info || {},
     booking_requirements: initial?.booking_requirements || '',
     cancellation_policy: initial?.cancellation_policy || ''
-  })
+  }
+
+  // If existing service is transport or has transport prices, include the specialized price fields
+  if ((initial as any)?.category_id === 'cat_transport' || (initial as any)?.price_within_town !== undefined || (initial as any)?.price_upcountry !== undefined) {
+    baseForm.price_within_town = (initial as any)?.price_within_town ?? initial?.price ?? 0
+    baseForm.price_upcountry = (initial as any)?.price_upcountry ?? initial?.price ?? 0
+  }
+
+  const [form, setForm] = useState<Partial<Service>>(baseForm as Partial<Service>)
 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
@@ -1200,6 +1252,13 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   const [mapModalInitialCoords, setMapModalInitialCoords] = useState<{ lat: number; lon: number } | null>(null)
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
+
+  // Ensure form reflects updated `initial` prop when ServiceForm is re-used
+  useEffect(() => {
+    setForm(baseForm as Partial<Service>)
+    // reset array input helpers so they reflect current service
+    setArrayInputs({})
+  }, [initial])
 
   // Ticket types form helpers
   const [ticketPreset, setTicketPreset] = useState<'general' | 'vip' | 'early_general' | 'early_vip' | 'free' | 'custom'>('general')
@@ -1679,6 +1738,43 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Engine (make/model)</label>
+                <input type="text" value={form.vehicle_engine || ''} onChange={(e) => update('vehicle_engine', e.target.value)} placeholder="e.g., Toyota 1NZ-FE" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Engine CC (cc)</label>
+                <input type="number" value={form.vehicle_ccs || ''} onChange={(e) => update('vehicle_ccs', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 1500" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel Type</label>
+                <select value={form.fuel_type || ''} onChange={(e) => update('fuel_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select fuel type</option>
+                  <option value="petrol">Petrol</option>
+                  <option value="diesel">Diesel</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="electric">Electric</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel efficiency (km / L)</label>
+                <input type="number" step="0.1" min="0" value={form.fuel_km_per_liter || ''} onChange={(e) => {
+                    const kmPerL = e.target.value ? Number(e.target.value) : undefined
+                    // Also update legacy per-100km value for storage/compatibility
+                    const per100km = kmPerL ? Number((100 / kmPerL).toFixed(2)) : undefined
+                    update('fuel_km_per_liter', kmPerL)
+                    update('fuel_consumption_per_100km', per100km)
+                  }} placeholder="e.g., 12.0" className="mt-1 w-full border rounded-md px-3 py-2" />
+                {form.fuel_km_per_liter ? (
+                  <p className="text-xs text-gray-500 mt-1">Equivalent: {Number((100 / (form.fuel_km_per_liter as any)).toFixed(2))} L / 100km</p>
+                ) : null}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Vehicle Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
@@ -1718,6 +1814,28 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                   <input type="checkbox" checked={form.automatic_transmission || false} onChange={(e) => update('automatic_transmission', e.target.checked)} className="mr-2" />
                   Automatic Transmission
                 </label>
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm font-medium text-gray-700">Additional Vehicle Features</label>
+              <div className="flex gap-2 mt-2">
+                <input
+                  value={arrayInputs.vehicle_features || ''}
+                  onChange={(e) => setArrayInputs(prev => ({ ...prev, vehicle_features: e.target.value }))}
+                  placeholder="Add custom feature and press Add (e.g., reclining seats)"
+                  className="flex-1 border rounded-md px-3 py-2"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('vehicle_features', arrayInputs.vehicle_features || ''))}
+                />
+                <button type="button" onClick={() => addToArray('vehicle_features', arrayInputs.vehicle_features || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(form.vehicle_features || []).map((feat: string, idx: number) => (
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                    {feat}
+                    <button type="button" onClick={() => removeFromArray('vehicle_features', idx)} className="ml-1 text-gray-600 hover:text-gray-900">×</button>
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -3583,6 +3701,23 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                 return;
               }
             }
+            // Pricing validation: for transport require at least one transport price,
+            // for other categories require legacy `price`.
+            if (form.category_id === 'cat_transport') {
+              const within = (form as any).price_within_town
+              const upcountry = (form as any).price_upcountry
+              const withinEmpty = within === undefined || within === null || String(within).trim() === ''
+              const upcountryEmpty = upcountry === undefined || upcountry === null || String(upcountry).trim() === ''
+              if (withinEmpty && upcountryEmpty) {
+                alert('Please set at least one transport price: Within Town or Upcountry')
+                return
+              }
+            } else if (form.category_id !== 'cat_activities') {
+              if (form.price === undefined || form.price === null || String(form.price).trim() === '') {
+                alert('Please set a price')
+                return
+              }
+            }
             onSubmit(form) 
           }}
         >
@@ -3612,20 +3747,35 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               Event-specific fields (event_datetime, registration_deadline, event_location, ticket_types, etc.) are shown below. */}
           {form.category_id !== 'cat_activities' && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                  <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              {form.category_id === 'cat_transport' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Within Town Price</label>
+                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Upcountry Price</label>
+                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

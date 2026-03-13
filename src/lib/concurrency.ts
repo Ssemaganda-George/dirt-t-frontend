@@ -169,7 +169,19 @@ class OperationQueue {
       p_guest_email: data.guest_email,
       p_guest_phone: data.guest_phone,
       p_pickup_location: data.pickup_location,
-      p_dropoff_location: data.dropoff_location
+      p_dropoff_location: data.dropoff_location,
+      p_trip_setoff: data.trip_setoff || data.tripSetoff || null,
+      p_trip_setoff_lat: data.trip_setoff_lat ?? data.tripSetoffLat ?? null,
+      p_trip_setoff_lng: data.trip_setoff_lng ?? data.tripSetoffLng ?? null,
+      p_trip_destination: data.trip_destination || data.tripDestination || null,
+      p_trip_destination_lat: data.trip_destination_lat ?? data.tripDestinationLat ?? null,
+      p_trip_destination_lng: data.trip_destination_lng ?? data.tripDestinationLng ?? null,
+      p_trip_stopovers: data.trip_stopovers ? JSON.stringify(data.trip_stopovers) : (data.tripStopovers ? JSON.stringify(data.tripStopovers) : null),
+      p_trip_return_option: data.trip_return_option || data.tripReturnOption || null,
+      p_journey_estimated_hours: data.journey_estimated_hours ?? data.journeyEstimatedHours ?? null,
+      p_journey_estimated_distance: data.journey_estimated_distance ?? data.journeyEstimatedDistance ?? null,
+      p_journey_estimated_fuel: data.journey_estimated_fuel ?? data.journeyEstimatedFuel ?? null,
+      p_journey_summary: data.journey_summary || data.journeySummary || null
     });
 
     if (error || !result?.success) {

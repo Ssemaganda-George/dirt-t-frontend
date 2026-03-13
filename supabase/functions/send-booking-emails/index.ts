@@ -139,6 +139,58 @@ async function buildBookingReceiptPdf(
     y -= 28
   }
 
+  // Journey summary fields (if present)
+  try {
+    if (booking.trip_setoff || booking.trip_destination || booking.trip_stopovers || booking.trip_return_option) {
+      if (booking.trip_setoff) addField('Set-off', booking.trip_setoff, col1X, y)
+      if (booking.trip_destination) addField('Destination', booking.trip_destination, col2X, y)
+      y -= 28
+
+      if (booking.trip_stopovers) {
+        const stops = typeof booking.trip_stopovers === 'string' ? booking.trip_stopovers : JSON.stringify(booking.trip_stopovers)
+        page.drawText('Stop-overs', { x: col1X, y, font: font, size: 7, color: gray })
+        page.drawText((stops || '').substring(0, 60), { x: col1X, y: y - 11, font: fontBold, size: 9, color: black })
+        y -= 28
+      }
+
+      if (booking.trip_return_option) addField('Return option', booking.trip_return_option === 'return' ? 'Return to set-off point' : booking.trip_return_option === 'drop' ? 'Drop and leave' : String(booking.trip_return_option), col1X, y)
+      // Estimated journey metrics
+      if (booking.journey_estimated_hours != null || booking.journey_estimated_distance != null || booking.journey_estimated_fuel != null) {
+        const hrs = booking.journey_estimated_hours != null ? `${Number(booking.journey_estimated_hours).toFixed(1)} hrs` : ''
+        const dist = booking.journey_estimated_distance != null ? `${Number(booking.journey_estimated_distance).toFixed(1)} km` : ''
+        const fuel = booking.journey_estimated_fuel != null ? `${Number(booking.journey_estimated_fuel).toFixed(1)} L` : ''
+        page.drawText('Estimated', { x: col2X, y, font: font, size: 7, color: gray })
+        page.drawText(`${hrs}${hrs && dist ? ' · ' : ''}${dist}${(hrs || dist) && fuel ? ' · ' : ''}${fuel}`, { x: col2X, y: y - 11, font: fontBold, size: 9, color: black })
+        y -= 28
+      }
+    }
+  } catch (e) {
+    // ignore drawing errors
+  }
+
+  // Service Area (transport): show within-town / upcountry pricing notes when available
+  try {
+    if (booking.services?.service_categories?.name === 'transport') {
+      const svc = booking.services
+      const currency = svc.currency || booking.currency || 'UGX'
+      const within = svc.price_within_town != null ? `${currency} ${Number(svc.price_within_town).toLocaleString()}` : ''
+      const up = svc.price_upcountry != null ? `${currency} ${Number(svc.price_upcountry).toLocaleString()}` : ''
+      const startX = col1X
+      page.drawText('Service Area *', { x: startX, y, font: font, size: 8, color: gray })
+      const areaText = `${within ? 'Within Town · ' + within + (up ? '\n' : '') : ''}${up ? 'Upcountry · ' + up + '\n' : ''}Select whether this trip is within town or upcountry to see the correct price.`
+      const wrapped = areaText.split('\n')
+      let ay = y - 12
+      for (const line of wrapped) {
+        page.drawText(line.substring(0, 60), { x: startX, y: ay, font: fontBold, size: 9, color: black })
+        ay -= 12
+      }
+      y = ay
+      y -= 8
+    }
+  } catch (e) {
+    // ignore PDF drawing errors
+  }
+
   // Divider
   page.drawLine({ start: { x: col1X, y }, end: { x: pageW - 28, y }, thickness: 0.5, color: divider })
   y -= 16
@@ -238,6 +290,8 @@ serve(async (req) => {
           title,
           description,
           price,
+          price_within_town,
+          price_upcountry,
           currency,
           service_categories (
             name
@@ -336,6 +390,20 @@ serve(async (req) => {
     }
 
     // Build booking details HTML block (used in all emails)
+    let serviceAreaRows = ''
+    if (bookingData.services?.service_categories?.name === 'transport') {
+      const svc = bookingData.services
+      const currency = svc.currency || bookingData.currency || 'UGX'
+      const within = svc.price_within_town != null ? `${currency} ${Number(svc.price_within_town).toLocaleString()}` : ''
+      const up = svc.price_upcountry != null ? `${currency} ${Number(svc.price_upcountry).toLocaleString()}` : ''
+      serviceAreaRows = `
+        <tr>
+          <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Service Area *</td>
+          <td style="padding:8px 12px;color:#111827;font-size:13px;">${within ? `${'Within Town · ' + within}<br/>` : ''}${up ? `${'Upcountry · ' + up}<br/>` : ''}<div style="color:#6b7280;font-size:12px;margin-top:6px;">Select whether this trip is within town or upcountry to see the correct price.</div></td>
+        </tr>
+      `
+    }
+
     const bookingDetailsHtml = `
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
         <tr style="background:#f3f4f6;">
@@ -360,6 +428,26 @@ serve(async (req) => {
           <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">End Date</td>
           <td style="padding:8px 12px;color:#111827;font-size:13px;">${new Date(bookingData.end_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</td>
         </tr>` : ''}
+        ${booking.trip_setoff ? `
+        <tr>
+          <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Set-off</td>
+          <td style="padding:8px 12px;color:#111827;font-size:13px;">${booking.trip_setoff}</td>
+        </tr>` : ''}
+        ${booking.trip_destination ? `
+        <tr style="background:#f3f4f6;">
+          <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Destination</td>
+          <td style="padding:8px 12px;color:#111827;font-size:13px;">${booking.trip_destination}</td>
+        </tr>` : ''}
+        ${booking.trip_return_option ? `
+        <tr>
+          <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Return option</td>
+          <td style="padding:8px 12px;color:#111827;font-size:13px;">${booking.trip_return_option === 'return' ? 'Return to set-off point' : booking.trip_return_option === 'drop' ? 'Drop and leave' : booking.trip_return_option}</td>
+        </tr>` : ''}
+        ${booking.journey_estimated_hours != null || booking.journey_estimated_distance != null || booking.journey_estimated_fuel != null ? `
+        <tr style="background:#f3f4f6;">
+          <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Estimated</td>
+          <td style="padding:8px 12px;color:#111827;font-size:13px;">${booking.journey_estimated_hours != null ? Number(booking.journey_estimated_hours).toFixed(1) + ' hrs' : ''}${booking.journey_estimated_hours != null && booking.journey_estimated_distance != null ? ' · ' : ''}${booking.journey_estimated_distance != null ? Number(booking.journey_estimated_distance).toFixed(1) + ' km' : ''}${(booking.journey_estimated_hours != null || booking.journey_estimated_distance != null) && booking.journey_estimated_fuel != null ? ' · ' : ''}${booking.journey_estimated_fuel != null ? Number(booking.journey_estimated_fuel).toFixed(1) + ' L' : ''}</td>
+        </tr>` : ''}
         ${bookingData.booking_time || bookingData.start_time ? `
         <tr>
           <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Time</td>
@@ -379,6 +467,7 @@ serve(async (req) => {
           <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Drop-off</td>
           <td style="padding:8px 12px;color:#111827;font-size:13px;">${bookingData.dropoff_location}</td>
         </tr>` : ''}
+        ${serviceAreaRows}
         ${bookingData.return_trip ? `
         <tr>
           <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Return Trip</td>

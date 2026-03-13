@@ -51,6 +51,8 @@ const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module =>
 const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
 const DirtTrailsWallet = lazy(() => import('./pages/admin/DirtTrailsWallet').then(module => ({ default: module.DirtTrailsWallet })))
 const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
+const ConservationWallet = lazy(() => import('./pages/admin/ConservationWallet').then(module => ({ default: module.default })))
+const TouristWallets = lazy(() => import('./pages/admin/TouristWallets').then(module => ({ default: module.default })))
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
@@ -106,6 +108,9 @@ const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
 const Geotagging = lazy(() => import('./pages/conservation/Geotagging'))
 const TreePlanting = lazy(() => import('./pages/conservation/TreePlanting'))
 const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculator'))
+const OffsetDonation = lazy(() => import('./pages/conservation/OffsetDonation'))
+const OffsetCheckout = lazy(() => import('./pages/conservation/OffsetCheckout'))
+const OffsetSuccess = lazy(() => import('./pages/conservation/OffsetSuccess'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
@@ -176,6 +181,9 @@ function App() {
             <Route path="conservation/geotagging" element={<Geotagging />} />
             <Route path="conservation/tree-planting" element={<TreePlanting />} />
             <Route path="conservation/carbon" element={<CarbonCalculator />} />
+            <Route path="conservation/offset" element={<OffsetDonation />} />
+            <Route path="conservation/checkout" element={<OffsetCheckout />} />
+            <Route path="conservation/offset/success" element={<OffsetSuccess />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />
@@ -309,6 +317,8 @@ function App() {
             <Route path="vendors" element={<AdminVendors />} />
             <Route path="vendors/:id" element={<AdminVendorDetail />} />
             <Route path="dirt-trails-wallet" element={<DirtTrailsWallet />} />
+            <Route path="conservation-wallet" element={<ConservationWallet />} />
+            <Route path="tourist-wallets" element={<TouristWallets />} />
             <Route path="finance" element={<Finance />} />
             <Route path="vendor-messages" element={
               <ProtectedRoute requiredRole="admin">

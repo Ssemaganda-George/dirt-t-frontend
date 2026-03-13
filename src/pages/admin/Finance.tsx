@@ -102,6 +102,29 @@ export function Finance() {
     exportToCSV(trendsData, `monthly-trends-${format(new Date(), 'yyyy-MM-dd')}.csv`);
   };
 
+  const exportConservationReport = () => {
+    const cons = filteredTransactions.filter(t => {
+      const ref = (t.reference || '') as string;
+      const notes = (t.payment_notes || '') as string;
+      return /otx-|offset|conservation|carbon/i.test(ref) || /conservation|offset|carbon|otx-/i.test(notes);
+    }).map(t => ({
+      'Transaction ID': t.id,
+      'Amount': t.amount,
+      'Currency': t.currency,
+      'Status': t.status,
+      'Reference': t.reference,
+      'Notes': t.payment_notes || '',
+      'Created At': format(new Date(t.created_at), 'yyyy-MM-dd HH:mm:ss')
+    }));
+
+    if (cons.length === 0) {
+      alert('No conservation transactions found for the selected range.');
+      return;
+    }
+
+    exportToCSV(cons, `conservation-transactions-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -232,6 +255,16 @@ export function Finance() {
 
   const totalRefunds = filteredTransactions
     .filter(t => t.transaction_type === 'refund' && t.status === 'completed')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Conservation wallet: sum payments or donations tagged for conservation/offsets
+  const conservationBalance = filteredTransactions
+    .filter(t => (t.transaction_type === 'payment' || t.transaction_type === 'refund') && t.status === 'completed')
+    .filter(t => {
+      const ref = (t.reference || '') as string;
+      const notes = (t.payment_notes || '') as string;
+      return /otx-|offset|conservation|carbon/i.test(ref) || /conservation|offset|carbon|otx-/i.test(notes);
+    })
     .reduce((sum, t) => sum + t.amount, 0);
 
   const pendingWithdrawals = transactions.filter(t =>
@@ -503,6 +536,22 @@ export function Finance() {
           <p className="text-xs font-medium text-gray-500">Failed Transactions</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.failedTransactions}</p>
           <p className="text-xs text-gray-400 mt-1">Require investigation</p>
+        </div>
+      </div>
+
+      {/* Conservation Wallet */}
+      <div className="mt-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Conservation Wallet</p>
+            <p className="text-lg font-semibold text-gray-900 mt-2">
+              {formatCurrencyWithConversion(conservationBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Funds tagged for conservation & carbon offsets</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportConservationReport} className="px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition">Export</button>
+          </div>
         </div>
       </div>
 

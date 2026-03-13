@@ -387,8 +387,20 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           <div className="flex items-baseline gap-1 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-500">From</span>
               <span className="text-lg sm:text-xl font-bold text-gray-900">
-              {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
-            </span>
+                {(() => {
+                  if ((service as any)?.service_categories?.name?.toLowerCase() === 'transport') {
+                    const within = Number((service as any).price_within_town ?? NaN)
+                    const upcountry = Number((service as any).price_upcountry ?? NaN)
+                    const candidates: number[] = []
+                    if (Number.isFinite(within) && within > 0) candidates.push(within)
+                    if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+                    if (candidates.length > 0) {
+                      return formatCurrencyWithConversion(Math.min(...candidates), service.currency, selectedCurrency, selectedLanguage)
+                    }
+                  }
+                  return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)
+                })()}
+              </span>
             <span className="text-xs text-gray-500">
               {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 'per person'}
             </span>
