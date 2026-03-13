@@ -556,17 +556,17 @@ BEGIN
   -- Update service atomically
   UPDATE public.services
   SET
-    title = COALESCE(v_update_data->>'title', title),
-    description = COALESCE(v_update_data->>'description', description),
-    price = COALESCE((v_update_data->>'price')::numeric, price),
-    currency = COALESCE(v_update_data->>'currency', currency),
-    images = COALESCE((v_update_data->>'images')::text[], images),
-    location = COALESCE(v_update_data->>'location', location),
-    duration_hours = COALESCE((v_update_data->>'duration_hours')::numeric, duration_hours),
-    max_capacity = COALESCE((v_update_data->>'max_capacity')::integer, max_capacity),
-    amenities = COALESCE((v_update_data->>'amenities')::text[], amenities),
-    status = COALESCE(v_update_data->>'status', status),
-    scan_enabled = COALESCE((v_update_data->>'scan_enabled')::boolean, scan_enabled),
+    title = CASE WHEN v_update_data ? 'title' THEN v_update_data->>'title' ELSE title END,
+    description = CASE WHEN v_update_data ? 'description' THEN v_update_data->>'description' ELSE description END,
+    price = CASE WHEN v_update_data ? 'price' THEN (v_update_data->>'price')::numeric ELSE price END,
+    currency = CASE WHEN v_update_data ? 'currency' THEN v_update_data->>'currency' ELSE currency END,
+    images = CASE WHEN v_update_data ? 'images' THEN ARRAY(SELECT jsonb_array_elements_text(v_update_data->'images')) ELSE images END,
+    location = CASE WHEN v_update_data ? 'location' THEN v_update_data->>'location' ELSE location END,
+    duration_hours = CASE WHEN v_update_data ? 'duration_hours' THEN (v_update_data->>'duration_hours')::numeric ELSE duration_hours END,
+    max_capacity = CASE WHEN v_update_data ? 'max_capacity' THEN (v_update_data->>'max_capacity')::integer ELSE max_capacity END,
+    amenities = CASE WHEN v_update_data ? 'amenities' THEN ARRAY(SELECT jsonb_array_elements_text(v_update_data->'amenities')) ELSE amenities END,
+    status = CASE WHEN v_update_data ? 'status' THEN v_update_data->>'status' ELSE status END,
+    scan_enabled = CASE WHEN v_update_data ? 'scan_enabled' THEN (v_update_data->>'scan_enabled')::boolean ELSE scan_enabled END,
     updated_at = now()
   WHERE id = p_service_id;
 
@@ -623,10 +623,25 @@ BEGIN
     IF v_payment_count > 0 THEN
       -- If the service is still pending approval and the vendor is requesting deletion, allow cleanup
       IF v_service.status = 'pending' AND (p_is_admin OR (p_vendor_id IS NOT NULL AND v_service.vendor_id = p_vendor_id)) THEN
-        -- Remove payments associated with those orders so vendor can remove their pending listing
+        -- Log what will be removed and remove payments associated with those orders so vendor can remove their pending listing
+        RAISE NOTICE 'delete_service_atomic: removing % payment(s) for orders %', v_payment_count, v_order_ids;
         DELETE FROM public.payments WHERE order_id = ANY(v_order_ids);
       ELSE
-        RETURN jsonb_build_object('success', false, 'error', format('Cannot delete service: %s payment(s) exist for related orders. Resolve payments before deletion.', v_payment_count));
+        -- Collect payment diagnostics to help debugging
+        SELECT jsonb_agg(json_build_object('id', p.id, 'order_id', p.order_id, 'amount', p.amount, 'status', p.status, 'created_at', p.created_at))
+        INTO v_result
+        FROM public.payments p
+        WHERE p.order_id = ANY(v_order_ids);
+
+        RAISE NOTICE 'delete_service_atomic: blocked by % payment(s) on orders %', v_payment_count, v_order_ids;
+
+        RETURN jsonb_build_object(
+          'success', false,
+          'error', format('Cannot delete service: %s payment(s) exist for related orders. Resolve payments before deletion.', v_payment_count),
+          'payment_count', v_payment_count,
+          'orders', v_order_ids,
+          'payments', COALESCE(v_result, '[]'::jsonb)
+        );
       END IF;
     END IF;
   END IF;
@@ -729,6 +744,151 @@ BEGIN
   END IF;
 
   -- Create the booking
+  INSERT INTO public.bookings (
+    service_id,
+    tourist_id,
+    vendor_id,
+    booking_date,
+    service_date,
+    guests,
+    total_amount,
+    currency,
+    status,
+    payment_status,
+    special_requests,
+    guest_name,
+    guest_email,
+    guest_phone,
+    pickup_location,
+    dropoff_location,
+    trip_setoff,
+    trip_setoff_lat,
+    trip_setoff_lng,
+    trip_destination,
+    trip_destination_lat,
+    trip_destination_lng,
+    trip_stopovers,
+    trip_return_option,
+    journey_estimated_hours,
+    journey_estimated_distance,
+    journey_estimated_fuel,
+    journey_summary,
+    is_guest_booking,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_service_id,
+    p_tourist_id,
+    p_vendor_id,
+    p_booking_date,
+    p_service_date,
+    p_guests,
+    p_total_amount,
+    p_currency,
+    'pending',
+    'pending',
+    p_special_requests,
+    p_guest_name,
+    p_guest_email,
+    p_guest_phone,
+    p_pickup_location,
+    p_dropoff_location,
+    p_trip_setoff,
+    p_trip_setoff_lat,
+    p_trip_setoff_lng,
+    p_trip_destination,
+    p_trip_destination_lat,
+    p_trip_destination_lng,
+    p_trip_stopovers,
+    p_trip_return_option,
+    p_journey_estimated_hours,
+    p_journey_estimated_distance,
+    p_journey_estimated_fuel,
+    p_journey_summary,
+    CASE WHEN p_tourist_id IS NULL THEN true ELSE false END,
+    now(),
+    now()
+  )
+  RETURNING id INTO v_booking;
+
+  RETURN jsonb_build_object('success', true, 'booking_id', v_booking.id);
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Compatibility overload: some callers include an extra double precision argument.
+-- This overload accepts the extra param and delegates to the same insertion logic (ignores the extra).
+CREATE OR REPLACE FUNCTION create_booking_atomic(
+  p_service_id uuid,
+  p_vendor_id uuid,
+  p_booking_date date,
+  p_guests integer,
+  p_total_amount numeric,
+  p_tourist_id uuid DEFAULT NULL,
+  p_service_date date DEFAULT NULL,
+  p_currency text DEFAULT 'UGX',
+  p_special_requests text DEFAULT NULL,
+  p_guest_name text DEFAULT NULL,
+  p_guest_email text DEFAULT NULL,
+  p_guest_phone text DEFAULT NULL,
+  p_pickup_location text DEFAULT NULL,
+  p_dropoff_location text DEFAULT NULL,
+  p_trip_setoff text DEFAULT NULL,
+  p_trip_setoff_lat double precision DEFAULT NULL,
+  p_trip_setoff_lng double precision DEFAULT NULL,
+  p_trip_destination text DEFAULT NULL,
+  p_trip_destination_lat double precision DEFAULT NULL,
+  p_trip_destination_lng double precision DEFAULT NULL,
+  p_trip_destination_extra double precision DEFAULT NULL,
+  p_trip_stopovers jsonb DEFAULT NULL,
+  p_trip_return_option text DEFAULT NULL,
+  p_journey_estimated_hours numeric DEFAULT NULL,
+  p_journey_estimated_distance numeric DEFAULT NULL,
+  p_journey_estimated_fuel numeric DEFAULT NULL,
+  p_journey_summary text DEFAULT NULL
+) RETURNS jsonb AS $$
+DECLARE
+  v_service record;
+  v_existing_bookings integer;
+  v_available_capacity integer;
+  v_booking record;
+  v_result jsonb;
+BEGIN
+  -- Lock the service row for update to prevent concurrent bookings
+  SELECT * INTO v_service
+  FROM public.services
+  WHERE id = p_service_id
+  FOR UPDATE;
+
+  -- Check if service exists and is available
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Service not found');
+  END IF;
+
+  IF v_service.status NOT IN ('approved', 'active') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Service is not available for booking');
+  END IF;
+
+  -- Check capacity if max_capacity is set
+  IF v_service.max_capacity IS NOT NULL THEN
+    -- Count existing confirmed bookings for this service and date
+    SELECT COALESCE(SUM(guests), 0) INTO v_existing_bookings
+    FROM public.bookings
+    WHERE service_id = p_service_id
+      AND service_date = p_service_date
+      AND status IN ('confirmed', 'pending');
+
+    v_available_capacity := v_service.max_capacity - v_existing_bookings;
+
+    IF v_available_capacity < p_guests THEN
+      RETURN jsonb_build_object('success', false, 'error', format('Insufficient capacity. Available: %s, Requested: %s', v_available_capacity, p_guests));
+    END IF;
+  END IF;
+
+  -- Create the booking (ignore p_trip_destination_extra)
   INSERT INTO public.bookings (
     service_id,
     tourist_id,
@@ -954,6 +1114,61 @@ EXCEPTION
     RETURN jsonb_build_object('success', false, 'error', SQLERRM);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+  -- Compatibility overload: some callers pass arguments in vendor-first order
+  CREATE OR REPLACE FUNCTION create_transaction_atomic(
+    p_vendor_id uuid,
+    p_amount numeric,
+    p_currency text,
+    p_booking_id uuid DEFAULT NULL,
+    p_tourist_id uuid DEFAULT NULL,
+    p_transaction_type text DEFAULT 'payment',
+    p_status text DEFAULT 'pending',
+    p_payment_method text DEFAULT 'card',
+    p_reference text DEFAULT NULL
+  ) RETURNS jsonb AS $$
+  DECLARE
+    v_transaction record;
+    v_result jsonb;
+  BEGIN
+    -- Normalize reference if missing
+    IF p_reference IS NULL THEN
+      p_reference := UPPER(p_transaction_type || '_' || encode(gen_random_bytes(4), 'hex') || '_' || EXTRACT(epoch FROM now())::text);
+    END IF;
+
+    -- Insert transaction (vendor-first argument ordering compatibility)
+    INSERT INTO public.transactions (
+      booking_id,
+      vendor_id,
+      tourist_id,
+      amount,
+      currency,
+      transaction_type,
+      status,
+      payment_method,
+      reference,
+      created_at
+    ) VALUES (
+      p_booking_id,
+      p_vendor_id,
+      p_tourist_id,
+      p_amount,
+      p_currency,
+      p_transaction_type,
+      p_status,
+      p_payment_method,
+      p_reference,
+      now()
+    )
+    RETURNING id INTO v_transaction;
+
+    RETURN jsonb_build_object('success', true, 'transaction_id', v_transaction.id, 'reference', p_reference);
+
+  EXCEPTION
+    WHEN OTHERS THEN
+      RETURN jsonb_build_object('success', false, 'error', SQLERRM);
+  END;
+  $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create function for atomic wallet credit/debit operations
 CREATE OR REPLACE FUNCTION update_wallet_balance_atomic(
