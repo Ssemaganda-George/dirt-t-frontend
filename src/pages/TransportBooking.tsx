@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, CheckCircle, XCircle, Copy } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -1389,149 +1389,120 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       const left = 40
       let y = 48
 
-      // Title
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(20)
-      doc.text('Booking Receipt', left, y)
-      y += 26
+      const vendorName = service.vendors?.business_name || 'DIRT TRAILS'
+      const receiptShort = (result.id || '').toString().replace(/-/g, '').slice(0, 8).toUpperCase()
 
-      // Reference
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(11)
-      doc.text(`Reference: ${result.id || ''}`, left, y)
-      y += 22
-
-      // Service section
+      // Header - Vendor name and receipt title
       doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text(vendorName, left, y)
+      y += 20
       doc.setFontSize(13)
-      doc.text('Service', left, y)
-      y += 16
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(11)
-      doc.text(`Title: ${service.title}`, left + 10, y)
-      y += 14
-      doc.text(`Provider: ${service.vendors?.business_name || 'N/A'}`, left + 10, y)
-      y += 14
-      doc.text(`Location: ${service.location}`, left + 10, y)
+      doc.text('Adventure Booking Receipt', left, y)
       y += 20
 
-      // Trip section
+      // Receipt meta
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(13)
-      doc.text('Trip', left, y)
-      y += 16
-      doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
-      const pickup = `${bookingData.startDate || ''}${bookingData.startTime ? ' at ' + bookingData.startTime : ''}`.trim()
-      const dropoff = `${bookingData.endDate || ''}${bookingData.endTime ? ' at ' + bookingData.endTime : ''}`.trim()
-      doc.text(`Pick-up: ${pickup}`, left + 10, y)
+      doc.text(`Receipt #: ${receiptShort}`, left, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(new Date().toLocaleDateString(), pageWidth - left, y, { align: 'right' })
+      y += 18
+
+      // Status
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.text('BOOKING CONFIRMED', left, y)
+      y += 18
+
+      // Customer info
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('CUSTOMER INFORMATION', left, y)
       y += 14
-      doc.text(`Drop-off: ${dropoff}`, left + 10, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Name: ${bookingData.contactName || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Email: ${bookingData.contactEmail || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Phone: ${bookingData.countryCode || ''}${bookingData.contactPhone || ''}`, left + 8, y)
+      y += 18
+
+      // Service details
+      doc.setFont('helvetica', 'bold')
+      doc.text('SERVICE DETAILS', left, y)
       y += 14
-      doc.text(`Passengers: ${bookingData.passengers}`, left + 10, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Activity: ${service.title}`, left + 8, y)
+      y += 12
+      doc.text(`Location: ${service.location || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Category: ${service.service_categories?.name || 'N/A'}`, left + 8, y)
+      y += 12
+      const dateText = bookingData.startDate ? new Date(bookingData.startDate).toLocaleDateString() : 'N/A'
+      doc.text(`Date: ${dateText}`, left + 8, y)
+      y += 12
+      const durationHours = Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
+      doc.text(`Duration: ${durationHours} hours`, left + 8, y)
+      y += 12
+      doc.text(`Participants: ${bookingData.passengers || 1}`, left + 8, y)
+      y += 18
+
+      // Provider
+      doc.setFont('helvetica', 'bold')
+      doc.text('SERVICE PROVIDER', left, y)
       y += 14
-      // Trip details (set-off, stop-overs, destination)
-      if ((bookingData as any).tripSetoff) {
-        doc.text(`Set-off: ${(bookingData as any).tripSetoff}`, left + 10, y)
-        y += 14
-      }
-      if (stopovers && stopovers.length > 0) {
-        for (const s of stopovers) {
-          doc.text(`Stop-over: ${s.label} (${s.durationHours}h)`, left + 10, y)
-          y += 14
-        }
-      } else if ((bookingData as any).tripStopovers) {
-        doc.text(`Stop-overs: ${(bookingData as any).tripStopovers}`, left + 10, y)
-        y += 14
-      }
-      if ((bookingData as any).tripDestination) {
-        doc.text(`Destination: ${(bookingData as any).tripDestination}`, left + 10, y)
-        y += 14
-      }
-      if ((bookingData as any).tripReturnOption) {
-        const opt = (bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'
-        doc.text(`Return option: ${opt}`, left + 10, y)
-        y += 14
-      }
-      // Estimated hours and fuel
-      // Estimated hours, distance and fuel (prefer coordinate-based)
-      const coordDistance = computeTotalDistanceKm()
-      if (coordDistance > 0) {
-        const { hours, liters } = computeEstimatesFromDistance(
-          coordDistance,
-          Number((bookingData as any).avgSpeedKmph || 60),
-          Number((bookingData as any).fuelConsumptionPer100Km || 10),
-          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-        )
-        doc.text(`Estimated hours: ${hours.toFixed(1)} hrs`, left + 10, y)
-        y += 14
-        doc.text(`Estimated distance: ${coordDistance.toFixed(1)} km`, left + 10, y)
-        y += 14
-        doc.text(`Estimated fuel: ${liters.toFixed(1)} L`, left + 10, y)
-        y += 14
-        // draw any route anomalies
-        try {
-          const routeCheck = detectAbnormalRoute()
-          if (routeCheck.abnormal) {
-            doc.setFont('helvetica', 'bold')
-            doc.setFontSize(9)
-            doc.setTextColor(Math.round(0.8 * 255), Math.round(0.2 * 255), Math.round(0.2 * 255))
-            let ay = y
-            for (const line of routeCheck.reasons) {
-              doc.text(`Route warning: ${line}`, left + 10, ay)
-              ay += 12
-            }
-            y = ay
-            doc.setFont('helvetica', 'normal')
-            doc.setFontSize(10)
-            doc.setTextColor(0, 0, 0)
-          }
-        } catch (e) {
-          // ignore PDF drawing errors
-        }
-      } else {
-        const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-        if (estHours > 0) {
-          const { distanceKm, liters } = estimateFuel(
-            estHours,
-            Number((bookingData as any).avgSpeedKmph || 60),
-            Number((bookingData as any).fuelConsumptionPer100Km || 10),
-            Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-          )
-          doc.text(`Estimated hours: ${estHours.toFixed(1)} hrs`, left + 10, y)
-          y += 14
-          if (distanceKm > 0) {
-            doc.text(`Estimated distance: ${distanceKm.toFixed(1)} km`, left + 10, y)
-            y += 14
-          }
-          doc.text(`Estimated fuel: ${liters.toFixed(1)} L`, left + 10, y)
-          y += 14
-        }
-      }
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Provider: ${service.vendors?.business_name || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Contact: ${service.vendors?.business_phone || 'N/A'}`, left + 8, y)
+      y += 18
+
+      // Trip details (pickup/dropoff, duration, locations, special requests)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TRIP DETAILS', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      const pickupTxt = `${bookingData.startDate || 'N/A'}${bookingData.startTime ? ' at ' + bookingData.startTime : ''}`
+      const dropTxt = `${bookingData.endDate || 'N/A'}${bookingData.endTime ? ' at ' + bookingData.endTime : ''}`
+      doc.text(`Pick-up: ${pickupTxt}`, left + 8, y)
+      y += 12
+      doc.text(`Drop-off: ${dropTxt}`, left + 8, y)
+      y += 12
+      const durDays = bookingData.startDate && bookingData.endDate ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime) : null
+      const durHours = bookingData.startDate && bookingData.endDate ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime))) : null
+      doc.text(`Duration: ${durDays !== null ? `${durDays} days` : 'N/A'} ${durHours !== null ? `(${durHours} hrs)` : ''}`, left + 8, y)
+      y += 12
+      doc.text(`Pick-up Location: ${bookingData.pickupLocation || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Drop-off Location: ${bookingData.dropoffLocation || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Driver Option: ${bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}`, left + 8, y)
+      y += 12
+      doc.text(`Special Requests: ${bookingData.specialRequests || 'None'}`, left + 8, y)
+      y += 16
+
+      // Payment Summary
+      doc.setFont('helvetica', 'bold')
+      doc.text('PAYMENT SUMMARY', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      const unitPrice = basePrice || 0
+      doc.text(`Unit Price: ${unitPrice ? formatCurrencyWithConversion(unitPrice, service.currency) : `UGXNaN`}`, left + 8, y)
+      y += 12
+      doc.text(`Quantity: ${bookingData.passengers || 1}`, left + 8, y)
+      y += 12
+      doc.setFont('helvetica', 'bold')
+      doc.text(`TOTAL: ${formatCurrencyWithConversion(totalPrice, service.currency)}`, left + 8, y)
       y += 20
 
-      // Payment section
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(13)
-      doc.text('Payment', left, y)
-      y += 16
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(11)
-      // Right-align totals for clarity
-      const totalLabel = `Total:`
-      const totalValue = `${formatCurrencyWithConversion(totalPrice, service.currency)}`
-      doc.text(totalLabel, left + 10, y)
-      doc.text(totalValue, pageWidth - left, y, { align: 'right' })
-      y += 14
-      const methodLabel = `Method:`
-      const methodValue = bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod || 'N/A'
-      doc.text(methodLabel, left + 10, y)
-      doc.text(methodValue, pageWidth - left, y, { align: 'right' })
-      y += 28
+      doc.text('Thank you for choosing Dirt Trails!', left, y)
+      y += 18
 
-      // Footer note
-      doc.setFontSize(11)
-      doc.text('Thank you for booking with us.', left, y)
+      doc.setFontSize(10)
+      doc.text(`Booking Reference: ${result.id || ''}`, left, y)
 
       doc.save(`receipt-${result.id || 'booking'}.pdf`)
     } catch (e) {
@@ -2398,204 +2369,216 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32 min-h-screen">
-        <div className="space-y-4 sm:space-y-6 -mt-20 sm:-mt-24">
-          {/* Success Header */}
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-            <p className="text-gray-600 text-sm sm:text-base">
-              Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
-            </p>
-
-            {/* Booking reference & quick actions */}
-            {bookingResult?.id && (
-              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <div className="bg-gray-100 px-3 py-2 rounded-lg text-sm flex items-center gap-3">
-                  <span className="font-semibold">Reference:</span>
-                  <span className="break-all">{bookingResult.id}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => { try { await navigator.clipboard.writeText(bookingResult.id); alert('Booking reference copied'); } catch { /* ignore */ } }}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
-                  >
-                    Copy reference
-                  </button>
-                  <button
-                    onClick={() => downloadReceiptPDF(bookingResult || {})}
-                    className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
-                  >
-                    Download receipt (PDF)
-                  </button>
-                  <button
-                    onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm"
-                  >
-                    Message provider
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Service Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Service:</span>
-                <span className="font-medium text-right">{service.title}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Location:</span>
-                <span className="font-medium text-right">{service.location}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Category:</span>
-                <span className="font-medium text-right">{service.service_categories.name}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Service Provider */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Provider:</span>
-                <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Phone:</span>
-                <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Trip Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Pick-up Date & Time:</span>
-                <span className="font-medium text-right">{bookingData.startDate || 'Not set'} {bookingData.startTime ? `at ${bookingData.startTime}` : ''}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Drop-off Date & Time:</span>
-                <span className="font-medium text-right">{bookingData.endDate || 'Not set'} {bookingData.endTime ? `at ${bookingData.endTime}` : ''}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Duration:</span>
-                <span className="font-medium text-right">
-                  {bookingData.startDate && bookingData.endDate 
-                    ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days`
-                    : 'N/A'
-                  }
-                </span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Pick-up Location:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.pickupLocation || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Drop-off Location:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.dropoffLocation || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Passenger & Payment Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Passengers:</span>
-                <span className="font-medium">{bookingData.passengers}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Driver Option:</span>
-                <span className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Special Requests:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
-              </div>
-              {bookingData.paymentMethod === 'mobile' && (
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Provider:</span>
-                  <span className="font-medium">{bookingData.mobileProvider}</span>
-                </div>
+      <>
+      <div className="max-w-md mx-auto px-2 sm:px-4 pt-8 sm:pt-12 pb-0 min-h-[60vh] bg-white rounded-none shadow-md border border-gray-200 text-sm leading-relaxed">
+        <div className="space-y-3 sm:space-y-4">
+          {/* Vendor-style compact receipt header with responsive image */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+            <div className="w-full sm:w-40 flex-shrink-0">
+              <img
+                src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                alt={service.title}
+                className="w-full h-28 sm:h-24 object-cover rounded-lg"
+              />
+              {service.images && service.images.length > 0 && (
+                <div className="mt-1 text-xs text-gray-500 text-center sm:text-left">{currentImageIndex + 1} / {service.images.length}</div>
               )}
             </div>
+
+            <div className="flex-1">
+              <div className="text-xl font-bold">{service.vendors?.business_name || 'DIRT TRAILS'}</div>
+              <div className="text-xs text-gray-500">Adventure Booking Receipt</div>
+              <div className="mt-3 flex flex-col sm:flex-row items-center sm:items-start sm:justify-start gap-4">
+                <div className="text-center sm:text-left">
+                  <div className="text-xs text-gray-400">Receipt #</div>
+                  <div className="font-mono font-semibold text-sm">{(bookingResult?.id || '').toString().replace(/-/g, '').slice(0,8).toUpperCase()}</div>
+                </div>
+                <div className="text-center sm:text-left">
+                  <div className="text-xs text-gray-400">Date</div>
+                  <div className="text-sm">
+                    {new Date().toLocaleDateString('en-GB')}
+                    <span className="mx-2 text-gray-400">·</span>
+                    <span className="text-sm text-gray-700">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-semibold">BOOKING CONFIRMED</div>
+            </div>
           </div>
 
-          {/* Contact Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Name:</span>
-                <span className="font-medium text-right">{bookingData.contactName}</span>
+          {/* Two-column compact sections */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <div className="text-xs text-gray-500 font-semibold">Customer</div>
+                <div className="text-sm font-medium">{bookingData.contactName || 'N/A'}</div>
+                <div className="text-sm break-all">{bookingData.contactEmail || 'N/A'}</div>
+                <div className="text-sm">{(bookingData.countryCode || '') + (bookingData.contactPhone || '')}</div>
               </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
+
+              <div>
+                <div className="text-xs text-gray-500 font-semibold">Service</div>
+                <div className="text-sm font-medium">{service.title}</div>
+                <div className="text-sm">{service.location || 'N/A'}</div>
+                <div className="text-sm">{service.service_categories?.name || 'N/A'}</div>
+                <div className="text-sm mt-1">Date: {bookingData.startDate || 'N/A'}</div>
               </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Phone:</span>
-                <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <div className="text-xs text-gray-500 font-semibold">Provider</div>
+                <div className="text-sm font-medium">{service.vendors?.business_name || 'N/A'}</div>
+                <div className="text-sm">{service.vendors?.business_email || 'N/A'}</div>
+                <div className="text-sm">{service.vendors?.business_phone || 'N/A'}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 font-semibold">Payment</div>
+                <div className="text-sm">Unit Price: {basePrice ? formatCurrencyWithConversion(basePrice, service.currency) : 'UGXNaN'}</div>
+                <div className="text-sm">Quantity: {bookingData.passengers || 1}</div>
+                <div className="text-sm font-bold">TOTAL: {formatCurrencyWithConversion(totalPrice, service.currency)}</div>
               </div>
             </div>
           </div>
 
-          {/* Price Summary */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <div className="flex justify-between items-center">
-              <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+          
+
+          {/* Trip Details - clean two-column layout */}
+          <div className="pt-3 border-t border-gray-100">
+            <div className="text-xs text-gray-500 font-semibold mb-3">TRIP DETAILS</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Pick-up</div>
+                  <div className="font-medium">{bookingData.startDate || 'N/A'}{bookingData.startTime ? ` at ${bookingData.startTime}` : ''}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Duration</div>
+                  <div className="font-medium">{bookingData.startDate && bookingData.endDate ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days (${Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))} hrs)` : 'N/A'}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Pick-up Location</div>
+                  <div className="font-medium">{bookingData.pickupLocation || 'N/A'}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Driver Option</div>
+                  <div className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Drop-off</div>
+                  <div className="font-medium">{bookingData.endDate || 'N/A'}{bookingData.endTime ? ` at ${bookingData.endTime}` : ''}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Special Requests</div>
+                  <div className="font-medium">{bookingData.specialRequests || 'None'}</div>
+                </div>
+
+                <div>
+                  <div className="text-gray-500 uppercase text-xs font-medium">Drop-off Location</div>
+                  <div className="font-medium">{bookingData.dropoffLocation || 'N/A'}</div>
+                </div>
+
+                {bookingData.paymentMethod === 'mobile' && (
+                  <div>
+                    <div className="text-gray-500 uppercase text-xs font-medium">Payment Provider</div>
+                    <div className="font-medium">{bookingData.mobileProvider || 'N/A'}</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
-            <button
-              onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-            >
-              Message Provider
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-            >
-              Home
-            </button>
+          {/* Booking ref and actions (compact) */}
+          <div className="pt-2 border-t border-gray-100 text-center">
+            <div className="text-xs text-gray-500">Booking Reference</div>
+            <div className="mt-1 flex items-center justify-center gap-2">
+              <div className="font-mono break-all text-sm">{(bookingResult?.id || '')}</div>
+              <button
+                onClick={async () => { try { await navigator.clipboard.writeText(bookingResult?.id || ''); alert('Booking reference copied') } catch {} }}
+                title="Copy reference"
+                className="p-1 bg-gray-100 rounded"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-1 text-center">
+              <div className="font-medium">Thank you for choosing Dirt Trails!</div>
+              <div className="text-gray-500">Keep this receipt for your records</div>
+            </div>
+
+            {/* download moved to actions below */}
+
+            {/* Support strip (inside receipt) */}
+            <div className="mt-4 -mx-2 sm:-mx-4">
+              <div className="bg-gray-900 text-white rounded-none px-4 py-2 border-t border-gray-800">
+                <div className="text-sm font-semibold text-center sm:text-left">Should you need support</div>
+
+                <div className="mt-2 grid grid-cols-1 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300 w-24">Email</span>
+                    <a href="mailto:safaris.dirtrails@gmail.com" className="text-emerald-300 underline">safaris.dirtrails@gmail.com</a>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300 w-24">Phone</span>
+                    <a href="tel:+256759918649" className="text-emerald-300 underline">+256 759 918649</a>
+                  </div>
+                </div>
+
+                <div className="mt-1 text-xs text-gray-300 text-center sm:text-left">Or visit our <a href="/contact" className="text-emerald-300 underline">Contact Us</a> page</div>
+              </div>
+            </div>
           </div>
 
-            {/* Similar Services Carousel */}
-            {service.category_id && (
-              <div className="pt-6">
-                <h3 className="text-sm font-semibold mb-3">Other services you may like</h3>
-                <SimilarServicesCarousel
-                  categoryId={service.category_id}
-                  excludeServiceId={service.id}
-                  limit={8}
-                />
-              </div>
-            )}
         </div>
       </div>
+
+      {/* Detached actions and related services (outside receipt) */}
+      <div className="max-w-4xl mx-auto mt-4 px-4">
+        <div className="flex gap-2 sm:gap-3 justify-center">
+          <button
+            onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+          >
+            Message Provider
+          </button>
+          <button
+            onClick={() => downloadReceiptPDF(bookingResult || {})}
+            className="flex-1 sm:flex-none bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+          >
+            Download (PDF)
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+          >
+            Home
+          </button>
+        </div>
+
+        {service.category_id && (
+          <div className="pt-6">
+            <h3 className="text-sm font-semibold mb-3">Other services you may like</h3>
+            <SimilarServicesCarousel
+              categoryId={service.category_id}
+              excludeServiceId={service.id}
+              limit={8}
+            />
+          </div>
+        )}
+      </div>
+
+      
+      </>
     )
   }
 
