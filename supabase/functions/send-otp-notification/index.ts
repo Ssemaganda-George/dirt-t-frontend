@@ -22,15 +22,17 @@ const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN')
 const TWILIO_PHONE_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')
 
 serve(async (req: Request) => {
-  // CORS headers
+  const requestOrigin = req.headers.get('origin') || '*'
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': requestOrigin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  }
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    })
+    return new Response('ok', { headers: CORS_HEADERS })
   }
 
   try {
@@ -39,12 +41,7 @@ serve(async (req: Request) => {
     if (!to || !message || !type) {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, message, type' }), {
         status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       })
     }
 
@@ -52,24 +49,14 @@ serve(async (req: Request) => {
       if (!subject) {
         return new Response(JSON.stringify({ error: 'Subject is required for email notifications' }), {
           status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-          },
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         })
       }
 
       if (!RESEND_API_KEY) {
         return new Response(JSON.stringify({ error: 'Email service not configured' }), {
           status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-          },
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         })
       }
 
@@ -93,36 +80,21 @@ serve(async (req: Request) => {
         console.error('Email sending failed:', errorData)
         return new Response(JSON.stringify({ error: 'Failed to send email', details: errorData }), {
           status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-          },
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         })
       }
 
       const emailResult = await emailResponse.json()
       return new Response(JSON.stringify({ success: true, type: 'email', id: emailResult.id }), {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       })
 
     } else if (type === 'sms') {
       if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
         return new Response(JSON.stringify({ error: 'SMS service not configured' }), {
           status: 503,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-          },
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         })
       }
 
@@ -145,35 +117,20 @@ serve(async (req: Request) => {
         console.error('SMS sending failed:', errorData)
         return new Response(JSON.stringify({ error: 'Failed to send SMS', details: errorData }), {
           status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST',
-            'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-          },
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         })
       }
 
       const smsResult = await smsResponse.json()
       return new Response(JSON.stringify({ success: true, type: 'sms', id: smsResult.sid }), {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       })
 
     } else {
       return new Response(JSON.stringify({ error: 'Invalid notification type. Must be "email" or "sms"' }), {
         status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       })
     }
 
@@ -181,12 +138,7 @@ serve(async (req: Request) => {
     console.error('Exception in send-otp-notification:', error)
     return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     })
   }
 })

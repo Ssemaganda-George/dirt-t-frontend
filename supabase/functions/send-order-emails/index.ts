@@ -134,14 +134,17 @@ async function buildTicketsPdf(
 }
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin') || '*'
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': requestOrigin,
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  }
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    })
+    return new Response('ok', { headers: CORS_HEADERS })
   }
 
   try {
@@ -154,12 +157,12 @@ serve(async (req) => {
     try {
       body = await req.json()
     } catch (e) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } })
     }
 
     const { order_id, recipient_email } = body
     if (!order_id || !recipient_email) {
-      return new Response(JSON.stringify({ error: 'order_id and recipient_email are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'order_id and recipient_email are required' }), { status: 400, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } })
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -271,10 +274,10 @@ serve(async (req) => {
     const result = await res.json()
     console.log('Order email sent', result.id, hasAttachment ? '(with PDF)' : '')
 
-    return new Response(JSON.stringify({ success: true, id: result.id, attachment: hasAttachment }), { status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+    return new Response(JSON.stringify({ success: true, id: result.id, attachment: hasAttachment }), { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } })
 
   } catch (err: any) {
     console.error('Error in send-order-emails:', err)
-    return new Response(JSON.stringify({ error: err?.message || String(err) }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } })
+    return new Response(JSON.stringify({ error: err?.message || String(err) }), { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } })
   }
 })
