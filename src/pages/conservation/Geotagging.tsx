@@ -88,7 +88,20 @@ const GeotaggingPage = () => {
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const autoCenteredRef = useRef(false);
+  const approvedTrees = React.useMemo(() => {
+    // Only consider trees explicitly approved. If `approved` is missing (fallback/demo data), treat as approved.
+    return allTrees.filter((t: any) => (t.approved === undefined) ? true : Boolean(t.approved));
+  }, [allTrees]);
+
+  const totals = React.useMemo(() => {
+    const totalTrees = approvedTrees.reduce((sum: number, t: any) => sum + (Number(t.count) || 1), 0);
+    const avgKgPerTreePerYear = 21.77;
+    const totalKg = totalTrees * avgKgPerTreePerYear;
+    const totalTonnes = totalKg / 1000;
+    return { totalTrees, totalKg, totalTonnes };
+  }, [approvedTrees]);
   const navigate = useNavigate();
 
 
@@ -140,15 +153,18 @@ const GeotaggingPage = () => {
   const handleTreeIdSearch = (id?: string) => {
     const searchId = id || trackingId.trim();
     if (!searchId) return;
-    const foundTree = allTrees.find(tree => ((tree.external_id || tree.id) || '').toLowerCase() === searchId.toLowerCase() || (tree.id || '').toLowerCase() === searchId.toLowerCase());
+    const foundTree = approvedTrees.find(tree => ((tree.external_id || tree.id) || '').toLowerCase() === searchId.toLowerCase() || (tree.id || '').toLowerCase() === searchId.toLowerCase());
     if (foundTree && mapRef.current) {
       setSelectedTree(foundTree);
       setMapCenter([foundTree.latitude, foundTree.longitude]);
       setMapZoom(15);
+      // prefer flyTo on the actual Leaflet map instance for smooth, consistent panning
       try {
-        mapRef.current.setView([foundTree.latitude, foundTree.longitude], 15, { animate: true });
+        if (mapRef.current) {
+          mapRef.current.flyTo([foundTree.latitude, foundTree.longitude], 15, { animate: true });
+        }
       } catch (e) {
-        // ignore if mapRef not a leaflet instance
+        // ignore if mapRef is not a map instance yet
       }
     } else {
       setSelectedTree(null);
@@ -156,10 +172,12 @@ const GeotaggingPage = () => {
   };
 
   useEffect(() => {
-    if (allTrees.length > 0) {
+    // Auto-center to a demo tree only once on initial data load.
+    if (approvedTrees.length > 0 && !autoCenteredRef.current) {
+      autoCenteredRef.current = true;
       handleTreeIdSearch('TREE-000');
     }
-  }, [allTrees]);
+  }, [approvedTrees]);
 
   
 
@@ -171,6 +189,9 @@ const GeotaggingPage = () => {
             <TreePine className="h-6 w-6 text-green-600" />
           </div>
           <h1 className="text-4xl font-bold mb-2">Geotagging & Tree Tracking</h1>
+          <div className="text-sm text-gray-600 mb-4">
+            To date we have planted <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees — they remove about <span className="font-semibold text-gray-900">{Math.round(totals.totalKg).toLocaleString()}</span> kg of CO₂ each year (≈{totals.totalTonnes.toFixed(2)} tonnes/year).
+          </div>
           <p className="text-gray-600 max-w-2xl mx-auto md:mx-0 mb-4">
             Monitor, search, and celebrate your tree planting impact.
           </p>
@@ -239,15 +260,15 @@ const GeotaggingPage = () => {
         <h2 className="text-xl font-semibold mb-4 px-4">Tourists Planting Trees</h2>
         <div className="relative" style={{ width: "100%", overflow: "hidden", height: "250px" }}>
           <div
-            className="flex space-x-6 absolute left-0 top-0"
+              className="gallery-marquee flex space-x-6 absolute left-0 top-0"
             style={{
               width: "max-content",
               animation: "gallery-marquee 30s linear infinite"
             }}
           >
-            {allTrees.length > 0 ? (
-              // show approved trees only (allTrees is loaded with approved=true)
-              allTrees.concat(allTrees).slice(0, Math.max(8, allTrees.length * 2)).map((tree: any, idx: number) => {
+            {approvedTrees.length > 0 ? (
+              // show approved trees only
+              approvedTrees.concat(approvedTrees).slice(0, Math.max(8, approvedTrees.length * 2)).map((tree: any, idx: number) => {
                 const img = Array.isArray(tree.images) && tree.images.length > 0 ? tree.images[0] : null;
                 return (
                   <div className="flex-shrink-0 w-64" key={`tree-marquee-${tree.id || idx}-${idx}`}>
@@ -306,7 +327,7 @@ const GeotaggingPage = () => {
               <Popup>You are here 📍</Popup>
             </Marker>
           )}
-          {allTrees.map((tree) => (
+          {approvedTrees.map((tree) => (
             <Marker key={tree.id} position={[tree.latitude, tree.longitude]} icon={treeIcon}>
               <Popup>
                 <div className="space-y-1">
