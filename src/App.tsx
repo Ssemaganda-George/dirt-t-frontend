@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
@@ -56,6 +56,7 @@ const TouristWallets = lazy(() => import('./pages/admin/TouristWallets').then(mo
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
+const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Trees').then(m => ({ default: m.default })))
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
@@ -111,6 +112,7 @@ const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculato
 const OffsetDonation = lazy(() => import('./pages/conservation/OffsetDonation'))
 const OffsetCheckout = lazy(() => import('./pages/conservation/OffsetCheckout'))
 const OffsetSuccess = lazy(() => import('./pages/conservation/OffsetSuccess'))
+const Donate = lazy(() => import('./pages/conservation/Donate'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
@@ -180,10 +182,12 @@ function App() {
             <Route path="hospitality-class" element={<HospitalityClass />} />
             <Route path="conservation/geotagging" element={<Geotagging />} />
             <Route path="conservation/tree-planting" element={<TreePlanting />} />
+            <Route path="conservation/donate" element={<Donate />} />
             <Route path="conservation/carbon" element={<CarbonCalculator />} />
             <Route path="conservation/offset" element={<OffsetDonation />} />
             <Route path="conservation/checkout" element={<OffsetCheckout />} />
             <Route path="conservation/offset/success" element={<OffsetSuccess />} />
+            <Route path="environment/donate" element={<Navigate to="/conservation/donate" replace />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />
@@ -313,6 +317,7 @@ function App() {
             <Route path="messages" element={<Messages />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
+            <Route path="conservation/trees" element={<AdminConservationTrees />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="vendors" element={<AdminVendors />} />
             <Route path="vendors/:id" element={<AdminVendorDetail />} />

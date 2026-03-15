@@ -1,6 +1,12 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../../src/contexts/AuthContext'
+import { usePreferences } from '../../contexts/PreferencesContext'
+import { convertCurrency, formatCurrency } from '../../lib/utils'
+import { supabase } from '../../lib/supabaseClient'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 function generateTxnId() {
   return `OTX-${Date.now()}-${Math.random().toString(36).slice(2,8).toUpperCase()}`
@@ -27,19 +33,66 @@ export default function OffsetCheckout() {
   const [email, setEmail] = useState(profile?.email || '')
   const [amount, setAmount] = useState<string>(String(suggested))
   const [processing, setProcessing] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card'>('mobile_money')
+  const [paymentMethod, setPaymentMethod] = useState<string>('mobile')
   const [provider, setProvider] = useState<'mtn' | 'airtel'>('mtn')
   const [phone, setPhone] = useState<string>(profile?.phone || '+256759918649')
   const [comment, setComment] = useState<string>('')
   const [anonymous, setAnonymous] = useState<boolean>(false)
+  const { selectedCurrency } = usePreferences()
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault()
     setProcessing(true)
-    // Simulate payment processing delay
-    setTimeout(() => {
+    try {
+      const orderId = `donate-${Date.now()}`
+      const userCurrency = selectedCurrency || 'UGX'
+      const numericAmount = Number(amount || 0)
+      const amountInUGX = Math.round(convertCurrency(numericAmount, userCurrency, 'UGX'))
+
+      if (paymentMethod === 'mobile') {
+        const rawPhone = String(phone || '').trim().replace(/^\+256/, '')
+        const phoneFormatted = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+        if (!phoneFormatted || phoneFormatted.length < 10) {
+          alert('Please enter a valid mobile money phone number')
+          setProcessing(false)
+          return
+        }
+
+        const { data: session } = await supabase.auth.getSession()
+        const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            amount: amountInUGX,
+            phone_number: phoneFormatted,
+            order_id: orderId,
+            description: `Offset donation — ${trees} trees / ${kg}kg`,
+            user_id: session?.session?.user?.id || undefined,
+          }),
+        })
+
+        const result = await collectRes.json().catch(() => ({}))
+        if (!collectRes.ok) {
+          const msg = result?.error || `Payment initiation failed (${collectRes.status})`
+          throw new Error(msg)
+        }
+        if (!result?.success || !result?.data?.reference) {
+          throw new Error(result?.error || 'Payment initiation failed')
+        }
+
+        const ref = result.data.reference
+        navigate(`/checkout/${orderId}/payment?reference=${encodeURIComponent(ref)}`)
+        return
+      }
+
+      // fallback for card or offline: persist locally
       const txn = generateTxnId()
       const treeIds = generateTreeIds(trees)
+      const providerValue = paymentMethod === 'mobile' ? provider : null
+      const phoneValue = paymentMethod === 'mobile' ? phone : null
       const record = {
         txn,
         userId: user?.id || null,
@@ -47,12 +100,12 @@ export default function OffsetCheckout() {
         anonymous: anonymous,
         email,
         paymentMethod,
-        provider: paymentMethod === 'mobile_money' ? provider : null,
-        phone: paymentMethod === 'mobile_money' ? phone : null,
+        provider: providerValue,
+        phone: phoneValue,
         payment_notes: comment || null,
         kg,
         trees,
-        amount: Number(amount || 0),
+        amount: numericAmount,
         treeIds,
         date: new Date().toISOString()
       }
@@ -64,9 +117,13 @@ export default function OffsetCheckout() {
       } catch (err) {
         console.error('Failed to persist offset record', err)
       }
-      setProcessing(false)
       navigate(`/conservation/offset/success?txn=${encodeURIComponent(txn)}`)
-    }, 1200)
+    } catch (err) {
+      console.error('Offset payment error:', err)
+      alert((err as Error).message || 'Payment failed. Please try again.')
+    } finally {
+      setProcessing(false)
+    }
   }
 
   return (
@@ -105,8 +162,17 @@ export default function OffsetCheckout() {
         </div>
 
         <div>
-          <label className="text-sm text-gray-600 block mb-2">Contribution amount (USD)</label>
+          <label className="text-sm text-gray-600 block mb-2">Contribution amount ({selectedCurrency})</label>
           <input value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40 border border-gray-200 rounded-lg px-3 py-2 text-sm" required />
+          <div className="text-xs text-gray-500 mt-2">
+            {amount && !isNaN(Number(amount)) ? (
+              <>
+                ≈ {formatCurrency(Math.round(convertCurrency(Number(amount), selectedCurrency || 'UGX', 'UGX')), 'UGX')} will be charged
+              </>
+            ) : (
+              'Enter an amount to see the UGX equivalent'
+            )}
+          </div>
         </div>
 
         <div>
@@ -119,11 +185,11 @@ export default function OffsetCheckout() {
 
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
-              <input type="radio" name="payment" checked={paymentMethod === 'mobile_money'} onChange={() => setPaymentMethod('mobile_money')} className="mt-1" />
+              <input type="radio" name="payment" checked={paymentMethod === 'mobile'} onChange={() => setPaymentMethod('mobile')} className="mt-1" />
               <div>
                 <div className="font-medium">Mobile Money</div>
                 <div className="text-sm text-gray-500">Select provider to continue →</div>
-                {paymentMethod === 'mobile_money' && (
+                {paymentMethod === 'mobile' && (
                   <div className="mt-3 pl-3">
                     <label className="text-sm text-gray-600 block mb-2">Provider</label>
                     <select value={provider} onChange={(e) => setProvider(e.target.value as any)} className="w-44 border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3">
@@ -149,8 +215,8 @@ export default function OffsetCheckout() {
         </div>
 
         <div className="flex items-center justify-between">
-          <button type="submit" className="px-5 py-2 bg-emerald-600 text-white rounded-lg shadow" disabled={processing || (paymentMethod === 'mobile_money' && !phone)}>
-            {processing ? 'Processing...' : `Pay $${amount || '0.00'}`}
+          <button type="submit" className="px-5 py-2 bg-emerald-600 text-white rounded-lg shadow" disabled={processing || (paymentMethod === 'mobile' && !phone)}>
+            {processing ? 'Processing...' : `Pay ${formatCurrency(Number(amount || 0), selectedCurrency || 'UGX')}`}
           </button>
           <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 text-gray-600">Back</button>
         </div>

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Eye,
   Star
+  , TreePine
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -83,6 +84,12 @@ const navigation = [
     items: [
       { labelKey: 'reviews', href: '/admin/reviews', icon: Star },
       { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 }
+    ]
+  },
+  {
+    category: 'Conservation',
+    items: [
+      { labelKey: 'trees', href: '/admin/conservation/trees', icon: TreePine }
     ]
   },
   {

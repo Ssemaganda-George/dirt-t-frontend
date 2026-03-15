@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrency } from '../lib/utils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -82,6 +82,134 @@ export default function PaymentPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const paymentChannelRef = useRef<RealtimeChannel | null>(null)
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [searchParams] = useSearchParams()
+
+  const refFromQuery = searchParams.get('reference')
+  const [donationPayment, setDonationPayment] = useState<any | null>(null)
+
+  useEffect(() => {
+    if (!refFromQuery) return
+    let mounted = true
+    const load = async () => {
+      try {
+        const { data } = await supabase.from('payments').select('*').eq('reference', refFromQuery).maybeSingle()
+        if (mounted) setDonationPayment(data || null)
+      } catch (e) {
+        console.warn('[Payment] failed to fetch payment row for reference', refFromQuery, e)
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [refFromQuery])
+
+  const checkStatus = async (ref: string): Promise<'completed' | 'failed' | null> => {
+    try {
+      const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`
+      console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+      })
+      const raw = await res.text()
+      console.log('[Payment] checkStatus: response', {
+        ok: res.ok,
+        status: res.status,
+        body: raw?.slice(0, 300),
+      })
+      const data = (JSON.parse(raw || '{}') as { status?: string; error?: string })
+      const result = data?.status === 'completed' ? 'completed' : data?.status === 'failed' ? 'failed' : null
+      console.log('[Payment] checkStatus: parsed', { 'data.status': data?.status, result })
+      if (data?.status === 'completed') return 'completed'
+      if (data?.status === 'failed') return 'failed'
+      return null
+    } catch (e) {
+      console.error('[Payment] checkStatus: error', e)
+      return null
+    }
+  }
+
+  const startWatchingReference = async (ref: string) => {
+    setPaymentReference(ref)
+    setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+    const cleanup = () => {
+      console.log('[Payment] cleanup', { ref })
+      if (paymentChannelRef.current) {
+        paymentChannelRef.current.unsubscribe()
+        paymentChannelRef.current = null
+      }
+      if (backupPollRef.current) {
+        clearInterval(backupPollRef.current)
+        backupPollRef.current = null
+      }
+    }
+
+    const handleCompleted = () => {
+      console.log('[Payment] handleCompleted called', { orderId, ref })
+      cleanup()
+      setPollingMessage('Payment confirmed!')
+      setPaymentSuccess(true)
+      setProcessing(false)
+    }
+
+    const handleFailed = () => {
+      console.log('[Payment] handleFailed called', { ref })
+      cleanup()
+      setPollingMessage('')
+      setPaymentReference(null)
+      setProcessing(false)
+      alert('Payment was not completed or was declined. Please try again.')
+    }
+
+    const channel = supabase
+      .channel(`payment_${ref}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'payments',
+          filter: `reference=eq.${ref}`,
+        },
+        (payload) => {
+          const row = payload.new as { status: string }
+          console.log('[Payment] Realtime UPDATE received', { ref, status: row?.status, payload: payload.new })
+          if (row.status === 'completed') handleCompleted()
+          else if (row.status === 'failed') handleFailed()
+        }
+      )
+      .subscribe()
+    paymentChannelRef.current = channel
+    console.log('[Payment] Realtime channel subscribed', { ref })
+
+    const statusOnce = await checkStatus(ref)
+    console.log('[Payment] statusOnce (immediate)', { statusOnce, ref })
+    if (statusOnce === 'completed') {
+      handleCompleted()
+      return
+    }
+    if (statusOnce === 'failed') {
+      handleFailed()
+      return
+    }
+
+    backupPollRef.current = setInterval(async () => {
+      const status = await checkStatus(ref)
+      console.log('[Payment] poll tick', { status, ref, now: new Date().toISOString() })
+      if (status === 'completed') {
+        console.log('[Payment] handleCompleted from poll')
+        handleCompleted()
+      } else if (status === 'failed') handleFailed()
+    }, 4000)
+    console.log('[Payment] backup poll started every 4s, will stop after 120s')
+    setTimeout(() => {
+      if (backupPollRef.current) {
+        clearInterval(backupPollRef.current)
+        backupPollRef.current = null
+      }
+    }, 120000)
+  }
 
   // Ensure the paymentReference is observed so linters/TS don't flag it as unused.
   useEffect(() => {
@@ -101,6 +229,16 @@ export default function PaymentPage() {
       }
     }
   }, [])
+
+  // If a reference is provided in the URL (e.g. from Donate flow), start watching it
+  useEffect(() => {
+    const ref = searchParams.get('reference')
+    if (ref) {
+      // kick off watcher for provided reference
+      startWatchingReference(ref).catch((e) => console.error('[Payment] startWatchingReference error', e))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Prefill phone from order when order data is ready
   useEffect(() => {
@@ -171,114 +309,8 @@ export default function PaymentPage() {
       }
 
       const ref = result.data.reference
-  setPaymentReference(ref)
-  // Show the phone confirmation message inside the Pay button while processing
-  setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
-
-      const cleanup = () => {
-        console.log('[Payment] cleanup', { ref })
-        if (paymentChannelRef.current) {
-          paymentChannelRef.current.unsubscribe()
-          paymentChannelRef.current = null
-        }
-        if (backupPollRef.current) {
-          clearInterval(backupPollRef.current)
-          backupPollRef.current = null
-        }
-      }
-
-      const handleCompleted = () => {
-        console.log('[Payment] handleCompleted called', { orderId, ref })
-        cleanup()
-        setPollingMessage('Payment confirmed!')
-        // show success dialog — user will be able to go to receipt when they click OK
-        setProcessing(false)
-        setPaymentSuccess(true)
-        // Email is sent by the webhook after tickets are created — no need to call it here
-      }
-
-      const handleFailed = () => {
-        console.log('[Payment] handleFailed called', { ref })
-        cleanup()
-        setPollingMessage('')
-        setPaymentReference(null)
-        setProcessing(false)
-        alert('Payment was not completed or was declined. Please try again.')
-      }
-
-      const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
-        try {
-          const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`
-          console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
-          const res = await fetch(url, {
-            headers: { Authorization: `Bearer ${supabaseAnonKey}` },
-          })
-          const raw = await res.text()
-          console.log('[Payment] checkStatus: response', {
-            ok: res.ok,
-            status: res.status,
-            body: raw?.slice(0, 300),
-          })
-          const data = (JSON.parse(raw || '{}') as { status?: string; error?: string })
-          const result = data?.status === 'completed' ? 'completed' : data?.status === 'failed' ? 'failed' : null
-          console.log('[Payment] checkStatus: parsed', { 'data.status': data?.status, result })
-          if (data?.status === 'completed') return 'completed'
-          if (data?.status === 'failed') return 'failed'
-          return null
-        } catch (e) {
-          console.error('[Payment] checkStatus: error', e)
-          return null
-        }
-      }
-
-      const channel = supabase
-        .channel(`payment_${ref}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'payments',
-            filter: `reference=eq.${ref}`,
-          },
-          (payload) => {
-            const row = payload.new as { status: string }
-            console.log('[Payment] Realtime UPDATE received', { ref, status: row?.status, payload: payload.new })
-            if (row.status === 'completed') handleCompleted()
-            else if (row.status === 'failed') handleFailed()
-          }
-        )
-        .subscribe()
-      paymentChannelRef.current = channel
-      console.log('[Payment] Realtime channel subscribed', { ref })
-
-  const statusOnce = await checkStatus()
-      console.log('[Payment] statusOnce (immediate)', { statusOnce, ref })
-        if (statusOnce === 'completed') {
-          console.log('[Payment] handleCompleted from immediate check')
-          handleCompleted()
-          return
-        }
-      if (statusOnce === 'failed') {
-        handleFailed()
-        return
-      }
-
-      backupPollRef.current = setInterval(async () => {
-        const status = await checkStatus()
-        console.log('[Payment] poll tick', { status, ref, now: new Date().toISOString() })
-        if (status === 'completed') {
-          console.log('[Payment] handleCompleted from poll')
-          handleCompleted()
-        } else if (status === 'failed') handleFailed()
-      }, 4000)
-      console.log('[Payment] backup poll started every 4s, will stop after 120s')
-      setTimeout(() => {
-        if (backupPollRef.current) {
-          clearInterval(backupPollRef.current)
-          backupPollRef.current = null
-        }
-      }, 120000)
+      // reuse watcher logic to start polling/subscription for the returned reference
+      await startWatchingReference(ref)
     } catch (err) {
       console.error('Payment error:', err)
       setPollingMessage('')
@@ -289,7 +321,61 @@ export default function PaymentPage() {
   }, [orderId, order, phoneNumber, navigate])
 
   if (isLoading) return <PageSkeleton type="payment" />
-  if (error || !order) return <div className="p-6">Order not found</div>
+  if (error || !order) {
+    // If there's no order but we have a payment reference (donation flow), render the donation watcher UI below
+    if (!refFromQuery) return <div className="p-6">Order not found</div>
+  }
+
+  // Donation-only flow: no order but reference provided
+  if (!order && refFromQuery) {
+    const paymentAmount = donationPayment?.amount ?? null
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">Complete Donation</h1>
+            <p className="text-gray-600 font-light text-sm">Confirm the donation using your phone. Payment reference: <span className="font-mono">{refFromQuery}</span></p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6 p-6 text-center">
+            <div className="text-sm text-gray-700 mb-4">{paymentAmount ? `Amount: ${paymentAmount}` : 'Amount will be charged to your phone'}</div>
+            <div className="text-sm text-gray-600 mb-4">{pollingMessage || 'Waiting for confirmation on your phone...'}</div>
+
+            {paymentSuccess && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black opacity-40"></div>
+                <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 z-10">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Donation successful</h2>
+                  <p className="text-sm text-gray-700 mb-4">Thank you for your donation. A receipt will be sent if an email was provided.</p>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentSuccess(false)
+                        navigate('/')
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!paymentSuccess && (
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white text-gray-900 border rounded-md">Back</button>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-md" disabled>
+                  Processing…
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">

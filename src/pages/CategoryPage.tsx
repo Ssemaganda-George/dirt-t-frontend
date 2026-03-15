@@ -140,7 +140,7 @@ export default function CategoryPage() {
     setSelectedCategoryFilter('all')
   }, [category])
 
-  const { t } = usePreferences()
+  const { t, selectedCurrency } = usePreferences()
 
   const searchFilteredServices = filteredServices.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -261,7 +261,7 @@ export default function CategoryPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                    Price Range (UGX)
+                    Price Range ({selectedCurrency || 'UGX'})
                   </label>
                   <div className="flex items-center gap-2">
                     <input
