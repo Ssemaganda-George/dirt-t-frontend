@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 type Tree = {
   id: string;
@@ -12,6 +14,7 @@ type Tree = {
   images?: string[];
   approved?: boolean;
   created_at?: string;
+  booking_id?: string;
 };
 
 const AdminConservationTrees = () => {
@@ -32,6 +35,9 @@ const AdminConservationTrees = () => {
   const [editPlantedOn, setEditPlantedOn] = useState('');
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editPreviews, setEditPreviews] = useState<string[]>([]);
+  const [editBookingSearch, setEditBookingSearch] = useState('');
+  const [editBookingResults, setEditBookingResults] = useState<any[]>([]);
+  const [editSelectedBooking, setEditSelectedBooking] = useState<any | null>(null);
 
   const fetchTrees = async () => {
     setLoading(true);
@@ -116,13 +122,217 @@ const AdminConservationTrees = () => {
     setEditPlantedOn(t.planted_on ? new Date(t.planted_on).toISOString().slice(0,16) : '');
     setEditFiles([]);
     setEditPreviews([]);
+    setEditBookingSearch((t as any).booking_id || '');
+    setEditBookingResults([]);
+    setEditSelectedBooking(null);
+
+    // if this tree already has a booking_id, try to fetch and populate it
+    if (t && (t as any).booking_id) {
+      (async () => {
+        try {
+          const { data: b, error: be } = await supabase.from('bookings').select('*').eq('id', (t as any).booking_id).single();
+          if (!be && b) setEditSelectedBooking(b as any);
+        } catch (e) {
+          // ignore
+        }
+      })();
+    }
   };
 
   const closeEdit = () => {
     setEditingTree(null);
     setEditFiles([]);
     setEditPreviews([]);
+    setEditBookingSearch('');
+    setEditBookingResults([]);
+    setEditSelectedBooking(null);
   };
+
+  // Add-Tree (admin) state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addSpecies, setAddSpecies] = useState('');
+  const [addLatitude, setAddLatitude] = useState('');
+  const [addLongitude, setAddLongitude] = useState('');
+  const [addPlantedBy, setAddPlantedBy] = useState('');
+  const [addPlantedOn, setAddPlantedOn] = useState('');
+  const [addFiles, setAddFiles] = useState<File[]>([]);
+  const [addPreviews, setAddPreviews] = useState<string[]>([]);
+  const [addPickingLocation, setAddPickingLocation] = useState(false);
+  const [addMarkerPos, setAddMarkerPos] = useState<[number, number] | null>(null);
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [bookingResults, setBookingResults] = useState<any[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+
+  const onAddFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    setAddFiles(files);
+    const urls = files.map(f => URL.createObjectURL(f));
+    setAddPreviews(urls);
+  };
+
+  const searchBookings = async (q?: string) => {
+    const query = (q ?? bookingSearch).trim();
+    setLoading(true);
+    setBookingResults([]);
+    try {
+      // try exact id match first
+      if (query) {
+        const { data: byId, error: idErr } = await supabase.from('bookings').select('*').eq('id', query).limit(20);
+        if (!idErr && Array.isArray(byId) && byId.length > 0) {
+          setBookingResults(byId as any[]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // try external_id search (if it exists) - wrapped in try/catch because column might not exist
+      if (query) {
+        try {
+          const { data: ext, error: extErr } = await supabase.from('bookings').select('*').ilike('external_id', `%${query}%`).limit(20);
+          if (!extErr && Array.isArray(ext) && ext.length > 0) {
+            setBookingResults(ext as any[]);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // ignore if external_id not present
+        }
+      }
+
+      // fallback: list recent bookings
+      const { data: recent, error: recentErr } = await supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(20);
+      if (!recentErr && Array.isArray(recent)) setBookingResults(recent as any[]);
+    } catch (err) {
+      console.error('Bookings search error', err);
+      setBookingResults([]);
+    }
+    setLoading(false);
+  };
+
+  const searchBookingsForEdit = async (q?: string) => {
+    const query = (q ?? editBookingSearch).trim();
+    setLoading(true);
+    setEditBookingResults([]);
+    try {
+      if (query) {
+        const { data: byId, error: idErr } = await supabase.from('bookings').select('*').eq('id', query).limit(20);
+        if (!idErr && Array.isArray(byId) && byId.length > 0) {
+          setEditBookingResults(byId as any[]);
+          setLoading(false);
+          return;
+        }
+      }
+      if (query) {
+        try {
+          const { data: ext, error: extErr } = await supabase.from('bookings').select('*').ilike('external_id', `%${query}%`).limit(20);
+          if (!extErr && Array.isArray(ext) && ext.length > 0) {
+            setEditBookingResults(ext as any[]);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {}
+      }
+      const { data: recent, error: recentErr } = await supabase.from('bookings').select('*').order('created_at', { ascending: false }).limit(20);
+      if (!recentErr && Array.isArray(recent)) setEditBookingResults(recent as any[]);
+    } catch (err) {
+      console.error('Bookings search error', err);
+      setEditBookingResults([]);
+    }
+    setLoading(false);
+  };
+
+  const openAddModal = () => {
+    setShowAddModal(true);
+    setAddSpecies(''); setAddLatitude(''); setAddLongitude(''); setAddPlantedBy(''); setAddPlantedOn('');
+    setAddFiles([]); setAddPreviews([]);
+    setAddPickingLocation(false);
+    setAddMarkerPos(null);
+    setBookingSearch('');
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    addPreviews.forEach(u => URL.revokeObjectURL(u));
+    setAddPreviews([]); setAddFiles([]);
+    setBookingSearch('');
+  };
+
+  const createTree = async () => {
+    // basic validation
+    const lat = addMarkerPos ? addMarkerPos[0] : parseFloat(addLatitude);
+    const lng = addMarkerPos ? addMarkerPos[1] : parseFloat(addLongitude);
+    if (!addSpecies.trim() || Number.isNaN(lat) || Number.isNaN(lng)) {
+      setErrorMsg('Provide species and valid coordinates');
+      setTimeout(() => setErrorMsg(''), 5000);
+      return;
+    }
+    setLoading(true);
+    try {
+      const id = `TREE-${String(Date.now()).slice(-6)}`;
+      const plantedIso = addPlantedOn ? new Date(addPlantedOn).toISOString() : new Date().toISOString();
+
+      const uploadedUrls: string[] = [];
+      if (addFiles.length > 0) {
+        for (const f of addFiles) {
+          const path = `${id}/${Date.now()}_${f.name.replace(/[^a-zA-Z0-9.\-]/g,'_')}`;
+          const { error: uploadErr } = await supabase.storage.from('tree-images').upload(path, f, { cacheControl: '3600', upsert: false });
+          if (uploadErr) {
+            console.warn('Upload error', uploadErr);
+            continue;
+          }
+          const { data: urlData } = supabase.storage.from('tree-images').getPublicUrl(path);
+          if (urlData && urlData.publicUrl) uploadedUrls.push(urlData.publicUrl);
+        }
+      }
+
+      // accept typed booking id if provided and validate UUID format
+      const typedBooking = bookingSearch ? bookingSearch.trim() : null;
+      const bookingIdToSave = selectedBooking?.id || typedBooking || null;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (bookingIdToSave && !uuidRegex.test(bookingIdToSave)) {
+        setErrorMsg('Booking ID must be a valid UUID.');
+        setTimeout(() => setErrorMsg(''), 6000);
+        setLoading(false);
+        return;
+      }
+
+      const row: any = {
+        external_id: id,
+        species: addSpecies,
+        latitude: lat,
+        longitude: lng,
+        planted_by: addPlantedBy || 'Admin',
+        planted_on: plantedIso,
+        images: uploadedUrls,
+        booking_id: bookingIdToSave,
+        approved: true
+      };
+
+      const { error } = await supabase.from('trees').insert(row).select('*').single();
+      if (error) {
+        throw error;
+      }
+      setSuccessMsg('Tree created.');
+      setTimeout(() => setSuccessMsg(''), 4000);
+      closeAddModal();
+      fetchTrees();
+    } catch (err: any) {
+      console.error('Create tree error', err);
+      setErrorMsg('Failed to create tree: ' + (err?.message || String(err)));
+      setTimeout(() => setErrorMsg(''), 8000);
+    }
+    setLoading(false);
+  };
+
+  // small helper component to capture map clicks
+  function MapClickSetter({ onClick }: { onClick: (latlng: [number, number]) => void }) {
+    useMapEvents({
+      click(e) {
+        onClick([e.latlng.lat, e.latlng.lng]);
+      }
+    });
+    return null;
+  }
 
   const onEditFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
@@ -182,13 +392,24 @@ const AdminConservationTrees = () => {
       // upload files if any
       for (const file of editFiles) {
         const path = `${editingTree.id}/${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('tree-images').upload(path, file, { upsert: false });
+        const { error: uploadError } = await supabase.storage.from('tree-images').upload(path, file, { upsert: false });
         if (uploadError) {
           throw uploadError;
         }
         // construct public url
         const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/tree-images/${encodeURIComponent(path)}`;
         newImages.push(publicUrl);
+      }
+
+      // accept typed booking id if provided and validate UUID format
+      const typedBooking = editBookingSearch ? editBookingSearch.trim() : null;
+      const bookingIdToSave = editSelectedBooking?.id || typedBooking || null;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (bookingIdToSave && !uuidRegex.test(bookingIdToSave)) {
+        setErrorMsg('Booking ID must be a valid UUID.');
+        setTimeout(() => setErrorMsg(''), 6000);
+        setLoading(false);
+        return;
       }
 
       const updates: any = {
@@ -198,6 +419,8 @@ const AdminConservationTrees = () => {
         planted_by: editPlantedBy || null,
         planted_on: editPlantedOn ? new Date(editPlantedOn).toISOString() : null,
         images: newImages,
+        // save validated booking id (selected or typed)
+        booking_id: bookingIdToSave,
       };
 
       const { error } = await supabase.from('trees').update(updates).eq('id', editingTree.id);
@@ -244,6 +467,7 @@ const AdminConservationTrees = () => {
         <label className="text-sm">To <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="ml-1 border rounded px-2" /></label>
         <button onClick={() => { setSearch(''); setApprovedFilter('all'); setSpeciesFilter(''); setDateFrom(''); setDateTo(''); }} className="ml-2 px-3 py-2 bg-gray-200 rounded">Reset</button>
         <button onClick={() => fetchTrees()} className="ml-2 px-3 py-2 bg-green-600 text-white rounded">Refresh</button>
+        <button onClick={openAddModal} className="ml-2 px-3 py-2 bg-indigo-600 text-white rounded">Add Tree</button>
       </div>
 
       {loading ? <div>Loading…</div> : (
@@ -298,7 +522,7 @@ const AdminConservationTrees = () => {
       {editingTree && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
           <div className="absolute inset-0 bg-black opacity-40" onClick={closeEdit} />
-          <div className="bg-white rounded shadow-lg w-full max-w-2xl p-6 relative z-10">
+          <div className="bg-white rounded shadow-lg w-full max-w-2xl p-6 relative z-10 max-h-[80vh] overflow-auto">
             <h2 className="text-lg font-semibold mb-3">Edit tree — {editingTree.external_id || editingTree.id}</h2>
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col"><span className="text-sm">Species</span>
@@ -315,6 +539,47 @@ const AdminConservationTrees = () => {
               </label>
               <label className="flex flex-col col-span-2"><span className="text-sm">Planted On (date & time)</span>
                 <input type="datetime-local" value={editPlantedOn} onChange={e => setEditPlantedOn(e.target.value)} className="border px-2 py-1 rounded" />
+              </label>
+              <label className="flex flex-col col-span-2"><span className="text-sm">Attach Booking (optional)</span>
+                <div className="flex gap-2">
+                  <input value={editBookingSearch} onChange={e => setEditBookingSearch(e.target.value)} placeholder="Search booking ID or external ID" className="flex-1 border px-2 py-1 rounded" />
+                  <button onClick={() => searchBookingsForEdit()} className="px-2 py-1 border rounded bg-gray-50 text-xs">Search</button>
+                </div>
+                <div className="mt-2">
+                    <div className="text-xs text-gray-500 mb-1">You can type a booking ID directly and save, or search to validate.</div>
+                    {editSelectedBooking ? (
+                    <div className="p-2 border rounded bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-sm font-medium">{editSelectedBooking.external_id || editSelectedBooking.id}</div>
+                          <div className="text-xs text-gray-600">{editSelectedBooking.service_name || editSelectedBooking.product_name || editSelectedBooking.title || ''}</div>
+                          <div className="text-xs text-gray-600">{editSelectedBooking.vendor_name || editSelectedBooking.provider_name || ''}</div>
+                        </div>
+                        <div className="text-right text-xs text-gray-600">
+                          {editSelectedBooking.start_at ? new Date(editSelectedBooking.start_at).toLocaleString() : ''}
+                          <div>{editSelectedBooking.total ? `${editSelectedBooking.currency || ''} ${editSelectedBooking.total}` : ''}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <button onClick={() => setEditSelectedBooking(null)} className="text-xs text-red-600">Remove</button>
+                      </div>
+                    </div>
+                    ) : (
+                    editBookingResults.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-auto">
+                        {editBookingResults.map(b => (
+                          <button key={b.id} onClick={() => setEditSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-gray-50 text-sm">
+                            <div className="font-medium">{b.external_id || b.id}</div>
+                            <div className="text-xs text-gray-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
+                            <div className="text-xs text-gray-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 mt-2">No booking selected. You can type an ID above or search to attach a booking.</div>
+                    )
+                  )}
+                </div>
               </label>
               <label className="flex flex-col col-span-2"><span className="text-sm">Add Images</span>
                 <input type="file" multiple accept="image/*" onChange={onEditFilesChange} className="mt-1" />
@@ -339,6 +604,130 @@ const AdminConservationTrees = () => {
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={closeEdit} className="px-3 py-2 rounded border">Cancel</button>
               <button onClick={saveEdit} className="px-3 py-2 rounded bg-green-600 text-white">Save changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={closeAddModal} />
+          <div className="bg-white rounded shadow-lg w-full max-w-2xl p-6 relative z-10 max-h-[80vh] overflow-auto">
+            <h2 className="text-lg font-semibold mb-4">Add Tree (admin)</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                  <input value={addSpecies} onChange={e => setAddSpecies(e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Planted By</label>
+                  <input value={addPlantedBy} onChange={e => setAddPlantedBy(e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 items-end">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                  <input value={addLatitude} onChange={e => setAddLatitude(e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                  <input value={addLongitude} onChange={e => setAddLongitude(e.target.value)} className="w-full border rounded px-3 py-2" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => setAddPickingLocation(p => !p)} className="w-full px-2 py-1 border rounded bg-gray-50 text-xs text-center h-9">{addPickingLocation ? 'Close map' : 'Pick on map'}</button>
+                  <button type="button" onClick={async () => {
+                    if (!('geolocation' in navigator)) { alert('Geolocation not available'); return; }
+                    try {
+                      const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 20000 }));
+                      const lat = pos.coords.latitude.toFixed(6);
+                      const lng = pos.coords.longitude.toFixed(6);
+                      setAddLatitude(String(lat)); setAddLongitude(String(lng));
+                      setAddMarkerPos([parseFloat(lat), parseFloat(lng)]);
+                    } catch (e) {
+                      console.error('Geolocation error', e);
+                      alert('Unable to get current location');
+                    }
+                  }} className="w-full px-2 py-1 border rounded bg-gray-50 text-xs text-center h-9">Use current</button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Planted On (date & time)</label>
+                <input type="datetime-local" value={addPlantedOn} onChange={e => setAddPlantedOn(e.target.value)} className="w-full border rounded px-3 py-2" />
+                <div className="text-xs text-gray-500 mt-1">{addPlantedOn ? new Date(addPlantedOn).toLocaleString() : 'dd/mm/yyyy, --:--'}</div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Attach Booking (optional)</label>
+                <div className="flex gap-2">
+                  <input value={bookingSearch} onChange={e => setBookingSearch(e.target.value)} placeholder="Search booking ID or external ID" className="flex-1 border rounded px-3 py-2" />
+                  <button onClick={() => searchBookings()} className="px-3 py-2 border rounded bg-gray-50">Search</button>
+                </div>
+                <div className="mt-2">
+                  {selectedBooking ? (
+                    <div className="p-2 border rounded bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-sm font-medium">{selectedBooking.external_id || selectedBooking.id}</div>
+                          <div className="text-xs text-gray-600">{selectedBooking.service_name || selectedBooking.product_name || selectedBooking.title || ''}</div>
+                          <div className="text-xs text-gray-600">{selectedBooking.vendor_name || selectedBooking.provider_name || ''}</div>
+                        </div>
+                        <div className="text-right text-xs text-gray-600">
+                          {selectedBooking.start_at ? new Date(selectedBooking.start_at).toLocaleString() : ''}
+                          <div>{selectedBooking.total ? `${selectedBooking.currency || ''} ${selectedBooking.total}` : ''}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <button onClick={() => setSelectedBooking(null)} className="text-xs text-red-600">Remove</button>
+                      </div>
+                    </div>
+                  ) : (
+                    bookingResults.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-auto">
+                        {bookingResults.map(b => (
+                          <button key={b.id} onClick={() => setSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-gray-50 text-sm">
+                            <div className="font-medium">{b.external_id || b.id}</div>
+                            <div className="text-xs text-gray-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
+                            <div className="text-xs text-gray-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500 mt-2">No booking selected. Search to attach a booking.</div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Add Images</label>
+                <input type="file" multiple accept="image/*" onChange={onAddFilesChange} className="w-full" />
+                {addPreviews.length > 0 && (
+                  <div className="flex gap-2 mt-3">
+                    {addPreviews.map((p, i) => (
+                      <div key={i} className="relative">
+                        <img src={p} className="h-20 w-20 object-cover rounded" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {addPickingLocation && (
+                <div className="mt-2 border rounded overflow-hidden" style={{ height: 220 }}>
+                  <MapContainer center={addMarkerPos || [0.32, 32.47]} zoom={10} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <MapClickSetter onClick={(latlng) => { setAddMarkerPos(latlng); setAddLatitude(String(latlng[0].toFixed(6))); setAddLongitude(String(latlng[1].toFixed(6))); }} />
+                    {addMarkerPos && <Marker position={addMarkerPos} />}
+                  </MapContainer>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-2">
+                <button onClick={closeAddModal} className="px-4 py-2 rounded border">Cancel</button>
+                <button onClick={createTree} className="px-4 py-2 rounded bg-indigo-600 text-white">Create</button>
+              </div>
             </div>
           </div>
         </div>
