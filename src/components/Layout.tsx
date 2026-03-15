@@ -34,6 +34,7 @@ const navigation = [
     items: [
       { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
       { labelKey: 'visitor_activity', href: '/admin/visitor-activity', icon: Eye }
+      ,{ labelKey: 'performance', href: '/admin/performance', icon: BarChart3 }
     ]
   },
   {

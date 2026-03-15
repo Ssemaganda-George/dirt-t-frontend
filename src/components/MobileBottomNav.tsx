@@ -56,12 +56,14 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
                 }`}
                 aria-hidden
               />
-              <item.icon className={`h-5 w-5 transition-colors duration-150 ${iconClass}`} aria-hidden />
-              {item.labelKey === 'messages' && unreadCount > 0 && (
-                <span className="absolute -top-3 -right-3 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
+              <span className="relative inline-flex">
+                <item.icon className={`h-5 w-5 transition-colors duration-150 ${iconClass}`} aria-hidden />
+                {item.labelKey === 'messages' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </span>
               <span className={`text-[10px] font-semibold mt-0.5 tracking-wide transition-colors duration-150 ${textClass}`}>{label}</span>
             </>
           )

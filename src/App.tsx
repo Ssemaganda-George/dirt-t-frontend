@@ -39,6 +39,7 @@ const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
 const VendorTickets = lazy(() => import('./pages/vendor/Tickets'))
 const VendorEvents = lazy(() => import('./pages/vendor/Events'))
 const VendorVisitorActivity = lazy(() => import('./pages/vendor/VisitorActivity'))
+const VendorPerformance = lazy(() => import('./pages/vendor/PerformanceReport'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Businesses = lazy(() => import('./pages/admin/Businesses'))
 const AdminVendors = lazy(() => import('./pages/admin/Vendors'))
@@ -84,6 +85,7 @@ const TransportBookings = lazy(() => import('./pages/admin/TransportBookings').t
 const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(module => ({ default: module.VisitorActivity })))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => ({ default: module.Reviews })))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
+const AdminPerformance = lazy(() => import('./pages/admin/PerformanceReport'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -283,6 +285,7 @@ function App() {
             <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
             <Route path="visitor-activity" element={<VendorVisitorActivity />} />
+            <Route path="performance" element={<VendorPerformance />} />
           </Route>
           
           {/* Admin Routes */}
@@ -332,6 +335,7 @@ function App() {
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
             <Route path="visitor-activity" element={<VisitorActivity />} />
+            <Route path="performance" element={<AdminPerformance />} />
             <Route path="reviews" element={<AdminReviews />} />
           </Route>
           <Route path="/unauthorized" element={

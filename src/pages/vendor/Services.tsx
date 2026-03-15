@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
@@ -70,6 +71,7 @@ export default function VendorServices() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
+  const [formInitial, setFormInitial] = useState<Partial<Service> | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -194,6 +196,24 @@ export default function VendorServices() {
 
     checkVendorStatus()
   }, [user?.id])
+
+  // If navigated here with a preselectCategory (from Events "Create event"), open the create form
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    const state: any = (location && (location.state as any)) || {}
+    const pre = state?.preselectCategory
+    if (pre && !showForm && !editing) {
+      setFormInitial({ category_id: pre })
+      setShowForm(true)
+      // clear the state to avoid reopening when navigating back
+      try {
+        navigate(location.pathname, { replace: true, state: {} })
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [location?.state, showForm, editing])
 
   // Load ticket types for services when services change
   useEffect(() => {
@@ -1073,9 +1093,9 @@ export default function VendorServices() {
 
       {showForm && (
         <ServiceForm
-          initial={editing || undefined}
+          initial={formInitial || editing || undefined}
           vendorId={vendorId}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setFormInitial(null) }}
           onSubmit={(payload) => {
             if (editing) {
               onUpdate(editing.id, payload)
@@ -1083,6 +1103,7 @@ export default function VendorServices() {
               onCreate(payload)
             }
             setShowForm(false)
+            setFormInitial(null)
           }}
         />
       )}

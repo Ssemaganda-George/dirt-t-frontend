@@ -191,6 +191,26 @@ const DonatePage = () => {
                         }
 
                         const ref = result.data.reference
+                        // Register a pending donation transaction so it appears in the Conservation Wallet.
+                        try {
+                          const { data: session } = await supabase.auth.getSession()
+                          // amountInUGX already computed above
+                          await supabase.rpc('create_transaction_with_meta_atomic', {
+                            p_booking_id: null,
+                            p_vendor_id: null,
+                            p_tourist_id: session?.session?.user?.id || null,
+                            p_amount: amountInUGX,
+                            p_currency: 'UGX',
+                            p_transaction_type: 'donation',
+                            p_status: 'pending',
+                            p_payment_method: 'mobile',
+                            p_reference: ref,
+                            p_payout_meta: null
+                          });
+                        } catch (rpcErr) {
+                          console.warn('Failed to register donation transaction:', rpcErr);
+                        }
+
                         // Navigate to the payment page and include the reference so the payment page can start polling/subscription
                         navigate(`/checkout/${orderId}/payment?reference=${encodeURIComponent(ref)}`)
                       } catch (err) {

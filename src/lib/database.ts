@@ -2751,6 +2751,65 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
 
   console.log('Booking created successfully:', data)
 
+  // If booking was created as confirmed and paid, attempt to create the payment transaction and credit wallets
+  try {
+    const finalStatus = data.status
+    const finalPaymentStatus = (data as any).payment_status
+    const shouldCreateTransaction = finalStatus === 'confirmed' && finalPaymentStatus === 'paid'
+    console.log('DB: Post-create transaction check - status:', finalStatus, 'payment_status:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction)
+
+    if (shouldCreateTransaction) {
+      // Ensure we don't duplicate transactions for the same booking
+      const { data: existingTransaction, error: transactionCheckError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('booking_id', data.id)
+        .eq('transaction_type', 'payment')
+        .eq('status', 'completed')
+        .single()
+
+      if (transactionCheckError && transactionCheckError.code !== 'PGRST116') {
+        if (transactionCheckError.message?.includes('relation "transactions" does not exist')) {
+          console.warn('Transactions table does not exist. Skipping payment transaction creation.')
+        } else {
+          console.error('Error checking existing transaction after createBooking:', transactionCheckError)
+        }
+      } else if (!existingTransaction) {
+        try {
+          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+            p_vendor_id: data.vendor_id,
+            p_amount: data.total_amount,
+            p_booking_id: data.id || null,
+            p_tourist_id: data.tourist_id || null,
+            p_currency: data.currency || 'UGX',
+            p_payment_method: 'card',
+            p_reference: `PMT_${data.id?.toString().slice(0,8)}_${Date.now()}`
+          }) as any
+
+          if (paymentError) throw paymentError
+          if (!paymentResult?.success) {
+            throw new Error(paymentResult?.error || 'Failed to process payment')
+          }
+
+          console.log('Created payment transaction and credited wallet for new booking:', data.id)
+
+          const adminId = await getAdminProfileId()
+          if (adminId) {
+            await creditWallet(adminId, data.total_amount, data.currency)
+          }
+        } catch (transactionError) {
+          if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
+            console.warn('Transactions table does not exist. Payment transaction not created (createBooking).')
+          } else {
+            console.error('Error creating payment transaction after createBooking:', transactionError)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in post-create booking transaction logic:', err)
+  }
+
   // Send booking confirmation emails asynchronously (don't block on errors)
   sendBookingEmails(data.id).catch(error => {
     console.error('Failed to send booking emails:', error)

@@ -84,6 +84,25 @@ export default function OffsetCheckout() {
         }
 
         const ref = result.data.reference
+        // Register a pending offset transaction in the DB so it appears in Conservation Wallet
+        try {
+          const { data: session } = await supabase.auth.getSession()
+          await supabase.rpc('create_transaction_with_meta_atomic', {
+            p_booking_id: null,
+            p_vendor_id: null,
+            p_tourist_id: session?.session?.user?.id || null,
+            p_amount: amountInUGX,
+            p_currency: 'UGX',
+            p_transaction_type: 'offset',
+            p_status: 'pending',
+            p_payment_method: 'mobile',
+            p_reference: ref,
+            p_payout_meta: null
+          });
+        } catch (rpcErr) {
+          console.warn('Failed to register offset transaction:', rpcErr);
+        }
+
         navigate(`/checkout/${orderId}/payment?reference=${encodeURIComponent(ref)}`)
         return
       }
@@ -114,6 +133,24 @@ export default function OffsetCheckout() {
         const arr = raw ? JSON.parse(raw) : []
         arr.push(record)
         localStorage.setItem('dirttrails_offsets', JSON.stringify(arr))
+        // Also try to persist a pending transaction record to the DB (best-effort)
+        try {
+          const { data: session } = await supabase.auth.getSession()
+          await supabase.rpc('create_transaction_with_meta_atomic', {
+            p_booking_id: null,
+            p_vendor_id: null,
+            p_tourist_id: session?.session?.user?.id || null,
+            p_amount: Math.round(convertCurrency(Number(amount || 0), selectedCurrency || 'UGX', 'UGX')),
+            p_currency: 'UGX',
+            p_transaction_type: 'offset',
+            p_status: 'pending',
+            p_payment_method: paymentMethod === 'mobile' ? provider : paymentMethod,
+            p_reference: txn,
+            p_payout_meta: JSON.stringify({ comment: comment || null })
+          });
+        } catch (e) {
+          console.warn('Could not persist offset transaction to DB:', e)
+        }
       } catch (err) {
         console.error('Failed to persist offset record', err)
       }
