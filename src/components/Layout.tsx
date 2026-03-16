@@ -67,7 +67,8 @@ const navigation = [
       { labelKey: 'shops_bookings', href: '/admin/bookings/shops', icon: MapPin },
       { labelKey: 'tours_bookings', href: '/admin/bookings/tours', icon: MapPin },
       { labelKey: 'transport_bookings', href: '/admin/bookings/transport', icon: MapPin },
-      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket }
+      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket },
+      { labelKey: 'flagged_bookings', href: '/admin/bookings/flagged', icon: Eye }
     ]
   },
   {

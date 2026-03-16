@@ -86,6 +86,7 @@ const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(
 const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => ({ default: module.Reviews })))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
 const AdminPerformance = lazy(() => import('./pages/admin/PerformanceReport'))
+const AdminFlaggedBookings = lazy(() => import('./pages/admin/FlaggedBookings'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -317,6 +318,7 @@ function App() {
             <Route path="bookings/shops" element={<ShopsBookings />} />
             <Route path="bookings/tours" element={<ToursBookings />} />
             <Route path="bookings/transport" element={<TransportBookings />} />
+            <Route path="bookings/flagged" element={<AdminFlaggedBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
