@@ -182,16 +182,27 @@ export default function CategoryPage() {
       </div>
 
       {/* Category header banner */}
+
       <div className={`${accentGradient} py-10 md:py-14`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
-            {categoryName}
-          </h1>
-          <p className="text-white/60 mt-2 text-sm md:text-base">
-            {sortedServices.length > 0
-              ? `${sortedServices.length} option${sortedServices.length !== 1 ? 's' : ''} available`
-              : 'Browse available options'}
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
+              {categoryName}
+            </h1>
+            <p className="text-white/60 mt-2 text-sm md:text-base">
+              {sortedServices.length > 0
+                ? `${sortedServices.length} option${sortedServices.length !== 1 ? 's' : ''} available`
+                : 'Browse available options'}
+            </p>
+          </div>
+          {category === 'tours' && (
+            <Link
+              to="/create-safari"
+              className="mt-6 md:mt-0 inline-block bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg px-6 py-3 shadow transition border-2 border-white"
+            >
+              Create My Safari
+            </Link>
+          )}
         </div>
       </div>
 
@@ -328,6 +339,9 @@ export default function CategoryPage() {
           </div>
         )}
       </div>
+
+      {/* Create My Safari button for Tours category */}
+
 
       {/* Results grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

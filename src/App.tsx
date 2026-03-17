@@ -12,7 +12,6 @@ import { PageTransition } from './components/PageTransition'
 import { SmoothLoader } from './components/SmoothLoader'
 import { AppVisitorTracker } from './components/AppVisitorTracker'
 
-// Lazy load all page components for better UX with loading states
 const Home = lazy(() => import('./pages/Home'))
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'))
 const BookingFlow = lazy(() => import('./pages/BookingFlow'))
@@ -58,6 +57,9 @@ const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Trees').then(m => ({ default: m.default })))
+
+// Create Safari Page
+const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
@@ -171,6 +173,7 @@ function App() {
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
+            <Route path="create-safari" element={<CreateSafariPage />} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />
