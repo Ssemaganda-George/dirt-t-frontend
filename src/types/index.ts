@@ -55,6 +55,10 @@ export interface Vendor {
 }
 
 export interface Service {
+    /** Event location latitude (optional) */
+    event_lat?: number;
+    /** Event location longitude (optional) */
+    event_lon?: number;
   id: string
   slug?: string
   vendor_id: string
@@ -86,6 +90,12 @@ export interface Service {
   sustainability_certified?: boolean
   eco_friendly?: boolean
 
+    /** Service base location (display name, optional) */
+    service_location?: string;
+    /** Service base latitude (optional) */
+    service_lat?: number;
+    /** Service base longitude (optional) */
+    service_lon?: number;
   // Hotel-specific fields
   room_types?: string[]
   check_in_time?: string
