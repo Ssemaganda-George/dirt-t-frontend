@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, X } from 'lucide-react'
-import { formatCurrency } from '../lib/utils'
+import { Search, MapPin, Star, SlidersHorizontal, Hotel, Map, Car, Utensils, Target, Plane, ShoppingBag, Package, ChevronDown, X, ArrowLeft } from 'lucide-react'
+import { formatCurrency, getDisplayPrice } from '../lib/utils'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { Link } from 'react-router-dom'
 import { useServices } from '../hooks/hook'
 import { getServiceAverageRating } from '../lib/database'
 import type { Service } from '../types'
 
+import { useNavigate } from 'react-router-dom'
+
 export default function CategoryPage() {
+  const navigate = useNavigate();
   const { category } = useParams<{ category: string }>()
   const { services: allServices, loading } = useServices(undefined, { includeExpired: false })
   const [filteredServices, setFilteredServices] = useState<Service[]>([])
@@ -167,6 +170,17 @@ export default function CategoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Back Button */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-emerald-700 hover:text-emerald-900 font-medium text-sm mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
+      </div>
+
       {/* Category header banner */}
       <div className={`${accentGradient} py-10 md:py-14`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -440,7 +454,7 @@ function ServiceCard({ service }: ServiceCardProps) {
         <div className="flex items-baseline gap-1 mt-1.5">
           <span className="text-[10px] text-gray-500">From</span>
           <span className="text-sm font-semibold text-gray-900">
-            {formatCurrency(service.price, service.currency)}
+            {formatCurrency(getDisplayPrice(service, service.ticket_types), service.currency)}
           </span>
           <span className="text-[10px] text-gray-500">{getUnitLabel()}</span>
         </div>

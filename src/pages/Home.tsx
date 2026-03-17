@@ -1,3 +1,16 @@
+// Helper to map internal category id to friendly slug
+function getCategorySlug(categoryId: string): string {
+  switch (categoryId) {
+    case 'cat_hotels': return 'hotels';
+    case 'cat_tour_packages': return 'tours';
+    case 'cat_restaurants': return 'restaurants';
+    case 'cat_transport': return 'transport';
+    case 'cat_activities': return 'events';
+    case 'cat_flights': return 'flights';
+    case 'cat_shops': return 'shops';
+    default: return categoryId.replace(/^cat_/, '');
+  }
+}
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
@@ -944,7 +957,7 @@ export default function Home() {
                         {getDailyTitleForCategory(category.id, category.name)}
                       </h3>
                       <Link
-                        to={`/category/${category.id}`}
+                        to={`/category/${getCategorySlug(category.id)}`}
                         className="flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors whitespace-nowrap"
                       >
                         View all <ChevronRight className="h-4 w-4" />
