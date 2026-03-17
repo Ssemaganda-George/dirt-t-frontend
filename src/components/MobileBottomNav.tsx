@@ -25,10 +25,7 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
     baseNavigation.push({ labelKey: 'messages', href: '/messages', icon: MessageSquare })
   }
 
-  // Bookings are shown for logged-in tourists
-  if (user && profile?.role === 'tourist') {
-    baseNavigation.push({ labelKey: 'bookings', href: '/bookings', icon: Calendar })
-  }
+  // Bookings are no longer shown in bottom nav for tourists; only in menu
 
   baseNavigation.push({ labelKey: 'support', href: '/support', icon: HelpCircle, isModal: true })
 
