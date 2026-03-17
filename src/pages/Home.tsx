@@ -12,6 +12,7 @@ function getCategorySlug(categoryId: string): string {
   }
 }
 import { useState, useEffect, useRef } from 'react'
+import ReactDOM from 'react-dom'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
@@ -785,8 +786,8 @@ export default function Home() {
                 </button>
 
                 {/* Dropdown Menu */}
-                {isDropdownOpen && (
-                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[9999]">
+                {isDropdownOpen && ReactDOM.createPortal(
+                  <div className="category-dropdown fixed top-32 right-8 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
                     {/* Header */}
                     <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                       <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
@@ -862,7 +863,8 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </div>
