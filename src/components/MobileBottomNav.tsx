@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, HelpCircle, Search, Calendar, MessageSquare } from 'lucide-react'
+import { Home, HelpCircle, Search, MessageSquare } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -11,7 +11,7 @@ interface MobileBottomNavProps {
 
 export default function MobileBottomNav({ onSupportClick, onSearchClick }: MobileBottomNavProps) {
   const location = useLocation()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const { unreadCount } = useUnreadMessages()
   const { t } = usePreferences()
 

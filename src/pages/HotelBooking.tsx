@@ -656,7 +656,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
   const finaliseHotelBooking = async (paymentStatus: 'paid' | 'pending') => {
     try {
-      const result = await createBooking({
+      await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
         booking_date: new Date().toISOString(),

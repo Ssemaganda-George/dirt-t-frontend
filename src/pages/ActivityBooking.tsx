@@ -570,7 +570,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
   const finaliseBooking = async (paymentStatus: 'paid' | 'pending') => {
     try {
-      const result = await createBooking({
+      await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
         booking_date: new Date().toISOString(),
