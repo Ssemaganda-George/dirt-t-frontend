@@ -338,28 +338,28 @@ serve(async (req) => {
       .from('vendors')
       .select('business_name, business_email, user_id')
       .eq('id', bookingData.vendor_id)
-      .single()
+      .maybeSingle()
 
-    if (vendorBusinessError || !vendorBusiness) {
-      throw new Error(`Failed to fetch vendor business: ${vendorBusinessError?.message}`)
+    if (vendorBusinessError) {
+      console.warn(`Failed to fetch vendor business: ${vendorBusinessError?.message}`)
     }
 
     // Fetch vendor profile using user_id
     let vendorProfile: { email: string; full_name: string } | null = null
-    if (vendorBusiness.user_id) {
+    if (vendorBusiness?.user_id) {
       const { data: profile, error: vendorError } = await supabase
         .from('profiles')
         .select('email, full_name')
         .eq('id', vendorBusiness.user_id)
-        .single()
+        .maybeSingle()
 
-      if (!vendorError) {
+      if (!vendorError && profile) {
         vendorProfile = profile
       }
     }
 
-    const vendorEmail = vendorBusiness.business_email || vendorProfile?.email || 'vendor@example.com'
-    const vendorName = vendorBusiness.business_name || vendorProfile?.full_name || 'Vendor'
+    const vendorEmail = vendorBusiness?.business_email || vendorProfile?.email || null
+    const vendorName = vendorBusiness?.business_name || vendorProfile?.full_name || 'Vendor'
 
     // Fetch all admin emails
     const { data: adminProfiles } = await supabase
@@ -493,6 +493,9 @@ serve(async (req) => {
       </table>
     `
 
+    const emailResults: { tourist?: string; vendor?: string; admins: string[] } = { admins: [] }
+    const emailErrors: string[] = []
+
     // Tourist email
     if (touristEmail) {
       console.log(`Sending booking confirmation email to tourist: ${touristEmail}`)
@@ -544,65 +547,83 @@ serve(async (req) => {
         ? [{ filename: `booking-receipt-${booking_id.slice(0, 8)}.pdf`, content: pdfBase64 }]
         : []
 
-      await sendEmail({
-        to: touristEmail,
-        subject: `Booking Confirmed — ${serviceName} | DirtTrails`,
-        html: touristEmailBody,
-        attachments,
-      })
-      console.log(`✅ Tourist email sent to ${touristEmail}`)
+      try {
+        await sendEmail({
+          to: touristEmail,
+          subject: `Booking Confirmed — ${serviceName} | DirtTrails`,
+          html: touristEmailBody,
+          attachments,
+        })
+        emailResults.tourist = touristEmail
+        console.log(`✅ Tourist email sent to ${touristEmail}`)
+      } catch (emailErr: any) {
+        const errMsg = `Tourist email to ${touristEmail} failed: ${emailErr?.message || emailErr}`
+        console.error(errMsg)
+        emailErrors.push(errMsg)
+      }
     } else {
       console.warn('No tourist email found, skipping tourist email')
     }
 
     // Vendor email
-    console.log(`Sending booking notification email to vendor: ${vendorEmail}`)
-    const vendorEmailBody = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f9fafb;">
-        <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-          <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:28px;">
-            <div style="font-size:20px;font-weight:800;color:#ffffff;">New Booking Received</div>
-            <div style="font-size:13px;color:#bfdbfe;margin-top:4px;">DirtTrails Vendor Portal</div>
+    if (vendorEmail) {
+      console.log(`Sending booking notification email to vendor: ${vendorEmail}`)
+      const vendorEmailBody = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f9fafb;">
+          <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+            <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:28px;">
+              <div style="font-size:20px;font-weight:800;color:#ffffff;">New Booking Received</div>
+              <div style="font-size:13px;color:#bfdbfe;margin-top:4px;">DirtTrails Vendor Portal</div>
+            </div>
+            <div style="padding:24px 28px;">
+              <p style="color:#374151;font-size:15px;margin:0 0 8px;">Dear <strong>${vendorName}</strong>,</p>
+              <p style="color:#6b7280;font-size:14px;margin:0 0 20px;">A new booking has been placed for your service.</p>
+              ${bookingDetailsHtml}
+              <p style="color:#374151;font-size:14px;font-weight:600;margin:20px 0 8px;">Customer Details</p>
+              <table style="width:100%;border-collapse:collapse;">
+                <tr style="background:#f3f4f6;">
+                  <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;width:40%;">Name</td>
+                  <td style="padding:8px 12px;color:#111827;font-size:13px;">${touristName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Email</td>
+                  <td style="padding:8px 12px;color:#111827;font-size:13px;">${touristEmail || 'N/A'}</td>
+                </tr>
+                ${bookingData.guest_phone ? `
+                <tr style="background:#f3f4f6;">
+                  <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Phone</td>
+                  <td style="padding:8px 12px;color:#111827;font-size:13px;">${bookingData.guest_phone}</td>
+                </tr>` : ''}
+              </table>
+              <a href="${FRONTEND_URL}/vendor/bookings" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Manage Bookings →</a>
+            </div>
+            <div style="padding:16px 28px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px;border-top:1px solid #e5e7eb;">
+              Automated notification from DirtTrails. Do not reply.
+            </div>
           </div>
-          <div style="padding:24px 28px;">
-            <p style="color:#374151;font-size:15px;margin:0 0 8px;">Dear <strong>${vendorName}</strong>,</p>
-            <p style="color:#6b7280;font-size:14px;margin:0 0 20px;">A new booking has been placed for your service.</p>
-            ${bookingDetailsHtml}
-            <p style="color:#374151;font-size:14px;font-weight:600;margin:20px 0 8px;">Customer Details</p>
-            <table style="width:100%;border-collapse:collapse;">
-              <tr style="background:#f3f4f6;">
-                <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;width:40%;">Name</td>
-                <td style="padding:8px 12px;color:#111827;font-size:13px;">${touristName}</td>
-              </tr>
-              <tr>
-                <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Email</td>
-                <td style="padding:8px 12px;color:#111827;font-size:13px;">${touristEmail || 'N/A'}</td>
-              </tr>
-              ${bookingData.guest_phone ? `
-              <tr style="background:#f3f4f6;">
-                <td style="padding:8px 12px;font-weight:600;color:#374151;font-size:13px;">Phone</td>
-                <td style="padding:8px 12px;color:#111827;font-size:13px;">${bookingData.guest_phone}</td>
-              </tr>` : ''}
-            </table>
-            <a href="${FRONTEND_URL}/vendor/bookings" style="display:inline-block;background:#2563eb;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Manage Bookings →</a>
-          </div>
-          <div style="padding:16px 28px;background:#f9fafb;text-align:center;color:#9ca3af;font-size:12px;border-top:1px solid #e5e7eb;">
-            Automated notification from DirtTrails. Do not reply.
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+        </body>
+        </html>
+      `
 
-    await sendEmail({
-      to: vendorEmail,
-      subject: `New Booking — ${serviceName} | DirtTrails`,
-      html: vendorEmailBody,
-    })
-    console.log(`✅ Vendor email sent to ${vendorEmail}`)
+      try {
+        await sendEmail({
+          to: vendorEmail,
+          subject: `New Booking — ${serviceName} | DirtTrails`,
+          html: vendorEmailBody,
+        })
+        emailResults.vendor = vendorEmail
+        console.log(`✅ Vendor email sent to ${vendorEmail}`)
+      } catch (emailErr: any) {
+        const errMsg = `Vendor email to ${vendorEmail} failed: ${emailErr?.message || emailErr}`
+        console.error(errMsg)
+        emailErrors.push(errMsg)
+      }
+    } else {
+      console.warn('No vendor email found, skipping vendor email')
+    }
 
     // Admin emails
     console.log(`Sending booking notification emails to ${adminEmails.length} admin(s)`)
@@ -641,25 +662,51 @@ serve(async (req) => {
         </html>
       `
 
-      await sendEmail({
-        to: adminEmail,
-        subject: `New Booking Alert — ${serviceName} | DirtTrails`,
-        html: adminEmailBody,
-      })
-      console.log(`✅ Admin email sent to ${adminEmail}`)
+      try {
+        await sendEmail({
+          to: adminEmail,
+          subject: `New Booking Alert — ${serviceName} | DirtTrails`,
+          html: adminEmailBody,
+        })
+        emailResults.admins.push(adminEmail)
+        console.log(`✅ Admin email sent to ${adminEmail}`)
+      } catch (emailErr: any) {
+        const errMsg = `Admin email to ${adminEmail} failed: ${emailErr?.message || emailErr}`
+        console.error(errMsg)
+        emailErrors.push(errMsg)
+      }
     }
 
-    console.log('✅ All booking emails sent successfully')
+    const anySuccess = emailResults.tourist || emailResults.vendor || emailResults.admins.length > 0
+    const allFailed = emailErrors.length > 0 && !anySuccess
+
+    if (allFailed) {
+      console.error('❌ All booking emails failed:', emailErrors)
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: 'All emails failed to send',
+          errors: emailErrors,
+          pdf_attached: !!pdfBase64,
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          }
+        }
+      )
+    }
+
+    console.log('✅ Booking emails completed', { sent: emailResults, errors: emailErrors })
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Emails sent successfully',
+        message: emailErrors.length > 0 ? 'Some emails sent (with errors)' : 'Emails sent successfully',
         pdf_attached: !!pdfBase64,
-        sent_to: {
-          tourist: touristEmail,
-          vendor: vendorEmail,
-          admins: adminEmails
-        }
+        sent_to: emailResults,
+        errors: emailErrors.length > 0 ? emailErrors : undefined
       }),
       {
         status: 200,
