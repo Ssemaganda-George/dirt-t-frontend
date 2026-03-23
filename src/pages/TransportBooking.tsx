@@ -1109,16 +1109,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       } as any)
 
       if (result && result.id) {
-        // Send booking confirmation email with PDF
-        fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify({ booking_id: result.id }),
-        }).catch(err => console.warn('Failed to send booking email:', err))
-
         setBookingResult(result)
         setBookingConfirmed(true)
         setPollingMessage('')
