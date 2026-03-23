@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook'
@@ -16,11 +17,9 @@ function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]
     const ticketPrices = ticketTypes[service.id]
       .map((ticket: any) => ticket.price)
       .filter((price: number) => price > 0);
-    
     if (ticketPrices.length > 0) {
       const minPrice = Math.min(...ticketPrices);
       const maxPrice = Math.max(...ticketPrices);
-      
       if (minPrice === maxPrice) {
         return formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage);
       } else {
@@ -28,7 +27,20 @@ function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]
       }
     }
   }
-  
+
+  // Transport: show price range if both prices are set
+  if (service.category_id === 'cat_transport') {
+    const within = typeof service.price_within_town === 'number' ? service.price_within_town : undefined;
+    const upcountry = typeof service.price_upcountry === 'number' ? service.price_upcountry : undefined;
+    if (within !== undefined && upcountry !== undefined && within !== upcountry) {
+      return `${formatCurrencyWithConversion(within, service.currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(upcountry, service.currency, selectedCurrency, selectedLanguage)}`;
+    } else if (within !== undefined) {
+      return formatCurrencyWithConversion(within, service.currency, selectedCurrency, selectedLanguage);
+    } else if (upcountry !== undefined) {
+      return formatCurrencyWithConversion(upcountry, service.currency, selectedCurrency, selectedLanguage);
+    }
+  }
+
   // Fallback to service price
   return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage);
 }
@@ -70,6 +82,7 @@ export default function VendorServices() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
+  const [formInitial, setFormInitial] = useState<Partial<Service> | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -195,6 +208,24 @@ export default function VendorServices() {
     checkVendorStatus()
   }, [user?.id])
 
+  // If navigated here with a preselectCategory (from Events "Create event"), open the create form
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => {
+    const state: any = (location && (location.state as any)) || {}
+    const pre = state?.preselectCategory
+    if (pre && !showForm && !editing) {
+      setFormInitial({ category_id: pre })
+      setShowForm(true)
+      // clear the state to avoid reopening when navigating back
+      try {
+        navigate(location.pathname, { replace: true, state: {} })
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [location?.state, showForm, editing])
+
   // Load ticket types for services when services change
   useEffect(() => {
     const loadTicketTypes = async () => {
@@ -296,7 +327,7 @@ export default function VendorServices() {
         event_description: (data as any).event_description || '',
         event_type: data.event_type || '',
   // store as ISO UTC string so DB timestamptz parsing is deterministic
-  event_datetime: normalizeDateTimeLocalToISO(data.event_datetime) || null,
+          event_datetime: normalizeDateTimeLocalToISO(data.event_datetime) || null,
         event_location: data.event_location || '',
         max_participants: data.max_participants || undefined,
         registration_deadline: data.registration_deadline || '',
@@ -1073,9 +1104,9 @@ export default function VendorServices() {
 
       {showForm && (
         <ServiceForm
-          initial={editing || undefined}
+          initial={formInitial || editing || undefined}
           vendorId={vendorId}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setFormInitial(null) }}
           onSubmit={(payload) => {
             if (editing) {
               onUpdate(editing.id, payload)
@@ -1083,6 +1114,7 @@ export default function VendorServices() {
               onCreate(payload)
             }
             setShowForm(false)
+            setFormInitial(null)
           }}
         />
       )}
@@ -1250,6 +1282,8 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapModalInitialCoords, setMapModalInitialCoords] = useState<{ lat: number; lon: number } | null>(null)
+  // Used to determine which location (service/event) is being set in the map modal
+  const [mapContext, setMapContext] = useState<'event' | 'service'>('event')
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -1884,6 +1918,35 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700">Service Location</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  value={form.location ?? ''}
+                  onChange={(e) => update('location', e.target.value)}
+                  placeholder="Primary service location or base (optional)"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMapContext('service')
+                    if ((form as any).service_lat && (form as any).service_lon) {
+                      setMapModalInitialCoords({ lat: (form as any).service_lat, lon: (form as any).service_lon })
+                    } else {
+                      setMapModalInitialCoords(null)
+                    }
+                    setShowMapModal(true)
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors border border-blue-600"
+                >
+                  <Map size={16} />
+                  {(form as any).service_lat && (form as any).service_lon ? 'Edit Location' : 'Select on Map'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Optional: mark a primary base or meeting point for this service</p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700">Route Description</label>
               <textarea value={form.route_description || ''} onChange={(e) => update('route_description', e.target.value)} placeholder="Describe the route, stops, and any notable points along the way" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
@@ -2163,6 +2226,7 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
                   <button
                     type="button"
                     onClick={() => {
+                      setMapContext('event')
                       if ((form as any).event_lat && (form as any).event_lon) {
                         // If coordinates exist, open in view/edit mode
                         setMapModalInitialCoords({ lat: (form as any).event_lat, lon: (form as any).event_lon })
@@ -3874,9 +3938,15 @@ function ServiceForm({ initial, vendorId, onClose, onSubmit }: { initial?: Parti
               <SearchMap
                 initialCoords={mapModalInitialCoords}
                 onLocationSelect={(location) => {
-                  update('event_location', location.display_name as any)
-                  update('event_lat' as any, location.lat)
-                  update('event_lon' as any, location.lon)
+                  if (mapContext === 'service') {
+                    update('location', location.display_name as any)
+                    update('service_lat', location.lat)
+                    update('service_lon', location.lon)
+                  } else {
+                    update('event_location', location.display_name as any)
+                    update('event_lat', location.lat)
+                    update('event_lon', location.lon)
+                  }
                   setShowMapModal(false)
                   setMapModalInitialCoords(null)
                 }}

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Eye,
   Star
+  , TreePine
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -33,6 +34,7 @@ const navigation = [
     items: [
       { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
       { labelKey: 'visitor_activity', href: '/admin/visitor-activity', icon: Eye }
+      ,{ labelKey: 'performance', href: '/admin/performance', icon: BarChart3 }
     ]
   },
   {
@@ -65,7 +67,8 @@ const navigation = [
       { labelKey: 'shops_bookings', href: '/admin/bookings/shops', icon: MapPin },
       { labelKey: 'tours_bookings', href: '/admin/bookings/tours', icon: MapPin },
       { labelKey: 'transport_bookings', href: '/admin/bookings/transport', icon: MapPin },
-      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket }
+      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket },
+      { labelKey: 'flagged_bookings', href: '/admin/bookings/flagged', icon: Eye }
     ]
   },
   {
@@ -83,6 +86,12 @@ const navigation = [
     items: [
       { labelKey: 'reviews', href: '/admin/reviews', icon: Star },
       { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 }
+    ]
+  },
+  {
+    category: 'Conservation',
+    items: [
+      { labelKey: 'trees', href: '/admin/conservation/trees', icon: TreePine }
     ]
   },
   {

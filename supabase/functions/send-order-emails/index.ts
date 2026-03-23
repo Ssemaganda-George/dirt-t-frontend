@@ -128,14 +128,41 @@ async function buildTicketsPdf(tickets: any[], frontendUrl: string): Promise<Uin
 /* ---------------- EDGE FUNCTION ---------------- */
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get("origin") || "*"
+  const CORS_HEADERS = {
+    "Access-Control-Allow-Origin": requestOrigin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
+  }
+
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS })
+  }
+
   try {
-    const body = await req.json()
+    if (!RESEND_API_KEY || !FROM_EMAIL || !FRONTEND_URL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Missing environment variables for send-order-emails")
+      throw new Error("Missing required environment variables")
+    }
+
+    let body
+    try {
+      body = await req.json()
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      })
+    }
 
     const { order_id, recipient_email } = body
 
     if (!order_id || !recipient_email) {
-      return new Response(JSON.stringify({ error: "order_id and recipient_email required" }), {
+      return new Response(JSON.stringify({ error: "order_id and recipient_email are required" }), {
         status: 400,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
       })
     }
 
@@ -184,15 +211,23 @@ serve(async (req) => {
 
     const result = await res.json()
 
-    return new Response(JSON.stringify({ success: true, result }), {
-      headers: { "Content-Type": "application/json" },
-    })
-  } catch (err) {
+    return new Response(
+      JSON.stringify({ success: true, id: result?.id ?? null, attachment: attachments.length > 0, result }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      }
+    )
+  } catch (err: any) {
+    console.error("Error in send-order-emails:", err)
     return new Response(
       JSON.stringify({
-        error: err.message,
+        error: err?.message || String(err),
       }),
-      { status: 500 }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+      }
     )
   }
 })

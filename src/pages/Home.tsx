@@ -1,4 +1,18 @@
+// Helper to map internal category id to friendly slug
+function getCategorySlug(categoryId: string): string {
+  switch (categoryId) {
+    case 'cat_hotels': return 'hotels';
+    case 'cat_tour_packages': return 'tours';
+    case 'cat_restaurants': return 'restaurants';
+    case 'cat_transport': return 'transport';
+    case 'cat_activities': return 'events';
+    case 'cat_flights': return 'flights';
+    case 'cat_shops': return 'shops';
+    default: return categoryId.replace(/^cat_/, '');
+  }
+}
 import { useState, useEffect, useRef } from 'react'
+import ReactDOM from 'react-dom'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
@@ -772,8 +786,8 @@ export default function Home() {
                 </button>
 
                 {/* Dropdown Menu */}
-                {isDropdownOpen && (
-                  <div className="category-dropdown absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                {isDropdownOpen && ReactDOM.createPortal(
+                  <div className="category-dropdown fixed top-32 right-8 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
                     {/* Header */}
                     <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                       <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
@@ -849,7 +863,8 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </div>
@@ -944,7 +959,7 @@ export default function Home() {
                         {getDailyTitleForCategory(category.id, category.name)}
                       </h3>
                       <Link
-                        to={`/category/${category.id}`}
+                        to={`/category/${getCategorySlug(category.id)}`}
                         className="flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors whitespace-nowrap"
                       >
                         View all <ChevronRight className="h-4 w-4" />

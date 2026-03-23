@@ -1918,7 +1918,8 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
     if (itemsError) throw itemsError
 
     const createdTickets: any[] = []
-    // Create bookings per service for ALL ticket orders (logged-in and guest)
+
+    
     // This ensures a booking ID exists for ticket purchases
     const bookingMap: Record<string, string> = {}
     try {
@@ -2751,13 +2752,262 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
 
   console.log('Booking created successfully:', data)
 
+  // If the caller requested specific status/payment_status (e.g., 'confirmed'/'paid'),
+  // ensure the booking row reflects that to avoid delays in downstream processing.
+  let finalBooking = data
+  try {
+    const requestedStatus = (bookingData as any).status
+    const requestedPaymentStatus = (bookingData as any).payment_status || (bookingData as any).paymentStatus
+    if ((requestedStatus && requestedStatus !== (data as any).status) || (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status)) {
+      const { data: updated, error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          ...(requestedStatus ? { status: requestedStatus } : {}),
+          ...(requestedPaymentStatus ? { payment_status: requestedPaymentStatus } : {})
+        })
+        .eq('id', data.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.warn('Failed to update booking status/payment_status after createBooking:', updateError)
+      } else if (updated) {
+        finalBooking = updated
+        console.log('Updated booking status/payment_status after createBooking:', finalBooking.id, finalBooking.status, (finalBooking as any).payment_status)
+      }
+    }
+  } catch (err) {
+    console.error('Error updating booking status/payment_status after createBooking:', err)
+  }
+
+  // If booking was created as confirmed and paid, attempt to create the payment transaction and credit wallets
+  try {
+    const finalStatus = finalBooking.status
+    const finalPaymentStatus = (finalBooking as any).payment_status
+    const shouldCreateTransaction = finalStatus === 'confirmed' && finalPaymentStatus === 'paid'
+    console.log('DB: Post-create transaction check - status:', finalStatus, 'payment_status:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction)
+
+    if (shouldCreateTransaction) {
+      // Ensure we don't duplicate transactions for the same booking
+        const { data: existingTransaction, error: transactionCheckError } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('booking_id', finalBooking.id)
+          .eq('transaction_type', 'payment')
+          .eq('status', 'completed')
+          .single()
+
+      if (transactionCheckError && transactionCheckError.code !== 'PGRST116') {
+        if (transactionCheckError.message?.includes('relation "transactions" does not exist')) {
+          console.warn('Transactions table does not exist. Skipping payment transaction creation.')
+        } else {
+          console.error('Error checking existing transaction after createBooking:', transactionCheckError)
+        }
+      } else if (!existingTransaction) {
+        try {
+          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+            p_vendor_id: finalBooking.vendor_id,
+            p_amount: finalBooking.total_amount,
+            p_booking_id: finalBooking.id || null,
+            p_tourist_id: finalBooking.tourist_id || null,
+            p_currency: finalBooking.currency || 'UGX',
+            p_payment_method: 'card',
+            p_reference: `PMT_${finalBooking.id?.toString().slice(0,8)}_${Date.now()}`
+          }) as any
+
+          if (paymentError) throw paymentError
+          if (!paymentResult?.success) {
+            throw new Error(paymentResult?.error || 'Failed to process payment')
+          }
+
+          console.log('Created payment transaction and credited wallet for new booking:', finalBooking.id)
+
+          const adminId = await getAdminProfileId()
+          if (adminId) {
+            await creditWallet(adminId, finalBooking.total_amount, finalBooking.currency)
+          }
+        } catch (transactionError) {
+          if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
+            console.warn('Transactions table does not exist. Payment transaction not created (createBooking).')
+          } else {
+            console.error('Error creating payment transaction after createBooking:', transactionError)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in post-create booking transaction logic:', err)
+  }
+
   // Send booking confirmation emails asynchronously (don't block on errors)
   sendBookingEmails(data.id).catch(error => {
     console.error('Failed to send booking emails:', error)
     // Don't throw - email failure shouldn't break the booking creation
   })
 
+  // Verify payment: if booking was marked as paid but no completed transaction exists,
+  // report it and mark booking for admin review to catch spam or failed payments.
+  try {
+    const bookingPaymentStatus = (finalBooking as any).payment_status
+    if (bookingPaymentStatus === 'paid') {
+      const { data: completedTx, error: txErr } = await supabase
+        .from('transactions')
+        .select('id,status')
+        .eq('booking_id', finalBooking.id)
+        .eq('transaction_type', 'payment')
+        .eq('status', 'completed')
+        .single()
+
+      if (txErr || !completedTx) {
+        // Best-effort: notify backend (edge function) to log the suspected unpaid booking
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+          if (supabaseUrl && supabaseAnonKey) {
+            await fetch(`${supabaseUrl}/functions/v1/report-booking-issue`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                booking_id: finalBooking.id,
+                vendor_id: finalBooking.vendor_id,
+                amount: finalBooking.total_amount,
+                currency: finalBooking.currency,
+                issue: 'payment_unverified',
+                timestamp: new Date().toISOString()
+              })
+            }).catch(e => console.warn('report-booking-issue function not available or failed:', e))
+          }
+        } catch (e) {
+          console.warn('Failed to call report-booking-issue function:', e)
+        }
+
+        // Mark booking for admin review: revert payment_status to pending and set rejection_reason
+        try {
+          const { error: markErr } = await supabase
+            .from('bookings')
+            .update({ payment_status: 'pending', rejection_reason: 'payment_unverified' })
+            .eq('id', finalBooking.id)
+
+          if (markErr) console.warn('Failed to mark booking as payment_unverified:', markErr)
+          else console.log('Marked booking for review due to missing completed transaction:', finalBooking.id)
+        } catch (e) {
+          console.error('Error marking booking payment_unverified:', e)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error during booking payment verification:', err)
+  }
+
   return data
+}
+
+export async function getFlaggedBookings(): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`*, services(id,title,vendors(id,business_name)), profiles(id,full_name,email)`) 
+    .or("rejection_reason.eq.payment_unverified,payment_status.eq.pending")
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching flagged bookings:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function approveFlaggedBooking(bookingId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ payment_status: 'paid', rejection_reason: null, status: 'confirmed', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort: notify backend/edge function for audit
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'approve', timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('approveFlaggedBooking error:', err)
+    throw err
+  }
+}
+
+export async function rejectFlaggedBooking(bookingId: string, reason: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ payment_status: 'pending', rejection_reason: reason || 'rejected_by_admin', status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort: notify backend/edge function for audit
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'reject', reason, timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('rejectFlaggedBooking error:', err)
+    throw err
+  }
+}
+
+export async function resolveFlaggedBooking(bookingId: string, notes?: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ rejection_reason: notes || 'reviewed', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort audit call
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'resolve', notes: notes || null, timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('resolveFlaggedBooking error:', err)
+    throw err
+  }
 }
 
 /**

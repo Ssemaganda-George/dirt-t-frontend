@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { BookingProvider } from './contexts/BookingContext'
@@ -12,7 +12,6 @@ import { PageTransition } from './components/PageTransition'
 import { SmoothLoader } from './components/SmoothLoader'
 import { AppVisitorTracker } from './components/AppVisitorTracker'
 
-// Lazy load all page components for better UX with loading states
 const Home = lazy(() => import('./pages/Home'))
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'))
 const BookingFlow = lazy(() => import('./pages/BookingFlow'))
@@ -39,6 +38,7 @@ const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
 const VendorTickets = lazy(() => import('./pages/vendor/Tickets'))
 const VendorEvents = lazy(() => import('./pages/vendor/Events'))
 const VendorVisitorActivity = lazy(() => import('./pages/vendor/VisitorActivity'))
+const VendorPerformance = lazy(() => import('./pages/vendor/PerformanceReport'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Businesses = lazy(() => import('./pages/admin/Businesses'))
 const AdminVendors = lazy(() => import('./pages/admin/Vendors'))
@@ -56,6 +56,10 @@ const TouristWallets = lazy(() => import('./pages/admin/TouristWallets').then(mo
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
+const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Trees').then(m => ({ default: m.default })))
+
+// Create Safari Page
+const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
@@ -83,6 +87,8 @@ const TransportBookings = lazy(() => import('./pages/admin/TransportBookings').t
 const VisitorActivity = lazy(() => import('./pages/admin/VisitorActivity').then(module => ({ default: module.VisitorActivity })))
 const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => ({ default: module.Reviews })))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
+const AdminPerformance = lazy(() => import('./pages/admin/PerformanceReport'))
+const AdminFlaggedBookings = lazy(() => import('./pages/admin/FlaggedBookings'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -111,6 +117,7 @@ const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculato
 const OffsetDonation = lazy(() => import('./pages/conservation/OffsetDonation'))
 const OffsetCheckout = lazy(() => import('./pages/conservation/OffsetCheckout'))
 const OffsetSuccess = lazy(() => import('./pages/conservation/OffsetSuccess'))
+const Donate = lazy(() => import('./pages/conservation/Donate'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
@@ -166,6 +173,7 @@ function App() {
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
+            <Route path="create-safari" element={<CreateSafariPage />} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />
@@ -180,10 +188,12 @@ function App() {
             <Route path="hospitality-class" element={<HospitalityClass />} />
             <Route path="conservation/geotagging" element={<Geotagging />} />
             <Route path="conservation/tree-planting" element={<TreePlanting />} />
+            <Route path="conservation/donate" element={<Donate />} />
             <Route path="conservation/carbon" element={<CarbonCalculator />} />
             <Route path="conservation/offset" element={<OffsetDonation />} />
             <Route path="conservation/checkout" element={<OffsetCheckout />} />
             <Route path="conservation/offset/success" element={<OffsetSuccess />} />
+            <Route path="environment/donate" element={<Navigate to="/conservation/donate" replace />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />
@@ -279,6 +289,7 @@ function App() {
             <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
             <Route path="visitor-activity" element={<VendorVisitorActivity />} />
+            <Route path="performance" element={<VendorPerformance />} />
           </Route>
           
           {/* Admin Routes */}
@@ -310,9 +321,11 @@ function App() {
             <Route path="bookings/shops" element={<ShopsBookings />} />
             <Route path="bookings/tours" element={<ToursBookings />} />
             <Route path="bookings/transport" element={<TransportBookings />} />
+            <Route path="bookings/flagged" element={<AdminFlaggedBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
+            <Route path="conservation/trees" element={<AdminConservationTrees />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="vendors" element={<AdminVendors />} />
             <Route path="vendors/:id" element={<AdminVendorDetail />} />
@@ -327,6 +340,7 @@ function App() {
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
             <Route path="visitor-activity" element={<VisitorActivity />} />
+            <Route path="performance" element={<AdminPerformance />} />
             <Route path="reviews" element={<AdminReviews />} />
           </Route>
           <Route path="/unauthorized" element={

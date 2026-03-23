@@ -4,30 +4,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey",
-}
-
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin') || '*'
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': requestOrigin,
+    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  }
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response("ok", { headers: CORS_HEADERS })
   }
 
   if (req.method !== "GET") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     })
   }
 
   const url = new URL(req.url)
   const reference = url.searchParams.get("reference")
-  if (!reference) {
+    if (!reference) {
     return new Response(JSON.stringify({ error: "Missing reference parameter" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     })
   }
 
@@ -42,7 +45,7 @@ serve(async (req) => {
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       })
     }
 
@@ -50,9 +53,9 @@ serve(async (req) => {
     if (!p) {
       console.log("[marzpay-payment-status] not found", { reference })
       return new Response(JSON.stringify({ error: "Payment not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      status: 404,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    })
     }
 
     console.log("[marzpay-payment-status] found", {
@@ -68,12 +71,12 @@ serve(async (req) => {
         order_id: p.order_id,
         amount: p.amount,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     )
   } catch (err) {
     return new Response(
       JSON.stringify({ error: (err as Error).message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     )
   }
 })

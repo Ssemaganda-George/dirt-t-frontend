@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -12,7 +13,8 @@ const navigation = [
     category: 'Overview',
     items: [
       { name: 'My Dashboard', href: '/vendor', icon: BarChart3 },
-      { name: 'Visitor Activity', href: '/vendor/visitor-activity', icon: Eye }
+      { name: 'Visitor Activity', href: '/vendor/visitor-activity', icon: Eye },
+      { name: 'Performance Report', href: '/vendor/performance', icon: BarChart3 }
     ]
   },
   {
@@ -128,6 +130,7 @@ export default function VendorLayout() {
   }
 
   const { unreadCount } = useUnreadMessages()
+  const [hasEvents, setHasEvents] = useState(false)
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -140,6 +143,37 @@ export default function VendorLayout() {
       return newSet
     })
   }
+
+  useEffect(() => {
+    // Check whether this vendor has any services in the "events" category (cat_activities)
+    const checkEvents = async () => {
+      const vendorId = vendor?.id || profile?.id
+      if (!vendorId) {
+        setHasEvents(false)
+        return
+      }
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('id')
+          .eq('vendor_id', vendorId)
+          .eq('category_id', 'cat_activities')
+          .limit(1)
+
+        if (error) {
+          console.warn('Could not check vendor events:', error)
+          setHasEvents(false)
+          return
+        }
+        setHasEvents(Array.isArray(data) && data.length > 0)
+      } catch (e) {
+        console.warn('Error checking vendor events:', e)
+        setHasEvents(false)
+      }
+    }
+
+    checkEvents()
+  }, [vendor?.id, profile?.id])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -170,6 +204,7 @@ export default function VendorLayout() {
                 {expandedCategories.has(category.category) && (
                   <div className="space-y-0.5">
                     {category.items.map((item) => {
+                      if ((item.name === 'Events' || item.name === 'Tickets') && !hasEvents) return null
                       const isActive = location.pathname === item.href
                       return (
                         <Link
@@ -240,6 +275,7 @@ export default function VendorLayout() {
                 {expandedCategories.has(category.category) && (
                   <div className={`${sidebarCollapsed ? 'space-y-1' : 'space-y-0.5'}`}>
                     {category.items.map((item) => {
+                      if ((item.name === 'Events' || item.name === 'Tickets') && !hasEvents) return null
                       const isActive = location.pathname === item.href
                       return (
                         <Link

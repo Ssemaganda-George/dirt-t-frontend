@@ -386,7 +386,8 @@ export default function CheckoutPage() {
     return sum + unit * qty
   }, 0)
 
-  const serviceFeesAmount = Math.max(100, Math.round(subtotalAmount * 0.01))
+  // Use percentage-based service fee (match Payment page: 7% of subtotal)
+  const serviceFeesAmount = Math.round(subtotalAmount * 0.07)
   const totalAmount = subtotalAmount + serviceFeesAmount
 
   if (isLoading) return <PageSkeleton type="checkout" />
