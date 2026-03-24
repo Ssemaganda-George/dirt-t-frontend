@@ -107,10 +107,15 @@ export default function PaymentPage() {
 
   const checkStatus = async (ref: string): Promise<'completed' | 'failed' | null> => {
     try {
-      const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`
+      const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`
       console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${supabaseAnonKey}` },
+        cache: 'no-store',
+        headers: {
+          Authorization: `Bearer ${supabaseAnonKey}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
       })
       const raw = await res.text()
       console.log('[Payment] checkStatus: response', {

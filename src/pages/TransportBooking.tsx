@@ -889,8 +889,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
               try {
                 const res = await fetch(
-                  `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
-                  { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+                  `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`,
+                  {
+                    cache: 'no-store',
+                    headers: {
+                      Authorization: `Bearer ${supabaseAnonKey}`,
+                      'Cache-Control': 'no-cache, no-store, must-revalidate',
+                      Pragma: 'no-cache',
+                    }
+                  }
                 )
                 const data = await res.json().catch(() => ({})) as { status?: string }
                 if (data?.status === 'completed') return 'completed'
