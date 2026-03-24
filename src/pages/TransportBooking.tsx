@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, CreditCard, CheckCircle, XCircle, Copy } from 'lucide-react'
+import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -2372,207 +2372,248 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
+    // ── Design tokens — identical to send-booking-emails PDF ──
+    const T = {
+      green:   '#1B3A2D',
+      amber:   '#C9873A',
+      ivory:   '#FAF6EE',
+      dark:    '#1C1917',
+      sage:    '#8FAF9B',
+      cream:   '#F2EDE4',
+      paid:    '#2D6A4F',
+      pending: '#C9873A',
+    }
+    const SH = ({ children }: { children: React.ReactNode }) => (
+      <div style={{ marginBottom: '12px', marginTop: '4px' }}>
+        <div style={{ height: '1px', background: T.cream, marginBottom: '6px' }} />
+        <p style={{ margin: 0, fontSize: '7px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>{children}</p>
+      </div>
+    )
+    const RR = ({ label, value }: { label: string; value: React.ReactNode }) => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <span style={{ color: T.sage, fontSize: '8.5px', flexShrink: 0, width: '42%', fontFamily: 'Arial, sans-serif' }}>{label}</span>
+        <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700, textAlign: 'right' as const, wordBreak: 'break-word' as const, maxWidth: '56%', fontFamily: 'Arial, sans-serif' }}>{value}</span>
+      </div>
+    )
+
+    const payColor  = (bookingResult?.payment_status || 'pending') === 'paid' ? T.paid : T.pending
+    const fullPhone = (bookingData.countryCode || '') + (bookingData.contactPhone || '')
+    const durDays  = bookingData.startDate && bookingData.endDate
+      ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+      : null
+    const durHrs   = durDays !== null
+      ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
+      : null
+    const durationStr = durDays !== null ? `${durDays} day${durDays !== 1 ? 's' : ''} (${durHrs} hrs)` : 'N/A'
+
     return (
       <>
-      <div className="max-w-md mx-auto px-2 sm:px-4 pt-8 sm:pt-12 pb-0 min-h-[60vh] bg-white rounded-none shadow-md border border-gray-200 text-sm leading-relaxed">
-        <div className="space-y-3 sm:space-y-4">
-          {/* Vendor-style compact receipt header with responsive image */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-            <div className="w-full sm:w-40 flex-shrink-0">
-              <img
-                src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                alt={service.title}
-                className="w-full h-28 sm:h-24 object-cover rounded-lg"
-              />
-              {service.images && service.images.length > 0 && (
-                <div className="mt-1 text-xs text-gray-500 text-center sm:text-left">{currentImageIndex + 1} / {service.images.length}</div>
+      <div style={{ maxWidth: '420px', margin: '0 auto', fontFamily: 'Arial, Helvetica, sans-serif', padding: '32px 16px' }}>
+
+        {/* ── TOP SCALLOPED EDGE ── */}
+        <div style={{
+          height: '14px',
+          background: T.ivory,
+          backgroundImage: `radial-gradient(circle at 10px 14px, #E8E0D0 10px, transparent 11px)`,
+          backgroundSize: '20px 14px',
+          backgroundRepeat: 'repeat-x',
+          borderLeft: '1px solid #D4C9B8',
+          borderRight: '1px solid #D4C9B8',
+        }} />
+
+        {/* ── RECEIPT BODY ── */}
+        <div style={{
+          background: T.ivory,
+          border: '1px solid #D4C9B8',
+          borderTop: 'none',
+          borderBottom: 'none',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 4px 28px rgba(27,58,45,0.10)',
+        }}>
+
+          {/* Faint CONFIRMED watermark */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+            <span style={{ fontSize: '64px', fontWeight: 900, letterSpacing: '4px', color: T.green, opacity: 0.03, transform: 'rotate(-22deg)', whiteSpace: 'nowrap', userSelect: 'none' as const, fontFamily: 'Georgia, serif', textTransform: 'uppercase' as const }}>
+              CONFIRMED
+            </span>
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+
+            {/* Service image banner */}
+            {(selectedImage || service.images?.[0]) && (
+              <div style={{ height: '110px', overflow: 'hidden', position: 'relative' }}>
+                <img
+                  src={selectedImage || service.images[0]}
+                  alt={service.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(27,58,45,0.65) 100%)' }} />
+              </div>
+            )}
+
+            {/* ── HEADER — matches PDF: amber rules, DIRT TRAILS centred ── */}
+            <div style={{ background: T.green, padding: '28px 24px', textAlign: 'center' }}>
+              <div style={{ display: 'inline-block', borderTop: `1px solid rgba(201,135,58,0.55)`, borderBottom: `1px solid rgba(201,135,58,0.55)`, padding: '7px 28px' }}>
+                <h1 style={{ margin: '0 0 4px', color: T.ivory, fontSize: '22px', letterSpacing: '10px', fontFamily: 'Georgia, serif', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1.1 }}>
+                  DIRT TRAILS
+                </h1>
+                <p style={{ margin: 0, color: T.amber, fontSize: '7.5px', letterSpacing: '5px', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                  ADVENTURE BOOKING RECEIPT
+                </p>
+              </div>
+            </div>
+
+            {/* ── STATUS STRIPE ── */}
+            <div style={{ background: T.amber, padding: '10px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                <CheckCircle size={11} color={T.green} />
+                <span style={{ color: T.green, fontSize: '9.5px', letterSpacing: '4px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                  BOOKING CONFIRMED
+                </span>
+              </div>
+            </div>
+
+            {/* ── CONTENT ── */}
+            <div style={{ padding: '16px 20px' }}>
+
+              {/* Reference box: cream bg + amber left border — matches PDF */}
+              <div style={{ background: T.cream, borderLeft: `3px solid ${T.amber}`, padding: '13px 15px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{ margin: '0 0 3px', fontSize: '7px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>BOOKING REFERENCE</p>
+                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', color: T.green, wordBreak: 'break-all' as const }}>
+                    {(bookingResult?.id || '').toUpperCase() || 'N/A'}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }}>
+                  <p style={{ margin: '0 0 3px', fontSize: '7px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>DATE BOOKED</p>
+                  <p style={{ margin: 0, fontSize: '9px', fontWeight: 700, color: T.dark, fontFamily: 'Arial, sans-serif' }}>
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+
+              {/* ── GUEST ── */}
+              <SH>Guest</SH>
+              <RR label="Name"  value={bookingData.contactName  || 'N/A'} />
+              <RR label="Email" value={bookingData.contactEmail || '—'} />
+              <RR label="Phone" value={fullPhone || '—'} />
+
+              {/* ── SERVICE DETAILS ── */}
+              <SH>Service Details</SH>
+              <RR label="Service"  value={service.title} />
+              <RR label="Provider" value={service.vendors?.business_name || 'N/A'} />
+              <RR label="Location" value={service.location || 'N/A'} />
+              <RR label="Date"     value={bookingData.startDate || 'N/A'} />
+              <RR label="Guests"   value={`${bookingData.passengers || 1} guest${(bookingData.passengers || 1) !== 1 ? 's' : ''}`} />
+
+              {/* ── SERVICE PROVIDER ── */}
+              <SH>Service Provider</SH>
+              <RR label="Business" value={service.vendors?.business_name  || 'N/A'} />
+              <RR label="Email"    value={service.vendors?.business_email || 'N/A'} />
+              {service.vendors?.business_phone && <RR label="Phone" value={service.vendors.business_phone} />}
+
+              {/* ── TRIP DETAILS ── */}
+              <SH>Trip Details</SH>
+              <RR label="Pick-up"  value={`${bookingData.startDate || 'N/A'}${bookingData.startTime ? ` at ${bookingData.startTime}` : ''}`} />
+              <RR label="Drop-off" value={`${bookingData.endDate   || 'N/A'}${bookingData.endTime   ? ` at ${bookingData.endTime}`   : ''}`} />
+              <RR label="Duration" value={durationStr} />
+              {bookingData.pickupLocation  && <RR label="Pick-up Loc"  value={bookingData.pickupLocation} />}
+              {bookingData.dropoffLocation && <RR label="Drop-off Loc" value={bookingData.dropoffLocation} />}
+              <RR label="Driver" value={bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'} />
+              {bookingData.paymentMethod === 'mobile' && bookingData.mobileProvider && (
+                <RR label="Payment Provider" value={bookingData.mobileProvider} />
               )}
-            </div>
 
-            <div className="flex-1">
-              <div className="text-xl font-bold">{service.vendors?.business_name || 'DIRT TRAILS'}</div>
-              <div className="text-xs text-gray-500">Adventure Booking Receipt</div>
-              <div className="mt-3 flex flex-col sm:flex-row items-center sm:items-start sm:justify-start gap-4">
-                <div className="text-center sm:text-left">
-                  <div className="text-xs text-gray-400">Receipt #</div>
-                  <div className="font-mono font-semibold text-sm">{(bookingResult?.id || '').toString().replace(/-/g, '').slice(0,8).toUpperCase()}</div>
+              {/* ── PAYMENT SUMMARY — cream box, large amount + status — matches PDF ── */}
+              <SH>Payment Summary</SH>
+              <RR label="Subtotal"       value={formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency)} />
+              <RR label="Hirer Fee (2%)" value={formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee,   service.currency)} />
+              <RR label="Quantity"       value={String(bookingData.passengers || 1)} />
+
+              <div style={{ background: T.cream, padding: '16px 16px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '7.5px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>TOTAL AMOUNT</p>
+                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '20px', fontWeight: 700, color: T.green }}>
+                    {formatCurrencyWithConversion(totalPrice, service.currency)}
+                  </p>
                 </div>
-                <div className="text-center sm:text-left">
-                  <div className="text-xs text-gray-400">Date</div>
-                  <div className="text-sm">
-                    {new Date().toLocaleDateString('en-GB')}
-                    <span className="mx-2 text-gray-400">·</span>
-                    <span className="text-sm text-gray-700">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '7.5px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>STATUS</p>
+                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: payColor, fontFamily: 'Arial, sans-serif' }}>
+                    {(bookingResult?.payment_status || 'pending').toUpperCase()}
+                  </p>
                 </div>
               </div>
-              <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-semibold">BOOKING CONFIRMED</div>
+
+              {/* SPECIAL REQUESTS */}
+              {bookingData.specialRequests && (
+                <div style={{ marginTop: '12px' }}>
+                  <SH>Special Requests</SH>
+                  <p style={{ margin: 0, color: T.dark, fontSize: '8.5px', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
+                    "{bookingData.specialRequests}"
+                  </p>
+                </div>
+              )}
+
             </div>
+
+            {/* ── GREEN FOOTER BAND — matches PDF footer exactly ── */}
+            <div style={{ background: T.green, padding: '18px 24px' }}>
+              <div style={{ borderTop: `1px solid rgba(201,135,58,0.4)`, paddingTop: '10px', paddingBottom: '10px' }}>
+                <div style={{ borderBottom: `1px solid rgba(201,135,58,0.4)`, paddingBottom: '10px', textAlign: 'center' }}>
+                  <p style={{ margin: 0, color: T.ivory, fontSize: '8px', letterSpacing: '2px', fontFamily: 'Arial, sans-serif' }}>
+                    DIRTTRAILS ADVENTURES &nbsp;·&nbsp; Keep this receipt for your records
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
-
-          {/* Two-column compact sections */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs text-gray-500 font-semibold">Customer</div>
-                <div className="text-sm font-medium">{bookingData.contactName || 'N/A'}</div>
-                <div className="text-sm break-all">{bookingData.contactEmail || 'N/A'}</div>
-                <div className="text-sm">{(bookingData.countryCode || '') + (bookingData.contactPhone || '')}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-gray-500 font-semibold">Service</div>
-                <div className="text-sm font-medium">{service.title}</div>
-                <div className="text-sm">{service.location || 'N/A'}</div>
-                <div className="text-sm">{service.service_categories?.name || 'N/A'}</div>
-                <div className="text-sm mt-1">Date: {bookingData.startDate || 'N/A'}</div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="text-xs text-gray-500 font-semibold">Provider</div>
-                <div className="text-sm font-medium">{service.vendors?.business_name || 'N/A'}</div>
-                <div className="text-sm">{service.vendors?.business_email || 'N/A'}</div>
-                <div className="text-sm">{service.vendors?.business_phone || 'N/A'}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-gray-500 font-semibold">Payment</div>
-                <div className="text-sm">Subtotal: {basePrice ? formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency) : 'UGXNaN'}</div>
-                <div className="text-sm">Hirer Fee (2%): {formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</div>
-                <div className="text-sm">Quantity: {bookingData.passengers || 1}</div>
-                <div className="text-sm font-bold">TOTAL: {formatCurrencyWithConversion(totalPrice, service.currency)}</div>
-              </div>
-            </div>
-          </div>
-
-          
-
-          {/* Trip Details - clean two-column layout */}
-          <div className="pt-3 border-t border-gray-100">
-            <div className="text-xs text-gray-500 font-semibold mb-3">TRIP DETAILS</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Pick-up</div>
-                  <div className="font-medium">{bookingData.startDate || 'N/A'}{bookingData.startTime ? ` at ${bookingData.startTime}` : ''}</div>
-                </div>
-
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Duration</div>
-                  <div className="font-medium">{bookingData.startDate && bookingData.endDate ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days (${Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))} hrs)` : 'N/A'}</div>
-                </div>
-
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Pick-up Location</div>
-                  <div className="font-medium">{bookingData.pickupLocation || 'N/A'}</div>
-                </div>
-
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Driver Option</div>
-                  <div className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Drop-off</div>
-                  <div className="font-medium">{bookingData.endDate || 'N/A'}{bookingData.endTime ? ` at ${bookingData.endTime}` : ''}</div>
-                </div>
-
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Special Requests</div>
-                  <div className="font-medium">{bookingData.specialRequests || 'None'}</div>
-                </div>
-
-                <div>
-                  <div className="text-gray-500 uppercase text-xs font-medium">Drop-off Location</div>
-                  <div className="font-medium">{bookingData.dropoffLocation || 'N/A'}</div>
-                </div>
-
-                {bookingData.paymentMethod === 'mobile' && (
-                  <div>
-                    <div className="text-gray-500 uppercase text-xs font-medium">Payment Provider</div>
-                    <div className="font-medium">{bookingData.mobileProvider || 'N/A'}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Booking ref and actions (compact) */}
-          <div className="pt-2 border-t border-gray-100 text-center">
-            <div className="text-xs text-gray-500">Booking Reference</div>
-            <div className="mt-1 flex items-center justify-center gap-2">
-              <div className="font-mono break-all text-sm">{(bookingResult?.id || '')}</div>
-              <button
-                onClick={async () => { try { await navigator.clipboard.writeText(bookingResult?.id || ''); alert('Booking reference copied') } catch {} }}
-                title="Copy reference"
-                className="p-1 bg-gray-100 rounded"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mt-3 space-y-1 text-center">
-              <div className="font-medium">Thank you for choosing Dirt Trails!</div>
-              <div className="text-gray-500">Keep this receipt for your records</div>
-            </div>
-
-            {/* download moved to actions below */}
-
-            {/* Support strip (inside receipt) */}
-            <div className="mt-4 -mx-2 sm:-mx-4">
-              <div className="bg-gray-900 text-white rounded-none px-4 py-2 border-t border-gray-800">
-                <div className="text-sm font-semibold text-center sm:text-left">Should you need support</div>
-
-                <div className="mt-2 grid grid-cols-1 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-300 w-24">Email</span>
-                    <a href="mailto:safaris.dirtrails@gmail.com" className="text-emerald-300 underline">safaris.dirtrails@gmail.com</a>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-300 w-24">Phone</span>
-                    <a href="tel:+256759918649" className="text-emerald-300 underline">+256 759 918649</a>
-                  </div>
-                </div>
-
-                <div className="mt-1 text-xs text-gray-300 text-center sm:text-left">Or visit our <a href="/contact" className="text-emerald-300 underline">Contact Us</a> page</div>
-              </div>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      {/* Detached actions and related services (outside receipt) */}
-      <div className="max-w-4xl mx-auto mt-4 px-4">
-        <div className="flex gap-2 sm:gap-3 justify-center">
+        {/* ── BOTTOM SCALLOPED EDGE ── */}
+        <div style={{
+          height: '14px',
+          background: T.ivory,
+          backgroundImage: `radial-gradient(circle at 10px 0px, #E8E0D0 10px, transparent 11px)`,
+          backgroundSize: '20px 14px',
+          backgroundRepeat: 'repeat-x',
+          borderLeft: '1px solid #D4C9B8',
+          borderRight: '1px solid #D4C9B8',
+          borderBottom: '1px solid #D4C9B8',
+        }} />
+
+        {/* ── ACTION BUTTONS ── */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
           <button
             onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-            className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+            style={{ flex: 1, background: T.green, color: T.ivory, border: 'none', padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
           >
             Message Provider
           </button>
           <button
             onClick={() => downloadReceiptPDF(bookingResult || {})}
-            className="flex-1 sm:flex-none bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+            style={{ background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            title="Download receipt PDF"
           >
-            Download (PDF)
+            <CreditCard size={14} color={T.green} />
           </button>
           <button
             onClick={() => navigate('/')}
-            className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+            style={{ flex: 1, background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
           >
             Home
           </button>
         </div>
 
+        {/* ── SIMILAR SERVICES ── */}
         {service.category_id && (
-          <div className="pt-6">
-            <h3 className="text-sm font-semibold mb-3">Other services you may like</h3>
+          <div style={{ marginTop: '28px' }}>
+            <h3 style={{ textAlign: 'center', fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, color: T.green, fontFamily: 'Arial, sans-serif', marginBottom: '14px', fontWeight: 700 }}>
+              You may also like
+            </h3>
             <SimilarServicesCarousel
               categoryId={service.category_id}
               excludeServiceId={service.id}
@@ -2580,9 +2621,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             />
           </div>
         )}
-      </div>
 
-      
+      </div>
       </>
     )
   }
