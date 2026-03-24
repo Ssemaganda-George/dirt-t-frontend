@@ -904,7 +904,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               // and finalize booking/receipt in background.
               setIsReceiptFinalizing(true)
               setPollingMessage('Payment confirmed! Finalizing your receipt in background…')
-              void createTransportBooking('paid').catch((e) => {
+              void createTransportBooking('paid', ref).catch((e) => {
                 console.warn('Background booking finalization failed:', e)
               })
             }
@@ -997,7 +997,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const createTransportBooking = async (paymentStatus: 'paid' | 'pending') => {
+  const createTransportBooking = async (paymentStatus: 'paid' | 'pending', paymentReference?: string) => {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
@@ -1113,6 +1113,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         currency: service.currency,
         status: 'confirmed' as const,
         payment_status: paymentStatus as any,
+        payment_reference: paymentReference || undefined,
         special_requests: `${(bookingData as any).tripSetoff ? 'Set-off: ' + (bookingData as any).tripSetoff + '\n' : ''}${stopovers && stopovers.length > 0 ? 'Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; ') + '\n' : ((bookingData as any).tripStopovers ? 'Stop-overs: ' + (bookingData as any).tripStopovers + '\n' : '')}${(bookingData as any).tripDestination ? 'Destination: ' + (bookingData as any).tripDestination + '\n' : ''}${(bookingData as any).tripReturnOption ? 'Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave') + '\n\n' : ''}${bookingData.specialRequests || ''}`,
         trip_setoff: (bookingData as any).tripSetoff || null,
         trip_setoff_lat: setoffLocation?.lat ?? null,
@@ -1140,6 +1141,25 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       } as any)
 
       if (result && result.id) {
+        // Trigger a lightweight webhook reconciliation for transport bookings created after
+        // payment completion so payment->booking linkage and queue jobs are guaranteed.
+        if (paymentStatus === 'paid' && paymentReference) {
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/marzpay-webhook`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                transaction: {
+                  reference: paymentReference,
+                  status: 'completed',
+                },
+              }),
+            })
+          } catch (e) {
+            console.warn('Transport payment reconciliation trigger failed:', e)
+          }
+        }
+
         setBookingResult(result)
         setBookingConfirmed(true)
         setPollingMessage('')

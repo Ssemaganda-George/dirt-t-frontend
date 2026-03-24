@@ -157,6 +157,55 @@ serve(async (req) => {
     }
   }
 
+  // Transport fallback: payment can complete before booking is created/linked.
+  // In that case, attach by booking.payment_reference and enqueue queue work.
+  if (paymentStatus === "completed" && !payment.booking_id && !payment.order_id) {
+    try {
+      const { data: bookingByReference, error: bookingByRefErr } = await supabase
+        .from("bookings")
+        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+        .eq("payment_reference", reference)
+        .maybeSingle()
+
+      if (bookingByRefErr) {
+        console.warn("Webhook: booking lookup by payment_reference failed", reference, bookingByRefErr)
+      } else if (bookingByReference?.id) {
+        const bookingId = bookingByReference.id
+
+        await supabase
+          .from("payments")
+          .update({ booking_id: bookingId, updated_at: new Date().toISOString() })
+          .eq("id", payment.id)
+
+        await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            payment_status: "paid",
+            payment_reference: reference,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId)
+
+        try {
+          await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
+            reference,
+            amount: Number(payment.amount || 0),
+            transport_fee_rates: {
+              hirer: HIRER_TRANSPORT_FEE_RATE,
+              provider: PROVIDER_TRANSPORT_FEE_RATE,
+            },
+          })
+          triggerQueueWorker()
+        } catch (queueErr) {
+          console.warn("Webhook: failed to enqueue fallback booking fulfillment job", bookingId, queueErr)
+        }
+      }
+    } catch (err) {
+      console.warn("Webhook: fallback payment_reference reconciliation failed", err)
+    }
+  }
+
   if (paymentStatus === "completed" && payment.order_id) {
     const orderId = payment.order_id
 

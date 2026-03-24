@@ -2761,15 +2761,18 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
   try {
     const requestedStatus = (bookingData as any).status
     const requestedPaymentStatus = (bookingData as any).payment_status || (bookingData as any).paymentStatus
+    const requestedPaymentReference = (bookingData as any).payment_reference || (bookingData as any).paymentReference
     if (
       (requestedStatus && requestedStatus !== (data as any).status) ||
-      (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status)
+      (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) ||
+      (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference)
     ) {
       const { data: updated, error: updateError } = await supabase
         .from('bookings')
         .update({
           ...(requestedStatus ? { status: requestedStatus } : {}),
-          ...(requestedPaymentStatus ? { payment_status: requestedPaymentStatus } : {})
+          ...(requestedPaymentStatus ? { payment_status: requestedPaymentStatus } : {}),
+          ...(requestedPaymentReference ? { payment_reference: requestedPaymentReference } : {})
         })
         .eq('id', data.id)
         .select()
