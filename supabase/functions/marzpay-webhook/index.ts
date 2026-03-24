@@ -3,26 +3,46 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") || ""
-const TELEGRAM_CHAT_IDS = (Deno.env.get("TELEGRAM_CHAT_ID") || "")
-  .split(",")
-  .map((id) => id.trim())
-  .filter(Boolean)
+const PROCESS_QUEUE_SECRET = Deno.env.get("PROCESS_QUEUE_SECRET") || ""
 
 const HIRER_TRANSPORT_FEE_RATE = 0.02
 const PROVIDER_TRANSPORT_FEE_RATE = 0.02
 
-async function sendTelegramMessage(text: string): Promise<void> {
-  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_IDS.length === 0) return
-  await Promise.all(
-    TELEGRAM_CHAT_IDS.map((chatId) =>
-      fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
-      }).then((r) => r.json()).catch((e) => console.error("Telegram send error:", e.message))
+async function enqueueFulfillmentJob(
+  supabase: any,
+  jobType: "booking_fulfillment" | "order_fulfillment",
+  sourceId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const idempotencyKey = `${jobType}:${sourceId}:${payload.reference || ""}`
+  const { error } = await supabase
+    .from("payment_fulfillment_jobs")
+    .upsert(
+      {
+        job_type: jobType,
+        source_id: sourceId,
+        payload,
+        idempotency_key: idempotencyKey,
+        status: "pending",
+        scheduled_for: new Date().toISOString(),
+      },
+      { onConflict: "idempotency_key" }
     )
-  )
+
+  if (error) throw error
+}
+
+function triggerQueueWorker(): void {
+  const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+  const workerUrl = `${baseUrl}/functions/v1/process-payment-fulfillment-queue`
+  fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(PROCESS_QUEUE_SECRET ? { "x-worker-secret": PROCESS_QUEUE_SECRET } : {}),
+    },
+    body: JSON.stringify({ batch_size: 8 }),
+  }).catch((e) => console.warn("Webhook: queue worker trigger failed", e?.message || e))
 }
 
 serve(async (req) => {
@@ -54,7 +74,6 @@ serve(async (req) => {
   }
 
   let transaction = body.transaction
-  const collection = body.collection || body.data?.collection
   if (body.data?.transaction) transaction = body.data.transaction
 
   if (!transaction?.reference) {
@@ -119,72 +138,18 @@ serve(async (req) => {
           })
           .eq("id", bookingId)
 
-        // Default behavior: provider receives the full paid amount.
-        // Transport override: customer pays +2% and provider pays 2% from subtotal.
-        // If total_amount includes customer fee (subtotal * 1.02),
-        // provider payout = subtotal * 0.96.
-        let providerCreditAmount = Number(payment.amount || 0)
         try {
-          const { data: serviceData, error: serviceErr } = await supabase
-            .from("services")
-            .select("category_id")
-            .eq("id", booking.service_id)
-            .maybeSingle()
-
-          if (serviceErr) {
-            console.warn("Webhook: failed to fetch service category for booking", bookingId, serviceErr)
-          } else {
-            const isTransport = (serviceData as any)?.category_id === "cat_transport"
-            if (isTransport) {
-              const paidTotal = Number(booking.total_amount || payment.amount || 0)
-              const subtotal = paidTotal / (1 + HIRER_TRANSPORT_FEE_RATE)
-              providerCreditAmount = subtotal * (1 - PROVIDER_TRANSPORT_FEE_RATE)
-            }
-          }
-        } catch (feeErr) {
-          console.warn("Webhook: transport fee split calc failed, using default full credit amount", feeErr)
-          providerCreditAmount = Number(payment.amount || 0)
-        }
-
-        try {
-          await supabase.rpc("create_transaction_atomic", {
-            p_vendor_id: booking.vendor_id,
-            p_amount: providerCreditAmount,
-            p_transaction_type: "payment",
-            p_booking_id: bookingId,
-            p_tourist_id: booking.tourist_id || null,
-            p_currency: booking.currency || "UGX",
-            p_status: "completed",
-            p_payment_method: "mobile_money",
-            p_reference: reference,
-          })
-        } catch (txErr) {
-          console.warn("Webhook: create_transaction_atomic failed for booking", bookingId, txErr)
-        }
-
-        // Trigger booking emails (use service role key)
-        try {
-          const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
-          const sendBookingEmailsUrl = `${baseUrl}/functions/v1/send-booking-emails`
-          fetch(sendBookingEmailsUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
+            reference,
+            amount: Number(payment.amount || 0),
+            transport_fee_rates: {
+              hirer: HIRER_TRANSPORT_FEE_RATE,
+              provider: PROVIDER_TRANSPORT_FEE_RATE,
             },
-            body: JSON.stringify({ booking_id: bookingId }),
           })
-            .then(async (res) => {
-              if (!res.ok) {
-                const text = await res.text()
-                console.warn("Webhook: send-booking-emails failed", res.status, text)
-              } else {
-                console.log("Webhook: booking email triggered for", bookingId)
-              }
-            })
-            .catch((e) => console.warn("Webhook: send-booking-emails error", e?.message))
-        } catch (e) {
-          console.warn("Webhook: failed to call send-booking-emails", e?.message)
+          triggerQueueWorker()
+        } catch (queueErr) {
+          console.warn("Webhook: failed to enqueue booking fulfillment job", bookingId, queueErr)
         }
       }
     } catch (err) {
@@ -220,131 +185,14 @@ serve(async (req) => {
       .eq("id", orderId)
 
     try {
-      await supabase.rpc("create_transaction_atomic", {
-        p_vendor_id: order.vendor_id,
-        p_amount: payment.amount,
-        p_transaction_type: "payment",
-        p_booking_id: null,
-        p_tourist_id: order.user_id || null,
-        p_currency: order.currency || "UGX",
-        p_status: "completed",
-        p_payment_method: "mobile_money",
-        p_reference: reference,
+      await enqueueFulfillmentJob(supabase, "order_fulfillment", orderId, {
+        reference,
+        amount: Number(payment.amount || 0),
       })
-    } catch (txErr) {
-      console.warn("Webhook: create_transaction_atomic failed", txErr)
+      triggerQueueWorker()
+    } catch (queueErr) {
+      console.warn("Webhook: failed to enqueue order fulfillment job", orderId, queueErr)
     }
-
-    const { data: items, error: itemsErr } = await supabase
-      .from("order_items")
-      .select("*, ticket_types(*)")
-      .eq("order_id", orderId)
-
-    if (!itemsErr && items && items.length > 0) {
-      const groups: Record<string, { qty: number; total: number }> = {}
-      for (const it of items) {
-        const sid = (it as any).ticket_types?.service_id
-        if (!sid) continue
-        groups[sid] = groups[sid] || { qty: 0, total: 0 }
-        groups[sid].qty += it.quantity
-        groups[sid].total += Number(it.unit_price || 0) * it.quantity
-      }
-
-      // Run booking creation and ticket issuance in parallel — each service/ticket
-      // type is independent, so there is no need to process them sequentially.
-      const today = new Date().toISOString().slice(0, 10)
-
-      await Promise.all([
-        // Create one booking per service (in parallel)
-        ...Object.keys(groups).map(async (sid) => {
-          try {
-            const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
-            const vendorId = (svc as any)?.vendor_id || order.vendor_id
-            const createRes = await supabase.rpc("create_booking_atomic", {
-              p_service_id: sid,
-              p_vendor_id: vendorId,
-              p_booking_date: today,
-              p_guests: groups[sid].qty,
-              p_total_amount: groups[sid].total,
-              p_tourist_id: order.user_id || null,
-              p_service_date: today,
-              p_currency: order.currency || "UGX",
-              p_guest_name: order.guest_name || null,
-              p_guest_email: order.guest_email || null,
-              p_guest_phone: order.guest_phone || null,
-            })
-            if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
-              await supabase.rpc("update_booking_status_atomic", {
-                p_booking_id: (createRes.data as any).booking_id,
-                p_status: "confirmed",
-                p_payment_status: "paid",
-              })
-            }
-          } catch (bkErr) {
-            console.warn("Webhook: create booking failed for service", sid, bkErr)
-          }
-        }),
-
-        // Issue tickets for each ticket type (in parallel)
-        ...items.map(async (it: any) => {
-          try {
-            const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
-              p_ticket_type_id: it.ticket_type_id,
-              p_quantity: it.quantity,
-              p_order_id: orderId,
-            })
-            if (bookErr || !(bookData as any)?.success) {
-              console.warn("Webhook: book_tickets_atomic failed", it.ticket_type_id, bookErr || (bookData as any)?.error)
-            }
-          } catch (ticketErr) {
-            console.warn("Webhook: ticket booking failed", ticketErr)
-          }
-        }),
-      ])
-
-      // Send ticket email to customer (order has guest_email; otherwise use profile email)
-      let recipientEmail = (order as any).guest_email?.trim() || null
-      if (!recipientEmail && (order as any).user_id) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email")
-          .eq("id", (order as any).user_id)
-          .maybeSingle()
-        recipientEmail = (profile as any)?.email?.trim() || null
-      }
-      if (recipientEmail) {
-        const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
-        const sendOrderEmailsUrl = `${baseUrl}/functions/v1/send-order-emails`
-        fetch(sendOrderEmailsUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-          body: JSON.stringify({ order_id: orderId, recipient_email: recipientEmail }),
-        })
-          .then(async (res) => {
-            if (!res.ok) {
-              const text = await res.text()
-              console.warn("Webhook: send-order-emails failed", res.status, text)
-            } else {
-              console.log("Webhook: ticket email sent to", recipientEmail)
-            }
-          })
-          .catch((e) => console.warn("Webhook: send-order-emails error", e.message))
-      } else {
-        console.warn("Webhook: no recipient email for order", orderId, "- ticket email not sent")
-      }
-    }
-
-    const amountFmt = (collection?.amount as any)?.formatted || `${payment.amount} UGX`
-    await sendTelegramMessage(
-      `🎉 Payment completed\nOrder #${orderId}\nAmount: ${amountFmt}\nPhone: ${payment.phone_number}\nRef: ${reference}`
-    )
-  } else if (paymentStatus === "failed" && payment.order_id) {
-    await sendTelegramMessage(
-      `❌ Payment failed\nOrder #${payment.order_id}\nRef: ${reference}\nStatus: ${paymentStatus}`
-    )
   }
 
   return new Response(JSON.stringify({ success: true, reference, status: paymentStatus }), {

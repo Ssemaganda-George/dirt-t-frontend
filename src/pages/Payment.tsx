@@ -150,24 +150,32 @@ export default function PaymentPage() {
       cleanup()
       setProcessing(false)
 
-      // Payment row is updated early in the webhook, but the webhook still needs
-      // ~1-2 s to create the actual ticket rows. Poll until they exist so the
-      // receipt page never opens to an empty ticket list.
-      if (orderId) {
-        setPollingMessage('Payment confirmed! Preparing your tickets…')
-        for (let attempt = 0; attempt < 15; attempt++) {
-          const { data: ticketCheck } = await supabase
-            .from('tickets')
-            .select('id')
-            .eq('order_id', orderId)
-            .limit(1)
-          if (ticketCheck && ticketCheck.length > 0) break
-          if (attempt < 14) await new Promise<void>(r => setTimeout(r, 1000))
-        }
-      }
-
-      setPollingMessage('Payment confirmed!')
+      // Do not block success UX on downstream fulfillment.
+      // Show success instantly, then perform a short best-effort ticket readiness check.
+      setPollingMessage('Payment confirmed! Finalizing your tickets in background…')
       setPaymentSuccess(true)
+
+      if (orderId) {
+        ;(async () => {
+          for (let attempt = 0; attempt < 6; attempt++) {
+            const { data: ticketCheck } = await supabase
+              .from('tickets')
+              .select('id')
+              .eq('order_id', orderId)
+              .limit(1)
+            if (ticketCheck && ticketCheck.length > 0) {
+              setPollingMessage('Payment confirmed! Tickets are ready.')
+              return
+            }
+            if (attempt < 5) await new Promise<void>(r => setTimeout(r, 1000))
+          }
+          setPollingMessage('Payment confirmed! Tickets may take a moment to appear.')
+        })().catch((e) => {
+          console.warn('[Payment] post-success ticket check failed', e)
+        })
+      } else {
+        setPollingMessage('Payment confirmed!')
+      }
     }
 
     const handleFailed = () => {
