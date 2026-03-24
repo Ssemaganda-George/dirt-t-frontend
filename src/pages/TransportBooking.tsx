@@ -2372,6 +2372,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
+    // NOTE: Keep this confirmation receipt manually in sync with
+    // supabase/functions/send-booking-emails/index.ts (tourist receipt design).
     // ── Design tokens — identical to send-booking-emails PDF ──
     const T = {
       green:   '#1B3A2D',
@@ -2385,14 +2387,14 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
     const SH = ({ children }: { children: React.ReactNode }) => (
       <div style={{ marginBottom: '12px', marginTop: '4px' }}>
-        <div style={{ height: '1px', background: T.cream, marginBottom: '6px' }} />
-        <p style={{ margin: 0, fontSize: '7px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>{children}</p>
+        <div style={{ height: '1px', background: '#EEE9DF', marginBottom: '8px' }} />
+        <p style={{ margin: 0, fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>{children}</p>
       </div>
     )
     const RR = ({ label, value }: { label: string; value: React.ReactNode }) => (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <span style={{ color: T.sage, fontSize: '8.5px', flexShrink: 0, width: '42%', fontFamily: 'Arial, sans-serif' }}>{label}</span>
-        <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700, textAlign: 'right' as const, wordBreak: 'break-word' as const, maxWidth: '56%', fontFamily: 'Arial, sans-serif' }}>{value}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '7px' }}>
+        <span style={{ color: T.sage, fontSize: '12px', flexShrink: 0, width: '38%', fontFamily: 'Arial, sans-serif' }}>{label}</span>
+        <span style={{ color: T.dark, fontSize: '13px', fontWeight: 600, textAlign: 'right' as const, wordBreak: 'break-word' as const, maxWidth: '58%', fontFamily: 'Arial, sans-serif' }}>{value}</span>
       </div>
     )
 
@@ -2408,7 +2410,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
     return (
       <>
-      <div style={{ maxWidth: '420px', margin: '0 auto', fontFamily: 'Arial, Helvetica, sans-serif', padding: '32px 16px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto', fontFamily: 'Arial, Helvetica, sans-serif', padding: '24px 16px' }}>
 
         {/* ── TOP SCALLOPED EDGE ── */}
         <div style={{
@@ -2429,7 +2431,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           borderBottom: 'none',
           position: 'relative',
           overflow: 'hidden',
-          boxShadow: '0 4px 28px rgba(27,58,45,0.10)',
+          boxShadow: '0 8px 48px rgba(27,58,45,.14)',
         }}>
 
           {/* Faint CONFIRMED watermark */}
@@ -2441,54 +2443,42 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
           <div style={{ position: 'relative', zIndex: 1 }}>
 
-            {/* Service image banner */}
-            {(selectedImage || service.images?.[0]) && (
-              <div style={{ height: '110px', overflow: 'hidden', position: 'relative' }}>
-                <img
-                  src={selectedImage || service.images[0]}
-                  alt={service.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(27,58,45,0.65) 100%)' }} />
-              </div>
-            )}
-
             {/* ── HEADER — matches PDF: amber rules, DIRT TRAILS centred ── */}
-            <div style={{ background: T.green, padding: '28px 24px', textAlign: 'center' }}>
+            <div style={{ background: T.green, padding: '32px 44px', textAlign: 'center' }}>
               <div style={{ display: 'inline-block', borderTop: `1px solid rgba(201,135,58,0.55)`, borderBottom: `1px solid rgba(201,135,58,0.55)`, padding: '7px 28px' }}>
-                <h1 style={{ margin: '0 0 4px', color: T.ivory, fontSize: '22px', letterSpacing: '10px', fontFamily: 'Georgia, serif', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1.1 }}>
+                <h1 style={{ margin: '0 0 4px', color: T.ivory, fontSize: '26px', letterSpacing: '8px', fontFamily: 'Georgia, serif', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1.1 }}>
                   DIRT TRAILS
                 </h1>
-                <p style={{ margin: 0, color: T.amber, fontSize: '7.5px', letterSpacing: '5px', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                <p style={{ margin: 0, color: T.amber, fontSize: '9px', letterSpacing: '5px', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
                   ADVENTURE BOOKING RECEIPT
                 </p>
               </div>
             </div>
 
             {/* ── STATUS STRIPE ── */}
-            <div style={{ background: T.amber, padding: '10px 24px' }}>
+            <div style={{ background: T.amber, padding: '13px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
                 <CheckCircle size={11} color={T.green} />
-                <span style={{ color: T.green, fontSize: '9.5px', letterSpacing: '4px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                <span style={{ color: T.green, fontSize: '11px', letterSpacing: '4px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
                   BOOKING CONFIRMED
                 </span>
               </div>
             </div>
 
             {/* ── CONTENT ── */}
-            <div style={{ padding: '16px 20px' }}>
+            <div style={{ padding: '32px 44px' }}>
 
               {/* Reference box: cream bg + amber left border — matches PDF */}
-              <div style={{ background: T.cream, borderLeft: `3px solid ${T.amber}`, padding: '13px 15px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ background: T.cream, borderLeft: `3px solid ${T.amber}`, padding: '16px 20px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <p style={{ margin: '0 0 3px', fontSize: '7px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>BOOKING REFERENCE</p>
-                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', color: T.green, wordBreak: 'break-all' as const }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>BOOKING REFERENCE</p>
+                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '13px', fontWeight: 700, letterSpacing: '2px', color: T.green, wordBreak: 'break-all' as const }}>
                     {(bookingResult?.id || '').toUpperCase() || 'N/A'}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }}>
-                  <p style={{ margin: '0 0 3px', fontSize: '7px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>DATE BOOKED</p>
-                  <p style={{ margin: 0, fontSize: '9px', fontWeight: 700, color: T.dark, fontFamily: 'Arial, sans-serif' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>DATE BOOKED</p>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: T.dark, fontFamily: 'Arial, sans-serif' }}>
                     {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
@@ -2505,7 +2495,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <RR label="Service"  value={service.title} />
               <RR label="Provider" value={service.vendors?.business_name || 'N/A'} />
               <RR label="Location" value={service.location || 'N/A'} />
-              <RR label="Date"     value={bookingData.startDate || 'N/A'} />
+              <RR label="Experience Date" value={bookingData.startDate || 'N/A'} />
               <RR label="Guests"   value={`${bookingData.passengers || 1} guest${(bookingData.passengers || 1) !== 1 ? 's' : ''}`} />
 
               {/* ── SERVICE PROVIDER ── */}
@@ -2532,16 +2522,16 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <RR label="Hirer Fee (2%)" value={formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee,   service.currency)} />
               <RR label="Quantity"       value={String(bookingData.passengers || 1)} />
 
-              <div style={{ background: T.cream, padding: '16px 16px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div style={{ background: '#F0F7F4', borderLeft: '3px solid #2D6A4F', padding: '16px 20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '7.5px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>TOTAL AMOUNT</p>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>TOTAL AMOUNT</p>
                   <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '20px', fontWeight: 700, color: T.green }}>
                     {formatCurrencyWithConversion(totalPrice, service.currency)}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '7.5px', letterSpacing: '2px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>STATUS</p>
-                  <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: payColor, fontFamily: 'Arial, sans-serif' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>STATUS</p>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: payColor, fontFamily: 'Arial, sans-serif' }}>
                     {(bookingResult?.payment_status || 'pending').toUpperCase()}
                   </p>
                 </div>
@@ -2551,7 +2541,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               {bookingData.specialRequests && (
                 <div style={{ marginTop: '12px' }}>
                   <SH>Special Requests</SH>
-                  <p style={{ margin: 0, color: T.dark, fontSize: '8.5px', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
+                  <p style={{ margin: 0, color: T.dark, fontSize: '13px', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
                     "{bookingData.specialRequests}"
                   </p>
                 </div>
@@ -2560,11 +2550,14 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
 
             {/* ── GREEN FOOTER BAND — matches PDF footer exactly ── */}
-            <div style={{ background: T.green, padding: '18px 24px' }}>
+            <div style={{ background: T.green, padding: '28px 44px', textAlign: 'center' }}>
               <div style={{ borderTop: `1px solid rgba(201,135,58,0.4)`, paddingTop: '10px', paddingBottom: '10px' }}>
-                <div style={{ borderBottom: `1px solid rgba(201,135,58,0.4)`, paddingBottom: '10px', textAlign: 'center' }}>
-                  <p style={{ margin: 0, color: T.ivory, fontSize: '8px', letterSpacing: '2px', fontFamily: 'Arial, sans-serif' }}>
-                    DIRTTRAILS ADVENTURES &nbsp;·&nbsp; Keep this receipt for your records
+                <div style={{ borderBottom: `1px solid rgba(201,135,58,0.4)`, paddingBottom: '10px' }}>
+                  <p style={{ margin: '0 0 8px', color: T.amber, fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif' }}>
+                    DIRTTRAILS ADVENTURES
+                  </p>
+                  <p style={{ margin: 0, color: '#5D8070', fontSize: '12px', fontFamily: 'Arial, sans-serif', lineHeight: 1.7 }}>
+                    Questions? Contact your service provider or visit our platform.
                   </p>
                 </div>
               </div>
