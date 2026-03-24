@@ -76,11 +76,11 @@ async function buildTicketsPdf(tickets: any[], frontendUrl: string): Promise<Uin
 
     const service    = t.services    || {}
     const ticketType = t.ticket_types || {}
-    const code       = t.code || t.id
+    const code       = t.code || t.qr_data || t.id           // same priority as the web system
     const slug       = service.slug
     const qrUrl      = slug
-      ? `${frontendUrl}/service/${slug}?ticket=${code}`
-      : `${frontendUrl}/tickets/${code}`
+      ? `https://bookings.dirt-trails.com/service/${slug}?ticket=${code}` // exact URL the system encodes
+      : code                                                               // bare code when no slug — matches system
 
     // Left accent stripe
     page.drawRectangle({ x: 0, y: 0, width: 7, height: H, color: green })

@@ -191,7 +191,7 @@ export default function TicketReceiptPage() {
             const service  = t.services    || {}
             const ttype    = t.ticket_types || {}
             const order    = t.orders       || {}
-            const code     = (t.code || t.id || '').toUpperCase()
+            const code     = (t.code || t.qr_data || t.id || '').toUpperCase()
             const currency = order.currency || 'UGX'
 
             const eventDate = service.event_datetime
