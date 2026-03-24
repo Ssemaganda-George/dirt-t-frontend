@@ -64,7 +64,7 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
       providerCreditAmount = subtotal * (1 - PROVIDER_TRANSPORT_FEE_RATE)
     }
 
-    const { error: txErr } = await supabase.rpc("create_transaction_atomic", {
+    const { error: txErr } = await supabase.rpc("create_transaction_atomic_v2", {
       p_vendor_id: booking.vendor_id,
       p_amount: providerCreditAmount,
       p_transaction_type: "payment",
@@ -113,7 +113,7 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   if (orderTxCheckErr) throw new Error(`order-tx-check-failed:${orderTxCheckErr.message}`)
 
   if (!existingOrderTx) {
-    const { error: txErr } = await supabase.rpc("create_transaction_atomic", {
+    const { error: txErr } = await supabase.rpc("create_transaction_atomic_v2", {
       p_vendor_id: order.vendor_id,
       p_amount: Number((job as any)?.payload?.amount || 0),
       p_transaction_type: "payment",
