@@ -82,6 +82,7 @@ export default function PaymentPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const paymentChannelRef = useRef<RealtimeChannel | null>(null)
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const completionHandledRef = useRef(false)
   const [searchParams] = useSearchParams()
 
   const refFromQuery = searchParams.get('reference')
@@ -130,6 +131,7 @@ export default function PaymentPage() {
   }
 
   const startWatchingReference = async (ref: string) => {
+    completionHandledRef.current = false
     setPaymentReference(ref)
     setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
@@ -146,6 +148,8 @@ export default function PaymentPage() {
     }
 
     const handleCompleted = async () => {
+      if (completionHandledRef.current) return
+      completionHandledRef.current = true
       console.log('[Payment] handleCompleted called', { orderId, ref })
       cleanup()
       setProcessing(false)
@@ -179,6 +183,8 @@ export default function PaymentPage() {
     }
 
     const handleFailed = () => {
+      if (completionHandledRef.current) return
+      completionHandledRef.current = true
       console.log('[Payment] handleFailed called', { ref })
       cleanup()
       setPollingMessage('')
@@ -219,6 +225,20 @@ export default function PaymentPage() {
       return
     }
 
+    // Fast-start polling window: reduce perceived delay right after user confirms on phone.
+    for (let i = 0; i < 6; i++) {
+      const status = await checkStatus(ref)
+      if (status === 'completed') {
+        handleCompleted()
+        return
+      }
+      if (status === 'failed') {
+        handleFailed()
+        return
+      }
+      await new Promise<void>(r => setTimeout(r, 800))
+    }
+
     backupPollRef.current = setInterval(async () => {
       const status = await checkStatus(ref)
       console.log('[Payment] poll tick', { status, ref, now: new Date().toISOString() })
@@ -226,8 +246,8 @@ export default function PaymentPage() {
         console.log('[Payment] handleCompleted from poll')
         handleCompleted()
       } else if (status === 'failed') handleFailed()
-    }, 4000)
-    console.log('[Payment] backup poll started every 4s, will stop after 120s')
+    }, 1500)
+    console.log('[Payment] backup poll started every 1.5s, will stop after 120s')
     setTimeout(() => {
       if (backupPollRef.current) {
         clearInterval(backupPollRef.current)

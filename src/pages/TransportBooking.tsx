@@ -934,6 +934,23 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               return
             }
 
+            // Fast-start polling burst to reduce latency after user confirms on phone.
+            for (let i = 0; i < 6; i++) {
+              const status = await checkStatus()
+              if (status === 'completed') {
+                channel.unsubscribe()
+                await finalise()
+                return
+              } else if (status === 'failed') {
+                channel.unsubscribe()
+                setPollingMessage('')
+                setIsPaymentProcessing(false)
+                setBookingError('Payment was not completed or was declined. Please try again.')
+                return
+              }
+              await new Promise<void>(r => setTimeout(r, 800))
+            }
+
             backupPollRef.current = setInterval(async () => {
               const status = await checkStatus()
               if (status === 'completed') {
@@ -947,7 +964,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 setIsPaymentProcessing(false)
                 setBookingError('Payment was not completed or was declined. Please try again.')
               }
-            }, 4000)
+            }, 1500)
             setTimeout(() => {
               if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
             }, 120000)
