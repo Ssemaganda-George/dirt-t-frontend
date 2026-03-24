@@ -53,6 +53,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finaliseInFlightRef = useRef(false)
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -655,6 +656,8 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   }
 
   const finaliseHotelBooking = async (paymentStatus: 'paid' | 'pending') => {
+    if (finaliseInFlightRef.current) return
+    finaliseInFlightRef.current = true
     try {
       await createBooking({
         service_id: service.id,
@@ -678,6 +681,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       setPollingMessage('')
       setCurrentStep(3)
     } catch (error) {
+      finaliseInFlightRef.current = false
       console.error('Error creating booking:', error)
       alert('Failed to complete booking. Please try again.')
     } finally {

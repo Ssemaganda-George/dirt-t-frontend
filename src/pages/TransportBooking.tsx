@@ -340,6 +340,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [pollingMessage, setPollingMessage] = useState('')
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finaliseInFlightRef = useRef(false)
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -969,6 +970,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   const createTransportBooking = async (paymentStatus: 'paid' | 'pending') => {
+    if (finaliseInFlightRef.current) return
+    finaliseInFlightRef.current = true
     try {
       // Compute journey estimates (prefer coords) and prepare persisted journey fields
       const _coordDistance = computeTotalDistanceKm()
@@ -1119,6 +1122,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         setIsPaymentProcessing(false)
       }
     } catch (error: any) {
+      finaliseInFlightRef.current = false
       setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
       setIsPaymentProcessing(false)
     }
