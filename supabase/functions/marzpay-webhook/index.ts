@@ -9,6 +9,9 @@ const TELEGRAM_CHAT_IDS = (Deno.env.get("TELEGRAM_CHAT_ID") || "")
   .map((id) => id.trim())
   .filter(Boolean)
 
+const HIRER_TRANSPORT_FEE_RATE = 0.04
+const PROVIDER_TRANSPORT_FEE_RATE = 0.04
+
 async function sendTelegramMessage(text: string): Promise<void> {
   if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_IDS.length === 0) return
   await Promise.all(
@@ -99,7 +102,7 @@ serve(async (req) => {
     try {
       const { data: booking, error: bookingFetchErr } = await supabase
         .from("bookings")
-        .select("id, vendor_id, tourist_id, currency, total_amount")
+        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
         .eq("id", bookingId)
         .single()
 
@@ -116,10 +119,37 @@ serve(async (req) => {
           })
           .eq("id", bookingId)
 
+        // Default behavior: provider receives the full paid amount.
+        // Transport override: customer pays +4% and provider pays 4% from subtotal.
+        // If total_amount includes customer fee (subtotal * 1.04),
+        // provider payout = subtotal * 0.96.
+        let providerCreditAmount = Number(payment.amount || 0)
+        try {
+          const { data: serviceData, error: serviceErr } = await supabase
+            .from("services")
+            .select("category_id")
+            .eq("id", booking.service_id)
+            .maybeSingle()
+
+          if (serviceErr) {
+            console.warn("Webhook: failed to fetch service category for booking", bookingId, serviceErr)
+          } else {
+            const isTransport = (serviceData as any)?.category_id === "cat_transport"
+            if (isTransport) {
+              const paidTotal = Number(booking.total_amount || payment.amount || 0)
+              const subtotal = paidTotal / (1 + HIRER_TRANSPORT_FEE_RATE)
+              providerCreditAmount = subtotal * (1 - PROVIDER_TRANSPORT_FEE_RATE)
+            }
+          }
+        } catch (feeErr) {
+          console.warn("Webhook: transport fee split calc failed, using default full credit amount", feeErr)
+          providerCreditAmount = Number(payment.amount || 0)
+        }
+
         try {
           await supabase.rpc("create_transaction_atomic", {
             p_vendor_id: booking.vendor_id,
-            p_amount: payment.amount,
+            p_amount: providerCreditAmount,
             p_transaction_type: "payment",
             p_booking_id: bookingId,
             p_tourist_id: booking.tourist_id || null,

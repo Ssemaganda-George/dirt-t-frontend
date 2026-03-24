@@ -1505,14 +1505,20 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const totalPrice = (() => {
-    // compute using transport-specific unit price when available
+  const HIRER_SERVICE_FEE_RATE = 0.04
+  const pricingBreakdown = (() => {
+    // Compute using transport-specific unit price when available.
     const unit = getTransportUnitPrice()
     const days = calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
     const base = (unit || 0) * days
     const driverCostLocal = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? base * 0.3 : 0
-    return base + driverCostLocal
+    const transportSubtotal = base + driverCostLocal
+    const hirerServiceFee = transportSubtotal * HIRER_SERVICE_FEE_RATE
+    const customerTotal = transportSubtotal + hirerServiceFee
+    return { transportSubtotal, hirerServiceFee, customerTotal }
   })()
+
+  const totalPrice = pricingBreakdown.customerTotal
   // Expose basePrice and driverCost for UI breakdown
   const [unitPrice, setUnitPrice] = useState<number | null>(() => getTransportUnitPrice())
   useEffect(() => {
@@ -2072,6 +2078,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-gray-600">
+                    <span>DirtTrails service fee (4%)</span>
+                    <span className="font-medium">{formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</span>
+                  </div>
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                     <span>Total</span>
                     <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
@@ -2320,7 +2330,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             {/* Price Summary */}
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
-                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
+                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount (incl. 4% fee):</span>
                 <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
@@ -2429,7 +2439,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
               <div>
                 <div className="text-xs text-gray-500 font-semibold">Payment</div>
-                <div className="text-sm">Unit Price: {basePrice ? formatCurrencyWithConversion(basePrice, service.currency) : 'UGXNaN'}</div>
+                <div className="text-sm">Subtotal: {basePrice ? formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency) : 'UGXNaN'}</div>
+                <div className="text-sm">Hirer Fee (4%): {formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</div>
                 <div className="text-sm">Quantity: {bookingData.passengers || 1}</div>
                 <div className="text-sm font-bold">TOTAL: {formatCurrencyWithConversion(totalPrice, service.currency)}</div>
               </div>
