@@ -111,11 +111,6 @@ export default function PaymentPage() {
       console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
       const res = await fetch(url, {
         cache: 'no-store',
-        headers: {
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          Pragma: 'no-cache',
-        },
       })
       const raw = await res.text()
       console.log('[Payment] checkStatus: response', {
