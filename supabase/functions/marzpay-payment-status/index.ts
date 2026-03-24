@@ -6,6 +6,12 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
 serve(async (req) => {
   const requestOrigin = req.headers.get('origin') || '*'
+  const NO_CACHE_HEADERS = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'Surrogate-Control': 'no-store',
+  }
   const CORS_HEADERS = {
     'Access-Control-Allow-Origin': requestOrigin,
     'Access-Control-Allow-Methods': 'GET,OPTIONS',
@@ -15,13 +21,13 @@ serve(async (req) => {
   }
 
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS })
+    return new Response("ok", { headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS } })
   }
 
   if (req.method !== "GET") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" },
     })
   }
 
@@ -30,7 +36,7 @@ serve(async (req) => {
     if (!reference) {
     return new Response(JSON.stringify({ error: "Missing reference parameter" }), {
       status: 400,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" },
     })
   }
 
@@ -45,7 +51,7 @@ serve(async (req) => {
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" },
       })
     }
 
@@ -54,7 +60,7 @@ serve(async (req) => {
       console.log("[marzpay-payment-status] not found", { reference })
       return new Response(JSON.stringify({ error: "Payment not found" }), {
       status: 404,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" },
     })
     }
 
@@ -71,12 +77,12 @@ serve(async (req) => {
         order_id: p.order_id,
         amount: p.amount,
       }),
-      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" } }
     )
   } catch (err) {
     return new Response(
       JSON.stringify({ error: (err as Error).message || "Internal server error" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...CORS_HEADERS, ...NO_CACHE_HEADERS, "Content-Type": "application/json" } }
     )
   }
 })

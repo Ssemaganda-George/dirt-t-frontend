@@ -339,6 +339,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
+  const [isReceiptFinalizing, setIsReceiptFinalizing] = useState(false)
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const finaliseInFlightRef = useRef(false)
 
@@ -835,6 +836,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           }
 
           setIsPaymentProcessing(true)
+          setIsReceiptFinalizing(false)
           setPollingMessage('Initiating payment…')
 
           try {
@@ -897,9 +899,14 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               } catch { return null }
             }
 
-            const finalise = async () => {
-              setPollingMessage('Payment confirmed! Creating booking…')
-              await createTransportBooking('paid')
+            const finalise = () => {
+              // Match tickets/payment UX parity: move forward immediately on payment completion,
+              // and finalize booking/receipt in background.
+              setIsReceiptFinalizing(true)
+              setPollingMessage('Payment confirmed! Finalizing your receipt in background…')
+              void createTransportBooking('paid').catch((e) => {
+                console.warn('Background booking finalization failed:', e)
+              })
             }
 
             const channel = supabase
@@ -916,6 +923,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
                     setPollingMessage('')
                     setIsPaymentProcessing(false)
+                    setIsReceiptFinalizing(false)
                     setBookingError('Payment was not completed or was declined. Please try again.')
                   }
                 })
@@ -924,12 +932,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             const immediate = await checkStatus()
             if (immediate === 'completed') {
               channel.unsubscribe()
-              await finalise()
+              finalise()
               return
             } else if (immediate === 'failed') {
               channel.unsubscribe()
               setPollingMessage('')
               setIsPaymentProcessing(false)
+              setIsReceiptFinalizing(false)
               setBookingError('Payment was not completed or was declined. Please try again.')
               return
             }
@@ -939,7 +948,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               const status = await checkStatus()
               if (status === 'completed') {
                 channel.unsubscribe()
-                await finalise()
+                finalise()
                 return
               } else if (status === 'failed') {
                 channel.unsubscribe()
@@ -956,12 +965,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               if (status === 'completed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                await finalise()
+                finalise()
               } else if (status === 'failed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
                 setPollingMessage('')
                 setIsPaymentProcessing(false)
+                setIsReceiptFinalizing(false)
                 setBookingError('Payment was not completed or was declined. Please try again.')
               }
             }, 1500)
@@ -973,6 +983,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             console.error('Payment error:', err)
             setPollingMessage('')
             setIsPaymentProcessing(false)
+            setIsReceiptFinalizing(false)
             setBookingError(err?.message || 'Payment failed. Please try again.')
           }
           return
@@ -1133,15 +1144,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         setBookingConfirmed(true)
         setPollingMessage('')
         setIsPaymentProcessing(false)
+        setIsReceiptFinalizing(false)
         setCurrentStep(2)
       } else {
         setBookingError('Booking could not be confirmed. Please try again.')
         setIsPaymentProcessing(false)
+        setIsReceiptFinalizing(false)
       }
     } catch (error: any) {
       finaliseInFlightRef.current = false
       setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
       setIsPaymentProcessing(false)
+      setIsReceiptFinalizing(false)
     }
   }
 
@@ -2176,6 +2190,20 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   {pollingMessage && (
                     <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
                   )}
+                  {isPaymentProcessing && isReceiptFinalizing && !bookingConfirmed && (
+                    <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
+                      <div className="flex items-start gap-2">
+                        <svg className="mt-0.5 h-4 w-4 animate-spin text-emerald-700" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-emerald-800">Payment received</p>
+                          <p className="text-xs text-emerald-700">Preparing your booking receipt now. This usually takes a few seconds.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2859,7 +2887,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 }
                 className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium"
               >
-                {isPaymentProcessing ? (pollingMessage ? 'Waiting for payment…' : 'Processing...') : 'Pay with Mobile Money'}
+                {isPaymentProcessing
+                  ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
+                  : 'Pay with Mobile Money'}
               </button>
             </div>
 
@@ -2886,7 +2916,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 }
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                {isPaymentProcessing ? (pollingMessage ? 'Waiting for payment…' : 'Processing...') : 'Pay with Mobile Money'}
+                {isPaymentProcessing
+                  ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
+                  : 'Pay with Mobile Money'}
               </button>
             </div>
           </div>
