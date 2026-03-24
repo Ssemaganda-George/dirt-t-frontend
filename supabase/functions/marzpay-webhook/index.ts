@@ -250,50 +250,57 @@ serve(async (req) => {
         groups[sid].total += Number(it.unit_price || 0) * it.quantity
       }
 
-      for (const sid of Object.keys(groups)) {
-        const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
-        const vendorId = (svc as any)?.vendor_id || order.vendor_id
-        const today = new Date().toISOString().slice(0, 10)
-        try {
-          const createRes = await supabase.rpc("create_booking_atomic", {
-            p_service_id: sid,
-            p_vendor_id: vendorId,
-            p_booking_date: today,
-            p_guests: groups[sid].qty,
-            p_total_amount: groups[sid].total,
-            p_tourist_id: order.user_id || null,
-            p_service_date: today,
-            p_currency: order.currency || "UGX",
-            p_guest_name: order.guest_name || null,
-            p_guest_email: order.guest_email || null,
-            p_guest_phone: order.guest_phone || null,
-          })
-          if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
-            await supabase.rpc("update_booking_status_atomic", {
-              p_booking_id: (createRes.data as any).booking_id,
-              p_status: "confirmed",
-              p_payment_status: "paid",
-            })
-          }
-        } catch (bkErr) {
-          console.warn("Webhook: create booking failed for service", sid, bkErr)
-        }
-      }
+      // Run booking creation and ticket issuance in parallel — each service/ticket
+      // type is independent, so there is no need to process them sequentially.
+      const today = new Date().toISOString().slice(0, 10)
 
-      for (const it of items) {
-        try {
-          const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
-            p_ticket_type_id: it.ticket_type_id,
-            p_quantity: it.quantity,
-            p_order_id: orderId,
-          })
-          if (bookErr || !(bookData as any)?.success) {
-            console.warn("Webhook: book_tickets_atomic failed", it.ticket_type_id, bookErr || (bookData as any)?.error)
+      await Promise.all([
+        // Create one booking per service (in parallel)
+        ...Object.keys(groups).map(async (sid) => {
+          try {
+            const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
+            const vendorId = (svc as any)?.vendor_id || order.vendor_id
+            const createRes = await supabase.rpc("create_booking_atomic", {
+              p_service_id: sid,
+              p_vendor_id: vendorId,
+              p_booking_date: today,
+              p_guests: groups[sid].qty,
+              p_total_amount: groups[sid].total,
+              p_tourist_id: order.user_id || null,
+              p_service_date: today,
+              p_currency: order.currency || "UGX",
+              p_guest_name: order.guest_name || null,
+              p_guest_email: order.guest_email || null,
+              p_guest_phone: order.guest_phone || null,
+            })
+            if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
+              await supabase.rpc("update_booking_status_atomic", {
+                p_booking_id: (createRes.data as any).booking_id,
+                p_status: "confirmed",
+                p_payment_status: "paid",
+              })
+            }
+          } catch (bkErr) {
+            console.warn("Webhook: create booking failed for service", sid, bkErr)
           }
-        } catch (ticketErr) {
-          console.warn("Webhook: ticket booking failed", ticketErr)
-        }
-      }
+        }),
+
+        // Issue tickets for each ticket type (in parallel)
+        ...items.map(async (it: any) => {
+          try {
+            const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
+              p_ticket_type_id: it.ticket_type_id,
+              p_quantity: it.quantity,
+              p_order_id: orderId,
+            })
+            if (bookErr || !(bookData as any)?.success) {
+              console.warn("Webhook: book_tickets_atomic failed", it.ticket_type_id, bookErr || (bookData as any)?.error)
+            }
+          } catch (ticketErr) {
+            console.warn("Webhook: ticket booking failed", ticketErr)
+          }
+        }),
+      ])
 
       // Send ticket email to customer (order has guest_email; otherwise use profile email)
       let recipientEmail = (order as any).guest_email?.trim() || null
