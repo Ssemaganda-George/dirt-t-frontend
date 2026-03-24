@@ -9,8 +9,8 @@ const TELEGRAM_CHAT_IDS = (Deno.env.get("TELEGRAM_CHAT_ID") || "")
   .map((id) => id.trim())
   .filter(Boolean)
 
-const HIRER_TRANSPORT_FEE_RATE = 0.04
-const PROVIDER_TRANSPORT_FEE_RATE = 0.04
+const HIRER_TRANSPORT_FEE_RATE = 0.02
+const PROVIDER_TRANSPORT_FEE_RATE = 0.02
 
 async function sendTelegramMessage(text: string): Promise<void> {
   if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_IDS.length === 0) return
@@ -120,8 +120,8 @@ serve(async (req) => {
           .eq("id", bookingId)
 
         // Default behavior: provider receives the full paid amount.
-        // Transport override: customer pays +4% and provider pays 4% from subtotal.
-        // If total_amount includes customer fee (subtotal * 1.04),
+        // Transport override: customer pays +2% and provider pays 2% from subtotal.
+        // If total_amount includes customer fee (subtotal * 1.02),
         // provider payout = subtotal * 0.96.
         let providerCreditAmount = Number(payment.amount || 0)
         try {

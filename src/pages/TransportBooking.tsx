@@ -1505,7 +1505,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const HIRER_SERVICE_FEE_RATE = 0.04
+  const HIRER_SERVICE_FEE_RATE = 0.02
   const pricingBreakdown = (() => {
     // Compute using transport-specific unit price when available.
     const unit = getTransportUnitPrice()
@@ -2079,7 +2079,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </div>
                   )}
                   <div className="flex justify-between text-gray-600">
-                    <span>DirtTrails service fee (4%)</span>
+                    <span>DirtTrails service fee (2%)</span>
                     <span className="font-medium">{formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
@@ -2330,7 +2330,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             {/* Price Summary */}
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
-                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount (incl. 4% fee):</span>
+                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount (incl. 2% fee):</span>
                 <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
@@ -2440,7 +2440,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <div className="text-xs text-gray-500 font-semibold">Payment</div>
                 <div className="text-sm">Subtotal: {basePrice ? formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency) : 'UGXNaN'}</div>
-                <div className="text-sm">Hirer Fee (4%): {formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</div>
+                <div className="text-sm">Hirer Fee (2%): {formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee, service.currency)}</div>
                 <div className="text-sm">Quantity: {bookingData.passengers || 1}</div>
                 <div className="text-sm font-bold">TOTAL: {formatCurrencyWithConversion(totalPrice, service.currency)}</div>
               </div>
