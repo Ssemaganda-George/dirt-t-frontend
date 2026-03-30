@@ -46,14 +46,10 @@ export default function PublicLayout() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  // Removed unused scrolled state
   const location = useLocation()
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', handler, { passive: true })
-    return () => window.removeEventListener('scroll', handler)
-  }, [])
+  // Removed unused scroll effect
   const navigate = useNavigate()
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const guestDropdownRef = useRef<HTMLDivElement>(null)
@@ -112,13 +108,11 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
-      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 ${
-        location.pathname === '/' ? 'bg-transparent' : scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white shadow-sm'
-      }`}>
+      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 backdrop-blur-[2px] bg-white/10 shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
+          <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
-            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white/10 rounded-xl px-3 py-1 shadow backdrop-blur-[2px]">
+            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-3 py-1 shadow">
               <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
@@ -155,7 +149,7 @@ export default function PublicLayout() {
                 {/* Search Button - Hidden on mobile, only in bottom nav */}
                 <button
                   onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   title={t('search')}
                 >
                   <Search className="h-5 w-5 text-emerald-600" />
@@ -165,7 +159,7 @@ export default function PublicLayout() {
                 {user && (
                   <Link
                     to="/messages"
-                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
+                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
                     title={t('messages')}
                   >
                     <MessageSquare className="h-5 w-5 text-emerald-600" />
@@ -179,7 +173,7 @@ export default function PublicLayout() {
 
                 <button
                   onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 border border-white/80 bg-transparent rounded-full shadow hover:bg-gray-50 transition-colors"
                   title={t('preferences')}
                 >
                   <Globe className="h-3 w-3 md:h-4 md:w-4 text-emerald-600" />
@@ -188,7 +182,7 @@ export default function PublicLayout() {
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors">
                   <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
