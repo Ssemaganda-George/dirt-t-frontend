@@ -11,14 +11,15 @@ interface MobileBottomNavProps {
 
 export default function MobileBottomNav({ onSupportClick, onSearchClick }: MobileBottomNavProps) {
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { unreadCount } = useUnreadMessages()
   const { t } = usePreferences()
 
   const baseNavigation: Array<any> = [
     { labelKey: 'home', href: '/', icon: Home },
     { labelKey: 'find', href: '/search', icon: Search, isSearch: true },
-    { labelKey: 'Conservation', href: '/conservation/geotagging', icon: Leaf },
+    // Only show Conservation if not logged-in tourist
+    ...((!user || profile?.role !== 'tourist') ? [{ labelKey: 'Conservation', href: '/conservation/geotagging', icon: Leaf }] : []),
   ]
 
   // Only show messages to authenticated users
