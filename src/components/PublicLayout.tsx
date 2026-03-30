@@ -118,7 +118,7 @@ export default function PublicLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
           <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 backdrop-blur-[2px] bg-white/10 shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
-            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900">
+            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white/10 rounded-xl px-3 py-1 shadow backdrop-blur-[2px]">
               <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
