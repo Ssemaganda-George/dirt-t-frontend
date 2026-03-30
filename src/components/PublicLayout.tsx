@@ -60,11 +60,16 @@ export default function PublicLayout() {
 
   // Map category IDs to navigation items
   const getNavigationItems = (): Array<{name: string, href: string}> => {
-    // Home and Conservation for desktop nav (no icons)
+    // Show Conservation only on home page
+    if (location.pathname === '/') {
+      return [
+        { name: 'home', href: '/' },
+        { name: 'Conservation', href: '/conservation/geotagging' }
+      ];
+    }
     return [
-      { name: 'home', href: '/' },
-      { name: 'Conservation', href: '/conservation/geotagging' }
-    ]
+      { name: 'home', href: '/' }
+    ];
   }
 
   const navigation = getNavigationItems()
