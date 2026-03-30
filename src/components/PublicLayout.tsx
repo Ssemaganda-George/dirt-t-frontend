@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Leaf } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
