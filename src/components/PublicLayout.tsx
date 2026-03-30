@@ -55,7 +55,6 @@ export default function PublicLayout() {
     return () => window.removeEventListener('scroll', handler)
   }, [])
   const navigate = useNavigate()
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const guestDropdownRef = useRef<HTMLDivElement>(null)
   // const { categories } = useServiceCategories() // Temporarily commented out
@@ -379,7 +378,6 @@ export default function PublicLayout() {
                     )}
                   </div>
                 )}
-
               </div>
             )}
           </div>
