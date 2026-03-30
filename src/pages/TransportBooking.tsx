@@ -1635,7 +1635,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Passengers *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-xs sm:text-sm"
                   value={bookingData.passengers}
                   onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
                 >
@@ -1647,7 +1647,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Driver Option *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
                   value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
                   onChange={(e) => handleInputChange('driverOption', e.target.value)}
                 >
@@ -1695,19 +1695,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   <button
                     type="button"
                     onClick={() => setJourneyStep('setoff')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Set-off
                   </button>
                   <button
                     type="button"
                     onClick={() => setJourneyStep('stopovers')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Stop-overs
                   </button>
                   <button
                     type="button"
                     onClick={() => setJourneyStep('destination')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Destination
                   </button>
                 </div>
@@ -1882,7 +1882,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                           (bookingData as any).tripReturnOption ? (
                             isCalculatingReturn ? (
                               <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
-                                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                                 </svg>
@@ -2010,7 +2010,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                             else saveJourney()
                           }}
                           disabled={journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)}
-                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white'}`}
+                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                         >
                           {journeyStep === 'destination' ? 'Save my trip' : 'Next'}
                         </button>
@@ -2023,7 +2023,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="mt-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
                   rows={2}
                   placeholder="Any special requirements..."
                   value={bookingData.specialRequests}
@@ -2192,7 +2192,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'MTN')}
-                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
                       >
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
                         <span className="text-sm font-medium">MTN</span>
@@ -2200,7 +2200,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'Airtel')}
-                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
                       >
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
                         <span className="text-sm font-medium">Airtel</span>
@@ -2208,7 +2208,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </div>
                   </div>
                   {pollingMessage && (
-                    <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
+                    <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">{pollingMessage}</p>
                   )}
                   {isPaymentProcessing && isReceiptFinalizing && !bookingConfirmed && (
                     <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
@@ -2265,7 +2265,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </button>
                     <button
                       onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm"
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm"
                     >
                       Message provider
                     </button>
@@ -2396,7 +2396,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount (incl. 2% fee):</span>
-                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                <span className="text-lg sm:text-2xl font-bold text-emerald-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
 
@@ -2404,7 +2404,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Message Provider
               </button>
@@ -2699,7 +2699,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
           <button
             onClick={() => setCurrentStep(1)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
             Try Again
           </button>
@@ -2815,7 +2815,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                           className={`w-20 h-20 lg:w-[104px] lg:h-[128px] rounded-xl border-2 transition-all ${
                             currentImageIndex === index ? 'border-blue-600' : 'border-gray-200 hover:border-blue-400'
                           } flex-shrink-0 overflow-hidden bg-white shadow-sm`}
-                          style={{ outline: currentImageIndex === index ? '2px solid #2563eb' : 'none' }}
+                          style={{ outline: currentImageIndex === index ? '2px solid #059669' : 'none' }}
                           aria-label={`Show image ${index + 1}`}
                         >
                           <img
@@ -2841,7 +2841,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <p className="text-gray-600 text-xs sm:text-sm mb-2">{service.service_categories.name}</p>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-blue-700">
+                  <div className="text-xl font-bold text-emerald-700">
                     {service.service_categories?.name?.toLowerCase() === 'transport'
                       ? formatCurrencyWithConversion(unitPrice || service.price, service.currency)
                       : formatCurrencyWithConversion(totalPrice, service.currency)}
@@ -2856,8 +2856,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             </div>
             {/* Transport zone selector (move above Trip Dates & Times) */}
             {service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && (
-              <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-100">
-                <label className="block text-sm font-semibold text-blue-900 mb-2">Service Area *</label>
+              <div className="mb-6 p-4 rounded-lg bg-emerald-50 border border-emerald-100">
+                <label className="block text-sm font-semibold text-emerald-900 mb-2">Service Area *</label>
                 <div className="flex items-center gap-4 text-sm mb-2">
                   {(service as any).price_within_town !== undefined && (
                     <label className="inline-flex items-center">
@@ -2872,7 +2872,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-blue-700">Select whether this trip is within town or upcountry to see the correct price.</p>
+                <p className="text-xs text-emerald-700">Select whether this trip is within town or upcountry to see the correct price.</p>
               </div>
             )}
             {/* Step Content */}
@@ -2882,12 +2882,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             {/* Navigation */}
             {currentStep < 2 && (
               <div className="mt-6 flex flex-col md:flex-row gap-3 justify-end">
-                <button
-                  onClick={handleBack}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-                >
-                  Cancel
-                </button>
                 <button
                   onClick={handleNext}
                   disabled={
@@ -2901,12 +2895,26 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     bookingData.paymentMethod === 'card' ||
                     (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
                   }
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
                 >
                   {isPaymentProcessing
                     ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
                     : 'Pay with Mobile Money'}
                 </button>
+                {/* Up Arrow Icon below button on all screens, scrolls to top */}
+                <div className="w-full flex justify-center mt-4">
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    aria-label="Back to top"
+                    title="Back to top"
+                    className="bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-full shadow-xl border-2 border-white p-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all duration-200"
+                    style={{ boxShadow: '0 6px 32px 0 rgba(0,0,0,0.18)' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
           </div>
