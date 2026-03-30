@@ -683,7 +683,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative aspect-[16/9] w-full bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
+      <div className="relative aspect-[16/9] md:aspect-auto md:min-h-[72vh] w-full bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
         {/* Background media carousel */}
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
