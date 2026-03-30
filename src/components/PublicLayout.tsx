@@ -59,11 +59,11 @@ export default function PublicLayout() {
   const { selectedRegion, selectedCurrency, t } = usePreferences()
 
   // Map category IDs to navigation items
-  const getNavigationItems = (): Array<{name: string, href: string, icon?: any}> => {
-    // Home and Conservation for desktop nav
+  const getNavigationItems = (): Array<{name: string, href: string}> => {
+    // Home and Conservation for desktop nav (no icons)
     return [
-      { name: 'home', href: '/', icon: Home },
-      { name: 'Conservation', href: '/conservation/geotagging', icon: Leaf }
+      { name: 'home', href: '/' },
+      { name: 'Conservation', href: '/conservation/geotagging' }
     ]
   }
 
@@ -129,7 +129,7 @@ export default function PublicLayout() {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`flex items-center gap-1 text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
+                    className={`text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
                       item.name.toLowerCase() === 'home'
                         ? 'text-emerald-600 border-emerald-600'
                         : location.pathname === item.href
@@ -137,7 +137,6 @@ export default function PublicLayout() {
                           : 'text-white hover:text-emerald-300'
                     }`}
                   >
-                    {item.icon && <item.icon className="h-4 w-4 mr-1" />}
                     {t(item.name)}
                   </Link>
                 ))}
