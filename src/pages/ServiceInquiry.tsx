@@ -26,6 +26,7 @@ interface ServiceDetail {
   service_categories: {
     name: string
   }
+  category_id?: string
 
   // Service-specific fields
   room_types?: string[]

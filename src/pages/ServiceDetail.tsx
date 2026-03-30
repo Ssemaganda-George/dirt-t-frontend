@@ -29,30 +29,31 @@ import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
   id: string
-    slug?: string
-    title: string
-    description: string
-    price: number
-    currency: string
-    images: string[]
-    location: string
-    duration_hours: number
-    max_capacity: number
-    amenities: string[]
-    vendors?: {
-      business_name: string
-      business_description: string
-      business_phone: string
-      business_email: string
-      business_address: string
-      id?: string
-      user_id?: string
-    } | null
-    vendor_id?: string
-    scan_enabled?: boolean
-    service_categories: {
-      name: string
-    }
+  slug?: string
+  title: string
+  description: string
+  price: number
+  currency: string
+  images: string[]
+  location: string
+  duration_hours: number
+  max_capacity: number
+  amenities: string[]
+  vendors?: {
+    business_name: string
+    business_description: string
+    business_phone: string
+    business_email: string
+    business_address: string
+    id?: string
+    user_id?: string
+  } | null
+  vendor_id?: string
+  scan_enabled?: boolean
+  service_categories: {
+    name: string
+  }
+  category_id?: string
   
     // Service-specific fields
     duration_days?: number

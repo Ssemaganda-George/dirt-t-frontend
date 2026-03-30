@@ -30,6 +30,7 @@ interface ServiceDetail {
   service_categories: {
     name: string
   }
+  category_id?: string
   vehicle_type?: string
   vehicle_capacity?: number
   driver_included?: boolean
