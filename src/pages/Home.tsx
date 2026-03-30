@@ -1158,6 +1158,9 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
               : 'text-xs md:text-sm line-clamp-1 truncate'
           }`}>
             {service.title}
+            {service.category_id === 'cat_transport' && service.vehicle_capacity && (
+              <span className="text-gray-600 font-normal"> ({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})</span>
+            )}
           </h3>
           <div className="flex items-center justify-between mt-1 mb-1.5">
             <div className="text-gray-500 text-sm truncate pr-2">
@@ -1169,6 +1172,8 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
               {reviewCount > 0 && <span className="text-xs text-gray-500">({reviewCount})</span>}
             </div>
           </div>
+
+
 
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2 whitespace-nowrap flex-shrink-0">
