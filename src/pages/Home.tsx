@@ -683,7 +683,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative aspect-[16/9] md:aspect-auto md:min-h-[72vh] w-full bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
+      <div className="relative min-h-[60vh] md:min-h-[72vh] bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
         {/* Background media carousel */}
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -725,25 +725,25 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 z-20" />
 
         {/* Hero content + embedded search */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 md:pb-8 px-2 z-30">
-          <div className="text-center mb-3 md:mb-5">
-            <h1 className="text-3xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-tight mb-1">
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 md:pb-14 px-4 z-30">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight mb-3">
               {t('hero_title')}
             </h1>
-            <p className="text-xs md:text-base text-white/70 max-w-md mx-auto leading-relaxed">
+            <p className="text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed">
               {t('hero_subtitle')}
             </p>
           </div>
 
           {/* Search bar embedded in hero */}
-          <div className="w-full max-w-md mx-auto">
-            <div className="bg-white rounded-xl shadow-xl p-1 flex items-center gap-1">
-              <div className="flex-1 flex items-center px-2">
-                <Search className="h-3 w-3 text-gray-400 mr-2 flex-shrink-0" />
+          <div className="w-full max-w-2xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-1">
+              <div className="flex-1 flex items-center px-3">
+                <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
                 <input
                   type="text"
                   placeholder={t('search_placeholder')}
-                  className="w-full py-1.5 text-gray-900 placeholder-gray-400 focus:outline-none text-xs md:text-sm"
+                  className="w-full py-2 text-gray-900 placeholder-gray-400 focus:outline-none text-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -753,7 +753,7 @@ export default function Home() {
                     className="ml-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                     aria-label="Clear search"
                   >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -763,10 +763,10 @@ export default function Home() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white px-2 md:px-4 py-1.5 rounded-lg font-medium transition-colors text-xs md:text-sm"
+                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white px-3 md:px-5 py-2.5 rounded-xl font-medium transition-colors text-sm"
                   title="Filter services by category"
                 >
-                  <Filter className="w-3 h-3" />
+                  <Filter className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">
                     {selectedCategories.includes('all')
                       ? 'All'
@@ -774,41 +774,41 @@ export default function Home() {
                         ? categories.find(cat => cat.id === selectedCategories[0])?.name || 'Filter'
                         : `${selectedCategories.length} Selected`}
                   </span>
-                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && ReactDOM.createPortal(
-                  <div className="category-dropdown fixed top-32 right-4 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
+                  <div className="category-dropdown fixed top-32 right-8 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
                     {/* Header */}
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-900 text-xs">{t('choose_travel_needs')}</h3>
-                      <p className="text-[11px] text-gray-500 mt-0.5">{t('select_one_or_more')}</p>
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">{t('select_one_or_more')}</p>
                     </div>
 
                     {/* Categories List */}
-                    <div className="max-h-52 overflow-y-auto">
+                    <div className="max-h-60 overflow-y-auto">
                       {/* All Categories Option */}
                       <button
                         onClick={() => {
                           setSelectedCategories(['all'])
                           setIsDropdownOpen(false)
                         }}
-                        className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+                        className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
                           selectedCategories.includes('all') ? 'bg-emerald-50' : ''
                         }`}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                             selectedCategories.includes('all')
                               ? 'bg-emerald-600 border-emerald-600'
                               : 'border-gray-300'
                           }`}>
                             {selectedCategories.includes('all') && (
-                              <Check className="w-2 h-2 text-white" />
+                              <Check className="w-2.5 h-2.5 text-white" />
                             )}
                           </div>
-                          <span className={`text-xs ${selectedCategories.includes('all') ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
+                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
                             {t('show_all_travel_needs')}
                           </span>
                         </div>
@@ -819,21 +819,21 @@ export default function Home() {
                         <button
                           key={category.id}
                           onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors ${
+                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors ${
                             selectedCategories.includes(category.id) ? 'bg-emerald-50' : ''
                           }`}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2.5">
                             <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                               selectedCategories.includes(category.id)
                                 ? 'bg-emerald-600 border-emerald-600'
                                 : 'border-gray-300'
                             }`}>
                               {selectedCategories.includes(category.id) && (
-                                <Check className="w-2 h-2 text-white" />
+                                <Check className="w-2.5 h-2.5 text-white" />
                               )}
                             </div>
-                            <span className={`text-xs ${selectedCategories.includes(category.id) ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
+                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
                               {category.name}
                             </span>
                           </div>
@@ -842,14 +842,14 @@ export default function Home() {
                     </div>
 
                     {/* Footer */}
-                    <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] text-gray-500">
+                        <span className="text-xs text-gray-500">
                           {selectedCategories.includes('all') ? t('all_listings') : `${selectedCategories.length} selected`}
                         </span>
                         <button
                           onClick={() => setIsDropdownOpen(false)}
-                          className="text-[11px] text-emerald-700 font-semibold hover:text-emerald-900"
+                          className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
                         >
                           {t('done')}
                         </button>
