@@ -182,62 +182,61 @@ const GeotaggingPage = () => {
   
 
   const HeaderAndSearch = () => (
-    <div className="mb-10 bg-white">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 px-6 pt-8 pb-4">
-        <div className="text-center md:text-left flex-1">
-          <div className="inline-flex items-center justify-center p-2 bg-green-500/10 rounded-full mb-4">
-            <TreePine className="h-6 w-6 text-green-600" />
+    <div className="mb-4 bg-white border-b border-gray-100 sticky top-0 z-30">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-2 md:px-8 pt-3 pb-2 max-w-5xl mx-auto">
+        <div className="flex flex-col items-center md:items-start md:w-2/3">
+          <div className="inline-flex items-center justify-center p-2 bg-green-500/10 rounded-full mb-1">
+            <TreePine className="h-8 w-8 md:h-10 md:w-10 text-green-600" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">Geotagging & Tree Tracking</h1>
-          <div className="text-sm text-gray-600 mb-4">
-            To date we have planted <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees — they remove about <span className="font-semibold text-gray-900">{Math.round(totals.totalKg).toLocaleString()}</span> kg of CO₂ each year (≈{totals.totalTonnes.toFixed(2)} tonnes/year).
+          <h1 className="text-xl md:text-3xl font-bold mb-1">Geotagging & Tree Tracking</h1>
+          <div className="text-xs md:text-base text-gray-600 mb-1 text-center md:text-left">
+            <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalKg).toLocaleString()}</span> kg CO₂/year.
           </div>
-          <p className="text-gray-600 max-w-2xl mx-auto md:mx-0 mb-4">
-            Monitor, search, and celebrate your tree planting impact.
+          <p className="text-gray-600 max-w-xs md:max-w-lg mx-auto md:mx-0 mb-1 text-xs md:text-base">
+            Track, search, and celebrate your tree planting.
           </p>
-          <div className="flex flex-row flex-nowrap items-center gap-3 justify-center md:justify-start mt-2 overflow-auto">
+          <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 justify-center md:justify-start mt-1">
             <button
-              className="px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white text-sm font-medium rounded-md"
+              className="px-3 py-1 md:px-5 md:py-2 bg-green-700 hover:bg-green-800 text-white text-xs md:text-base font-medium rounded-md"
               onClick={() => navigate('/')}
             >
-              Book a Service
+              Book Service
             </button>
             <button
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-md"
+              className="px-3 py-1 md:px-5 md:py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-base font-medium rounded-md"
               onClick={() => setShowAddTree(true)}
             >
-              Plant Trees
+              Plant Tree
             </button>
             <button
-              className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-md"
+              className="px-3 py-1 md:px-5 md:py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs md:text-base font-medium rounded-md"
               onClick={() => navigate('/contact')}
             >
-              Contact Us
+              Contact
             </button>
             <button
-              className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-md"
+              className="px-3 py-1 md:px-5 md:py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs md:text-base font-medium rounded-md"
               onClick={() => navigate('/environment/donate')}
             >
-              Donate to Conservation
+              Donate
             </button>
           </div>
         </div>
-        <div className="flex-1 max-w-xl mx-auto md:mx-0">
-          <div>
-            <h3 className="flex items-center mb-2 text-lg font-semibold"><Search className="mr-2 h-5 w-5" />Find My Tree</h3>
-            <p className="mb-4 text-sm text-gray-600">Enter your Tree ID (e.g., TREE-001) to zoom to your tree on the map.</p>
-            <div className="flex gap-2">
+        <div className="flex flex-col items-center md:items-end md:w-1/3 mt-2 md:mt-0">
+          <div className="w-full max-w-xs md:max-w-sm">
+            <label htmlFor="tracking-id" className="block text-xs md:text-base font-semibold mb-1 text-gray-700">Find My Tree</label>
+            <div className="flex gap-1 md:gap-2">
               <input
                 id="tracking-id"
                 placeholder="Tree ID (e.g., TREE-001)"
                 value={trackingId}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTrackingId(e.target.value)}
                 onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleTreeIdSearch()}
-                className="border px-3 py-2 rounded w-full"
+                className="border px-2 py-1 md:px-4 md:py-2 rounded w-full text-xs md:text-base"
               />
-              <button onClick={() => handleTreeIdSearch()} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Find</button>
+              <button onClick={() => handleTreeIdSearch()} className="px-2 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 text-white rounded text-xs md:text-base">Find</button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Example IDs: TREE-001, TREE-002, TREE-003, TREE-004, TREE-005</p>
+            <p className="text-[10px] md:text-xs text-gray-500 mt-1">Ex: TREE-001, TREE-002</p>
           </div>
         </div>
       </div>
@@ -245,7 +244,7 @@ const GeotaggingPage = () => {
   );
 
   return (
-    <div className="container mx-auto px-0 py-0">
+    <div className="container mx-auto px-0 py-0 max-w-full">
       {successMsg && (
         <div className="fixed top-6 right-6 z-50">
           <div className="bg-emerald-600 text-white px-4 py-2 rounded shadow">{successMsg}</div>
@@ -256,9 +255,9 @@ const GeotaggingPage = () => {
           <div className="bg-red-600 text-white px-4 py-2 rounded shadow">{errorMsg}</div>
         </div>
       )}
-      <div className="w-full py-8 relative overflow-hidden">
-        <h2 className="text-xl font-semibold mb-4 px-4">Tourists Planting Trees</h2>
-        <div className="relative" style={{ width: "100%", overflow: "hidden", height: "250px" }}>
+      <div className="w-full py-4 relative overflow-hidden">
+        <h2 className="text-lg font-semibold mb-2 px-2">Tourists Planting Trees</h2>
+        <div className="relative" style={{ width: "100%", overflow: "hidden", height: "180px" }}>
           <div
               className="gallery-marquee flex space-x-6 absolute left-0 top-0"
             style={{
@@ -271,13 +270,13 @@ const GeotaggingPage = () => {
               approvedTrees.concat(approvedTrees).slice(0, Math.max(8, approvedTrees.length * 2)).map((tree: any, idx: number) => {
                 const img = Array.isArray(tree.images) && tree.images.length > 0 ? tree.images[0] : null;
                 return (
-                  <div className="flex-shrink-0 w-64" key={`tree-marquee-${tree.id || idx}-${idx}`}>
+                  <div className="flex-shrink-0 w-40" key={`tree-marquee-${tree.id || idx}-${idx}`}>
                     {img ? (
-                      <img src={img} alt={tree.species || 'Tree image'} className="rounded-lg w-full h-48 object-cover shadow" />
+                      <img src={img} alt={tree.species || 'Tree image'} className="rounded-lg w-full h-28 object-cover shadow" />
                     ) : (
-                      <div className="rounded-lg w-full h-48 bg-gray-100 flex items-center justify-center text-sm text-gray-500">No image</div>
+                      <div className="rounded-lg w-full h-28 bg-gray-100 flex items-center justify-center text-xs text-gray-500">No image</div>
                     )}
-                    <div className="mt-2 text-center text-sm font-medium">{(tree.planted_by || '').slice(0,40)} {tree.species ? `— ${tree.species}` : ''}</div>
+                    <div className="mt-1 text-center text-xs font-medium">{(tree.planted_by || '').slice(0,32)} {tree.species ? `— ${tree.species}` : ''}</div>
                   </div>
                 );
               })
@@ -309,7 +308,7 @@ const GeotaggingPage = () => {
 
       <HeaderAndSearch />
 
-      <div className="w-full mb-10" style={{ height: "60vh", minHeight: 350, maxHeight: "80vh" }}>
+      <div className="w-full mb-8" style={{ height: "45vh", minHeight: 220, maxHeight: "60vh" }}>
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}
@@ -554,9 +553,9 @@ const GeotaggingPage = () => {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto mt-16">
-        <h2 className="text-2xl font-semibold text-center mb-8">How Our Geotagging Works</h2>
-        <div className="grid md:grid-cols-3 gap-8">
+      <div className="max-w-2xl mx-auto mt-10 px-2">
+        <h2 className="text-xl font-semibold text-center mb-4">How Our Geotagging Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="mx-auto bg-green-500/10 p-3 rounded-full w-max">
               <TreePine className="h-6 w-6 text-green-600" />
