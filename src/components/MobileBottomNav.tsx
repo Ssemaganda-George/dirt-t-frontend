@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, HelpCircle, Search, MessageSquare, MoreHorizontal, Leaf } from 'lucide-react'
+import { Home, Search, MessageSquare, MoreHorizontal, Leaf } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
