@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Leaf } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
@@ -59,10 +59,11 @@ export default function PublicLayout() {
   const { selectedRegion, selectedCurrency, t } = usePreferences()
 
   // Map category IDs to navigation items
-  const getNavigationItems = (): Array<{name: string, href: string}> => {
-    // Return home navigation
+  const getNavigationItems = (): Array<{name: string, href: string, icon?: any}> => {
+    // Home and Conservation for desktop nav
     return [
-      { name: 'home', href: '/' }
+      { name: 'home', href: '/', icon: Home },
+      { name: 'Conservation', href: '/conservation/geotagging', icon: Leaf }
     ]
   }
 
@@ -123,19 +124,20 @@ export default function PublicLayout() {
 
             {/* Desktop Navigation */}
             {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex items-center space-x-7">
+              <nav className="hidden md:flex items-center space-x-4">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 backdrop-blur-[2px] shadow ${
-                      item.name === 'home'
+                    className={`flex items-center gap-1 text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
+                      item.name.toLowerCase() === 'home'
                         ? 'text-emerald-600 border-emerald-600'
                         : location.pathname === item.href
                           ? 'text-emerald-600 border-emerald-600'
                           : 'text-white hover:text-emerald-300'
                     }`}
                   >
+                    {item.icon && <item.icon className="h-4 w-4 mr-1" />}
                     {t(item.name)}
                   </Link>
                 ))}
