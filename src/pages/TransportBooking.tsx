@@ -2181,7 +2181,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     <input
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => setPhoneNumber(e.target.value.trimStart())}
                       placeholder="0712345678 or +256712345678"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />

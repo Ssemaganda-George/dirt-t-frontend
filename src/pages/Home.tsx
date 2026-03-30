@@ -695,13 +695,21 @@ export default function Home() {
                 <video
                   ref={currentSlide === idx ? videoRef : undefined}
                   src={media.url}
-                  autoPlay={autoPlayEnabled}
+                  autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
+                  poster="/public/hero-video-poster.jpg"
                   className="w-full h-full object-cover"
-                  key={currentSlide === idx ? media.url : undefined}
+                  key={media.url + '-' + currentSlide}
+                  onLoadedData={e => {
+                    // Force play on load for mobile browsers
+                    const vid = e.currentTarget;
+                    if (vid.paused) {
+                      vid.play().catch(() => {});
+                    }
+                  }}
                 />
               ) : (
                 <div
