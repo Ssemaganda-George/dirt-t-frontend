@@ -352,25 +352,9 @@ export default function Home() {
   }, [isLoading])
 
 
+  // Only allow one category at a time (single-select)
   const handleCategorySelect = (categoryId: string) => {
-    if (categoryId === 'all') {
-      setSelectedCategories(['all'])
-    } else {
-      setSelectedCategories(prev => {
-        if (prev.includes('all')) {
-          // If 'all' was selected, replace it with the specific category
-          return [categoryId]
-        } else if (prev.includes(categoryId)) {
-          // Remove the category if it's already selected
-          const newSelection = prev.filter(id => id !== categoryId)
-          // If no categories selected, default to 'all'
-          return newSelection.length === 0 ? ['all'] : newSelection
-        } else {
-          // Add the category
-          return [...prev, categoryId]
-        }
-      })
-    }
+    setSelectedCategories([categoryId])
   }
 
   // Category counting helper removed — we no longer display numeric counts next to categories.
