@@ -8,20 +8,29 @@ const PROCESS_QUEUE_SECRET = Deno.env.get("PROCESS_QUEUE_SECRET") || ""
 const HIRER_TRANSPORT_FEE_RATE = 0.02
 const PROVIDER_TRANSPORT_FEE_RATE = 0.02
 
+// Leave 30s headroom from the 150s edge function timeout
+const WORKER_DEADLINE_MS = 120_000
+
 type QueueJob = {
   id: string
   job_type: "booking_fulfillment" | "order_fulfillment"
   source_id: string
   payload: {
     reference?: string
+    amount?: number
   }
   attempts: number
   max_attempts: number
 }
 
+type JobOutcome = {
+  id: string
+  outcome: "completed" | "retrying" | "failed"
+  error?: string
+}
+
 function nextRetryDelayMinutes(attempt: number): number {
-  const delay = Math.min(60, Math.pow(2, Math.max(0, attempt - 1)))
-  return Math.max(1, delay)
+  return Math.max(1, Math.min(60, Math.pow(2, Math.max(0, attempt - 1))))
 }
 
 async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<void> {
@@ -36,7 +45,6 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
 
   if (bookingFetchErr || !booking) throw new Error(`booking-not-found:${bookingId}`)
 
-  // Prevent duplicate transaction creation.
   const { data: existingTx, error: txCheckErr } = await supabase
     .from("transactions")
     .select("id")
@@ -80,12 +88,11 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   }
 
   const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
-  const sendBookingEmailsUrl = `${baseUrl}/functions/v1/send-booking-emails`
-  fetch(sendBookingEmailsUrl, {
+  fetch(`${baseUrl}/functions/v1/send-booking-emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
     },
     body: JSON.stringify({ booking_id: bookingId }),
   }).catch((e) => console.warn("Worker: send-booking-emails error", e?.message || e))
@@ -103,19 +110,19 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
 
   if (orderFetchErr || !order) throw new Error(`order-not-found:${orderId}`)
 
-  // Order-level transaction (idempotent by reference check).
   const { data: existingOrderTx, error: orderTxCheckErr } = await supabase
     .from("transactions")
     .select("id")
     .eq("reference", reference)
     .eq("transaction_type", "payment")
     .maybeSingle()
+
   if (orderTxCheckErr) throw new Error(`order-tx-check-failed:${orderTxCheckErr.message}`)
 
   if (!existingOrderTx) {
     const { error: txErr } = await supabase.rpc("create_transaction_atomic_v2", {
       p_vendor_id: order.vendor_id,
-      p_amount: Number((job as any)?.payload?.amount || 0),
+      p_amount: Number(job.payload?.amount || 0),
       p_transaction_type: "payment",
       p_booking_id: null,
       p_tourist_id: order.user_id || null,
@@ -131,6 +138,7 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
     .from("order_items")
     .select("*, ticket_types(*)")
     .eq("order_id", orderId)
+
   if (itemsErr) throw new Error(`order-items-fetch-failed:${itemsErr.message}`)
   if (!items || items.length === 0) return
 
@@ -144,6 +152,8 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   }
 
   const today = new Date().toISOString().slice(0, 10)
+
+  // Bookings and ticket issuance run in parallel
   await Promise.all([
     ...Object.keys(groups).map(async (sid) => {
       const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
@@ -176,7 +186,9 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
         p_order_id: orderId,
       })
       if (bookErr || !(bookData as any)?.success) {
-        throw new Error(`ticket-book-failed:${it.ticket_type_id}:${bookErr?.message || (bookData as any)?.error || "unknown"}`)
+        throw new Error(
+          `ticket-book-failed:${it.ticket_type_id}:${bookErr?.message || (bookData as any)?.error || "unknown"}`
+        )
       }
     }),
   ])
@@ -193,15 +205,63 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
 
   if (recipientEmail) {
     const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
-    const sendOrderEmailsUrl = `${baseUrl}/functions/v1/send-order-emails`
-    fetch(sendOrderEmailsUrl, {
+    fetch(`${baseUrl}/functions/v1/send-order-emails`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
       body: JSON.stringify({ order_id: orderId, recipient_email: recipientEmail }),
     }).catch((e) => console.warn("Worker: send-order-emails error", e?.message || e))
+  }
+}
+
+// ── Per-job executor: runs job, writes outcome back to DB ─────────────────────
+async function runJob(supabase: any, job: QueueJob): Promise<JobOutcome> {
+  try {
+    if (job.job_type === "booking_fulfillment") {
+      await processBookingFulfillment(supabase, job)
+    } else if (job.job_type === "order_fulfillment") {
+      await processOrderFulfillment(supabase, job)
+    } else {
+      throw new Error(`unknown-job-type:${job.job_type}`)
+    }
+
+    await supabase
+      .from("payment_fulfillment_jobs")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", job.id)
+
+    return { id: job.id, outcome: "completed" }
+  } catch (e: any) {
+    const errMsg = e?.message || String(e)
+    const maxAttempts = Number(job.max_attempts || 6)
+
+    if (job.attempts >= maxAttempts) {
+      await supabase
+        .from("payment_fulfillment_jobs")
+        .update({ status: "failed", last_error: errMsg, updated_at: new Date().toISOString() })
+        .eq("id", job.id)
+      return { id: job.id, outcome: "failed", error: errMsg }
+    }
+
+    const delayMs = nextRetryDelayMinutes(job.attempts) * 60_000
+    const nextTime = new Date(Date.now() + delayMs).toISOString()
+    await supabase
+      .from("payment_fulfillment_jobs")
+      .update({
+        status: "pending",
+        last_error: errMsg,
+        scheduled_for: nextTime,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", job.id)
+    return { id: job.id, outcome: "retrying", error: errMsg }
   }
 }
 
@@ -235,87 +295,121 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const body = await req.json().catch(() => ({}))
-  const batchSize = Math.max(1, Math.min(20, Number(body?.batch_size || 8)))
+  const batchSize = Math.max(1, Math.min(20, Number(body?.batch_size || 10)))
+  const workerStart = Date.now()
 
-  const nowIso = new Date().toISOString()
-  const { data: jobs, error: jobsErr } = await supabase
-    .from("payment_fulfillment_jobs")
-    .select("id, job_type, source_id, payload, attempts, max_attempts")
-    .eq("status", "pending")
-    .lte("scheduled_for", nowIso)
-    .order("created_at", { ascending: true })
-    .limit(batchSize)
+  // ── Claim jobs atomically via DB function (FOR UPDATE SKIP LOCKED) ──────
+  // Prevents two concurrent workers (webhook + pg_cron) from double-processing.
+  const { data: claimedJobs, error: claimErr } = await supabase.rpc("claim_payment_jobs", {
+    p_batch_size: batchSize,
+    p_source: body?.source || "webhook",
+  })
 
-  if (jobsErr) {
-    return new Response(JSON.stringify({ success: false, error: jobsErr.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    })
+  if (claimErr) {
+    // Fallback: manual claim if claim_payment_jobs RPC not yet deployed
+    console.warn("Worker: claim_payment_jobs RPC unavailable, using manual claim", claimErr.message)
+    const nowIso = new Date().toISOString()
+    const { data: jobs, error: jobsErr } = await supabase
+      .from("payment_fulfillment_jobs")
+      .select("id, job_type, source_id, payload, attempts, max_attempts")
+      .eq("status", "pending")
+      .lte("scheduled_for", nowIso)
+      .order("created_at", { ascending: true })
+      .limit(batchSize)
+
+    if (jobsErr) {
+      return new Response(JSON.stringify({ success: false, error: jobsErr.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    // Fall back to original sequential processing for safety
+    let processed = 0, completed = 0, failed = 0
+    for (const j of (jobs || []) as QueueJob[]) {
+      const { data: claimed, error: claimRowErr } = await supabase
+        .from("payment_fulfillment_jobs")
+        .update({ status: "processing", started_at: new Date().toISOString(), attempts: (j.attempts || 0) + 1 })
+        .eq("id", j.id)
+        .eq("status", "pending")
+        .select("id, job_type, source_id, payload, attempts, max_attempts")
+        .maybeSingle()
+
+      if (claimRowErr || !claimed) continue
+      processed += 1
+      const result = await runJob(supabase, claimed as QueueJob)
+      if (result.outcome === "completed") completed++
+      else if (result.outcome === "failed") failed++
+    }
+    return new Response(
+      JSON.stringify({ success: true, scanned: (jobs || []).length, processed, completed, failed }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
   }
 
-  let processed = 0
-  let completed = 0
-  let failed = 0
+  const jobs = (claimedJobs || []) as QueueJob[]
 
-  for (const j of (jobs || []) as QueueJob[]) {
-    // Claim job optimistically.
-    const { data: claimed, error: claimErr } = await supabase
+  if (jobs.length === 0) {
+    return new Response(
+      JSON.stringify({ success: true, scanned: 0, processed: 0, completed: 0, failed: 0, retrying: 0 }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  }
+
+  // ── Deadline guard ────────────────────────────────────────────────────────
+  if (Date.now() - workerStart > WORKER_DEADLINE_MS) {
+    await supabase
       .from("payment_fulfillment_jobs")
-      .update({ status: "processing", started_at: new Date().toISOString(), attempts: (j.attempts || 0) + 1 })
-      .eq("id", j.id)
-      .eq("status", "pending")
-      .select("id, job_type, source_id, payload, attempts, max_attempts")
-      .maybeSingle()
+      .update({ status: "pending", scheduled_for: new Date().toISOString() })
+      .in("id", jobs.map((j) => j.id))
+      .eq("status", "processing")
 
-    if (claimErr || !claimed) continue
+    return new Response(
+      JSON.stringify({ success: false, error: "deadline_exceeded_before_processing" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  }
 
-    processed += 1
-    const attempt = Number((claimed as any).attempts || 1)
+  // ── Process all claimed jobs in PARALLEL ─────────────────────────────────
+  // Promise.allSettled: one failure doesn't cancel other jobs in the batch.
+  const settled = await Promise.allSettled(jobs.map((job) => runJob(supabase, job)))
 
-    try {
-      if ((claimed as any).job_type === "booking_fulfillment") {
-        await processBookingFulfillment(supabase, claimed as QueueJob)
-      } else if ((claimed as any).job_type === "order_fulfillment") {
-        await processOrderFulfillment(supabase, claimed as QueueJob)
-      } else {
-        throw new Error(`unknown-job-type:${(claimed as any).job_type}`)
-      }
-
-      await supabase
-        .from("payment_fulfillment_jobs")
-        .update({ status: "completed", completed_at: new Date().toISOString(), last_error: null })
-        .eq("id", (claimed as any).id)
-      completed += 1
-    } catch (e: any) {
-      const errMsg = e?.message || String(e)
-      const maxAttempts = Number((claimed as any).max_attempts || 6)
-
-      if (attempt >= maxAttempts) {
-        await supabase
-          .from("payment_fulfillment_jobs")
-          .update({ status: "failed", last_error: errMsg })
-          .eq("id", (claimed as any).id)
-        failed += 1
-      } else {
-        const delayMinutes = nextRetryDelayMinutes(attempt)
-        const next = new Date(Date.now() + delayMinutes * 60_000).toISOString()
-        await supabase
-          .from("payment_fulfillment_jobs")
-          .update({
-            status: "pending",
-            last_error: errMsg,
-            scheduled_for: next,
-          })
-          .eq("id", (claimed as any).id)
-      }
+  let completed = 0, failed = 0, retrying = 0
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      if (result.value.outcome === "completed") completed++
+      else if (result.value.outcome === "failed") failed++
+      else if (result.value.outcome === "retrying") retrying++
+    } else {
+      failed++
+      console.error("Worker: unhandled runJob rejection", result.reason)
     }
+  }
+
+  // ── Self-chain if backlog remains and time budget allows ─────────────────
+  const elapsed = Date.now() - workerStart
+  if (jobs.length === batchSize && elapsed < WORKER_DEADLINE_MS - 30_000) {
+    const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+    fetch(`${baseUrl}/functions/v1/process-payment-fulfillment-queue`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(PROCESS_QUEUE_SECRET ? { "x-worker-secret": PROCESS_QUEUE_SECRET } : {}),
+      },
+      body: JSON.stringify({ batch_size: batchSize, source: "self-chain" }),
+    }).catch((e) => console.warn("Worker: self-chain trigger failed", e?.message))
   }
 
   return new Response(
-    JSON.stringify({ success: true, scanned: (jobs || []).length, processed, completed, failed }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
+    JSON.stringify({
+      success: true,
+      scanned: jobs.length,
+      processed: jobs.length,
+      completed,
+      failed,
+      retrying,
+      elapsed_ms: Date.now() - workerStart,
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
   )
 })
