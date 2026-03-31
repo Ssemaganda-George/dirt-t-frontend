@@ -135,7 +135,7 @@ export default function PaymentPage() {
   const BACKOFF_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000, 32000]
   const POLL_TIMEOUT_MS = 90_000
 
-  const startWatchingReference = (ref: string) => {
+  const startWatchingReference = async (ref: string): Promise<void> => {
     completionHandledRef.current = false
     setPaymentReference(ref)
     setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
