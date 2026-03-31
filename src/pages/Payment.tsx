@@ -138,12 +138,25 @@ export default function PaymentPage() {
   const startWatchingReference = async (ref: string): Promise<void> => {
     completionHandledRef.current = false
     setPaymentReference(ref)
-    setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+    setPollingMessage('Check your phone — a USSD prompt should appear shortly.')
 
     // Cancel any prior watch session
     abortControllerRef.current?.abort()
     const abort = new AbortController()
     abortControllerRef.current = abort
+
+    // Progressive status messages — sets realistic expectations for 30–90s USSD flow
+    const messages: [number, string][] = [
+      [8000,  'Enter your PIN on the USSD prompt to confirm payment.'],
+      [20000, 'Still waiting… Airtel payments can take up to 60 seconds.'],
+      [40000, 'Almost there — waiting for network confirmation.'],
+      [65000, 'Taking longer than usual. If no prompt appeared, you can go back and retry.'],
+    ]
+    for (const [delay, msg] of messages) {
+      setTimeout(() => {
+        if (!abort.signal.aborted && !completionHandledRef.current) setPollingMessage(msg)
+      }, delay)
+    }
 
     const cleanup = () => {
       abort.abort()
