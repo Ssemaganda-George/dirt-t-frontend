@@ -46,16 +46,11 @@ export default function PublicLayout() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
+  // Removed unused scrolled state
   const location = useLocation()
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', handler, { passive: true })
-    return () => window.removeEventListener('scroll', handler)
-  }, [])
+  // Removed unused scroll effect
   const navigate = useNavigate()
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const guestDropdownRef = useRef<HTMLDivElement>(null)
   // const { categories } = useServiceCategories() // Temporarily commented out
@@ -65,10 +60,16 @@ export default function PublicLayout() {
 
   // Map category IDs to navigation items
   const getNavigationItems = (): Array<{name: string, href: string}> => {
-    // Return home navigation
+    // Show Conservation only on home page
+    if (location.pathname === '/') {
+      return [
+        { name: 'home', href: '/' },
+        { name: 'Conservation', href: '/conservation/geotagging' }
+      ];
+    }
     return [
       { name: 'home', href: '/' }
-    ]
+    ];
   }
 
   const navigation = getNavigationItems()
@@ -76,9 +77,7 @@ export default function PublicLayout() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // No dropdown to close anymore
-      }
+      // Only close if click is outside BOTH the ref container and the button
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false)
       }
@@ -115,21 +114,11 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        location.pathname.includes('/scan/')
-          ? 'bg-transparent shadow-none'
-          : scrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm'
-            : 'bg-white shadow-sm'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 md:h-[72px]">
+      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
+          <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
-            <Link to="/" className={`flex items-center transition-colors duration-300 ${
-              location.pathname.includes('/scan/')
-                ? 'text-white drop-shadow-lg'
-                : 'text-gray-900'
-            }`}>
+            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-3 py-1 shadow">
               <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
@@ -140,21 +129,22 @@ export default function PublicLayout() {
 
             {/* Desktop Navigation */}
             {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex items-center space-x-7">
+              <nav className="hidden md:flex items-center space-x-4">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`text-sm font-medium transition-colors ${
-                      location.pathname === item.href
-                        ? 'text-emerald-600 border-b-2 border-emerald-600'
-                        : 'text-gray-700 hover:text-emerald-600'
+                    className={`text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
+                      item.name.toLowerCase() === 'home'
+                        ? 'text-emerald-600 border-emerald-600'
+                        : location.pathname === item.href
+                          ? 'text-emerald-600 border-emerald-600'
+                          : 'text-white hover:text-emerald-300'
                     }`}
                   >
                     {t(item.name)}
                   </Link>
                 ))}
-
                 {/* Desktop messages text link removed — icon lives beside Search */}
               </nav>
             )}
@@ -165,20 +155,20 @@ export default function PublicLayout() {
                 {/* Search Button - Hidden on mobile, only in bottom nav */}
                 <button
                   onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   title={t('search')}
                 >
-                  <Search className="h-5 w-5 text-gray-600" />
+                  <Search className="h-5 w-5 text-emerald-600" />
                 </button>
 
                 {/* Messages icon for desktop - visible only to authenticated users */}
                 {user && (
                   <Link
                     to="/messages"
-                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
+                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
                     title={t('messages')}
                   >
-                    <MessageSquare className="h-5 w-5 text-gray-600" />
+                    <MessageSquare className="h-5 w-5 text-emerald-600" />
                     {unreadCount > 0 && (
                         <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
                           {unreadCount > 9 ? '9+' : unreadCount}
@@ -189,17 +179,17 @@ export default function PublicLayout() {
 
                 <button
                   onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 border border-white/80 bg-transparent rounded-full shadow hover:bg-gray-50 transition-colors"
                   title={t('preferences')}
                 >
-                  <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+                  <Globe className="h-3 w-3 md:h-4 md:w-4 text-emerald-600" />
                   {/* Show only the icon in the navbar; keep an sr-only label for accessibility */}
                   <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full hover:bg-gray-100 transition-colors">
-                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors">
+                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {getCartCount()}
@@ -209,7 +199,7 @@ export default function PublicLayout() {
 
                 {/* Sign In Button or User Account Dropdown */}
                 {user && profile?.role === 'tourist' ? (
-                  <div className="relative" ref={userDropdownRef}>
+                  <div className="relative z-[1002]" ref={userDropdownRef}>
                     <button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
                       className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
@@ -224,7 +214,7 @@ export default function PublicLayout() {
 
                     {/* User Dropdown Menu */}
                     {showUserDropdown && (
-                      <div className="fixed right-4 top-20 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200]">
+                      <div className="absolute right-0 top-14 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[1001]">
                         <div className="py-1">
                           <div className="px-4 py-2 border-b border-gray-200">
                             <p className="text-sm font-medium text-gray-900">{t('my_account')}</p>
@@ -235,7 +225,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Home className="h-3.5 w-3.5 mr-2" />
+                            <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
                           </Link>
                           <Link
@@ -243,7 +233,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <User className="h-3.5 w-3.5 mr-2" />
+                            <User className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('profile')}
                           </Link>
                           <Link
@@ -251,7 +241,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('bookings')}
                           </Link>
                           <Link
@@ -259,7 +249,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Heart className="h-3.5 w-3.5 mr-2" />
+                            <Heart className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('saved_items') || 'Saved Items'}
                           </Link>
                           <Link
@@ -267,7 +257,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Wallet className="h-3.5 w-3.5 mr-2" />
+                            <Wallet className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             My Wallet
                           </Link>
                           <Link
@@ -275,7 +265,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Settings className="h-3.5 w-3.5 mr-2" />
+                            <Settings className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('settings')}
                           </Link>
                           <Link
@@ -283,7 +273,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                            <HelpCircle className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('help_center')}
                           </Link>
 
@@ -297,7 +287,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                           >
-                            <LogOut className="h-3.5 w-3.5 mr-2" />
+                            <LogOut className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('sign_out')}
                           </button>
                         </div>
@@ -305,18 +295,18 @@ export default function PublicLayout() {
                     )}
                   </div>
                 ) : (
-                  <div className="relative" ref={guestDropdownRef}>
+                  <div className="relative z-[1002]" ref={guestDropdownRef}>
                     <button
                       onClick={() => setShowGuestDropdown(!showGuestDropdown)}
                       className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
-                      <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
+                      <User className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
                       <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
                     {/* Guest Dropdown Menu */}
                     {showGuestDropdown && (
-                      <div className="fixed right-4 top-20 min-w-56 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200] max-h-96 overflow-y-auto">
+                      <div className="absolute right-0 top-14 min-w-56 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[1001] max-h-96 overflow-y-auto">
                         <div className="py-2">
                           {/* Account Section */}
                           <div className="px-3 py-1.5">
@@ -327,7 +317,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <Home className="h-3.5 w-3.5 mr-2" />
+                            <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
                           </Link>
                           <button
@@ -338,7 +328,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <User className="h-3.5 w-3.5 mr-2" />
+                            <User className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('log_in')}
                           </button>
                           <button
@@ -348,7 +338,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <Globe className="h-3.5 w-3.5 mr-2" />
+                            <Globe className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('currency_region')}
                           </button>
                           <Link
@@ -356,7 +346,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                            <HelpCircle className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('help_center')}
                           </Link>
 
@@ -372,7 +362,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('list_my_business')}
                           </Link>
                           <Link
@@ -380,7 +370,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('partner_with')}
                           </Link>
                         </div>
@@ -388,7 +378,6 @@ export default function PublicLayout() {
                     )}
                   </div>
                 )}
-
               </div>
             )}
           </div>
@@ -421,7 +410,7 @@ export default function PublicLayout() {
 
       {/* Main Content */}
       {/* Add top padding equal to header height so fixed header doesn't overlap content */}
-      <main className={`${location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
+      <main className={`${location.pathname === '/' ? 'pt-0 pb-16' : location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
         <Outlet />
       </main>
 

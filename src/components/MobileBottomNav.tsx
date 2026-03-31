@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Home, HelpCircle, Search, MessageSquare } from 'lucide-react'
+import { Home, Search, MessageSquare, MoreHorizontal, Leaf } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
@@ -11,13 +11,15 @@ interface MobileBottomNavProps {
 
 export default function MobileBottomNav({ onSupportClick, onSearchClick }: MobileBottomNavProps) {
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { unreadCount } = useUnreadMessages()
   const { t } = usePreferences()
 
   const baseNavigation: Array<any> = [
     { labelKey: 'home', href: '/', icon: Home },
     { labelKey: 'find', href: '/search', icon: Search, isSearch: true },
+    // Only show Conservation if not logged-in tourist
+    ...((!user || profile?.role !== 'tourist') ? [{ labelKey: 'Conservation', href: '/conservation/geotagging', icon: Leaf }] : []),
   ]
 
   // Only show messages to authenticated users
@@ -27,7 +29,7 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
 
   // Bookings are no longer shown in bottom nav for tourists; only in menu
 
-  baseNavigation.push({ labelKey: 'support', href: '/support', icon: HelpCircle, isModal: true })
+  baseNavigation.push({ labelKey: 'More', href: '/support', icon: MoreHorizontal, isModal: true })
 
   return (
     <nav

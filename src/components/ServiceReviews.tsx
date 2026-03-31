@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Star, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, AlertCircle, ChevronUp } from 'lucide-react'
+import { useEffect } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { createServiceReview, getServiceReviews } from '../lib/database'
 import type { ServiceReview } from '../lib/database'
 
@@ -90,8 +92,35 @@ export default function ServiceReviews({
     }
   }
 
+
+  // Back to top button visibility (works for window and scrollable containers)
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  useEffect(() => {
+    const scrollContainer = document.scrollingElement || document.documentElement
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || scrollContainer.scrollTop
+      setShowBackToTop(scrollTop > 200)
+    }
+    window.addEventListener('scroll', handleScroll)
+    scrollContainer.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      scrollContainer.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
+  // Scroll to top handler (works for window and scrollable containers)
+  const handleScrollToTop = () => {
+    const scrollContainer = document.scrollingElement || document.documentElement
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Guest Reviews</h2>
@@ -216,13 +245,6 @@ export default function ServiceReviews({
               >
                 {loading ? 'Submitting...' : 'Submit Review'}
               </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              >
-                Cancel
-              </button>
             </div>
           </form>
         </div>
@@ -239,6 +261,31 @@ export default function ServiceReviews({
             <ReviewCard key={review.id} review={review} />
           ))
         )}
+      </div>
+      {/* Back to Top Icon */}
+      {showBackToTop && (
+        <button
+          onClick={handleScrollToTop}
+          aria-label="Back to top"
+          title="Back to top"
+          className="fixed bottom-8 right-8 z-[1000] w-7 h-7 bg-white/90 border border-gray-400 rounded-full flex items-center justify-center shadow-2xl hover:bg-gray-100 transition-colors backdrop-blur"
+          style={{ boxShadow: '0 4px 24px 0 rgba(0,0,0,0.18)' }}
+        >
+          <ChevronUp className="h-4 w-4 text-gray-700" />
+        </button>
+      )}
+
+
+      {/* Down Arrow Icon below Pay with Mobile Money button on mobile */}
+      {/* Only show on mobile, and only after the main action button */}
+      <div className="block md:hidden">
+        {/* Find the Pay with Mobile Money button and add the icon below it */}
+        {/* This is only for demonstration; in a real payment form, place this after the payment button */}
+        <div className="flex flex-col items-center mt-4">
+          <div className="bg-white rounded-full shadow-lg border border-gray-300 p-1">
+            <ChevronDown className="h-10 w-10 text-blue-600 animate-bounce" />
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -1635,7 +1635,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Passengers *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-xs sm:text-sm"
                   value={bookingData.passengers}
                   onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
                 >
@@ -1647,7 +1647,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Driver Option *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
                   value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
                   onChange={(e) => handleInputChange('driverOption', e.target.value)}
                 >
@@ -1695,19 +1695,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   <button
                     type="button"
                     onClick={() => setJourneyStep('setoff')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Set-off
                   </button>
                   <button
                     type="button"
                     onClick={() => setJourneyStep('stopovers')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Stop-overs
                   </button>
                   <button
                     type="button"
                     onClick={() => setJourneyStep('destination')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
                     Destination
                   </button>
                 </div>
@@ -1882,7 +1882,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                           (bookingData as any).tripReturnOption ? (
                             isCalculatingReturn ? (
                               <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
-                                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                                 </svg>
@@ -2010,7 +2010,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                             else saveJourney()
                           }}
                           disabled={journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)}
-                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white'}`}
+                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
                         >
                           {journeyStep === 'destination' ? 'Save my trip' : 'Next'}
                         </button>
@@ -2023,7 +2023,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="mt-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
                   rows={2}
                   placeholder="Any special requirements..."
                   value={bookingData.specialRequests}
@@ -2181,7 +2181,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     <input
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => setPhoneNumber(e.target.value.trimStart())}
                       placeholder="0712345678 or +256712345678"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -2192,7 +2192,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'MTN')}
-                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
                       >
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
                         <span className="text-sm font-medium">MTN</span>
@@ -2200,7 +2200,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'Airtel')}
-                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
                       >
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
                         <span className="text-sm font-medium">Airtel</span>
@@ -2208,7 +2208,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </div>
                   </div>
                   {pollingMessage && (
-                    <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
+                    <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">{pollingMessage}</p>
                   )}
                   {isPaymentProcessing && isReceiptFinalizing && !bookingConfirmed && (
                     <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
@@ -2265,7 +2265,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </button>
                     <button
                       onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm"
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm"
                     >
                       Message provider
                     </button>
@@ -2396,7 +2396,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount (incl. 2% fee):</span>
-                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                <span className="text-lg sm:text-2xl font-bold text-emerald-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
               </div>
             </div>
 
@@ -2404,7 +2404,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Message Provider
               </button>
@@ -2699,7 +2699,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
           <button
             onClick={() => setCurrentStep(1)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
             Try Again
           </button>
@@ -2729,40 +2729,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         </div>
       </div>
 
-      {/* Progress Steps - Sticky */}
-      <div className="bg-white shadow-sm sticky top-16 z-20 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between w-full flex-nowrap">
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              const isActive = step.id === currentStep
-              const isCompleted = step.id < currentStep
-
-              return (
-                <div key={step.id} className="flex items-center flex-none">
-                  <div className={`flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full ${
-                    isCompleted
-                      ? 'bg-green-600 text-white'
-                      : isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    <Icon className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                  </div>
-                  <span className={`ml-0.5 md:ml-1 text-[10px] md:text-xs font-medium ${
-                    isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`${isCompleted ? 'bg-green-600' : 'bg-gray-200'} w-2 md:w-3 h-0.5 mx-0.5 md:mx-1`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Progress Steps removed as requested */}
       {/* City Picker Modal */}
       <CityPickerModal
         isOpen={isCityModalOpen}
@@ -2780,84 +2747,117 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32">
-
-        {/* Main Layout: Image on Left, Form on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 -mt-32">
-          
-          {/* Service Image - Sticky on Desktop */}
-          <div className="lg:col-span-5 -mx-3 sm:-mx-0 lg:mx-0">
-            <div className="sticky top-4">
-              <div className="relative">
-                <img
-                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                  alt={service.title}
-                  className="w-screen lg:w-full h-64 md:h-80 object-cover cursor-pointer"
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-                />
-                {service.images && service.images.length > 0 && (
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
-                    {currentImageIndex + 1} / {service.images.length}
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 -mt-32">
+          {/* Images on top for web: use order classes */}
+          <div className="order-1 lg:order-1 lg:col-span-7">
+            {/* Professional image gallery with sliding effect */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-full max-w-4xl mx-auto flex flex-col lg:grid lg:grid-cols-3 gap-6 items-center">
+                {/* Main image and arrows - left 2/3 */}
+                <div className="relative flex items-center justify-center w-full col-span-2">
+                  {/* Left arrow */}
+                  {service.images && service.images.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1;
+                        setCurrentImageIndex(prevIndex);
+                        setSelectedImage(service.images[prevIndex]);
+                      }}
+                      className="absolute left-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
+                      aria-label="Previous image"
+                    >
+                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  )}
+                  {/* Main image - bigger, cleaner */}
+                  <img
+                    src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                    alt={service.title}
+                    className="rounded-xl object-cover mx-auto border border-gray-100 shadow-sm"
+                    style={{ width: '100%', maxWidth: 720, height: 420, objectFit: 'cover', background: '#f8fafc' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                  />
+                  {/* Right arrow */}
+                  {service.images && service.images.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const nextIndex = (currentImageIndex + 1) % service.images.length;
+                        setCurrentImageIndex(nextIndex);
+                        setSelectedImage(service.images[nextIndex]);
+                      }}
+                      className="absolute right-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
+                      aria-label="Next image"
+                    >
+                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  )}
+                  {/* Image count indicator */}
+                  {service.images && service.images.length > 0 && (
+                    <div className="absolute bottom-3 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wide shadow">
+                      {currentImageIndex + 1} / {service.images.length}
+                    </div>
+                  )}
+                </div>
+                {/* Thumbnails - right 1/3, vertically centered */}
+                {service.images && service.images.length > 1 && (
+                  <div className="w-full flex lg:block overflow-x-auto pb-1 lg:pb-0 col-span-1 flex-col justify-center items-center h-full">
+                    <div className="flex lg:grid lg:grid-cols-2 lg:grid-rows-3 gap-3 lg:gap-4 w-full lg:h-[420px] items-center content-center">
+                      {service.images.map((img, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setCurrentImageIndex(index);
+                            setSelectedImage(img);
+                          }}
+                          className={`w-20 h-20 lg:w-[104px] lg:h-[128px] rounded-xl border-2 transition-all ${
+                            currentImageIndex === index ? 'border-blue-600' : 'border-gray-200 hover:border-blue-400'
+                          } flex-shrink-0 overflow-hidden bg-white shadow-sm`}
+                          style={{ outline: currentImageIndex === index ? '2px solid #059669' : 'none' }}
+                          aria-label={`Show image ${index + 1}`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-              
-              {/* Image Thumbnails - Desktop Only */}
-              {service.images && service.images.length > 1 && (
-                <div className="hidden lg:flex gap-2 mt-3">
-                  {service.images.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setCurrentImageIndex(index)
-                        setSelectedImage(img)
-                      }}
-                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        currentImageIndex === index ? 'border-blue-600' : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Thumbnail ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Form and Details - Right Side */}
-          <div className="lg:col-span-7 space-y-3 sm:space-y-4 pt-2 sm:pt-4">
+          {/* Details below images for web, but stacked for mobile */}
+          <div className="order-2 lg:order-2 lg:col-span-7 space-y-6 pt-2 sm:pt-4">
             {/* Service Info Header */}
-            <div>
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1">
-                {service.title} <span className="text-gray-600 font-normal">in {service.location}</span>
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-1">
+                {service.title} <span className="text-gray-600 font-normal text-base">in {service.location}</span>
               </h2>
-              <p className="text-gray-600 text-xs sm:text-sm mb-3">{service.service_categories.name}</p>
-              
-              {/* Price Summary */}
+              <p className="text-gray-600 text-xs sm:text-sm mb-2">{service.service_categories.name}</p>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-lg sm:text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-emerald-700">
                     {service.service_categories?.name?.toLowerCase() === 'transport'
                       ? formatCurrencyWithConversion(unitPrice || service.price, service.currency)
                       : formatCurrencyWithConversion(totalPrice, service.currency)}
                   </div>
                   <div className="text-xs text-gray-500">
                     {service.service_categories?.name?.toLowerCase() === 'transport'
-                      ? `per day ${bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`
-                      : `One way ${bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`}
+                      ? `per day${bookingData.startDate && bookingData.endDate ? ` • ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`
+                      : `One way${bookingData.startDate && bookingData.endDate ? ` • ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`}
                   </div>
                 </div>
               </div>
             </div>
-
             {/* Transport zone selector (move above Trip Dates & Times) */}
             {service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Service Area *</label>
+              <div className="mb-6 p-4 rounded-lg bg-emerald-50 border border-emerald-100">
+                <label className="block text-sm font-semibold text-emerald-900 mb-2">Service Area *</label>
                 <div className="flex items-center gap-4 text-sm mb-2">
                   {(service as any).price_within_town !== undefined && (
                     <label className="inline-flex items-center">
@@ -2872,77 +2872,51 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     </label>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">Select whether this trip is within town or upcountry to see the correct price.</p>
+                <p className="text-xs text-emerald-700">Select whether this trip is within town or upcountry to see the correct price.</p>
               </div>
             )}
-
             {/* Step Content */}
-            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
+            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 shadow-sm">
               {renderStepContent()}
             </div>
-
-        {/* Navigation */}
-        {currentStep < 2 && (
-          <div className="mt-4 sm:mt-6">
-            {/* Mobile: Horizontal layout with smaller buttons */}
-            <div className="flex md:hidden justify-between gap-2">
-              <button
-                onClick={handleBack}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={
-                  isPaymentProcessing ||
-                  !bookingData.startDate ||
-                  !bookingData.endDate ||
-                  (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
-                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                  !bookingData.contactName ||
-                  !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card' ||
-                  (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-                }
-                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium"
-              >
-                {isPaymentProcessing
-                  ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
-                  : 'Pay with Mobile Money'}
-              </button>
-            </div>
-
-            {/* Desktop: Horizontal layout */}
-            <div className="hidden md:flex justify-between gap-3 mt-4">
-              <button
-                onClick={handleBack}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={
-                  isPaymentProcessing ||
-                  !bookingData.startDate ||
-                  !bookingData.endDate ||
-                  (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
-                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                  !bookingData.contactName ||
-                  !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card' ||
-                  (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-                }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                {isPaymentProcessing
-                  ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
-                  : 'Pay with Mobile Money'}
-              </button>
-            </div>
-          </div>
-        )}
+            {/* Navigation */}
+            {currentStep < 2 && (
+              <div className="mt-6 flex flex-col md:flex-row gap-3 justify-end">
+                <button
+                  onClick={handleNext}
+                  disabled={
+                    isPaymentProcessing ||
+                    !bookingData.startDate ||
+                    !bookingData.endDate ||
+                    (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
+                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                    !bookingData.contactName ||
+                    !bookingData.contactEmail ||
+                    bookingData.paymentMethod === 'card' ||
+                    (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
+                  }
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
+                >
+                  {isPaymentProcessing
+                    ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
+                    : 'Pay with Mobile Money'}
+                </button>
+                {/* Up Arrow Icon below button on all screens, scrolls to top */}
+                <div className="w-full flex justify-center mt-4">
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    aria-label="Back to top"
+                    title="Back to top"
+                    className="bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-full shadow-xl border-2 border-white p-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all duration-200"
+                    style={{ boxShadow: '0 6px 32px 0 rgba(0,0,0,0.18)' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

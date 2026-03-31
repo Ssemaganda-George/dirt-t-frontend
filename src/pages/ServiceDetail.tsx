@@ -29,30 +29,31 @@ import { PageSkeleton } from '../components/SkeletonLoader'
 
 interface ServiceDetail {
   id: string
-    slug?: string
-    title: string
-    description: string
-    price: number
-    currency: string
-    images: string[]
-    location: string
-    duration_hours: number
-    max_capacity: number
-    amenities: string[]
-    vendors?: {
-      business_name: string
-      business_description: string
-      business_phone: string
-      business_email: string
-      business_address: string
-      id?: string
-      user_id?: string
-    } | null
-    vendor_id?: string
-    scan_enabled?: boolean
-    service_categories: {
-      name: string
-    }
+  slug?: string
+  title: string
+  description: string
+  price: number
+  currency: string
+  images: string[]
+  location: string
+  duration_hours: number
+  max_capacity: number
+  amenities: string[]
+  vendors?: {
+    business_name: string
+    business_description: string
+    business_phone: string
+    business_email: string
+    business_address: string
+    id?: string
+    user_id?: string
+  } | null
+  vendor_id?: string
+  scan_enabled?: boolean
+  service_categories: {
+    name: string
+  }
+  category_id?: string
   
     // Service-specific fields
     duration_days?: number
@@ -151,14 +152,26 @@ interface ServiceDetail {
 export default function ServiceDetail() {
   const formatServiceTitle = (service: ServiceDetail, isDesktop = false) => {
     const location = service.event_location || service.location;
-    if (!location) return service.title;
-    
+    if (!location) {
+      return (
+        <>
+          {service.title}
+          {service.category_id === 'cat_transport' && service.vehicle_capacity && (
+            <span className="text-gray-600 font-normal"> ({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})</span>
+          )}
+        </>
+      );
+    }
+
     const preposition = ['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in';
     const locationClass = isDesktop ? 'text-lg font-normal text-blue-600' : 'text-sm font-normal text-blue-600';
-    
+
     return (
       <>
-        {service.title}{' '}
+        {service.title}
+        {service.category_id === 'cat_transport' && service.vehicle_capacity && (
+          <span className="text-gray-500 font-normal text-xs md:text-sm align-middle ml-1">({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})</span>
+        )}{' '}
         <span className={locationClass}>
           {preposition} {location}
         </span>
@@ -1648,27 +1661,48 @@ export default function ServiceDetail() {
       {/* Mobile Image with Header Overlay */}
       <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
         <div className="relative h-[95vw] min-h-[400px] max-h-[650px] rounded-b-2xl shadow-lg overflow-hidden">
-          {/* Scrollable Image Container */}
-          <div 
-            ref={scrollContainerRef}
-            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth bg-gray-200" 
-            style={{ scrollBehavior: 'smooth' }}
-          >
-            <div className="flex w-full h-full">
+          {/* Mobile Image Carousel with Arrows */}
+          <div className="relative w-full h-full">
+            {/* Left Arrow */}
+            {service.images && service.images.length > 1 && (
+              <button
+                className="absolute left-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? service.images.length - 1 : prev - 1))}
+                aria-label="Previous image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </button>
+            )}
+            {/* Right Arrow */}
+            {service.images && service.images.length > 1 && (
+              <button
+                className="absolute right-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                onClick={() => setCurrentImageIndex((prev) => (prev === service.images.length - 1 ? 0 : prev + 1))}
+                aria-label="Next image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-gray-700">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+            {/* Image Display */}
+            <div className="w-full h-full">
               {service.images && service.images.length > 0 ? (
-                service.images.map((image, index) => (
-                  <div key={index} className="flex-shrink-0 w-full snap-center">
+                <div className="flex w-full h-full">
+                  <div className="flex-shrink-0 w-full snap-center">
                     <img
                       loading="lazy"
                       decoding="async"
-                      src={image}
-                      alt={`${service.title} ${index + 1}`}
+                      src={service.images[currentImageIndex]}
+                      alt={`${service.title} ${currentImageIndex + 1}`}
                       className="w-full h-full object-cover cursor-pointer rounded-b-2xl"
                       style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
-                      onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                      onClick={() => { setLightboxIndex(currentImageIndex); setLightboxOpen(true) }}
                     />
                   </div>
-                ))
+                </div>
               ) : (
                 <div className="flex-shrink-0 w-full snap-center">
                   <img
