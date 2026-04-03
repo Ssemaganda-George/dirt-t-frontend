@@ -1,0 +1,327 @@
+/* Lambula.net inspired search bar styles (scoped for Home page search bar only) */
+
+.lambula-search-bar {
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    margin-bottom: 0;
+    position: relative;
+    z-index: 1000;
+}
+
+.lambula-search-bar .smart-search-dropdown {
+    position: fixed !important;
+    background-color: #fff !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    z-index: 99998 !important;
+    width: 100% !important;
+    min-width: 300px !important;
+    max-height: 240px;
+    overflow-y: auto;
+    border-radius: 8px;
+    display: block !important;
+    left: 0 !important;
+    right: 0 !important;
+}
+
+.lambula-search-bar .smart-search-dropdown ul {
+    list-style: none;
+    padding: 8px 0;
+    margin: 0;
+}
+
+.lambula-search-bar .smart-search-dropdown li {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.lambula-search-bar .smart-search-dropdown li:hover {
+    background-color: #f3f4f6;
+}
+
+.lambula-search-bar .guest-selector .val input[type="number"] {
+    width: 50px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    -moz-appearance: textfield;
+    padding: 6px 0;
+}
+
+.lambula-search-bar .guest-selector .val input::-webkit-outer-spin-button,
+.lambula-search-bar .guest-selector .val input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.lambula-search-bar .btn-search {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+
+.lambula-search-bar .btn-search:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+}
+
+.lambula-search-bar .nav-tabs {
+    border-bottom: none;
+    justify-content: center;
+    margin-bottom: 16px;
+    display: flex;
+    padding: 4px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+.lambula-search-bar .nav-tabs {
+    border-bottom: none;
+    justify-content: center;
+    margin-bottom: 20px;
+    display: flex;
+}
+.lambula-search-bar .nav-tabs .nav-item {
+    margin: 0 10px;
+}
+.lambula-search-bar .nav-tabs .nav-link {
+    border: none;
+    border-radius: 0;
+    color: #555;
+    font-weight: bold;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+    background: none;
+    cursor: pointer;
+}
+.lambula-search-bar .nav-tabs .nav-link.active {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    background-color: transparent;
+}
+.lambula-search-bar .nav-tabs .nav-link:hover {
+    color: #007bff;
+}
+.lambula-search-bar .g-field-search .form-group {
+    position: relative;
+    margin-bottom: 0;
+    padding: 15px 0;
+}
+.lambula-search-bar .g-field-search .form-group .field-icon {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 18px;
+}
+.lambula-search-bar .g-field-search .form-group .form-content {
+    padding-left: 30px;
+}
+.lambula-search-bar .g-field-search .form-group label {
+    display: block;
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 5px;
+}
+.lambula-search-bar .g-field-search .form-control {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    height: auto;
+    font-size: 16px;
+}
+.lambula-search-bar .g-field-search .border-right {
+    border-right: 1px solid #eee;
+}
+.lambula-search-bar .smart-search-dropdown {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+.lambula-search-bar .smart-search-dropdown ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.lambula-search-bar .smart-search-dropdown li {
+    padding: 10px;
+    cursor: pointer;
+}
+.lambula-search-bar .smart-search-dropdown li:hover {
+    background-color: #f5f5f5;
+}
+.lambula-search-bar .dropdown-guests {
+    cursor: pointer;
+}
+.lambula-search-bar .dropdown-guests .render {
+    font-size: 16px;
+    color: #333;
+}
+.lambula-search-bar .dropdown-menu.dropdown-menu-right {
+    padding: 15px;
+    min-width: 250px;
+}
+.lambula-search-bar .guest-selector {
+    margin-bottom: 10px;
+}
+.lambula-search-bar .guest-selector .label {
+    font-weight: bold;
+}
+.lambula-search-bar .guest-selector .val span {
+    cursor: pointer;
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 0 5px;
+}
+.lambula-search-bar .guest-selector .val input[type="number"] {
+    width: 50px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    -moz-appearance: textfield;
+}
+.lambula-search-bar .guest-selector .val input::-webkit-outer-spin-button,
+.lambula-search-bar .guest-selector .val input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.lambula-search-bar .g-button-submit {
+    text-align: center;
+    padding-top: 20px;
+}
+.lambula-search-bar .btn-search {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #fff;
+    padding: 10px 30px;
+    border-radius: 5px;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+}
+.lambula-search-bar .btn-search:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* React DatePicker Custom Styles - Compact Version */
+.react-datepicker {
+    font-family: inherit;
+    border: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    font-size: 11px !important;
+}
+
+.react-datepicker__month-container {
+    float: none !important;
+    margin-right: 8px;
+    flex: 1;
+    padding: 2px;
+}
+
+.react-datepicker__month-container:last-child {
+    margin-right: 0;
+}
+
+.react-datepicker__header {
+    background-color: #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 6px 0 !important;
+}
+
+.react-datepicker__current-month {
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    color: #111827 !important;
+}
+
+.react-datepicker__day-name {
+    color: #6b7280 !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    width: 26px !important;
+    line-height: 26px !important;
+}
+
+.react-datepicker__day {
+    width: 26px !important;
+    line-height: 26px !important;
+    font-size: 10px !important;
+    color: #374151 !important;
+    border-radius: 4px !important;
+    margin: 1px !important;
+}
+
+
+.react-datepicker__day:hover {
+    background-color: #f3f4f6 !important;
+    border-radius: 4px !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+    background-color: #10b981 !important;
+    color: white !important;
+    border-radius: 4px !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+    border-radius: 4px !important;
+}
+
+.react-datepicker__day--outside-month {
+    color: #d1d5db !important;
+}
+
+.react-datepicker__day--disabled {
+    color: #d1d5db !important;
+}
+
+.react-datepicker__navigation {
+    top: 6px !important;
+}
+
+.react-datepicker__navigation--previous,
+.react-datepicker__navigation--next {
+    border: none !important;
+    background: none !important;
+    cursor: pointer !important;
+    padding: 2px !important;
+}
+
+.react-datepicker__navigation-icon::before {
+    border-color: #6b7280 !important;
+}
+
+.react-datepicker__triangle {
+    display: none !important;
+}
+
+.react-datepicker-wrapper {
+    display: block !important;
+}

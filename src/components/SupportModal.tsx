@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { X, ExternalLink } from 'lucide-react'
+import { partners } from '../data/partners'
 
 interface SupportModalProps {
   isOpen: boolean
@@ -43,7 +44,7 @@ const businessServices = [
     href: '/vendor-login'
   },
   {
-    name: 'Partner with Us',
+    name: 'Our Partners',
     href: '/partner'
   },
   {
@@ -135,21 +136,33 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           {/* Divider */}
           <div className="h-px bg-gray-300 mb-6"></div>
 
-          {/* Business Services */}
+          {/* Partners List */}
           <div>
-            <h3 className="text-lg font-bold text-black mb-4">Business</h3>
-            <div className="space-y-2">
-              {businessServices.map((service) => (
-                <Link
-                  key={service.name}
-                  to={service.href}
-                  onClick={onClose}
-                  className="block py-2 text-base font-medium text-black hover:text-green-600 transition-colors duration-200"
+            <h3 className="text-lg font-bold text-black mb-4">Our Partners</h3>
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              {partners.map((partner) => (
+                <a
+                  key={partner.name}
+                  href={partner.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 rounded-lg p-3 border border-gray-200 transition"
                 >
-                  {service.name}
-                </Link>
+                  <img src={partner.logo} alt={partner.name + ' logo'} className="h-10 w-10 object-contain rounded bg-white border border-gray-200" />
+                  <span className="font-medium text-black flex-1 truncate">{partner.name}</span>
+                  <ExternalLink className="w-4 h-4 text-gray-400" />
+                </a>
               ))}
             </div>
+            <button
+              onClick={() => {
+                onClose();
+                window.location.href = '/partner';
+              }}
+              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-base transition-colors duration-200 shadow"
+            >
+              Partner with Us
+            </button>
           </div>
         </div>
       </div>

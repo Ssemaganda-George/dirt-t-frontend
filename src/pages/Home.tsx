@@ -12,10 +12,9 @@ function getCategorySlug(categoryId: string): string {
   }
 }
 import { useState, useEffect, useRef } from 'react'
-import ReactDOM from 'react-dom'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
+import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronRight } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -23,6 +22,8 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
 import type { Service } from '../types'
+import LambulaSearchBar from '../components/LambulaSearchBar'
+import '../lambula-search-bar.css'
 
 // Playful titles per category. The UI will pick one title per category per day,
 // seeded by a per-device random value stored in localStorage so different devices
@@ -302,6 +303,8 @@ export default function Home() {
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
+  const [selectedLocation, setSelectedLocation] = useState<string>('')
+  const [selectedDates, setSelectedDates] = useState<{ checkIn: string; checkOut: string } | null>(null)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   // When the user refreshes the page multiple times, we may swap the column order.
@@ -355,6 +358,20 @@ export default function Home() {
   // Only allow one category at a time (single-select)
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategories([categoryId])
+  }
+
+  // Handle location selection from search bar
+  const handleLocationSelect = (location: string) => {
+    console.log('=== handleLocationSelect called ===')
+    console.log('Location received:', location)
+    setSelectedLocation(location)
+  }
+
+  // Handle date selection from search bar
+  const handleDatesSelect = (dates: { checkIn: string; checkOut: string }) => {
+    console.log('=== handleDatesSelect called ===')
+    console.log('Dates received:', dates)
+    setSelectedDates(dates)
   }
 
   // Category counting helper removed — we no longer display numeric counts next to categories.
@@ -655,8 +672,19 @@ export default function Home() {
     const matchesCategory = selectedCategories.includes('all') ||
                            selectedCategories.includes(service.category_id || '')
 
-    // If there's a search query, ignore category filter; otherwise apply category filter
-    const shouldInclude = isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
+    // Location filter - check if service location matches selected location
+    // When location is selected, only show services that have that location
+    const hasLocation = service.location || service.event_location || service.meeting_point
+    const locationMatch = hasLocation ?
+      (service.location && service.location.toLowerCase().includes(selectedLocation.toLowerCase())) ||
+      (service.event_location && service.event_location.toLowerCase().includes(selectedLocation.toLowerCase())) ||
+      (service.meeting_point && service.meeting_point.toLowerCase().includes(selectedLocation.toLowerCase()))
+      : false
+    const matchesLocation = !selectedLocation || locationMatch
+
+    // Apply all filters: approval, category/search, and location
+    const categoryOrSearchFilter = searchQuery ? matchesSearch : (matchesSearch && matchesCategory)
+    const shouldInclude = isApproved && categoryOrSearchFilter && matchesLocation
 
     return shouldInclude;
   })
@@ -735,164 +763,45 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Search bar embedded in hero */}
-          <div className="w-full max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-1">
-              <div className="flex-1 flex items-center px-3">
-                <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder={t('search_placeholder')}
-                  className="w-full py-2 text-gray-900 placeholder-gray-400 focus:outline-none text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="ml-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                    aria-label="Clear search"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              {/* Filter Dropdown Trigger */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white px-3 md:px-5 py-2.5 rounded-xl font-medium transition-colors text-sm"
-                  title="Filter services by category"
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">
-                    {selectedCategories.includes('all')
-                      ? 'All'
-                      : selectedCategories.length === 1
-                        ? categories.find(cat => cat.id === selectedCategories[0])?.name || 'Filter'
-                        : `${selectedCategories.length} Selected`}
-                  </span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Dropdown Menu */}
-                {isDropdownOpen && ReactDOM.createPortal(
-                  <div className="category-dropdown fixed top-32 right-8 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
-                    {/* Header */}
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{t('select_one_or_more')}</p>
-                    </div>
-
-                    {/* Categories List */}
-                    <div className="max-h-60 overflow-y-auto">
-                      {/* All Categories Option */}
-                      <button
-                        onClick={() => {
-                          setSelectedCategories(['all'])
-                          setIsDropdownOpen(false)
-                        }}
-                        className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                          selectedCategories.includes('all') ? 'bg-emerald-50' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            selectedCategories.includes('all')
-                              ? 'bg-emerald-600 border-emerald-600'
-                              : 'border-gray-300'
-                          }`}>
-                            {selectedCategories.includes('all') && (
-                              <Check className="w-2.5 h-2.5 text-white" />
-                            )}
-                          </div>
-                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
-                            {t('show_all_travel_needs')}
-                          </span>
-                        </div>
-                      </button>
-
-                      {/* Individual Categories */}
-                      {categories.slice(1).map((category) => (
-                        <button
-                          key={category.id}
-                          onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors ${
-                            selectedCategories.includes(category.id) ? 'bg-emerald-50' : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                              selectedCategories.includes(category.id)
-                                ? 'bg-emerald-600 border-emerald-600'
-                                : 'border-gray-300'
-                            }`}>
-                              {selectedCategories.includes(category.id) && (
-                                <Check className="w-2.5 h-2.5 text-white" />
-                              )}
-                            </div>
-                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
-                              {category.name}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {selectedCategories.includes('all') ? t('all_listings') : `${selectedCategories.length} selected`}
-                        </span>
-                        <button
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
-                        >
-                          {t('done')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body
-                )}
-              </div>
-            </div>
+          {/* Lambula-style search bar */}
+          <div className="w-full max-w-4xl mx-auto">
+            <LambulaSearchBar
+              onCategoryChange={handleCategorySelect}
+              onLocationChange={handleLocationSelect}
+              onDatesChange={handleDatesSelect}
+              activeCategory={selectedCategories[0]}
+            />
           </div>
         </div>
       </div>
 
       {/* Category filter pills */}
-      {!searchQuery && (
-        <div className="border-b border-gray-100 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-4">
-              {categories.map((category) => {
-                const isActive = category.id === 'all'
-                  ? selectedCategories.includes('all')
-                  : selectedCategories.includes(category.id) && !selectedCategories.includes('all')
-                const Icon = category.icon
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gray-900 text-white shadow-sm'
-                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
-                    }`}
-                  >
-                    {Icon && <Icon className="h-3.5 w-3.5" />}
-                    {category.name}
-                  </button>
-                )
-              })}
-            </div>
+      <div className="border-b border-gray-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-4">
+            {categories.map((category) => {
+              const isActive = category.id === 'all'
+                ? selectedCategories.includes('all')
+                : selectedCategories.includes(category.id) && !selectedCategories.includes('all')
+              const Icon = category.icon
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => handleCategorySelect(category.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+                  }`}
+                >
+                  {Icon && <Icon className="h-3.5 w-3.5" />}
+                  {category.name}
+                </button>
+              )
+            })}
           </div>
         </div>
-      )}
+      </div>
 
 
       {/* Main Content */}
@@ -901,17 +810,18 @@ export default function Home() {
         {/* Results Header */}
         <div className="mb-4">
           <div className="mb-3">
-              {(searchQuery || !selectedCategories.includes('all')) && (
-                <h2 className="text-2xl font-bold text-black">
-                  {searchQuery
-                    ? `Search results for "${searchQuery}"`
+            {(searchQuery || !selectedCategories.includes('all') || selectedLocation) && (
+              <h2 className="text-2xl font-bold text-black">
+                {searchQuery
+                  ? `Search results for "${searchQuery}"`
+                  : selectedLocation
+                    ? `Services in ${selectedLocation}`
                     : selectedCategories.length === 1
                       ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
                       : `${selectedCategories.length} categories selected`}
-                </h2>
-              )}
-            </div>
-
+              </h2>
+            )}
+          </div>
         </div>
 
         {/* Content Grid */}
@@ -929,7 +839,18 @@ export default function Home() {
                 <ServiceCard 
                   key={service.id} 
                   service={service}
-                  onClick={() => navigate(`/service/${service.slug || service.id}`)}
+                  onClick={() => {
+                    // Build query params for dates
+                    const params = new URLSearchParams()
+                    if (selectedDates?.checkIn) {
+                      params.set('checkin', selectedDates.checkIn)
+                    }
+                    if (selectedDates?.checkOut) {
+                      params.set('checkout', selectedDates.checkOut)
+                    }
+                    const queryString = params.toString()
+                    navigate(`/service/${service.slug || service.id}${queryString ? '?' + queryString : ''}`)
+                  }}
                 />
               ))}
             </div>
@@ -937,7 +858,7 @@ export default function Home() {
             // Otherwise, show 6 category rows (one row per category). Each row scrolls horizontally if it has more items than fit.
             <div className="space-y-12">
               {getDailyCategoryOrder(categories.slice(1, 7)).map((category) => {
-                const servicesForCat = allServices.filter((s: Service) => 
+                const servicesForCat = filteredServices.filter((s: Service) => 
                   s.category_id === category.id && 
                   s.status === 'approved' && 
                   (!s.vendors || s.vendors.status !== 'suspended')
@@ -964,7 +885,18 @@ export default function Home() {
                           <div key={service.id} className="snap-start flex-shrink-0 w-[68%] sm:w-[46%] md:w-[32%] lg:w-[23%] xl:w-[19%]">
                             <ServiceCard
                               service={service}
-                              onClick={() => navigate(`/service/${service.slug || service.id}`)}
+                              onClick={() => {
+                                // Build query params for dates
+                                const params = new URLSearchParams()
+                                if (selectedDates?.checkIn) {
+                                  params.set('checkin', selectedDates.checkIn)
+                                }
+                                if (selectedDates?.checkOut) {
+                                  params.set('checkout', selectedDates.checkOut)
+                                }
+                                const queryString = params.toString()
+                                navigate(`/service/${service.slug || service.id}${queryString ? '?' + queryString : ''}`)
+                              }}
                             />
                           </div>
                         ))}

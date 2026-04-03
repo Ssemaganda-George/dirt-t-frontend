@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
@@ -60,10 +60,57 @@ const categories = [
 ]
 
 export default function Services() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { t } = usePreferences()
   const [dbCategories, setDbCategories] = useState<Array<{id: string, name: string, icon?: string | React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
+
+  // Initialize state from URL params on mount
+  useEffect(() => {
+    const category = searchParams.get('category')
+    const query = searchParams.get('q')
+    
+    if (category) {
+      setSelectedCategory(category)
+    }
+    if (query) {
+      setSearchQuery(query)
+    }
+  }, [searchParams])
+
+  // Handle category selection and update URL
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId)
+    // Update URL params
+    const newParams = new URLSearchParams(searchParams.toString())
+    if (categoryId === 'all') {
+      newParams.delete('category')
+    } else {
+      newParams.set('category', categoryId)
+    }
+    setSearchParams(newParams)
+  }
+
+  // Handle search query and update URL
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query)
+    const newParams = new URLSearchParams(searchParams.toString())
+    if (query) {
+      newParams.set('q', query)
+    } else {
+      newParams.delete('q')
+    }
+    setSearchParams(newParams)
+  }
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchQuery('')
+    setSelectedCategory('all')
+    setSearchParams(new URLSearchParams())
+  }
 
   // Use the reactive useServices hook instead of local state
   const { services: allServices, loading: servicesLoading } = useServices(undefined, { includeExpired: false })
@@ -120,17 +167,25 @@ export default function Services() {
     }
   }
 
-  const handleCategorySelect = (categoryId: string) => {
-    setSelectedCategory(categoryId)
-  }
-
   // Filter by search query first (across all categories if searching)
   const approvedServices = allServices.filter(service => 
     service.status === 'approved' && 
     (!service.vendors || service.vendors.status !== 'suspended')
   )
   
+  // Get location from URL params
+  const locationFilter = searchParams.get('location')
+  
   const searchFilteredServices = approvedServices.filter((service: Service) => {
+    // Location filter check
+    if (locationFilter) {
+      const locationLower = locationFilter.toLowerCase()
+      const serviceLocation = service.location?.toLowerCase() || ''
+      if (!serviceLocation.includes(locationLower)) {
+        return false
+      }
+    }
+    
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
     return service.title.toLowerCase().includes(query) ||
@@ -179,9 +234,9 @@ export default function Services() {
               <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="I want ..."
+                placeholder={t('search_placeholder') || 'I want...'}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -244,6 +299,14 @@ export default function Services() {
             <Search className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No results found</h3>
             <p className="text-gray-500">Try adjusting your search or filters</p>
+            {(searchQuery || selectedCategory !== 'all' || searchParams.get('location')) && (
+              <button
+                onClick={clearAllFilters}
+                className="mt-6 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-medium hover:bg-emerald-700 transition-colors"
+              >
+                {t('clear_all_filters') || 'Clear all filters'}
+              </button>
+            )}
           </div>
         )}
       </div>

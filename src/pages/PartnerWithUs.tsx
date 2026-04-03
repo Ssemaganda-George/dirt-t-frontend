@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Handshake, Users, TrendingUp, CheckCircle } from 'lucide-react';
+import { Handshake, Users, TrendingUp, CheckCircle, ExternalLink } from 'lucide-react';
+import { partners } from '../data/partners';
 
 const PartnerWithUs: React.FC = () => {
   const [form, setForm] = useState({
@@ -60,49 +61,27 @@ const PartnerWithUs: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <Handshake className="h-20 w-20 text-white mx-auto mb-6" />
-            <h1 className="text-4xl font-black text-white mb-4 tracking-tight antialiased">Partner With Us</h1>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed antialiased">
-              Join our network of trusted partners and grow your business with DirtTrails. Let's create exceptional experiences together.
-            </p>
-          </div>
-        </div>
-      </div>
+
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Partnership Benefits */}
+        {/* Our Partners */}
         <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
-          <h2 className="text-3xl font-black text-black mb-8 tracking-tight antialiased">Why Partner With DirtTrails?</h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <Users className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Expand Your Reach</h3>
-              <p className="text-gray-700 leading-snug antialiased">Connect with thousands of travelers seeking authentic Ugandan experiences.</p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <TrendingUp className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Grow Your Business</h3>
-              <p className="text-gray-700 leading-snug antialiased">Increase bookings and revenue through our established platform.</p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Quality Assurance</h3>
-              <p className="text-gray-700 leading-snug antialiased">Benefit from our quality standards and customer support network.</p>
-            </div>
+          <h2 className="text-2xl font-black text-black mb-8 tracking-tight antialiased">Our Partners</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+            {partners.map((partner) => (
+              <a
+                key={partner.name}
+                href={partner.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 rounded-lg p-3 border border-gray-200 transition"
+              >
+                <img src={partner.logo} alt={partner.name + ' logo'} className="h-10 w-10 object-contain rounded bg-white border border-gray-200" />
+                <span className="font-medium text-black flex-1 truncate">{partner.name}</span>
+                <ExternalLink className="w-4 h-4 text-gray-400" />
+              </a>
+            ))}
           </div>
         </div>
 
