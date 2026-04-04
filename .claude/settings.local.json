@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit --skipLibCheck)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''mcpServers'''',{}\\), indent=2\\)\\)\")",
+      "Bash(supabase functions:*)",
+      "Bash(supabase --help)",
+      "Bash(supabase inspect:*)",
+      "Read(//c/Users/user/.config/supabase/**)",
+      "Read(//c/Users/user/.supabase/**)",
+      "Bash(supabase --debug)",
+      "Bash(supabase projects:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(p.get\\(''''id'''',''''''''\\), p.get\\(''''name'''',''''''''\\)\\) for p in d]\")",
+      "Bash(xargs grep:*)",
+      "Bash(ls -la db/*.sql)",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
@@ -54,6 +54,13 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(2) // Start at step 2 (Booking Details)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [pollingMessage, setPollingMessage] = useState('')
+  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finaliseInFlightRef = useRef(false)
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
   // Currency conversion rates (simplified)
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
@@ -559,7 +566,136 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const hotelGrandTotal = customerPaysTotal
 
   const handleCompleteBooking = async () => {
+    if (isSubmitting) return
+
+    if (bookingData.paymentMethod === 'mobile') {
+      const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
+      const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+      if (!phone || phone.length < 12) {
+        alert('Please enter a valid mobile money phone number (e.g. 0712345678).')
+        return
+      }
+      if (!bookingData.mobileProvider) {
+        alert('Please select a mobile money provider (MTN or Airtel).')
+        return
+      }
+
+      setIsSubmitting(true)
+      setPollingMessage('Initiating payment…')
+
+      try {
+        const { data: session } = await supabase.auth.getSession()
+        const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+        const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            amount: Math.round(totalPrice),
+            phone_number: phone,
+            booking_id: tempRef,
+            description: `${service.title} hotel booking — ${nights} night${nights > 1 ? 's' : ''}`,
+            user_id: session?.session?.user?.id || undefined,
+          }),
+        })
+
+        const result = await collectRes.json().catch(() => ({})) as {
+          success?: boolean
+          error?: string
+          data?: { reference: string; status: string }
+        }
+
+        if (!collectRes.ok || !result?.success || !result?.data?.reference) {
+          throw new Error(result?.error || 'Payment initiation failed')
+        }
+
+        const ref = result.data.reference
+        setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+        const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
+          try {
+            const res = await fetch(
+              `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
+              { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+            )
+            const data = await res.json().catch(() => ({})) as { status?: string }
+            if (data?.status === 'completed') return 'completed'
+            if (data?.status === 'failed') return 'failed'
+            return null
+          } catch {
+            return null
+          }
+        }
+
+        const channel = supabase
+          .channel(`payment_htl_${ref}`)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
+            async (payload) => {
+              const row = payload.new as { status: string }
+              if (row.status === 'completed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                await finaliseHotelBooking('paid')
+              } else if (row.status === 'failed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                setPollingMessage('')
+                setIsSubmitting(false)
+                alert('Payment was not completed or was declined. Please try again.')
+              }
+            })
+          .subscribe()
+
+        const immediate = await checkStatus()
+        if (immediate === 'completed') {
+          channel.unsubscribe()
+          await finaliseHotelBooking('paid')
+          return
+        } else if (immediate === 'failed') {
+          channel.unsubscribe()
+          setPollingMessage('')
+          setIsSubmitting(false)
+          alert('Payment was not completed or was declined. Please try again.')
+          return
+        }
+
+        backupPollRef.current = setInterval(async () => {
+          const status = await checkStatus()
+          if (status === 'completed') {
+            channel.unsubscribe()
+            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            await finaliseHotelBooking('paid')
+          } else if (status === 'failed') {
+            channel.unsubscribe()
+            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            setPollingMessage('')
+            setIsSubmitting(false)
+            alert('Payment was not completed or was declined. Please try again.')
+          }
+        }, 4000)
+        setTimeout(() => {
+          if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+        }, 120000)
+
+      } catch (err) {
+        console.error('Payment error:', err)
+        setPollingMessage('')
+        setIsSubmitting(false)
+        alert((err as Error).message || 'Payment failed. Please try again.')
+      }
+      return
+    }
+
     setIsSubmitting(true)
+    await finaliseHotelBooking('pending')
+  }
+
+  const finaliseHotelBooking = async (paymentStatus: 'paid' | 'pending') => {
+    if (finaliseInFlightRef.current) return
+    finaliseInFlightRef.current = true
     try {
       await createBooking({
         service_id: service.id,
@@ -570,22 +706,21 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         total_amount: hotelGrandTotal,
         pricing_base_amount: totalPrice,
         currency: 'UGX',
-        status: 'pending',
-        payment_status: 'pending',
+        status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
+        payment_status: paymentStatus,
         special_requests: bookingData.specialRequests,
-        // Guest booking fields
         tourist_id: user?.id,
         guest_name: user ? undefined : bookingData.contactName,
         guest_email: user ? undefined : bookingData.contactEmail,
         guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
-        // Hotel-specific fields
         start_time: service.check_in_time,
         end_time: service.check_out_time,
         end_date: bookingData.checkOutDate
       })
-
-      setCurrentStep(3) // Go to confirmation step
+      setPollingMessage('')
+      setCurrentStep(3)
     } catch (error) {
+      finaliseInFlightRef.current = false
       console.error('Error creating booking:', error)
       alert('Failed to complete booking. Please try again.')
     } finally {
@@ -838,17 +973,41 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 </label>
               </div>
               {bookingData.paymentMethod === 'mobile' && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Provider</label>
-                  <select
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
-                    value={bookingData.mobileProvider}
-                    onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                  >
-                    <option value="">Select a provider</option>
-                    <option value="MTN">MTN Mobile Money</option>
-                    <option value="Airtel">Airtel Money</option>
-                  </select>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-1">Mobile Money Number</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="0712345678 or +256712345678"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Provider</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'MTN')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
+                        <span className="text-sm font-medium">MTN</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'Airtel')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
+                        <span className="text-sm font-medium">Airtel</span>
+                      </button>
+                    </div>
+                  </div>
+                  {pollingMessage && (
+                    <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -1108,11 +1267,16 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
               disabled={
                 isSubmitting ||
-                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || bookingData.paymentMethod === 'card'))
+                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || bookingData.paymentMethod === 'card')) ||
+                (currentStep === 2 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
               }
               className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
             >
-              {isSubmitting ? 'Processing...' : (currentStep === 2 ? 'Complete Booking' : 'Next')}
+              {isSubmitting
+                ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')
+                : currentStep === 2
+                  ? (bookingData.paymentMethod === 'mobile' ? 'Pay with Mobile Money' : 'Complete Booking')
+                  : 'Next'}
             </button>
           </div>
         )}

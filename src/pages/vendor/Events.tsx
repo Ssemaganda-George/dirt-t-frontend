@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { Calendar, MapPin, Users, DollarSign, CheckCircle, Clock, ExternalLink, Copy, ArrowLeft } from 'lucide-react'
+import { Calendar, MapPin, Users, DollarSign, CheckCircle, Clock, ExternalLink, Copy, ArrowLeft, Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
 import { createActivationRequest } from '../../lib/database'
 
@@ -174,6 +174,9 @@ export default function VendorEvents() {
     return matchesSearch && matchesStatus
   })
 
+  // Show create button for vendors (even if they have no active events)
+  const showCreateButton = Boolean(profile?.role === 'vendor' || vendor?.id)
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800'
@@ -216,6 +219,18 @@ export default function VendorEvents() {
             <p className="text-sm text-gray-600 mt-1">Manage your event listings and activation requests</p>
           </div>
         </div>
+        {showCreateButton && (
+          <div className="ml-4 flex items-start">
+            <Link
+              to="/vendor/services"
+              state={{ preselectCategory: 'cat_activities' }}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="text-sm font-medium">Create event</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -252,8 +267,10 @@ export default function VendorEvents() {
           <div key={event.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-200">
             {/* Event Image */}
             <div className="h-32 md:h-36 bg-gray-200 relative">
-              {event.primary_image_url ? (
+                {event.primary_image_url ? (
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={event.primary_image_url}
                   alt={event.title}
                   className="w-full h-full object-cover"

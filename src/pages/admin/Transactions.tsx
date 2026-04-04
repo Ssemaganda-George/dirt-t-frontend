@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 import { useTransactions } from '../../hooks/hook';
+import { useState } from 'react';
+import type { Transaction } from '../../lib/database';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrency } from '../../lib/utils';
@@ -43,6 +45,8 @@ export function Transactions() {
     withdrawals: transactions.filter(t => t.transaction_type === 'withdrawal').length,
     refunds: transactions.filter(t => t.transaction_type === 'refund').length,
   };
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   return (
     <div className="space-y-6">
@@ -140,7 +144,13 @@ export function Transactions() {
                       {formatCurrency(transaction.amount, transaction.currency)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {transaction.payment_method.replace('_', ' ')}
+                      <button
+                        onClick={() => setSelectedTransaction(transaction)}
+                        className="text-blue-600 hover:underline"
+                        title="View payment details"
+                      >
+                        {transaction.payment_method.replace('_', ' ')}
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={transaction.status} variant="small" />
@@ -174,6 +184,57 @@ export function Transactions() {
               </tbody>
             </table>
           </div>
+
+          {/* Payment details modal */}
+          {selectedTransaction && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedTransaction(null)} />
+              <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold">Payment Details</h2>
+                  <button onClick={() => setSelectedTransaction(null)} className="text-gray-500 hover:text-black">Close</button>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                  <p className="text-sm text-gray-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_', ' ')}</span></p>
+                  <div className="mt-4 space-y-3">
+                    {selectedTransaction.payout_meta ? (
+                      selectedTransaction.payout_meta.type === 'bank' ? (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.name || selectedTransaction.payout_meta.account_name}</div>
+                          <div className="text-sm text-gray-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
+                          <div className="text-sm text-gray-600">Branch: {selectedTransaction.payout_meta.branch || '—'}</div>
+                          <div className="mt-3">
+                            <button
+                              onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')}
+                              className="px-3 py-1 bg-gray-100 rounded text-sm"
+                            >Copy account number</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.provider || 'Mobile Money'}</div>
+                          {selectedTransaction.payout_meta.name && (
+                            <div className="text-sm text-gray-700">Account name: <span className="font-medium">{selectedTransaction.payout_meta.name}</span>
+                              <button className="ml-3 text-gray-500" onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.name || '')}>Copy</button>
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
+                          <div className="mt-3">
+                            <button
+                              onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())}
+                              className="px-3 py-1 bg-gray-100 rounded text-sm"
+                            >Copy phone number</button>
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-sm text-gray-500">No payout details available for this transaction.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
           {transactions.length === 0 && (
             <div className="text-center py-8">

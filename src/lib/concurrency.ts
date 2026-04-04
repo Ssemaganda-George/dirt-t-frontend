@@ -183,6 +183,62 @@ class OperationQueue {
     if (error || !result?.success) {
       throw new Error(result?.error || error?.message || 'Failed to create booking');
     }
+
+    // After successful RPC, attempt to verify payment for the created booking.
+    try {
+      const bookingId = (result as any)?.booking_id || (result as any)?.bookingId || null
+      if (bookingId) {
+        const { data: bookingRow, error: fetchErr } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('id', bookingId)
+          .single()
+
+        if (!fetchErr && bookingRow) {
+          const paymentStatus = bookingRow.payment_status
+          if (paymentStatus === 'paid') {
+            const { data: completedTx, error: txErr } = await supabase
+              .from('transactions')
+              .select('id')
+              .eq('booking_id', bookingId)
+              .eq('transaction_type', 'payment')
+              .eq('status', 'completed')
+              .single()
+
+            if (txErr || !completedTx) {
+              // Report and mark booking for review (best-effort)
+              try {
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+                const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+                if (supabaseUrl && supabaseAnonKey) {
+                  await fetch(`${supabaseUrl}/functions/v1/report-booking-issue`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${supabaseAnonKey}`
+                    },
+                    body: JSON.stringify({ booking_id: bookingId, issue: 'payment_unverified', timestamp: new Date().toISOString() })
+                  }).catch(() => {})
+                }
+              } catch (e) {
+                // ignore
+              }
+
+              try {
+                await supabase
+                  .from('bookings')
+                  .update({ payment_status: 'pending', rejection_reason: 'payment_unverified' })
+                  .eq('id', bookingId)
+              } catch (e) {
+                // ignore
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error verifying payment for queued booking:', err)
+    }
   }
 
   getQueueLength(): number {

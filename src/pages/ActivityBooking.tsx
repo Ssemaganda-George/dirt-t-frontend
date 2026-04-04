@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   calculatePaymentForAmount,
   customerTotalFromUnitPricingCalc,
@@ -48,6 +48,13 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [pollingMessage, setPollingMessage] = useState('')
+  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finaliseInFlightRef = useRef(false)
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
@@ -471,7 +478,141 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
 
+    // If mobile money selected, process payment via MarzPay first
+    if (bookingData.paymentMethod === 'mobile') {
+      const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
+      const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+      if (!phone || phone.length < 12) {
+        alert('Please enter a valid mobile money phone number (e.g. 0712345678).')
+        return
+      }
+      if (!bookingData.mobileProvider) {
+        alert('Please select a mobile money provider (MTN or Airtel).')
+        return
+      }
+
+      setIsSubmitting(true)
+      setPollingMessage('Initiating payment…')
+
+      try {
+        const { data: session } = await supabase.auth.getSession()
+        // Use a temporary booking reference for the payment
+        const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+        const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            amount: Math.round(totalPrice),
+            phone_number: phone,
+            booking_id: tempRef,
+            description: `${service.title} booking — ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`,
+            user_id: session?.session?.user?.id || undefined,
+          }),
+        })
+
+        const result = await collectRes.json().catch(() => ({})) as {
+          success?: boolean
+          error?: string
+          data?: { reference: string; status: string }
+        }
+
+        if (!collectRes.ok || !result?.success || !result?.data?.reference) {
+          throw new Error(result?.error || 'Payment initiation failed')
+        }
+
+        const ref = result.data.reference
+        setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+        // Poll payment status
+        const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
+          try {
+            const res = await fetch(
+              `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
+              { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
+            )
+            const data = await res.json().catch(() => ({})) as { status?: string }
+            if (data?.status === 'completed') return 'completed'
+            if (data?.status === 'failed') return 'failed'
+            return null
+          } catch {
+            return null
+          }
+        }
+
+        // Realtime listener
+        const channel = supabase
+          .channel(`payment_act_${ref}`)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
+            async (payload) => {
+              const row = payload.new as { status: string }
+              if (row.status === 'completed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                await finaliseBooking('paid')
+              } else if (row.status === 'failed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                setPollingMessage('')
+                setIsSubmitting(false)
+                alert('Payment was not completed or was declined. Please try again.')
+              }
+            })
+          .subscribe()
+
+        // Immediate check
+        const immediate = await checkStatus()
+        if (immediate === 'completed') {
+          channel.unsubscribe()
+          await finaliseBooking('paid')
+          return
+        } else if (immediate === 'failed') {
+          channel.unsubscribe()
+          setPollingMessage('')
+          setIsSubmitting(false)
+          alert('Payment was not completed or was declined. Please try again.')
+          return
+        }
+
+        // Backup poll every 4s, stop after 2 min
+        backupPollRef.current = setInterval(async () => {
+          const status = await checkStatus()
+          if (status === 'completed') {
+            channel.unsubscribe()
+            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            await finaliseBooking('paid')
+          } else if (status === 'failed') {
+            channel.unsubscribe()
+            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            setPollingMessage('')
+            setIsSubmitting(false)
+            alert('Payment was not completed or was declined. Please try again.')
+          }
+        }, 4000)
+        setTimeout(() => {
+          if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+        }, 120000)
+
+      } catch (err) {
+        console.error('Payment error:', err)
+        setPollingMessage('')
+        setIsSubmitting(false)
+        alert((err as Error).message || 'Payment failed. Please try again.')
+      }
+      return
+    }
+
+    // Non-mobile-money: create booking directly
     setIsSubmitting(true)
+    await finaliseBooking('pending')
+  }
+
+  const finaliseBooking = async (paymentStatus: 'paid' | 'pending') => {
+    if (finaliseInFlightRef.current) return
+    finaliseInFlightRef.current = true
     try {
       await createBooking({
         service_id: service.id,
@@ -481,19 +622,19 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         guests: bookingData.guests,
         total_amount: customerPaysTotal,
         currency: service.currency,
-        status: 'pending',
-        payment_status: 'pending',
+        status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
+        payment_status: paymentStatus,
         special_requests: bookingData.specialRequests,
-        // Guest booking fields
         tourist_id: user?.id,
         guest_name: user ? undefined : bookingData.contactName,
         guest_email: user ? undefined : bookingData.contactEmail,
         guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
         pricing_base_amount: totalPrice
       })
-
-      setCurrentStep(5) // Go to confirmation step
+      setPollingMessage('')
+      setCurrentStep(5)
     } catch (error) {
+      finaliseInFlightRef.current = false
       console.error('Error creating booking:', error)
       alert('Failed to complete booking. Please try again.')
     } finally {
@@ -713,17 +854,41 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               </div>
             </div>
             {bookingData.paymentMethod === 'mobile' && (
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                  value={bookingData.mobileProvider}
-                  onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                >
-                  <option value="" disabled>Select Provider</option>
-                  <option value="MTN">MTN Mobile Money</option>
-                  <option value="Airtel">Airtel Money</option>
-                </select>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number</label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="0712345678 or +256712345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('mobileProvider', 'MTN')}
+                      className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                    >
+                      <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
+                      <span className="text-sm font-medium">MTN</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('mobileProvider', 'Airtel')}
+                      className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                    >
+                      <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
+                      <span className="text-sm font-medium">Airtel</span>
+                    </button>
+                  </div>
+                </div>
+                {pollingMessage && (
+                  <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
+                )}
               </div>
             )}
             {bookingData.paymentMethod === 'card' && (
@@ -837,6 +1002,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0">
             <img
+              loading="lazy"
+              decoding="async"
               src={service.images[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
               alt={service.title}
               className="w-full sm:w-20 md:w-24 h-40 sm:h-20 md:h-24 object-cover rounded-lg"
@@ -874,12 +1041,17 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               disabled={
                 isSubmitting ||
                 (currentStep === 1 && !bookingData.date) ||
-                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail))
-                || (currentStep === 3 && bookingData.paymentMethod === 'card')
+                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail)) ||
+                (currentStep === 3 && bookingData.paymentMethod === 'card') ||
+                (currentStep === 3 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
               }
               className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base"
             >
-              {isSubmitting ? 'Processing...' : currentStep === 3 ? 'Complete Booking' : 'Next'}
+              {isSubmitting
+                ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')
+                : currentStep === 3
+                  ? (bookingData.paymentMethod === 'mobile' ? 'Pay with Mobile Money' : 'Complete Booking')
+                  : 'Next'}
             </button>
           </div>
         )}

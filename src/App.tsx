@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import { AuthProvider } from './contexts/AuthContext'
@@ -13,7 +13,6 @@ import { PageTransition } from './components/PageTransition'
 import { SmoothLoader } from './components/SmoothLoader'
 import { AppVisitorTracker } from './components/AppVisitorTracker'
 
-// Lazy load all page components for better UX with loading states
 const Home = lazy(() => import('./pages/Home'))
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'))
 const BookingFlow = lazy(() => import('./pages/BookingFlow'))
@@ -22,6 +21,9 @@ const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const ServiceCategories = lazy(() => import('./pages/Services'))
 const UserDashboard = lazy(() => import('./pages/Dashboard'))
 const Login = lazy(() => import('./pages/Login'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const VerifyOtp = lazy(() => import('./pages/VerifyOtp'))
 const VendorLogin = lazy(() => import('./pages/VendorLogin'))
 const VendorPending = lazy(() => import('./pages/VendorPending'))
 const VendorDashboard = lazy(() => import('./pages/vendor/Dashboard'))
@@ -37,8 +39,11 @@ const VendorSettings = lazy(() => import('./pages/vendor/Settings'))
 const VendorTickets = lazy(() => import('./pages/vendor/Tickets'))
 const VendorEvents = lazy(() => import('./pages/vendor/Events'))
 const VendorVisitorActivity = lazy(() => import('./pages/vendor/VisitorActivity'))
+const VendorPerformance = lazy(() => import('./pages/vendor/PerformanceReport'))
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
 const Businesses = lazy(() => import('./pages/admin/Businesses'))
+const AdminVendors = lazy(() => import('./pages/admin/Vendors'))
+const AdminVendorDetail = lazy(() => import('./pages/admin/VendorDetail.tsx'))
 const Messages = lazy(() => import('./pages/admin/Messages'))
 const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
@@ -47,9 +52,15 @@ const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module =>
 const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
 const DirtTrailsWallet = lazy(() => import('./pages/admin/DirtTrailsWallet').then(module => ({ default: module.DirtTrailsWallet })))
 const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
+const ConservationWallet = lazy(() => import('./pages/admin/ConservationWallet').then(module => ({ default: module.default })))
+const TouristWallets = lazy(() => import('./pages/admin/TouristWallets').then(module => ({ default: module.default })))
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
+const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Trees').then(m => ({ default: m.default })))
+
+// Create Safari Page
+const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
@@ -79,6 +90,8 @@ const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => (
 const VendorTierManagement = lazy(() => import('./pages/admin/VendorTierManagement'))
 const Vendors = lazy(() => import('./pages/admin/Vendors'))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
+const AdminPerformance = lazy(() => import('./pages/admin/PerformanceReport'))
+const AdminFlaggedBookings = lazy(() => import('./pages/admin/FlaggedBookings'))
 
 // Preload critical routes
 const preloadCriticalRoutes = () => {
@@ -94,18 +107,28 @@ const HelpCenter = lazy(() => import('./pages/HelpCenter'))
 const ContactUs = lazy(() => import('./pages/ContactUs'))
 const Safety = lazy(() => import('./pages/Safety'))
 const TermsOfService = lazy(() => import('./pages/TermsOfService'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TravelInsurance = lazy(() => import('./pages/TravelInsurance'))
 const VisaProcessing = lazy(() => import('./pages/VisaProcessing'))
 const InternetConnectivity = lazy(() => import('./pages/InternetConnectivity'))
 const ReferBusiness = lazy(() => import('./pages/ReferBusiness'))
 const ReferralForm = lazy(() => import('./pages/ReferralForm'))
 const HospitalityClass = lazy(() => import('./pages/HospitalityClass'))
+const Geotagging = lazy(() => import('./pages/conservation/Geotagging'))
+const TreePlanting = lazy(() => import('./pages/conservation/TreePlanting'))
+const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculator'))
+const OffsetDonation = lazy(() => import('./pages/conservation/OffsetDonation'))
+const OffsetCheckout = lazy(() => import('./pages/conservation/OffsetCheckout'))
+const OffsetSuccess = lazy(() => import('./pages/conservation/OffsetSuccess'))
+const Donate = lazy(() => import('./pages/conservation/Donate'))
 
 // Tourist pages
 const TouristBookings = lazy(() => import('./pages/Bookings'))
 const Saved = lazy(() => import('./pages/Saved'))
+const TouristWallet = lazy(() => import('./pages/Wallet'))
 const UserSettings = lazy(() => import('./pages/Settings'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
+const MessagesPage = lazy(() => import('./pages/Messages'))
 
 // Scroll to top component
 function ScrollToTop() {
@@ -154,23 +177,36 @@ function App() {
             <Route path="services" element={<ServiceCategories />} />
             <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
+            <Route path="create-safari" element={<CreateSafariPage />} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />
             <Route path="safety" element={<Safety />} />
             <Route path="terms" element={<TermsOfService />} />
+            <Route path="privacy" element={<PrivacyPolicy />} />
             <Route path="travel-insurance" element={<TravelInsurance />} />
             <Route path="visa-processing" element={<VisaProcessing />} />
             <Route path="internet-connectivity" element={<InternetConnectivity />} />
             <Route path="refer-business" element={<ReferBusiness />} />
             <Route path="referral-form" element={<ReferralForm />} />
             <Route path="hospitality-class" element={<HospitalityClass />} />
+            <Route path="conservation/geotagging" element={<Geotagging />} />
+            <Route path="conservation/tree-planting" element={<TreePlanting />} />
+            <Route path="conservation/donate" element={<Donate />} />
+            <Route path="conservation/carbon" element={<CarbonCalculator />} />
+            <Route path="conservation/offset" element={<OffsetDonation />} />
+            <Route path="conservation/checkout" element={<OffsetCheckout />} />
+            <Route path="conservation/offset/success" element={<OffsetSuccess />} />
+            <Route path="environment/donate" element={<Navigate to="/conservation/donate" replace />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />
           </Route>
           
           {/* Auth Routes */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/login" element={<Login />} />
           <Route path="/vendor-pending" element={<VendorPending />} />
           
@@ -196,6 +232,16 @@ function App() {
             <Route index element={<Saved />} />
           </Route>
           <Route
+            path="/wallet"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <PublicLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<TouristWallet />} />
+          </Route>
+          <Route
             path="/settings"
             element={
               <ProtectedRoute requiredRole="tourist">
@@ -214,6 +260,16 @@ function App() {
             }
           >
             <Route index element={<EditProfile />} />
+          </Route>
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute requiredRole="tourist">
+                <PublicLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<MessagesPage />} />
           </Route>
           
           {/* Vendor Routes */}
@@ -237,6 +293,7 @@ function App() {
             <Route path="inquiries" element={<VendorInquiries />} />
             <Route path="transactions" element={<VendorTransactions />} />
             <Route path="visitor-activity" element={<VendorVisitorActivity />} />
+            <Route path="performance" element={<VendorPerformance />} />
           </Route>
           
           {/* Admin Routes */}
@@ -268,11 +325,17 @@ function App() {
             <Route path="bookings/shops" element={<ShopsBookings />} />
             <Route path="bookings/tours" element={<ToursBookings />} />
             <Route path="bookings/transport" element={<TransportBookings />} />
+            <Route path="bookings/flagged" element={<AdminFlaggedBookings />} />
             <Route path="messages" element={<Messages />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
+            <Route path="conservation/trees" element={<AdminConservationTrees />} />
             <Route path="wallets" element={<Transactions />} />
+            <Route path="vendors" element={<AdminVendors />} />
+            <Route path="vendors/:id" element={<AdminVendorDetail />} />
             <Route path="dirt-trails-wallet" element={<DirtTrailsWallet />} />
+            <Route path="conservation-wallet" element={<ConservationWallet />} />
+            <Route path="tourist-wallets" element={<TouristWallets />} />
             <Route path="finance" element={<Finance />} />
             <Route path="vendor-messages" element={
               <ProtectedRoute requiredRole="admin">
@@ -281,6 +344,7 @@ function App() {
             } />
             <Route path="hero-video" element={<HeroVideoManager />} />
             <Route path="visitor-activity" element={<VisitorActivity />} />
+            <Route path="performance" element={<AdminPerformance />} />
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="vendor-tiers" element={<VendorTierManagement />} />
             <Route path="vendors" element={<Vendors />} />

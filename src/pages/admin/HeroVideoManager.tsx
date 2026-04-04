@@ -302,7 +302,7 @@ export default function AdminHeroVideoManager() {
                     {mediaType === 'video' ? (
                       <video src={mediaUrl} controls className="w-full rounded-lg shadow-sm" />
                     ) : (
-                      <img src={mediaUrl} alt="Hero" className="w-full rounded-lg shadow-sm" />
+                      <img loading="lazy" decoding="async" src={mediaUrl} alt="Hero" className="w-full rounded-lg shadow-sm" />
                     )}
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function AdminHeroVideoManager() {
                             onMouseLeave={(e) => e.currentTarget.pause()}
                           />
                         ) : (
-                          <img src={item.url} alt="Hero" className="w-full h-full object-cover" />
+                          <img loading="lazy" decoding="async" src={item.url} alt="Hero" className="w-full h-full object-cover" />
                         )}
 
                         {/* Overlay with type indicator */}

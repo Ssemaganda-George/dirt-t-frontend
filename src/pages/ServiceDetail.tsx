@@ -54,105 +54,125 @@ interface ServiceDetail {
   service_categories: {
     name: string
   }
-
-  // Service-specific fields
-  duration_days?: number
-  star_rating?: number
-  room_types?: string[]
-  check_in_time?: string
-  check_out_time?: string
-  facilities?: string[]
-  breakfast_included?: boolean
-  wifi_available?: boolean
-  parking_available?: boolean
-  pet_friendly?: boolean
-  generator_backup?: boolean
-  smoking_allowed?: boolean
-  children_allowed?: boolean
-  disabled_access?: boolean
-  concierge_service?: boolean
-  total_rooms?: number
-  minimum_stay?: number
-  maximum_guests?: number
-  hotel_policies?: string[]
-  difficulty_level?: string
-  minimum_age?: number
-  languages_offered?: string[]
-  included_items?: string[]
-  excluded_items?: string[]
-  itinerary?: string[]
-  meeting_point?: string
-  end_point?: string
-  transportation_included?: boolean
-  meals_included?: string[]
-  guide_included?: boolean
-  accommodation_included?: boolean
-  vehicle_type?: string
-  vehicle_capacity?: number
-  driver_included?: boolean
-  air_conditioning?: boolean
-  pickup_locations?: string[]
-  dropoff_locations?: string[]
-  route_description?: string
-  license_required?: string
-  booking_notice_hours?: number
-  gps_tracking?: boolean
-  fuel_included?: boolean
-  tolls_included?: boolean
-  insurance_included?: boolean
-  usb_charging?: boolean
-  child_seat?: boolean
-  roof_rack?: boolean
-  towing_capacity?: boolean
-  four_wheel_drive?: boolean
-  automatic_transmission?: boolean
-  reservations_required?: boolean
-  transport_terms?: string
-  airline?: string
-  flight_number?: string
-  departure_city?: string
-  arrival_city?: string
-  flight_class?: string
-  cuisine_type?: string
-  average_cost_per_person?: number
-  outdoor_seating?: boolean
-  menu_items?: string[]
-  dietary_options?: string[]
-  opening_hours?: any
-  live_music?: boolean
-  private_dining?: boolean
-  alcohol_served?: boolean
-  activity_type?: string
-  skill_level_required?: string
-  equipment_provided?: string[]
-  languages_spoken?: string[]
-  specialties?: string[]
-  certifications?: string[]
-  years_experience?: number
-  service_area?: string
-
-  // Event-specific fields
-  event_datetime?: string
-  event_location?: string
-  event_status?: string
-  registration_deadline?: string
-  max_participants?: number
-  event_highlights?: string[]
-  event_inclusions?: string[]
-  event_prerequisites?: string[]
+  category_id?: string
+  
+    // Service-specific fields
+    duration_days?: number
+    star_rating?: number
+    room_types?: string[]
+    check_in_time?: string
+    check_out_time?: string
+    facilities?: string[]
+    breakfast_included?: boolean
+    wifi_available?: boolean
+    parking_available?: boolean
+    pet_friendly?: boolean
+    generator_backup?: boolean
+    smoking_allowed?: boolean
+    children_allowed?: boolean
+    disabled_access?: boolean
+    concierge_service?: boolean
+    total_rooms?: number
+    minimum_stay?: number
+    maximum_guests?: number
+    hotel_policies?: string[]
+    difficulty_level?: string
+    minimum_age?: number
+    languages_offered?: string[]
+    included_items?: string[]
+    excluded_items?: string[]
+    itinerary?: string[]
+    meeting_point?: string
+    end_point?: string
+    transportation_included?: boolean
+    meals_included?: string[]
+    guide_included?: boolean
+    accommodation_included?: boolean
+    vehicle_type?: string
+    vehicle_capacity?: number
+    driver_included?: boolean
+    air_conditioning?: boolean
+    pickup_locations?: string[]
+    dropoff_locations?: string[]
+    route_description?: string
+    license_required?: string
+    booking_notice_hours?: number
+    gps_tracking?: boolean
+    fuel_included?: boolean
+    tolls_included?: boolean
+    insurance_included?: boolean
+    usb_charging?: boolean
+    child_seat?: boolean
+    roof_rack?: boolean
+    towing_capacity?: boolean
+    four_wheel_drive?: boolean
+    automatic_transmission?: boolean
+    reservations_required?: boolean
+    transport_terms?: string
+    airline?: string
+    flight_number?: string
+    departure_city?: string
+    arrival_city?: string
+    flight_class?: string
+    cuisine_type?: string
+    average_cost_per_person?: number
+    outdoor_seating?: boolean
+    menu_items?: string[]
+    dietary_options?: string[]
+    opening_hours?: any
+    live_music?: boolean
+    private_dining?: boolean
+    alcohol_served?: boolean
+    activity_type?: string
+    skill_level_required?: string
+    equipment_provided?: string[]
+    languages_spoken?: string[]
+    specialties?: string[]
+    certifications?: string[]
+    years_experience?: number
+    service_area?: string
+  
+    // Event-specific fields
+    event_datetime?: string
+    event_location?: string
+    event_status?: string
+    registration_deadline?: string
+    max_participants?: number
+    event_highlights?: string[]
+    event_inclusions?: string[]
+    event_prerequisites?: string[]
+    group_discounts?: boolean
+    photography_allowed?: boolean
+    recording_allowed?: boolean
+    meals_included_flag?: boolean
+    certificates_provided?: boolean
+    safety_gear_required?: boolean
+    event_notes?: string
 }
 
 export default function ServiceDetail() {
   const formatServiceTitle = (service: ServiceDetail, isDesktop = false) => {
     const location = service.event_location || service.location;
-    if (!location) return service.title;
-    
+    if (!location) {
+      return (
+        <>
+          {service.title}
+          {service.category_id === 'cat_transport' && service.vehicle_capacity && (
+            <span className="text-gray-600 font-normal"> ({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})</span>
+          )}
+        </>
+      );
+    }
+
     const preposition = ['activities', 'events', 'activity', 'event'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'at' : 'in';
     const locationClass = isDesktop ? 'text-lg font-normal text-blue-600' : 'text-sm font-normal text-blue-600';
-    
+
     return (
       <>
-        {service.title}{' '}
+        {service.title}
+        {service.category_id === 'cat_transport' && service.vehicle_capacity && (
+          <span className="text-gray-500 font-normal text-xs md:text-sm align-middle ml-1">({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})</span>
+        )}{' '}
         <span className={locationClass}>
           {preposition} {location}
         </span>
@@ -175,6 +195,23 @@ export default function ServiceDetail() {
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [transportZone, setTransportZone] = useState<'within' | 'upcountry' | ''>('')
+
+  // Auto-default transportZone when only one transport price is provided
+  useEffect(() => {
+    if (!service) return
+    const cat = service.service_categories?.name?.toLowerCase()
+    if (cat !== 'transport') return
+    if (transportZone) return
+
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    const hasWithin = Number.isFinite(within) && within > 0
+    const hasUpcountry = Number.isFinite(upcountry) && upcountry > 0
+
+    if (hasWithin && !hasUpcountry) setTransportZone('within')
+    else if (hasUpcountry && !hasWithin) setTransportZone('upcountry')
+  }, [service, transportZone])
   const [checkInDate, setCheckInDate] = useState('')
   const [checkOutDate, setCheckOutDate] = useState('')
   const [startTime, setStartTime] = useState('09:00')
@@ -199,6 +236,21 @@ export default function ServiceDetail() {
   const bookingRef = useRef<HTMLDivElement>(null)
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
+  // Transport unit price (kept as top-level hook to preserve hook order)
+  const [unitPrice, setUnitPrice] = useState<number>(0)
+  useEffect(() => {
+    if (!service) return
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    if (transportZone === 'within' && Number.isFinite(within)) { setUnitPrice(within); return }
+    if (transportZone === 'upcountry' && Number.isFinite(upcountry)) { setUnitPrice(upcountry); return }
+
+    const candidates: number[] = []
+    if (Number.isFinite(within) && within > 0) candidates.push(within)
+    if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+    if (candidates.length > 0) { setUnitPrice(Math.min(...candidates)); return }
+    setUnitPrice(Number(service.price) || 0)
+  }, [transportZone, service])
   const { user, profile } = useAuth()
   const { addToCart } = useCart()
   const { selectedLanguage } = usePreferences()
@@ -317,6 +369,15 @@ export default function ServiceDetail() {
     }
   }, [service?.images?.length])
 
+  // Keep selectedImage in sync with the carousel index so desktop scrolling updates the main selected image
+  useEffect(() => {
+    if (service?.images && service.images.length > 0) {
+      const idx = Math.min(Math.max(0, currentImageIndex), service.images.length - 1)
+      const img = service.images[idx]
+      if (img && img !== selectedImage) setSelectedImage(img)
+    }
+  }, [currentImageIndex, service?.images])
+
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!service) return
@@ -422,7 +483,7 @@ export default function ServiceDetail() {
     
     // Pass selected dates and guests via navigation state
     const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
-      ? { startDate, endDate, guests }
+      ? { startDate, endDate, guests, transportZone }
       : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
       ? { checkInDate, checkOutDate, guests, rooms: 1 }
       : { selectedDate, guests }
@@ -661,7 +722,7 @@ export default function ServiceDetail() {
                   <span className="text-sm font-medium text-gray-700">Room Types:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {service.room_types.map((room, index) => (
-                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800">
                         {room}
                       </span>
                     ))}
@@ -1235,6 +1296,93 @@ export default function ServiceDetail() {
                 </div>
               )}
             </div>
+
+            {/* Event Highlights */}
+            {service.event_highlights && service.event_highlights.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Event Highlights</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_highlights.map((highlight, idx) => (
+                    <li key={idx}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* What's Included */}
+            {service.event_inclusions && service.event_inclusions.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">What's Included</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_inclusions.map((inclusion, idx) => (
+                    <li key={idx}>{inclusion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Prerequisites */}
+            {service.event_prerequisites && service.event_prerequisites.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-2">Prerequisites</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {service.event_prerequisites.map((prereq, idx) => (
+                    <li key={idx}>{prereq}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Event Features */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {service.group_discounts && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Group Discounts Available</span>
+                </div>
+              )}
+              {service.photography_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Photography Allowed</span>
+                </div>
+              )}
+              {service.recording_allowed && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Recording Allowed</span>
+                </div>
+              )}
+              {service.transportation_included && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Transportation Included</span>
+                </div>
+              )}
+              {service.meals_included_flag && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Meals Included</span>
+                </div>
+              )}
+              {service.certificates_provided && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">Certificates Provided</span>
+                </div>
+              )}
+              {service.safety_gear_required && (
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-yellow-500 mr-2" />
+                  <span className="text-sm text-gray-700">Safety Gear Required</span>
+                </div>
+              )}
+              {service.event_notes && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Notes:</span> {service.event_notes}
+                </div>
+              )}
+            </div>
           </div>
         )
 
@@ -1243,23 +1391,7 @@ export default function ServiceDetail() {
     }
   }
 
-  if (isLoading) {
-    return <PageSkeleton type="serviceDetail" />
-  }
-
-  if (!service) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
-          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
-          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
-            Return to home
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  
 
   // Calculate number of days for transport services based on actual time difference
   const calculateDays = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
@@ -1288,11 +1420,66 @@ export default function ServiceDetail() {
     return diffDays || 1
   }
 
-  const totalPrice = service.service_categories?.name?.toLowerCase() === 'transport'
-    ? service.price * calculateDays(startDate, startTime, endDate, endTime)
-    : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-    ? service.price * calculateNights(checkInDate, checkOutDate)
-    : service.price * guests
+  if (isLoading) {
+    return <PageSkeleton type="serviceDetail" />
+  }
+
+  if (!service) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
+          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
+            Return to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const getTransportUnitPrice = () => {
+    const within = Number((service as any)?.price_within_town ?? NaN)
+    const upcountry = Number((service as any)?.price_upcountry ?? NaN)
+    if (transportZone === 'within' && Number.isFinite(within)) return within
+    if (transportZone === 'upcountry' && Number.isFinite(upcountry)) return upcountry
+    // fallback to any provided transport price
+    const candidates: number[] = []
+    if (Number.isFinite(within) && within > 0) candidates.push(within)
+    if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
+    if (candidates.length > 0) return Math.min(...candidates)
+    return Number(service!.price) || 0
+  }
+
+  const totalPrice = service!.service_categories?.name?.toLowerCase() === 'transport'
+    ? getTransportUnitPrice() * calculateDays(startDate, startTime, endDate, endTime)
+    : ['hotels', 'hotel', 'accommodation'].includes(service!.service_categories?.name?.toLowerCase() || '')
+    ? service!.price * calculateNights(checkInDate, checkOutDate)
+    : service!.price * guests
+
+  
+
+  const displayUnit = service!.service_categories?.name?.toLowerCase() === 'transport'
+    ? (unitPrice ?? getDisplayPrice(service!, ticketTypes))
+    : getDisplayPrice(service!, ticketTypes)
+
+  if (isLoading) {
+    return <PageSkeleton type="serviceDetail" />
+  }
+
+  if (!service) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Service not found</h1>
+          <p className="text-gray-600 mb-4">The service you're looking for doesn't exist or has been removed.</p>
+          <Link to="/" className="text-blue-600 hover:text-blue-700 underline">
+            Return to home
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   // Shared info sections used by both mobile and desktop to keep flow uniform
   const InfoSections = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -1479,107 +1666,132 @@ export default function ServiceDetail() {
 
       {/* Mobile Image with Header Overlay */}
       <div className="md:hidden w-screen relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
-        <div className="relative h-[60vh]">
-          {/* Scrollable Image Container */}
-          <div 
-            ref={scrollContainerRef}
-            className="w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" 
-            style={{ scrollBehavior: 'smooth' }}
-          >
-            <div className="flex w-full h-full">
+        <div className="relative h-[95vw] min-h-[400px] max-h-[650px] rounded-b-2xl shadow-lg overflow-hidden">
+          {/* Mobile Image Carousel with Arrows */}
+          <div className="relative w-full h-full">
+            {/* Left Arrow */}
+            {service.images && service.images.length > 1 && (
+              <button
+                className="absolute left-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? service.images.length - 1 : prev - 1))}
+                aria-label="Previous image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </button>
+            )}
+            {/* Right Arrow */}
+            {service.images && service.images.length > 1 && (
+              <button
+                className="absolute right-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
+                onClick={() => setCurrentImageIndex((prev) => (prev === service.images.length - 1 ? 0 : prev + 1))}
+                aria-label="Next image"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-gray-700">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+            {/* Image Display */}
+            <div className="w-full h-full">
               {service.images && service.images.length > 0 ? (
-                service.images.map((image, index) => (
-                  <div key={index} className="flex-shrink-0 w-full snap-center">
+                <div className="flex w-full h-full">
+                  <div className="flex-shrink-0 w-full snap-center">
                     <img
-                      src={image}
-                      alt={`${service.title} ${index + 1}`}
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                      loading="lazy"
+                      decoding="async"
+                      src={service.images[currentImageIndex]}
+                      alt={`${service.title} ${currentImageIndex + 1}`}
+                      className="w-full h-full object-cover cursor-pointer rounded-b-2xl"
+                      style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
+                      onClick={() => { setLightboxIndex(currentImageIndex); setLightboxOpen(true) }}
                     />
                   </div>
-                ))
+                </div>
               ) : (
                 <div className="flex-shrink-0 w-full snap-center">
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
                     alt={service.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-b-2xl"
+                    style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
                   />
                 </div>
               )}
             </div>
           </div>
-          
           {/* Mobile Header Overlay */}
-          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-            <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+          <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between z-10">
+            <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center space-x-2">
-              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
                 <Heart className="h-5 w-5" />
               </button>
-              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all">
+              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
                 <Share2 className="h-5 w-5" />
               </button>
               <button 
                 onClick={handleSaveToCart}
-                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-all"
+                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all"
               >
                 <ShoppingCart className="h-5 w-5" />
               </button>
             </div>
           </div>
-
           {/* Image Counter */}
           {service.images && service.images.length > 0 && (
-            <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-sm z-10 border border-gray-200 shadow-sm">
+            <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-xs z-10 border border-gray-200 shadow-md">
               {currentImageIndex + 1} / {service.images.length}
             </div>
           )}
-
           {/* Event hero overlay for Activities/Events - compact & mobile-optimized card */}
           {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-            <div className="absolute left-3 right-3 bottom-5 z-20">
-              <div className="w-full bg-gradient-to-r from-black/80 via-black/50 to-transparent text-white px-3 py-3 rounded-lg shadow-lg">
-                <div className="flex items-start justify-between gap-2">
+            <div className="absolute left-2 right-2 bottom-2 z-20">
+              <div className="w-full bg-gradient-to-r from-black/90 via-black/60 to-transparent text-white px-2 py-2 rounded-lg shadow-lg border border-white/10 backdrop-blur-sm">
+                <div className="flex items-start justify-between gap-1">
                   <div className="flex-1 min-w-0">
-                    <div className="text-[10px] uppercase tracking-wide text-gray-200 font-semibold mb-0">{service.service_categories?.name || 'Event'}</div>
-                    <h2 className="text-base font-semibold leading-tight truncate">{service.title}</h2>
-                    <div className="mt-1 flex items-center text-xs text-gray-200 space-x-2">
+                    <div className="text-[9px] uppercase tracking-wide text-gray-200 font-semibold mb-0">{service.service_categories?.name || 'Event'}</div>
+                    <h2 className="text-xs font-semibold leading-tight truncate">{service.title}</h2>
+                    <div className="mt-0.5 flex items-center text-[10px] text-gray-200 space-x-1">
                       {service.duration_hours && (
                         <div className="flex items-center truncate">
-                          <Clock className="h-3.5 w-3.5 mr-1.5" />
+                          <Clock className="h-3 w-3 mr-1" />
                           <span>{service.duration_hours}h</span>
                         </div>
                       )}
                       {(service.location || service.event_location) && (
                         <div className="flex items-center truncate">
-                          <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                          <MapPin className="h-3 w-3 mr-1" />
                           <span className="truncate">{service.event_location || service.location}</span>
                         </div>
                       )}
                     </div>
                   </div>
-
-                    <div className="flex-shrink-0 text-right pl-2">
-                      <div className="text-[10px] text-gray-300">From</div>
-                      <div className="text-lg font-semibold inline-flex items-baseline">
-                        {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-                        <span className="text-sm font-normal text-gray-200 ml-2 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
-                      </div>
-                      {/* Mobile-only Buy Tickets CTA (keeps purchase action accessible on mobile hero for events/activities) */}
-                      <button
-                        onClick={() => {
-                          const el = document.querySelector('[data-tickets-section]')
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                        }}
-                        aria-label="Buy Tickets"
-                        className="mt-2 w-28 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md shadow-sm transition-colors md:hidden"
-                      >
-                        Buy Tickets
-                      </button>
+                  <div className="flex-shrink-0 text-right pl-1 flex flex-col items-end">
+                    <div className="text-[9px] text-gray-300">From</div>
+                    <div className="text-base font-semibold">
+                      {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
                     </div>
+                    <div className="text-[9px] font-normal text-gray-200 whitespace-nowrap align-middle -mt-0.5">
+                      {getUnitLabel(service.service_categories?.name || '')}
+                    </div>
+                    {/* Mobile-only Buy Tickets CTA (smaller button) */}
+                    <button
+                      onClick={() => {
+                        const el = document.querySelector('[data-tickets-section]')
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }}
+                      aria-label="Buy Tickets"
+                      className="mt-1 w-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 rounded shadow-md transition-colors md:hidden sticky bottom-0"
+                    >
+                      Buy Tickets
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1598,18 +1810,40 @@ export default function ServiceDetail() {
           <div className="lg:col-span-2">
             {/* Image Gallery - Desktop */}
             <div className="mb-8 hidden md:block">
-              {/* Main Image Display */}
+              {/* Main Image Display (desktop) - horizontally scrollable so users can browse without opening preview */}
               <div className="relative mb-4">
-                <img
-                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                  alt={service.title}
-                  className="w-full h-[520px] object-cover rounded-lg shadow-lg cursor-pointer"
-                  onClick={() => {
-                    const idx = service.images?.indexOf(selectedImage || service.images?.[0] || '') ?? 0
-                    setLightboxIndex(Math.max(0, idx))
-                    setLightboxOpen(true)
-                  }}
-                />
+                <div
+                  ref={scrollContainerRef}
+                  className="w-full h-[520px] overflow-x-auto snap-x snap-mandatory scroll-smooth hidden md:block"
+                  style={{ scrollBehavior: 'smooth' }}
+                >
+                  <div className="flex w-full h-full">
+                    {service.images && service.images.length > 0 ? (
+                      service.images.map((image, index) => (
+                        <div key={index} className="flex-shrink-0 w-full snap-center">
+                          <img
+                            loading="lazy"
+                            decoding="async"
+                            src={image}
+                            alt={`${service.title} ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer rounded-lg shadow-lg"
+                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex-shrink-0 w-full snap-center">
+                        <img
+                          loading="lazy"
+                          decoding="async"
+                          src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                          alt={service.title}
+                          className="w-full h-full object-cover rounded-lg shadow-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Desktop Header Overlay – inside image */}
                 <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
@@ -1690,6 +1924,8 @@ export default function ServiceDetail() {
                           }`}
                         >
                           <img
+                            loading="lazy"
+                            decoding="async"
                             src={image}
                             alt={`${service.title} ${index + 1}`}
                             className="w-full h-full object-cover"
@@ -1710,7 +1946,7 @@ export default function ServiceDetail() {
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
-            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''}`}>
+            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''} md:overflow-visible`}>
               {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
                   <div data-tickets-section>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>
@@ -1775,7 +2011,7 @@ export default function ServiceDetail() {
               ) : (
                 <div>
                   <div className="text-center mb-6">
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}</div>
+                      <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(displayUnit, service.currency)}</div>
                       <div className="text-xs text-gray-500">
                         {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
                          ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
@@ -1789,13 +2025,26 @@ export default function ServiceDetail() {
                     {service.service_categories?.name?.toLowerCase() === 'transport' ? (
                       <>
                         <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Service Type</label>
+                          <div className="flex gap-3 mb-2">
+                            <label className="inline-flex items-center text-sm">
+                              <input type="radio" name="transportZone" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                              Within Town
+                            </label>
+                            <label className="inline-flex items-center text-sm">
+                              <input type="radio" name="transportZone" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                              Upcountry
+                            </label>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-3">Choose town or upcountry pricing before selecting dates.</p>
+
                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                           </div>
                         </div>
                         <div>
@@ -1803,9 +2052,9 @@ export default function ServiceDetail() {
                           <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
                           </div>
                         </div>
                       </>
@@ -1854,10 +2103,10 @@ export default function ServiceDetail() {
                     <div className="flex justify-between items-center mb-2 text-xs">
                       <span className="text-gray-600">
                         {service.service_categories?.name?.toLowerCase() === 'transport'
-                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                          ? `${formatCurrencyWithConversion(getTransportUnitPrice(), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
                           : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                          ? `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
-                          : `${formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                          ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                          : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
                       </span>
                       <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
@@ -1879,12 +2128,12 @@ export default function ServiceDetail() {
                   />
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 mb-3">
+                    <div className="flex gap-2 mb-3">
                     <button onClick={handleBooking} disabled={
-                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate :
+                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate || !transportZone :
                       ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
                       !selectedDate
-                    } className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    } className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
@@ -1944,9 +2193,9 @@ export default function ServiceDetail() {
               <div className="relative z-10">
                 <div className="text-xs text-blue-100 font-medium uppercase tracking-wider mb-1">From</div>
                 <div className="text-xl font-bold leading-none mb-1 text-white drop-shadow-sm">
-                  {service ? formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency) : '—'}
+                  {service ? formatCurrencyWithConversion(displayUnit, service.currency) : '—'}
                 </div>
-                <div className="text-xs text-blue-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
+                <div className="text-xs text-emerald-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
               </div>
             </button>
 
@@ -2006,6 +2255,8 @@ export default function ServiceDetail() {
 
           {/* Image */}
           <img
+            loading="eager"
+            decoding="async"
             src={service.images[lightboxIndex]}
             alt={`${service.title} ${lightboxIndex + 1}`}
             className="max-h-[90vh] max-w-[90vw] object-contain select-none"

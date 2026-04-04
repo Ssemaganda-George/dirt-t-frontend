@@ -44,13 +44,24 @@ CREATE INDEX IF NOT EXISTS idx_service_overrides_active ON public.service_pricin
 CREATE OR REPLACE FUNCTION check_service_override_overlap()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Check if there's already any override for this service (only one override allowed per service)
-  IF EXISTS (
-    SELECT 1 FROM public.service_pricing_overrides
-    WHERE service_id = NEW.service_id
-      AND id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
-  ) THEN
-    RAISE EXCEPTION 'Only one pricing override is allowed per service. Edit the existing override instead of creating a new one.';
+  -- Allow multiple overrides per service, but prevent overlapping effective windows
+  -- Only enforce when the new/updated row is enabled
+  IF NEW.override_enabled THEN
+    IF EXISTS (
+      SELECT 1 FROM public.service_pricing_overrides o
+      WHERE o.service_id = NEW.service_id
+        AND o.id != COALESCE(NEW.id, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND o.override_enabled = true
+        AND NOT (
+          -- No overlap if existing ends before NEW starts
+          (o.effective_until IS NOT NULL AND o.effective_until < NEW.effective_from)
+          OR
+          -- Or NEW ends before existing starts
+          (NEW.effective_until IS NOT NULL AND NEW.effective_until < o.effective_from)
+        )
+    ) THEN
+      RAISE EXCEPTION 'Overlapping active pricing override exists for this service. Disable or adjust existing overrides first.';
+    END IF;
   END IF;
 
   RETURN NEW;

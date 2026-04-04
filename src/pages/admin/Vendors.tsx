@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { formatDate, getStatusColor, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, Store, UserCog } from 'lucide-react'
-import { getAllVendors, updateVendorStatus, Vendor } from '../../lib/database'
+import { getAllVendors, updateVendorStatus, getVendorById, Vendor } from '../../lib/database'
 import { getActiveTiers, getAutomaticTierForVendor } from '../../lib/commissionService'
 import { VendorTier } from '../../types'
 import { supabase } from '../../lib/supabaseClient'
@@ -52,6 +53,8 @@ function tierBadge(
 }
 
 export default function Vendors() {
+  const params = useParams()
+  const navigate = useNavigate()
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
@@ -68,7 +71,20 @@ export default function Vendors() {
 
   useEffect(() => {
     fetchVendors()
-  }, [])
+    // If the URL contains an id param, we'll fetch that vendor directly and open the modal
+    const id = params?.id
+    if (id) {
+      // Attempt to fetch that single vendor and open the modal when available
+      ;(async () => {
+        try {
+          const v = await getVendorById(id)
+          if (v) setSelectedVendor(v)
+        } catch (err) {
+          console.error('Error fetching vendor from URL param:', err)
+        }
+      })()
+    }
+  }, [params?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -316,7 +332,7 @@ export default function Vendors() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setSelectedVendor(vendor)}
+                        onClick={() => navigate(`/admin/vendors/${vendor.id}`)}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         <Eye className="h-4 w-4" />

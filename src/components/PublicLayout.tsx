@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare } from 'lucide-react'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
 import MobileBottomNav from './MobileBottomNav'
@@ -37,6 +38,7 @@ const getRegionName = (code: string) => {
 }
 
 export default function PublicLayout() {
+  const { unreadCount } = useUnreadMessages()
   const [showPreferences, setShowPreferences] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
@@ -44,9 +46,11 @@ export default function PublicLayout() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  // Removed unused scrolled state
   const location = useLocation()
+
+  // Removed unused scroll effect
   const navigate = useNavigate()
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const guestDropdownRef = useRef<HTMLDivElement>(null)
   // const { categories } = useServiceCategories() // Temporarily commented out
@@ -56,10 +60,16 @@ export default function PublicLayout() {
 
   // Map category IDs to navigation items
   const getNavigationItems = (): Array<{name: string, href: string}> => {
-    // Return home navigation
+    // Show Conservation only on home page
+    if (location.pathname === '/') {
+      return [
+        { name: 'home', href: '/' },
+        { name: 'Conservation', href: '/conservation/geotagging' }
+      ];
+    }
     return [
       { name: 'home', href: '/' }
-    ]
+    ];
   }
 
   const navigation = getNavigationItems()
@@ -67,9 +77,7 @@ export default function PublicLayout() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // No dropdown to close anymore
-      }
+      // Only close if click is outside BOTH the ref container and the button
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
         setShowUserDropdown(false)
       }
@@ -106,20 +114,12 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        location.pathname.includes('/scan/') 
-          ? 'bg-transparent shadow-none' 
-          : 'bg-white shadow-sm'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
+          <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
-            <Link to="/" className={`flex items-center transition-colors duration-300 ${
-              location.pathname.includes('/scan/') 
-                ? 'text-white drop-shadow-lg' 
-                : 'text-gray-900'
-            }`}>
-              <span className="text-2xl font-bold">DirtTrails</span>
+            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-3 py-1 shadow">
+              <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
               {location.pathname.includes('/scan/') && (
                 <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
                   Event Verification
@@ -129,48 +129,67 @@ export default function PublicLayout() {
 
             {/* Desktop Navigation */}
             {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex space-x-8 mt-6">
+              <nav className="hidden md:flex items-center space-x-4">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`text-sm font-medium transition-colors ${
-                      location.pathname === item.href
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-gray-700 hover:text-blue-600'
+                    className={`text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
+                      item.name.toLowerCase() === 'home'
+                        ? 'text-emerald-600 border-emerald-600'
+                        : location.pathname === item.href
+                          ? 'text-emerald-600 border-emerald-600'
+                          : 'text-white hover:text-emerald-300'
                     }`}
                   >
                     {t(item.name)}
                   </Link>
                 ))}
+                {/* Desktop messages text link removed — icon lives beside Search */}
               </nav>
             )}
 
             {/* Right side actions */}
             {!location.pathname.includes('/scan/') && (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-4">
                 {/* Search Button - Hidden on mobile, only in bottom nav */}
                 <button
                   onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   title={t('search')}
                 >
-                  <Search className="h-5 w-5 text-gray-600" />
+                  <Search className="h-5 w-5 text-emerald-600" />
                 </button>
+
+                {/* Messages icon for desktop - visible only to authenticated users */}
+                {user && (
+                  <Link
+                    to="/messages"
+                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
+                    title={t('messages')}
+                  >
+                    <MessageSquare className="h-5 w-5 text-emerald-600" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                  </Link>
+                )}
 
                 <button
                   onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 border border-white/80 bg-transparent rounded-full shadow hover:bg-gray-50 transition-colors"
                   title={t('preferences')}
                 >
-                  <Globe className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+                  <Globe className="h-3 w-3 md:h-4 md:w-4 text-emerald-600" />
                   {/* Show only the icon in the navbar; keep an sr-only label for accessibility */}
                   <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
                 </button>
 
                 {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-blue-600 relative">
-                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5" />
+                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors">
+                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
                   {getCartCount() > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {getCartCount()}
@@ -180,12 +199,12 @@ export default function PublicLayout() {
 
                 {/* Sign In Button or User Account Dropdown */}
                 {user && profile?.role === 'tourist' ? (
-                  <div className="relative" ref={userDropdownRef}>
+                  <div className="relative z-[1002]" ref={userDropdownRef}>
                     <button
                       onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
+                      <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center shadow-md">
                         <span className="text-sm font-bold text-white">
                           {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
                         </span>
@@ -195,7 +214,7 @@ export default function PublicLayout() {
 
                     {/* User Dropdown Menu */}
                     {showUserDropdown && (
-                      <div className="fixed right-4 top-28 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200]">
+                      <div className="absolute right-0 top-14 min-w-48 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[1001]">
                         <div className="py-1">
                           <div className="px-4 py-2 border-b border-gray-200">
                             <p className="text-sm font-medium text-gray-900">{t('my_account')}</p>
@@ -206,7 +225,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Home className="h-3.5 w-3.5 mr-2" />
+                            <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
                           </Link>
                           <Link
@@ -214,7 +233,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <User className="h-3.5 w-3.5 mr-2" />
+                            <User className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('profile')}
                           </Link>
                           <Link
@@ -222,7 +241,7 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('bookings')}
                           </Link>
                           <Link
@@ -230,15 +249,23 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Heart className="h-3.5 w-3.5 mr-2" />
+                            <Heart className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('saved_items') || 'Saved Items'}
+                          </Link>
+                          <Link
+                            to="/wallet"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <Wallet className="h-3.5 w-3.5 mr-2 text-emerald-600" />
+                            My Wallet
                           </Link>
                           <Link
                             to="/settings"
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <Settings className="h-3.5 w-3.5 mr-2" />
+                            <Settings className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('settings')}
                           </Link>
                           <Link
@@ -246,33 +273,12 @@ export default function PublicLayout() {
                             onClick={() => setShowUserDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
                           >
-                            <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                            <HelpCircle className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('help_center')}
                           </Link>
 
                           {/* Divider */}
                           <div className="border-t border-gray-100 my-1"></div>
-
-                          {/* Business Section */}
-                          <div className="px-3 py-1.5">
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('for_businesses') || 'For Businesses'}</h4>
-                          </div>
-                          <Link
-                            to="/vendor-login"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('list_my_business')}
-                          </Link>
-                          <Link
-                            to="/partner"
-                            onClick={() => setShowUserDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
-                            {t('partner_with')}
-                          </Link>
 
                           <button
                             onClick={() => {
@@ -281,7 +287,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
                           >
-                            <LogOut className="h-3.5 w-3.5 mr-2" />
+                            <LogOut className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('sign_out')}
                           </button>
                         </div>
@@ -289,18 +295,18 @@ export default function PublicLayout() {
                     )}
                   </div>
                 ) : (
-                  <div className="relative" ref={guestDropdownRef}>
+                  <div className="relative z-[1002]" ref={guestDropdownRef}>
                     <button
                       onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                      className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
                     >
-                      <User className="h-4 w-4 md:h-5 md:w-5 text-gray-700" />
+                      <User className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
                       <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
                     {/* Guest Dropdown Menu */}
                     {showGuestDropdown && (
-                      <div className="fixed right-4 top-28 min-w-56 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[200] max-h-96 overflow-y-auto">
+                      <div className="absolute right-0 top-14 min-w-56 max-w-64 bg-white rounded-md shadow-lg border border-gray-200 z-[1001] max-h-96 overflow-y-auto">
                         <div className="py-2">
                           {/* Account Section */}
                           <div className="px-3 py-1.5">
@@ -311,7 +317,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <Home className="h-3.5 w-3.5 mr-2" />
+                            <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
                           </Link>
                           <button
@@ -322,7 +328,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <User className="h-3.5 w-3.5 mr-2" />
+                            <User className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('log_in')}
                           </button>
                           <button
@@ -332,7 +338,7 @@ export default function PublicLayout() {
                             }}
                             className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <Globe className="h-3.5 w-3.5 mr-2" />
+                            <Globe className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('currency_region')}
                           </button>
                           <Link
@@ -340,7 +346,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <HelpCircle className="h-3.5 w-3.5 mr-2" />
+                            <HelpCircle className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('help_center')}
                           </Link>
 
@@ -356,7 +362,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('list_my_business')}
                           </Link>
                           <Link
@@ -364,7 +370,7 @@ export default function PublicLayout() {
                             onClick={() => setShowGuestDropdown(false)}
                             className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
-                            <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('partner_with')}
                           </Link>
                         </div>
@@ -372,7 +378,6 @@ export default function PublicLayout() {
                     )}
                   </div>
                 )}
-
               </div>
             )}
           </div>
@@ -405,7 +410,7 @@ export default function PublicLayout() {
 
       {/* Main Content */}
       {/* Add top padding equal to header height so fixed header doesn't overlap content */}
-      <main className={`${location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
+      <main className={`${location.pathname === '/' ? 'pt-0 pb-16' : location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
         <Outlet />
       </main>
 
@@ -418,57 +423,90 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <footer className="hidden md:block bg-gray-950 text-white">
+        {/* Top CTA strip */}
+        <div className="border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <div className="mb-4">
-                <span className="text-xl font-bold">DirtTrails</span>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Discover Uganda's hidden gems and create unforgettable experiences with local service providers.
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-1">For Businesses</p>
+              <p className="text-lg font-bold text-white">Reach thousands of travellers around the world.</p>
+            </div>
+            <Link
+              to="/vendor-login"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
+            >
+              List your business
+            </Link>
+          </div>
+        </div>
+
+        {/* Main footer grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+            {/* Brand column */}
+            <div className="md:col-span-4">
+              <p className="text-2xl font-bold tracking-tight mb-1">DirtTrails<span className="text-emerald-500">.</span></p>
+              <p className="text-gray-400 text-sm leading-relaxed mt-3 max-w-xs">
+                Discover hidden gems worldwide and create unforgettable experiences with trusted local hosts.
               </p>
+              
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Explore</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/" className="hover:text-white">Home</Link></li>
-                <li><Link to="/category/flights" className="hover:text-white">Flights</Link></li>
-                <li><Link to="/category/hotels" className="hover:text-white">Hotels</Link></li>
-                <li><Link to="/category/tours" className="hover:text-white">Tours</Link></li>
-                <li><Link to="/category/events" className="hover:text-white">Events</Link></li>
-                <li><Link to="/category/restaurants" className="hover:text-white">Restaurants</Link></li>
-                <li><Link to="/category/transport" className="hover:text-white">Transport</Link></li>
+
+            {/* Links */}
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Explore</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/" className="text-gray-400 hover:text-white transition-colors">Home</Link></li>
+                <li><Link to="/category/hotels" className="text-gray-400 hover:text-white transition-colors">Stays</Link></li>
+                <li><Link to="/category/tours" className="text-gray-400 hover:text-white transition-colors">Tours</Link></li>
+                <li><Link to="/category/events" className="text-gray-400 hover:text-white transition-colors">Events</Link></li>
+                <li><Link to="/category/restaurants" className="text-gray-400 hover:text-white transition-colors">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="text-gray-400 hover:text-white transition-colors">Transport</Link></li>
+                <li><Link to="/category/shops" className="text-gray-400 hover:text-white transition-colors">Shops</Link></li>
               </ul>
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/help" className="hover:text-white">Help Center</Link></li>
-                <li><Link to="/contact" className="hover:text-white">Contact Us</Link></li>
-                <li><Link to="/safety" className="hover:text-white">Safety</Link></li>
-                <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
-                <li><Link to="/travel-insurance" className="hover:text-white">Travel Insurance</Link></li>
-                <li><Link to="/visa-processing" className="hover:text-white">Visa Processing</Link></li>
-                <li><Link to="/internet-connectivity" className="hover:text-white">Internet & Connectivity</Link></li>
+
+            {/* Conservation column */}
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Conservation</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/conservation/geotagging" className="text-gray-400 hover:text-white transition-colors">Geotagging &amp; Monitoring</Link></li>
+                <li><Link to="/conservation/tree-planting" className="text-gray-400 hover:text-white transition-colors">Tree Planting Initiatives</Link></li>
+                <li><Link to="/conservation/carbon" className="text-gray-400 hover:text-white transition-colors">Calculate My Carbon</Link></li>
               </ul>
             </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">For Businesses</h3>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link to="/vendor-login" className="hover:text-white">List My Business</Link></li>
-                <li><Link to="/refer-business" className="hover:text-white">Refer a Business</Link></li>
-                <li><Link to="/hospitality-class" className="hover:text-white">Join a Hospitality Class</Link></li>
-                <li><Link to="/partner" className="hover:text-white">Partner with DirtTrails</Link></li>
+
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Support</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/safety" className="text-gray-400 hover:text-white transition-colors">Safety</Link></li>
+                <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="text-gray-400 hover:text-white transition-colors">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="text-gray-400 hover:text-white transition-colors">Visa Processing</Link></li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Business</h4>
+              <ul className="space-y-3 text-sm">
+                <li><Link to="/vendor-login" className="text-gray-400 hover:text-white transition-colors">List My Business</Link></li>
+                <li><Link to="/refer-business" className="text-gray-400 hover:text-white transition-colors">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="text-gray-400 hover:text-white transition-colors">Hospitality Class</Link></li>
+                <li><Link to="/partner" className="text-gray-400 hover:text-white transition-colors">Partner with Us</Link></li>
               </ul>
             </div>
           </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
+
+          {/* Bottom bar */}
+          <div className="border-t border-white/10 mt-14 pt-8 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <Link to="/privacy" className="hover:text-gray-400 transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
+              <Link to="/cookies" className="hover:text-gray-400 transition-colors">Cookies</Link>
+            </div>
           </div>
         </div>
       </footer>

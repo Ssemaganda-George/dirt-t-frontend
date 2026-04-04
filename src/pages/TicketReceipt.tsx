@@ -5,101 +5,87 @@ import { formatCurrency } from '../lib/utils'
 import * as QRCode from 'qrcode'
 import html2pdf from 'html2pdf.js'
 
-// Helper function to calculate dynamic font size based on email length
-const getEmailFontSize = (email: string) => {
-  const length = email?.length || 0
-  if (length <= 20) return '11px' // Normal size for short emails
-  if (length <= 30) return '10px' // Slightly smaller for medium emails
-  if (length <= 40) return '9px'  // Smaller for longer emails
-  return '8px' // Smallest for very long emails
+// ─── DESIGN TOKENS (match the ticket PDF exactly) ─────────────────────────────
+const T = {
+  green:  '#1B3A2D',
+  amber:  '#C9873A',
+  ivory:  '#FAF6EE',
+  dark:   '#1C1917',
+  sage:   '#8FAF9B',
+  cream:  '#F2EDE4',
+  white:  '#FFFFFF',
 }
 
 export default function TicketReceiptPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const [tickets, setTickets] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [qrMap, setQrMap] = useState<{ [key: string]: string }>({})
+  const [loading, setLoading]   = useState(true)
+  const [qrMap, setQrMap]       = useState<Record<string, string>>({})
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
+    if (!orderId) return
     const load = async () => {
-      if (!orderId) return
       setLoading(true)
       try {
-        const { data } = await supabase.from('tickets').select(`
-          *,
-          ticket_types(*),
-          services(
-            id,
-            slug,
-            title,
-            description,
-            location,
-            event_location,
-            event_datetime,
-            images,
-            vendors(business_name, business_phone, business_email)
-          ),
-          orders(currency, created_at, user_id, guest_name, guest_email, guest_phone)
-        `).eq('order_id', orderId)
+        const { data } = await supabase
+          .from('tickets')
+          .select(`
+            *,
+            ticket_types(*),
+            services(
+              id, slug, title, description, location,
+              event_location, event_datetime, images,
+              vendors(business_name, business_phone, business_email)
+            ),
+            orders(currency, created_at, user_id, guest_name, guest_email, guest_phone)
+          `)
+          .eq('order_id', orderId)
+
         const tix = data || []
 
-        // Fetch profiles for ticket buyers
+        // Fetch profiles for logged-in buyers
         let profilesMap: Record<string, { full_name: string; email: string }> = {}
-        if (tix && tix.length > 0) {
-          const userIds = [...new Set(tix.map(t => t.orders?.user_id).filter(Boolean))]
-          if (userIds.length > 0) {
-            const { data: profilesData, error: profilesError } = await supabase
-              .from('profiles')
-              .select('id, full_name, email')
-              .in('id', userIds)
-
-            if (!profilesError && profilesData) {
-              profilesMap = profilesData.reduce((acc, profile) => {
-                acc[profile.id] = { full_name: profile.full_name, email: profile.email }
-                return acc
-              }, {} as Record<string, { full_name: string; email: string }>)
-            }
+        const userIds = [...new Set(tix.map((t: any) => t.orders?.user_id).filter(Boolean))] as string[]
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds)
+          if (profiles) {
+            profilesMap = profiles.reduce((acc: any, p: any) => {
+              acc[p.id] = { full_name: p.full_name, email: p.email }
+              return acc
+            }, {})
           }
         }
 
-        // Attach profile or guest information to tickets
-        const ticketsWithProfiles = tix.map(ticket => {
-          let buyerInfo = null
-          
-          // First try to get logged-in user profile
+        const ticketsWithProfiles = tix.map((ticket: any) => {
+          let buyer = null
           if (ticket.orders?.user_id && profilesMap[ticket.orders.user_id]) {
-            buyerInfo = profilesMap[ticket.orders.user_id]
-          }
-          // If no profile, try guest information
-          else if (ticket.orders?.guest_name || ticket.orders?.guest_email) {
-            buyerInfo = {
-              full_name: ticket.orders.guest_name || 'N/A',
-              email: ticket.orders.guest_email || 'N/A'
+            buyer = profilesMap[ticket.orders.user_id]
+          } else if (ticket.orders?.guest_name || ticket.orders?.guest_email) {
+            buyer = {
+              full_name: ticket.orders.guest_name || 'Guest',
+              email:     ticket.orders.guest_email || '',
             }
           }
-          
-          return {
-            ...ticket,
-            buyer_profile: buyerInfo
-          }
+          return { ...ticket, buyer_profile: buyer }
         })
 
         setTickets(ticketsWithProfiles)
 
-        // generate QR data URLs
-        const map: { [key: string]: string } = {}
+        // Generate QR data URLs
+        const map: Record<string, string> = {}
         for (const t of tix) {
           try {
-            const ticketCode = t.code || t.qr_data || t.id
-            const serviceSlug = t.services?.slug
-            const qrData = serviceSlug
-              ? `https://bookings.dirt-trails.com/service/${serviceSlug}?ticket=${ticketCode}`
-              : ticketCode
-            const url = await QRCode.toDataURL(qrData)
-            map[t.id] = url
-          } catch (err) {
-            console.error('Failed to generate QR for ticket', t.id, err)
-          }
+            const code    = t.code || t.qr_data || t.id
+            const slug    = t.services?.slug
+            const qrData  = slug
+              ? `https://bookings.dirt-trails.com/service/${slug}?ticket=${code}`
+              : code
+            map[t.id] = await QRCode.toDataURL(qrData, { width: 160 })
+          } catch { /* ignore QR failures */ }
         }
         setQrMap(map)
       } catch (err) {
@@ -108,301 +94,368 @@ export default function TicketReceiptPage() {
         setLoading(false)
       }
     }
-
     load()
   }, [orderId])
 
   const downloadAllTickets = async () => {
-
-    if (typeof html2pdf === 'undefined') {
-      console.error('html2pdf is not available')
-      alert('PDF library not loaded. Please refresh the page and try again.')
-      return
-    }
-
+    setDownloading(true)
     for (let i = 0; i < tickets.length; i++) {
-      const ticket = tickets[i]
-      console.log('Processing ticket:', ticket.code, ticket.id)
+      const t  = tickets[i]
+      const el = document.querySelector(`[data-ticket-id="${t.id}"]`) as HTMLElement
+      if (!el) { console.error('Element not found:', t.id); continue }
 
-      const ticketElement = document.querySelector(`[data-ticket-id="${ticket.id}"]`) as HTMLElement
-      console.log('Found ticket element:', ticketElement)
+      const prev = { overflow: el.style.overflow, width: el.style.width, maxWidth: el.style.maxWidth }
+      el.style.overflow = 'visible'
+      el.style.width    = '650px'
+      el.style.maxWidth = '650px'
 
-      if (ticketElement) {
-        // Declare variables outside try block for error handling
-        let originalOverflow = ''
-        let originalMaxHeight = ''
-        let originalWidth = ''
-        let originalMaxWidth = ''
-        let truncatedElements: NodeListOf<Element> = ticketElement.querySelectorAll('.nonexistent-class')
-        let originalClasses: string[] = []
-
-        try {
-          console.log('Starting PDF generation for ticket:', ticket.code)
-
-          // Temporarily modify styles for better capture
-          originalOverflow = ticketElement.style.overflow
-          originalMaxHeight = ticketElement.style.maxHeight
-          originalWidth = ticketElement.style.width
-          originalMaxWidth = ticketElement.style.maxWidth
-
-          ticketElement.style.overflow = 'visible'
-          ticketElement.style.maxHeight = 'none'
-          ticketElement.style.width = '650px' // Force width to fit A4
-          ticketElement.style.maxWidth = '650px'
-
-          // Remove truncation classes temporarily
-          truncatedElements = ticketElement.querySelectorAll('.truncate, .line-clamp-1, .line-clamp-2')
-          originalClasses = []
-          truncatedElements.forEach((el, index) => {
-            originalClasses[index] = el.className
-            el.className = el.className.replace(/\b(truncate|line-clamp-\d+)\b/g, '')
-          })
-
-          // Wait for images to load
-          await new Promise(resolve => setTimeout(resolve, 500))
-
-          // Configure PDF options - high quality for clear, clean output
-          const options = {
-            margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number], // top, right, bottom, left margins
-            filename: `ticket-${ticket.code}.pdf`,
-            image: { type: 'jpeg' as const, quality: 1.0 }, // Maximum quality
-            html2canvas: {
-              scale: 2.5, // Higher scale for crisp, clear rendering
-              useCORS: true,
-              allowTaint: false,
-              backgroundColor: '#ffffff',
-              logging: false, // Disable logging for cleaner output
-              letterRendering: true,
-              width: 650, // Fixed width to fit A4 (8.27in - 1in margins = ~6.27in at 96 DPI)
-              height: ticketElement.scrollHeight, // Use scroll height for full content
-              scrollX: 0,
-              scrollY: 0,
-              windowWidth: 650,
-              windowHeight: ticketElement.scrollHeight,
-              imageTimeout: 0,
-              removeContainer: true,
-              foreignObjectRendering: true // Better rendering for complex elements
-            },
-            jsPDF: {
-              unit: 'in',
-              format: 'a4',
-              orientation: 'portrait' as const,
-              compress: false // Disable compression for better quality
-            }
-          }
-
-          console.log('PDF options configured, calling html2pdf')
-
-          // Generate and download PDF
-          await html2pdf().set(options).from(ticketElement).save()
-
-          console.log('PDF generated successfully for ticket:', ticket.code)
-
-          // Restore original styles and classes
-          ticketElement.style.overflow = originalOverflow
-          ticketElement.style.maxHeight = originalMaxHeight
-          ticketElement.style.width = originalWidth
-          ticketElement.style.maxWidth = originalMaxWidth
-          truncatedElements.forEach((el, index) => {
-            el.className = originalClasses[index]
-          })
-
-          // Add delay between downloads to prevent browser issues
-          if (i < tickets.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-
-        } catch (error) {
-          console.error('Error generating PDF for ticket:', ticket.code, error)
-
-          // Restore original styles and classes on error
-          ticketElement.style.overflow = originalOverflow
-          ticketElement.style.maxHeight = originalMaxHeight
-          ticketElement.style.width = originalWidth
-          ticketElement.style.maxWidth = originalMaxWidth
-          truncatedElements.forEach((el, index) => {
-            el.className = originalClasses[index]
-          })
-
-          // Show user-friendly error message
-          alert(`Failed to download ticket ${ticket.code}. Please try again.`)
-        }
-      } else {
-        console.error('Ticket element not found for ticket:', ticket.code, ticket.id)
-        alert(`Ticket element not found for ${ticket.code}. Please refresh the page.`)
+      try {
+        await html2pdf().set({
+          margin:    0,
+          filename:  `DirtTrails-Ticket-${(t.code || t.id).toUpperCase()}.pdf`,
+          image:     { type: 'jpeg', quality: 1.0 },
+          html2canvas: {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: T.white,
+            width: 650,
+            height: el.scrollHeight,
+            windowWidth: 650,
+          },
+          jsPDF: { unit: 'px', format: [650, el.scrollHeight + 2], orientation: 'landscape' },
+        }).from(el).save()
+        if (i < tickets.length - 1) await new Promise(r => setTimeout(r, 800))
+      } catch (err) {
+        console.error('PDF error for', t.code, err)
+      } finally {
+        el.style.overflow = prev.overflow
+        el.style.width    = prev.width
+        el.style.maxWidth = prev.maxWidth
       }
     }
-
-    console.log('Download process completed')
+    setDownloading(false)
   }
 
-  if (loading) return <div className="p-4">Loading tickets…</div>
-  if (!tickets || tickets.length === 0) return <div className="p-4">No tickets found for this order.</div>
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: T.sage, fontFamily: 'Arial, sans-serif', letterSpacing: '3px', textTransform: 'uppercase', fontSize: '12px' }}>
+        Loading tickets…
+      </p>
+    </div>
+  )
+
+  if (!tickets.length) return (
+    <div style={{ minHeight: '100vh', background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: T.dark, fontFamily: 'Arial, sans-serif' }}>No tickets found for this order.</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-3 md:p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-light text-gray-900">Your Tickets</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={downloadAllTickets}
-              style={{ backgroundColor: '#3B82F6' }}
-              className="text-white px-3 py-1.5 rounded text-xs font-light flex items-center gap-1 hover:opacity-90 transition-opacity"
-            >
-              {tickets.length > 1 ? 'Download All' : 'Download Ticket'}
-            </button>
+    <div style={{ minHeight: '100vh', background: T.cream, padding: '32px 16px', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+
+        {/* ── PAGE HEADER ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <h1 style={{ margin: '0 0 3px', color: T.green, fontSize: '22px', fontFamily: 'Georgia, serif', fontWeight: 700, letterSpacing: '6px', textTransform: 'uppercase' }}>
+              DIRT TRAILS
+            </h1>
+            <p style={{ margin: 0, color: T.sage, fontSize: '10px', letterSpacing: '3px', textTransform: 'uppercase' }}>
+              {tickets.length} TICKET{tickets.length !== 1 ? 'S' : ''} · ORDER {orderId?.slice(0, 8).toUpperCase()}
+            </p>
           </div>
+          <button
+            onClick={downloadAllTickets}
+            disabled={downloading}
+            style={{
+              background: downloading ? T.sage : T.green,
+              color: T.ivory,
+              border: 'none',
+              padding: '11px 24px',
+              fontSize: '10px',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              fontFamily: 'Arial, sans-serif',
+              fontWeight: 700,
+              cursor: downloading ? 'not-allowed' : 'pointer',
+              transition: 'background 0.2s',
+            }}
+          >
+            {downloading ? 'Generating…' : tickets.length > 1 ? 'Download All' : 'Download PDF'}
+          </button>
         </div>
-        
-        <div className="space-y-2">
-          {tickets.map(t => (
-            <div
-              key={t.id}
-              data-ticket-id={t.id}
-              className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden md:overflow-x-visible overflow-x-auto"
-            >
-              {/* Ticket Header */}
-              <div className="border-b border-gray-200 p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {t.services?.images?.[0] ? (
-                      <img
-                        src={t.services.images[0]}
-                        alt={t.services.title}
-                        className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs font-light flex-shrink-0">
-                        IMG
+
+        {/* ── TICKET LIST ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {tickets.map(t => {
+            const service  = t.services    || {}
+            const ttype    = t.ticket_types || {}
+            const order    = t.orders       || {}
+            const code     = (t.code || t.qr_data || t.id || '').toUpperCase()
+            const currency = order.currency || 'UGX'
+
+            const eventDate = service.event_datetime
+              ? new Date(service.event_datetime).toLocaleDateString('en-GB', {
+                  weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+                })
+              : null
+            const eventTime = service.event_datetime
+              ? new Date(service.event_datetime).toLocaleTimeString('en-GB', {
+                  hour: '2-digit', minute: '2-digit',
+                })
+              : null
+            const venue = service.event_location || service.location || ''
+
+            return (
+              /*
+               * This element is captured by html2pdf at 650px width.
+               * Layout mirrors the A5-landscape ticket PDF from send-order-emails exactly:
+               * - 7px left green stripe
+               * - Green header band (46px)
+               * - Amber "VALID TICKET" stripe (13px)
+               * - Content: event details (left) + QR panel (right, 150px)
+               */
+              <div
+                key={t.id}
+                data-ticket-id={t.id}
+                style={{
+                  width: '100%',
+                  maxWidth: '650px',
+                  background: T.ivory,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  boxShadow: '0 6px 32px rgba(27,58,45,0.14)',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                }}
+              >
+                {/* LEFT GREEN STRIPE + HEADER + STATUS as stacked rows */}
+                <div style={{ display: 'flex' }}>
+
+                  {/* Persistent left accent stripe */}
+                  <div style={{ width: '7px', flexShrink: 0, background: T.green }} />
+
+                  <div style={{ flex: 1 }}>
+
+                    {/* ── HEADER BAND ── */}
+                    <div style={{
+                      background: T.green,
+                      padding: '0 16px',
+                      height: '46px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <div>
+                        <div style={{ color: T.ivory, fontSize: '14px', fontWeight: 700, letterSpacing: '4px', lineHeight: 1.2 }}>
+                          DIRT TRAILS
+                        </div>
+                        <div style={{ color: T.amber, fontSize: '7px', letterSpacing: '3px', textTransform: 'uppercase' }}>
+                          EVENT TICKET
+                        </div>
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="font-light text-sm text-gray-900 truncate">{t.services?.title || 'Event'}</h3>
-                      <p className="text-gray-600 text-xs font-light truncate">{t.ticket_types?.title || 'Ticket'}</p>
+                      {ttype.title && (
+                        <div style={{
+                          color: T.amber,
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          letterSpacing: '2px',
+                          textTransform: 'uppercase',
+                          border: '1px solid rgba(201,135,58,0.5)',
+                          padding: '3px 10px',
+                        }}>
+                          {ttype.title.toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-xs text-gray-500 font-light">Code</div>
-                    <div className="font-mono font-light text-xs text-gray-900">{t.code}</div>
+
+                    {/* ── AMBER STATUS STRIPE ── */}
+                    <div style={{
+                      background: T.amber,
+                      height: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 16px',
+                    }}>
+                      <span style={{
+                        color: T.green,
+                        fontSize: '7px',
+                        fontWeight: 700,
+                        letterSpacing: '3px',
+                        textTransform: 'uppercase',
+                      }}>
+                        ✓ &nbsp;VALID TICKET
+                      </span>
+                    </div>
+
+                    {/* ── CONTENT ROW ── */}
+                    <div style={{ display: 'flex', minHeight: '148px' }}>
+
+                      {/* Left: Event details */}
+                      <div style={{ flex: 1, padding: '14px 16px 12px', display: 'flex', flexDirection: 'column', gap: '0' }}>
+
+                        {/* Event title */}
+                        <div style={{
+                          color: T.dark,
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          marginBottom: '10px',
+                          lineHeight: 1.3,
+                          letterSpacing: '0.3px',
+                        }}>
+                          {service.title || 'Event'}
+                        </div>
+
+                        {/* Organiser */}
+                        {service.vendors?.business_name && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={{ color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>BY</span>
+                            <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700 }}>{service.vendors.business_name}</span>
+                          </div>
+                        )}
+
+                        {/* Date */}
+                        {eventDate && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={{ color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>DATE &amp; TIME</span>
+                            <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700 }}>{eventDate}{eventTime ? ` · ${eventTime}` : ''}</span>
+                          </div>
+                        )}
+
+                        {/* Venue */}
+                        {venue && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={{ color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>VENUE</span>
+                            <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700 }}>{venue.length > 50 ? venue.slice(0, 50) + '…' : venue}</span>
+                          </div>
+                        )}
+
+                        {/* Buyer */}
+                        {t.buyer_profile?.full_name && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={{ color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>TICKET HOLDER</span>
+                            <span style={{ color: T.dark, fontSize: '8.5px', fontWeight: 700 }}>{t.buyer_profile.full_name}</span>
+                          </div>
+                        )}
+
+                        {/* Price + Ref at bottom */}
+                        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                          <div>
+                            {ttype.price != null && (
+                              <div style={{ color: T.green, fontSize: '13px', fontWeight: 700, fontFamily: '"Courier New", Courier, monospace' }}>
+                                {formatCurrency(Number(ttype.price), currency)}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '2px' }}>REF</div>
+                            <div style={{ color: T.dark, fontSize: '7px', fontFamily: '"Courier New", Courier, monospace', fontWeight: 700 }}>{code.slice(0, 16)}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Perforated divider */}
+                      <div style={{
+                        width: '16px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        background: T.ivory,
+                        position: 'relative',
+                      }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          bottom: 0,
+                          left: '50%',
+                          width: '1px',
+                          backgroundImage: `repeating-linear-gradient(to bottom, ${T.cream} 0px, ${T.cream} 5px, transparent 5px, transparent 10px)`,
+                        }} />
+                        {/* Top semicircle cut */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          background: T.cream,
+                        }} />
+                        {/* Bottom semicircle cut */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-8px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          background: T.cream,
+                        }} />
+                      </div>
+
+                      {/* Right: QR panel */}
+                      <div style={{
+                        width: '148px',
+                        flexShrink: 0,
+                        background: T.cream,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '14px 12px 12px',
+                        gap: '8px',
+                      }}>
+                        {qrMap[t.id] ? (
+                          <img
+                            src={qrMap[t.id]}
+                            alt={`QR ${code}`}
+                            style={{ width: '108px', height: '108px', display: 'block' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '108px',
+                            height: '108px',
+                            background: T.white,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            <span style={{ color: T.sage, fontSize: '8px', fontFamily: 'Arial, sans-serif' }}>QR</span>
+                          </div>
+                        )}
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ margin: '0 0 3px', color: T.sage, fontSize: '6.5px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+                            SCAN TO VERIFY
+                          </p>
+                          <p style={{ margin: 0, color: T.dark, fontSize: '6px', fontFamily: '"Courier New", Courier, monospace', wordBreak: 'break-all' }}>
+                            {code.slice(0, 14)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 </div>
               </div>
-
-              {/* Main ticket content - 4 Column Layout */}
-              <div className="grid grid-cols-4 gap-2.5 p-2.5 divide-x divide-gray-200 min-w-[600px] md:min-w-0">
-                {/* Column 1 - Event Details */}
-                <div className="space-y-1 pr-2.5">
-                  {t.services?.event_datetime && (
-                    <div>
-                      <span className="text-xs text-gray-500 font-light">Happening on</span>
-                      <p className="text-gray-900 font-light text-xs">
-                        {new Date(t.services.event_datetime).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-xs text-gray-500 font-light">At </span>
-                    <p className="text-gray-900 font-light text-xs line-clamp-2">{t.services?.event_location || t.services?.location || 'Venue TBA'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500 font-light">Organised by : </span>
-                    <p className="text-gray-900 font-light text-xs line-clamp-1">{t.services?.vendors?.business_name || 'Service Provider'}</p>
-                  </div>
-                </div>
-
-                {/* Column 2 - Buyer Info */}
-                <div className="space-y-1 px-2.5">
-                  {t.buyer_profile ? (
-                    <>
-                      <div>
-                        <span className="text-xs text-gray-500 font-light">Owner</span>
-                        <p className="text-gray-900 font-light text-xs line-clamp-1">{t.buyer_profile.full_name || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <span className="text-xs text-gray-500 font-light">Email</span>
-                        <p 
-                          className="text-gray-900 font-light line-clamp-1" 
-                          style={{ fontSize: getEmailFontSize(t.buyer_profile?.email || 'N/A') }}
-                        >
-                          {t.buyer_profile.email || 'N/A'}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <span className="text-xs text-gray-500 font-light">Owner</span>
-                      <p className="text-gray-900 font-light text-xs">N/A</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Column 3 - Ticket Details */}
-                <div className="space-y-1 px-2.5">
-                  <div>
-                    <span className="text-xs text-gray-500 font-light">Price</span>
-                    <p className="text-gray-900 font-light text-xs">{formatCurrency(t.ticket_types?.price || 0, t.orders?.currency || 'UGX')}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500 font-light">Status</span>
-                    <p className={`font-light text-xs ${
-                      t.status === 'issued' ? 'text-green-600' :
-                      t.status === 'used' ? 'text-blue-600' :
-                      'text-gray-600'
-                    }`}>
-                      {t.status?.charAt(0).toUpperCase() + t.status?.slice(1)}
-                    </p>
-                  </div>
-                  <div className="text-xs text-gray-500 font-light">
-                    Issued: {new Date(t.issued_at).toLocaleDateString()}
-                  </div>
-                </div>
-
-                {/* Column 4 - QR Code */}
-                <div className="flex flex-col items-center justify-center pl-2.5">
-                  <div className="flex-shrink-0 mb-1">
-                    {qrMap[t.id] ? (
-                      <img src={qrMap[t.id]} alt={`QR ${t.code}`} className="w-16 h-16 border border-gray-200 rounded" />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-100 border border-gray-200 rounded flex items-center justify-center text-xs text-gray-400 font-light">No QR</div>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500 font-light text-center">Scan for Entry</div>
-                  <div className="text-[10px] text-gray-400 font-light text-center mt-1.5 md:mt-3">
-                    Powered by : <br />
-                    <a 
-                      href="https://bookings.dirt-trails.com" 
-                      className="text-blue-500 hover:text-blue-700 font-normal" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      bookings.dirt-trails.com
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
-        {/* Thank you note and platform link */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-center border border-gray-200">
-          <div className="text-sm font-medium text-gray-900 mb-2">Thank you for choosing{' '}
-            <a
-              href="https://dirttrails.com"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              DirtTrails!
-            </a>{' '}</div>
-          <div className="text-xs text-gray-600 mb-3">We hope you have an amazing experience at <span className="text-blue-600 font-semibold">{tickets[0]?.services?.title || 'the event'}</span>. See You!</div>
+        {/* ── FOOTER NOTE ── */}
+        <div style={{
+          marginTop: '32px',
+          background: T.green,
+          padding: '24px 32px',
+          textAlign: 'center',
+        }}>
+          <p style={{ margin: '0 0 6px', color: T.amber, fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' }}>
+            DIRTTRAILS ADVENTURES
+          </p>
+          <p style={{ margin: 0, color: T.sage, fontSize: '12px', lineHeight: 1.7 }}>
+            Enjoy the event! Present your QR code at the entrance.
+          </p>
         </div>
       </div>
     </div>

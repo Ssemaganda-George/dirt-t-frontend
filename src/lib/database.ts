@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 import { formatCurrency } from './utils';
 import { executeWithCircuitBreaker } from './concurrency';
 import { buildCreateBookingAtomicRpcPayload } from './createBookingAtomicRpc';
+import { creditWallet } from './creditWallet';
 import type { UserPreferences, VendorTier } from '../types'
 
 /**
@@ -158,7 +159,6 @@ export async function getUserPreferences(): Promise<UserPreferences | null> {
       return null
     }
 
-    // Don't manually filter by user_id since RLS will handle it
     const { data, error } = await supabase
       .from('user_preferences')
       .select('*')
@@ -396,6 +396,29 @@ export interface Vendor {
   business_city?: string
   business_phone?: string
   business_phones?: string[]
+  // Payment / payout fields
+  bank_details?: {
+    name?: string
+    account_name?: string
+    account_number?: string
+    branch?: string
+    swift?: string
+    [key: string]: any
+  }
+  mobile_money_accounts?: Array<{
+    provider?: string
+    phone?: string
+    country_code?: string
+    name?: string
+    [key: string]: any
+  }>
+  crypto_accounts?: Array<{
+    currency?: string
+    address?: string
+    label?: string
+    [key: string]: any
+  }>
+  preferred_payout?: string
   business_email?: string
   business_website?: string
   business_type?: string
@@ -498,6 +521,11 @@ export interface Service {
   pickup_locations?: string[]
   dropoff_locations?: string[]
   route_description?: string
+  vehicle_features?: string[]
+  vehicle_ccs?: number
+  vehicle_engine?: string
+  fuel_type?: string
+  fuel_km_per_liter?: number
   driver_included?: boolean
   air_conditioning?: boolean
   gps_tracking?: boolean
@@ -674,6 +702,7 @@ export interface Transaction {
   status: TransactionStatus
   payment_method: 'card' | 'mobile_money' | 'bank_transfer'
   reference: string
+  payout_meta?: any
   created_at: string
 }
 
@@ -1125,6 +1154,9 @@ export async function updateService(serviceId: string, vendorId: string | undefi
   contact_info?: { phone?: string; email?: string; website?: string }
   booking_requirements?: string
   cancellation_policy?: string
+  // Transport pricing (new)
+  price_within_town?: number
+  price_upcountry?: number
 }>): Promise<any> {
   try {
     // Whitelist of columns that actually exist in the database
@@ -1146,9 +1178,12 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       'guide_included', 'accommodation_included',
       // Transport fields
       'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
+      'vehicle_features', 'vehicle_ccs', 'vehicle_engine', 'fuel_type', 'fuel_km_per_liter',
       'license_required', 'booking_notice_hours', 'usb_charging', 'child_seat', 'roof_rack',
       'towing_capacity', 'four_wheel_drive', 'automatic_transmission', 'transport_terms',
       'driver_included', 'air_conditioning', 'gps_tracking', 'fuel_included', 'tolls_included',
+      // Transport pricing
+      'price_within_town', 'price_upcountry',
       'insurance_included', 'reservations_required',
       // Restaurant fields
       'cuisine_type', 'opening_hours', 'menu_items', 'dietary_options', 'average_cost_per_person',
@@ -1202,14 +1237,21 @@ export async function updateService(serviceId: string, vendorId: string | undefi
 
   // Always include updated_at
   filteredUpdates.updated_at = new Date().toISOString();
+  // Build RPC payload omitting updated_at because the RPC implementation can be strict
+  const rpcUpdates = { ...filteredUpdates };
+  delete (rpcUpdates as any).updated_at;
 
-  console.log('Valid updates:', filteredUpdates);
-
-  // Try atomic RPC first, fall back to direct update if RPC fails (e.g. PGRST203 overload issue)
   try {
+    try {
+      console.log('Valid updates:', JSON.stringify(filteredUpdates));
+    } catch (e) {
+      console.log('Valid updates: (could not stringify)', filteredUpdates);
+    }
+
+    // Try atomic RPC first, fall back to direct update if RPC fails (e.g. type mismatches)
     const result = await supabase.rpc('update_service_atomic', {
       p_service_id: serviceId,
-      p_updates: filteredUpdates,
+      p_updates: rpcUpdates,
       p_vendor_id: vendorId
     });
 
@@ -1222,19 +1264,15 @@ export async function updateService(serviceId: string, vendorId: string | undefi
     }
   } catch (rpcError: any) {
     console.warn('RPC update_service_atomic failed, falling back to direct update:', rpcError?.code || rpcError?.message, rpcError);
-    
-    // Fallback: direct table update
+
+    // Fallback: direct table update (include updated_at)
     const updateQuery = supabase
       .from('services')
       .update(filteredUpdates)
       .eq('id', serviceId);
 
-    // If vendorId is provided, also filter by it for authorization
-    if (vendorId) {
-      updateQuery.eq('vendor_id', vendorId);
-    }
+    if (vendorId) updateQuery.eq('vendor_id', vendorId);
 
-    // Use select().single() so we get the updated row back and detect zero-row updates
     const { data: directUpdated, error: directError } = await updateQuery.select().single();
     if (directError) {
       console.error('updateService: direct update error (no rows updated?):', directError);
@@ -1288,21 +1326,31 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       }
     });
     if (mismatches.length > 0) {
-      console.warn('updateService: mismatch between sent updates and DB for keys:', mismatches, { sent: filteredUpdates, got: data });
-      // Retry with direct update to ensure changes are applied
-      try {
-        console.warn('updateService: attempting direct update retry due to mismatch...');
-        const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
-        if (vendorId) directQuery.eq('vendor_id', vendorId);
-        const { data: retryData, error: retryError } = await directQuery.select().single();
-        if (retryError) {
-          console.error('updateService: direct retry error:', retryError);
-        } else {
-          console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
-          return retryData;
+      // Ignore updated_at mismatches caused by formatting differences
+      const filteredMismatches = mismatches.filter(k => k !== 'updated_at');
+      if (filteredMismatches.length > 0) {
+        try {
+          console.warn('updateService: mismatch between sent updates and DB for keys:', filteredMismatches, 'details:', JSON.stringify({ sent: filteredUpdates, got: data }));
+        } catch (e) {
+          console.warn('updateService: mismatch between sent updates and DB for keys:', filteredMismatches, { sent: filteredUpdates, got: data });
         }
-      } catch (retryErr) {
-        console.error('updateService: error during direct retry:', retryErr);
+        // Retry with direct update to ensure changes are applied
+        try {
+          console.warn('updateService: attempting direct update retry due to mismatch...');
+          const directQuery = supabase.from('services').update(filteredUpdates).eq('id', serviceId);
+          if (vendorId) directQuery.eq('vendor_id', vendorId);
+          const { data: retryData, error: retryError } = await directQuery.select().single();
+          if (retryError) {
+            console.error('updateService: direct retry error:', retryError);
+          } else {
+            console.log('updateService: direct retry returned:', { id: retryData?.id, title: retryData?.title });
+            return retryData;
+          }
+        } catch (retryErr) {
+          console.error('updateService: error during direct retry:', retryErr);
+        }
+      } else {
+        console.log('updateService: only timestamp mismatch (ignored)');
       }
     }
   } catch (e) {
@@ -1963,7 +2011,8 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
     if (itemsError) throw itemsError
 
     const createdTickets: any[] = []
-    // Create bookings per service for ALL ticket orders (logged-in and guest)
+
+    
     // This ensures a booking ID exists for ticket purchases
     const bookingMap: Record<string, string> = {}
     try {
@@ -2593,6 +2642,58 @@ export async function getAllVendors(): Promise<Vendor[]> {
   })) as Vendor[]
 }
 
+export async function getVendorById(vendorId: string): Promise<Vendor | null> {
+  try {
+    // First attempt: try joining profiles (may fail in some RLS/schema setups)
+    const { data, error } = await supabase
+      .from('vendors')
+      .select(`
+        *,
+        profiles (
+          id,
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .eq('id', vendorId)
+      .single()
+
+    if (!error && data) {
+      return data as Vendor
+    }
+
+    // Fallback: simple vendor select without joins (safer for strict RLS setups)
+    console.warn('getVendorById: profiles join failed or returned no data, falling back to simple vendor select', error)
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('vendors')
+      .select('id, user_id, business_name, business_email, business_description, business_address, business_phone, status, created_at, updated_at, bank_details, mobile_money_accounts, preferred_payout')
+      .eq('id', vendorId)
+      .single()
+
+    if (simpleError) {
+      console.error('Error fetching vendor by id (simple fallback):', simpleError)
+      throw simpleError
+    }
+
+    // Construct a Vendor-shaped object with a minimal profiles stub
+    const vendor = {
+      ...simpleData,
+      profiles: {
+        id: (simpleData as any)?.user_id,
+        full_name: (simpleData as any)?.business_name,
+        email: (simpleData as any)?.business_email,
+        phone: undefined
+      }
+    } as Vendor
+
+    return vendor
+  } catch (error) {
+    console.error('getVendorById error:', error)
+    throw error
+  }
+}
+
 export async function getAllBookings(): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('bookings')
@@ -2724,7 +2825,10 @@ export async function createBooking(
     throw new Error(result.data?.error || 'Failed to create booking');
   }
 
-  // Fetch the complete booking with relations
+  const bookingId: string = result.data.booking_id
+  console.log('Booking created successfully (atomic):', bookingId)
+
+  // Fetch complete booking with relations (used by callers and downstream logic)
   const { data, error } = await supabase
     .from('bookings')
     .select(`
@@ -2743,20 +2847,198 @@ export async function createBooking(
         email
       )
     `)
-    .eq('id', result.data.booking_id)
-    .single();
+    .eq('id', bookingId)
+    .single()
 
-  if (error) throw error;
+  if (error || !data) {
+    throw error || new Error('Failed to fetch created booking')
+  }
 
-  console.log('Booking created successfully:', data)
+  let finalBooking: any = data
 
-  // Send booking confirmation emails asynchronously (don't block on errors)
-  sendBookingEmails(data.id).catch(error => {
+  // Sync status/payment_status only when explicitly requested by caller
+  try {
+    const requestedStatus = (bookingData as any).status
+    const requestedPaymentStatus = (bookingData as any).payment_status || (bookingData as any).paymentStatus
+    const requestedPaymentReference = (bookingData as any).payment_reference || (bookingData as any).paymentReference
+    if (
+      (requestedStatus && requestedStatus !== (data as any).status) ||
+      (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) ||
+      (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference)
+    ) {
+      const { data: updated, error: updateError } = await supabase
+        .from('bookings')
+        .update({
+          ...(requestedStatus ? { status: requestedStatus } : {}),
+          ...(requestedPaymentStatus ? { payment_status: requestedPaymentStatus } : {}),
+          ...(requestedPaymentReference ? { payment_reference: requestedPaymentReference } : {})
+        })
+        .eq('id', data.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.warn('Failed to update booking status/payment_status after createBooking:', updateError)
+      } else if (updated) {
+        // Preserve previously loaded relations on the returned object
+        finalBooking = { ...finalBooking, ...updated }
+      }
+    }
+  } catch (err) {
+    console.warn('Error updating booking status/payment_status after createBooking:', err)
+  }
+
+  // Critical payment processing must complete before returning to avoid lost updates
+  try {
+    const shouldCreateTransaction =
+      finalBooking.status === 'confirmed' && (finalBooking as any).payment_status === 'paid'
+
+    if (shouldCreateTransaction) {
+      const { data: existingTx, error: txCheckError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('booking_id', finalBooking.id)
+        .eq('transaction_type', 'payment')
+        .eq('status', 'completed')
+        .single()
+
+      if (txCheckError && txCheckError.code !== 'PGRST116') {
+        console.warn('Error checking existing payment transaction after createBooking:', txCheckError)
+      } else if (!existingTx) {
+        const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+          p_vendor_id: finalBooking.vendor_id,
+          p_amount: finalBooking.total_amount,
+          p_booking_id: finalBooking.id || null,
+          p_tourist_id: finalBooking.tourist_id || null,
+          p_currency: finalBooking.currency || 'UGX',
+          p_payment_method: 'card',
+          p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
+        }) as any
+
+        if (paymentError) throw paymentError
+        if (!paymentResult?.success) throw new Error(paymentResult?.error || 'Failed to process payment')
+
+        const adminId = await getAdminProfileId()
+        if (adminId) {
+          await creditWallet(adminId, finalBooking.total_amount, finalBooking.currency)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error creating payment transaction after createBooking:', err)
+  }
+
+  // Non-critical side effect: keep email sending fire-and-forget for UX speed
+  sendBookingEmails(finalBooking.id).catch(error => {
     console.error('Failed to send booking emails:', error)
-    // Don't throw - email failure shouldn't break the booking creation
   })
 
-  return data
+  return finalBooking as Booking
+}
+
+export async function getFlaggedBookings(): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`*, services(id,title,vendors(id,business_name)), profiles(id,full_name,email)`) 
+    .or("rejection_reason.eq.payment_unverified,payment_status.eq.pending")
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching flagged bookings:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+export async function approveFlaggedBooking(bookingId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ payment_status: 'paid', rejection_reason: null, status: 'confirmed', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort: notify backend/edge function for audit
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'approve', timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('approveFlaggedBooking error:', err)
+    throw err
+  }
+}
+
+export async function rejectFlaggedBooking(bookingId: string, reason: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ payment_status: 'pending', rejection_reason: reason || 'rejected_by_admin', status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort: notify backend/edge function for audit
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'reject', reason, timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('rejectFlaggedBooking error:', err)
+    throw err
+  }
+}
+
+export async function resolveFlaggedBooking(bookingId: string, notes?: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ rejection_reason: notes || 'reviewed', updated_at: new Date().toISOString() })
+      .eq('id', bookingId)
+
+    if (error) throw error
+
+    // Best-effort audit call
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseAnonKey) {
+        await fetch(`${supabaseUrl}/functions/v1/reconcile-booking`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({ booking_id: bookingId, action: 'resolve', notes: notes || null, timestamp: new Date().toISOString() })
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+  } catch (err) {
+    console.error('resolveFlaggedBooking error:', err)
+    throw err
+  }
 }
 
 /**
@@ -3449,11 +3731,11 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
         .or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
         .eq('status', 'unread')
     } else if (filter === 'customer') {
-      // Only messages from tourists to vendor
+      // Messages from tourists, admin, or system (OTP) to vendor
       query = query
         .eq('recipient_id', vendorId)
         .eq('recipient_role', 'vendor')
-        .eq('sender_role', 'tourist')
+        .in('sender_role', ['tourist', 'admin', 'system'])
     } else if (filter === 'admin') {
       // All messages between vendor and admin (sent or received)
       query = query.or(`and(sender_id.eq.${vendorId},recipient_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.admin)`)
@@ -3472,6 +3754,42 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
     return data || []
   } catch (error) {
     console.error('Error in getVendorMessages:', error)
+    throw error
+  }
+}
+
+export async function getTouristMessages(touristId: string, filter?: 'unread' | 'vendor' | 'admin') {
+  try {
+    let query = supabase
+      .from('messages')
+      .select(`*, sender:profiles!messages_sender_id_fkey(id, full_name, email), recipient:profiles!messages_recipient_id_fkey(id, full_name, email)`)    
+      .order('created_at', { ascending: false })
+
+    if (filter === 'unread') {
+      query = query
+        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+        .eq('status', 'unread')
+    } else if (filter === 'vendor') {
+      // Messages involving tourist where other party is vendor/admin/system
+      query = query
+        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+        .in('sender_role', ['vendor', 'admin', 'system'])
+    } else if (filter === 'admin') {
+      query = query.or(`and(sender_id.eq.${touristId},recipient_role.eq.admin),and(recipient_id.eq.${touristId},sender_role.eq.admin)`)    
+    } else {
+      query = query.or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching tourist messages:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getTouristMessages:', error)
     throw error
   }
 }
@@ -4184,20 +4502,34 @@ export async function getTransactions(vendorId: string) {
   try {
     console.log('getTransactions: Querying transactions for vendorId:', vendorId)
     
-    // Try RPC function first (if it exists)
+    // Try RPC function first (if it exists). Some deployments use different parameter names
+    // in the SQL function (vendor_id_param, vendor_id, p_vendor_id, etc). Try a few common
+    // variants and log the returned error details so we can diagnose 400 responses.
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_vendor_transactions', {
-        vendor_id_param: vendorId
-      })
-      
-      if (!rpcError && rpcData) {
-        console.log('getTransactions: Got transactions via RPC:', rpcData.length)
-        return rpcData
+      const paramCandidates = ['vendor_id_param', 'vendor_id', 'p_vendor_id', 'p_vendor']
+      for (const paramName of paramCandidates) {
+        try {
+          const params: any = {}
+          params[paramName] = vendorId
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_vendor_transactions', params)
+
+          if (!rpcError && rpcData) {
+            console.log(`getTransactions: Got transactions via RPC (param=${paramName}):`, rpcData.length)
+            return rpcData
+          }
+
+          // If we got an rpcError object, log details for debugging
+          if (rpcError) {
+            console.log(`getTransactions: RPC attempt param=${paramName} returned error:`, rpcError)
+          }
+        } catch (innerErr) {
+          // Network-level or unexpected errors from the RPC call
+          console.log(`getTransactions: RPC attempt param=${paramName} threw:`, innerErr)
+        }
       }
-      
-      console.log('getTransactions: RPC failed or not available:', rpcError)
+      console.log('getTransactions: RPC attempts exhausted or RPC not available, falling back')
     } catch (rpcErr) {
-      console.log('getTransactions: RPC not available, using fallback')
+      console.log('getTransactions: RPC wrapper failed, using fallback', rpcErr)
     }
     
     // Try querying through vendors relationship
@@ -4291,25 +4623,49 @@ export async function addTransaction(transaction: {
   status: 'pending' | 'completed' | 'failed'
   payment_method: 'card' | 'mobile_money' | 'bank_transfer'
   reference: string
+  payout_meta?: any
 }) {
   try {
 
     console.log('[Wallet Debug] addTransaction called with:', transaction);
     // Use atomic function to create transaction
-    const { data, error } = await supabase.rpc('create_transaction_atomic', {
-      p_vendor_id: transaction.vendor_id,
-      p_amount: transaction.amount,
-      p_transaction_type: transaction.transaction_type,
-      p_booking_id: transaction.booking_id || null,
-      p_tourist_id: transaction.tourist_id || null,
-      p_currency: transaction.currency || 'UGX',
-      p_status: transaction.status || 'pending',
-      p_payment_method: transaction.payment_method || 'card',
-      p_reference: transaction.reference || null
-    });
+    let data: any = null
+    let error: any = null
+
+    if (transaction.payout_meta) {
+      // Use a helper RPC that accepts payout_meta and inserts it into transactions.payout_meta
+      const rpcRes = await supabase.rpc('create_transaction_with_meta_atomic', {
+        p_vendor_id: transaction.vendor_id,
+        p_amount: transaction.amount,
+        p_transaction_type: transaction.transaction_type,
+        p_booking_id: transaction.booking_id || null,
+        p_tourist_id: transaction.tourist_id || null,
+        p_currency: transaction.currency || 'UGX',
+        p_status: transaction.status || 'pending',
+        p_payment_method: transaction.payment_method || 'card',
+        p_reference: transaction.reference || null,
+        p_payout_meta: transaction.payout_meta
+      })
+      data = rpcRes.data
+      error = rpcRes.error
+    } else {
+      const rpcRes = await supabase.rpc('create_transaction_atomic', {
+        p_vendor_id: transaction.vendor_id,
+        p_amount: transaction.amount,
+        p_transaction_type: transaction.transaction_type,
+        p_booking_id: transaction.booking_id || null,
+        p_tourist_id: transaction.tourist_id || null,
+        p_currency: transaction.currency || 'UGX',
+        p_status: transaction.status || 'pending',
+        p_payment_method: transaction.payment_method || 'card',
+        p_reference: transaction.reference || null
+      })
+      data = rpcRes.data
+      error = rpcRes.error
+    }
 
     // Log raw RPC response for easier debugging in browser console
-    console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
+  console.log('[Wallet Debug] create_transaction_atomic response:', { data, error });
 
     if (error) {
       // If table doesn't exist, throw a more helpful error
@@ -4512,7 +4868,7 @@ export async function getWalletStats(vendorId: string) {
   }
 }
 
-export async function requestWithdrawal(vendorId: string, amount: number, currency: string) {
+export async function requestWithdrawal(vendorId: string, amount: number, currency: string, payout?: { id?: string; type?: string; meta?: any }) {
   try {
     // Get current wallet stats to validate the withdrawal amount
     const walletStats = await getWalletStats(vendorId)
@@ -4528,15 +4884,25 @@ export async function requestWithdrawal(vendorId: string, amount: number, curren
     // Check if transactions table exists by trying to insert
     const reference = `WD_${Date.now()}_${Math.random().toString(36).slice(2,8)}`
 
+    const payment_method = payout?.type === 'bank' ? 'bank_transfer' : 'mobile_money'
+
+    // Include payout metadata if provided
     const transaction = await addTransaction({
       vendor_id: vendorId,
       amount,
       currency,
       transaction_type: 'withdrawal',
       status: 'pending',
-      payment_method: 'mobile_money',
-      reference
+      payment_method: (payment_method as 'card' | 'mobile_money' | 'bank_transfer'),
+      reference,
+      payout_meta: payout?.meta || (payout ? { type: payout.type } : null)
     })
+
+    // Optionally store payout metadata in a payments_payouts table or attach metadata to the transaction via another RPC.
+    // For now, we log it to the console for server-side developers to wire into the processing pipeline.
+    if (payout?.meta) {
+      console.log('[Wallet Debug] payout metadata provided for withdrawal:', payout.meta)
+    }
 
     return transaction
   } catch (error) {
@@ -4960,7 +5326,8 @@ async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise
         viewCount: sessionViews.length,
         daysSinceFirstVisit,
         ipAddress: session.ip_address || 'Unknown',
-        location: session.country ? `${session.city || ''}, ${session.country}`.trim() : 'Unknown Location'
+        location: `${(session.city && session.city !== '') ? session.city : 'Unknown'}, ${(session.country && session.country !== '') ? session.country : 'Unknown'}`,
+        visitedAt: (session.last_visit_at || session.first_visit_at || session.created_at) ? new Date(session.last_visit_at || session.first_visit_at || session.created_at).toISOString() : null
       }
     })
 

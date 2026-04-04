@@ -7,6 +7,12 @@ const APP_URL = Deno.env.get("APP_URL") || Deno.env.get("FRONTEND_URL") || "http
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isValidUUID(value: string): boolean {
+  return typeof value === "string" && UUID_REGEX.test(value.trim())
+}
+
 function generateReference(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -15,15 +21,18 @@ function generateReference(): string {
   })
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
 serve(async (req) => {
+  const requestOrigin = req.headers.get('origin') || '*'
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': requestOrigin,
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  }
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response("ok", { headers: CORS_HEADERS })
   }
 
   if (req.method !== "POST") {
@@ -37,25 +46,32 @@ serve(async (req) => {
     if (!MARZPAY_API_CREDENTIALS) {
       return new Response(
         JSON.stringify({ error: "Payment service not configured (MARZPAY_API_CREDENTIALS)" }),
-        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 503, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
-    let body: { amount: number; phone_number: string; order_id: string; description?: string; user_id?: string }
+    let body: { amount: number; phone_number: string; order_id?: string; booking_id?: string; description?: string; user_id?: string }
     try {
       body = await req.json()
     } catch {
       return new Response(
         JSON.stringify({ error: "Invalid JSON body" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
-    const { amount, phone_number, order_id, description, user_id } = body
-    if (!amount || !phone_number || !order_id) {
+    const { amount, phone_number, order_id, booking_id, description, user_id } = body
+    if (!amount || !phone_number) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: amount, phone_number, order_id" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing required fields: amount, phone_number" }),
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      )
+    }
+    // Either order_id (events/tickets) or booking_id (hotel/activity/tour/restaurant) must be provided
+    if (!order_id && !booking_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: order_id or booking_id" }),
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
@@ -69,14 +85,14 @@ serve(async (req) => {
         JSON.stringify({
           error: "Invalid phone number. Use 10 digits e.g. 0712345678 or +256712345678",
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
     const prefix = formattedPhone.charAt(4)
     if (!["7", "3"].includes(prefix)) {
       return new Response(
         JSON.stringify({ error: "Invalid phone. Must be (07...) or (03...)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
@@ -88,7 +104,7 @@ serve(async (req) => {
       phone_number: formattedPhone,
       country: "UG",
       reference,
-      description: description || `Order #${order_id} payment`,
+      description: description || (order_id ? `Order #${order_id} payment` : `Booking #${booking_id} payment`),
       callback_url: webhookUrl,
     }
 
@@ -103,12 +119,12 @@ serve(async (req) => {
 
     const responseText = await marzpayResponse.text()
     let marzpayData: any
-    try {
+      try {
       marzpayData = JSON.parse(responseText)
     } catch {
       return new Response(
         JSON.stringify({ error: "Invalid response from payment service" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
@@ -118,7 +134,7 @@ serve(async (req) => {
         JSON.stringify({ error: msg, details: marzpayData.errors || marzpayData.details }),
         {
           status: marzpayResponse.status === 422 ? 422 : 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
         }
       )
     }
@@ -126,7 +142,7 @@ serve(async (req) => {
     if (marzpayData.status !== "success") {
       return new Response(
         JSON.stringify({ error: marzpayData.message || "Payment initiation failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
@@ -147,11 +163,18 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
+    // payments.booking_id, order_id, user_id are UUID columns with FKs; only set when valid UUID
+    // Frontend may send temporary booking ref (e.g. "bk-...") before the booking exists — omit in that case
+    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
+    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
+    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+
     const { data: paymentRow, error: insertError } = await supabase
       .from("payments")
       .insert({
-        order_id: order_id,
-        user_id: user_id || null,
+        ...(paymentOrderId ? { order_id: paymentOrderId } : {}),
+        ...(paymentBookingId ? { booking_id: paymentBookingId } : {}),
+        user_id: paymentUserId,
         amount: amountInt,
         phone_number: formattedPhone,
         reference: ref,
@@ -168,7 +191,7 @@ serve(async (req) => {
       console.error("Payment insert error:", insertError)
       return new Response(
         JSON.stringify({ error: "Failed to store payment" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
 
@@ -184,13 +207,13 @@ serve(async (req) => {
           provider,
         },
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     )
   } catch (err) {
     console.error("marzpay-collect error:", err)
     return new Response(
       JSON.stringify({ error: (err as Error).message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
     )
   }
 })

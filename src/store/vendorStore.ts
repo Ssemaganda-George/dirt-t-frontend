@@ -209,16 +209,36 @@ export function updateTransactionStatus(vendorId: string, txId: string, status: 
   setTransactions(vendorId, list)
 }
 
-export async function requestWithdrawal(vendorId: string, amount: number, currency: string): Promise<Transaction> {
+export async function requestWithdrawal(vendorId: string, amount: number, currency: string, payout?: { id?: string; type?: string; meta?: any }): Promise<Transaction> {
   try {
     // Use atomic withdrawal processing
-    const { data, error } = await supabase.rpc('process_withdrawal_atomic', {
-      p_vendor_id: vendorId,
-      p_amount: amount,
-      p_currency: currency,
-      p_payment_method: 'mobile_money',
-      p_reference: `WD_${Math.random().toString(36).slice(2,8)}`
-    });
+    const paymentMethod = payout?.type === 'bank' ? 'bank_transfer' : 'mobile_money'
+    let data: any = null
+    let error: any = null
+
+    if (payout?.meta) {
+      // Use the helper that accepts payout metadata so it is persisted with the transaction
+      const rpcRes = await supabase.rpc('process_withdrawal_create_with_payout_meta', {
+        p_vendor_id: vendorId,
+        p_amount: amount,
+        p_currency: currency,
+        p_payment_method: paymentMethod,
+        p_reference: `WD_${Math.random().toString(36).slice(2,8)}`,
+        p_payout_meta: payout.meta
+      });
+      data = rpcRes.data
+      error = rpcRes.error
+    } else {
+      const rpcRes = await supabase.rpc('process_withdrawal_atomic', {
+        p_vendor_id: vendorId,
+        p_amount: amount,
+        p_currency: currency,
+        p_payment_method: paymentMethod,
+        p_reference: `WD_${Math.random().toString(36).slice(2,8)}`
+      });
+      data = rpcRes.data
+      error = rpcRes.error
+    }
 
     if (error) throw error;
 

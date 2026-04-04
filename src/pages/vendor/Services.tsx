@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests, useVendorPricing } from '../../hooks/hook'
@@ -9,7 +10,7 @@ import SearchMap from '../../components/SearchMap'
 import PricingNotification from '../../components/PricingNotification'
 import { supabase } from '../../lib/supabaseClient'
 import { uploadServiceImage, deleteServiceImage, removeServiceImage } from '../../lib/imageUpload'
-import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType } from '../../lib/database'
+import { createActivationRequest, createTicketType, getTicketTypes, updateTicketType, deleteTicketType, getServiceById } from '../../lib/database'
 
 function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]: any[] }, selectedCurrency: string, selectedLanguage: string) {
   // For events/activities with ticket types, show ticket prices
@@ -17,11 +18,9 @@ function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]
     const ticketPrices = ticketTypes[service.id]
       .map((ticket: any) => ticket.price)
       .filter((price: number) => price > 0);
-    
     if (ticketPrices.length > 0) {
       const minPrice = Math.min(...ticketPrices);
       const maxPrice = Math.max(...ticketPrices);
-      
       if (minPrice === maxPrice) {
         return formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage);
       } else {
@@ -29,7 +28,20 @@ function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]
       }
     }
   }
-  
+
+  // Transport: show price range if both prices are set
+  if (service.category_id === 'cat_transport') {
+    const within = typeof service.price_within_town === 'number' ? service.price_within_town : undefined;
+    const upcountry = typeof service.price_upcountry === 'number' ? service.price_upcountry : undefined;
+    if (within !== undefined && upcountry !== undefined && within !== upcountry) {
+      return `${formatCurrencyWithConversion(within, service.currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(upcountry, service.currency, selectedCurrency, selectedLanguage)}`;
+    } else if (within !== undefined) {
+      return formatCurrencyWithConversion(within, service.currency, selectedCurrency, selectedLanguage);
+    } else if (upcountry !== undefined) {
+      return formatCurrencyWithConversion(upcountry, service.currency, selectedCurrency, selectedLanguage);
+    }
+  }
+
   // Fallback to service price
   return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage);
 }
@@ -61,6 +73,8 @@ function formatServicePrice(service: Service, ticketTypes: { [serviceId: string]
 
 export default function VendorServices() {
   const { user } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const [vendorId, setVendorId] = useState<string | null>(null)
   const [vendorLoading, setVendorLoading] = useState(true)
@@ -72,11 +86,22 @@ export default function VendorServices() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
+  const [formInitial, setFormInitial] = useState<Partial<Service> | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [ticketTypes, setTicketTypes] = useState<{ [serviceId: string]: any[] }>({})
   const itemsPerPage = 10
+
+  // Helper: determine if an event is more than 24 hours past its event datetime
+  function isPast24HoursAfterEvent(service: Service | any): boolean {
+    const eventDateTimeStr = (service as any).event_datetime || (service as any).event_date;
+    if (!eventDateTimeStr) return false;
+    const eventDate = new Date(eventDateTimeStr);
+    if (isNaN(eventDate.getTime())) return false;
+    const now = Date.now();
+    return now > eventDate.getTime() + 24 * 60 * 60 * 1000;
+  }
 
   // Debounce search query for better performance
   useEffect(() => {
@@ -199,6 +224,22 @@ export default function VendorServices() {
     }
   }, [vendorId, vendorLoading, refetchTier])
 
+  // If navigated here with a preselectCategory (from Events "Create event"), open the create form
+  useEffect(() => {
+    const state: any = (location && (location.state as any)) || {}
+    const pre = state?.preselectCategory
+    if (pre && !showForm && !editing) {
+      setFormInitial({ category_id: pre })
+      setShowForm(true)
+      // clear the state to avoid reopening when navigating back
+      try {
+        navigate(location.pathname, { replace: true, state: {} })
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [location?.state, showForm, editing, navigate, location.pathname])
+
   // Load ticket types for services when services change
   useEffect(() => {
     const loadTicketTypes = async () => {
@@ -265,6 +306,9 @@ export default function VendorServices() {
         pickup_locations: data.pickup_locations || [],
         dropoff_locations: data.dropoff_locations || [],
         route_description: data.route_description || '',
+        // Transport pricing categories
+        price_within_town: (data as any).price_within_town ?? undefined,
+        price_upcountry: (data as any).price_upcountry ?? undefined,
 
         // Restaurant fields
         cuisine_type: data.cuisine_type || '',
@@ -297,7 +341,7 @@ export default function VendorServices() {
         event_description: (data as any).event_description || '',
         event_type: data.event_type || '',
   // store as ISO UTC string so DB timestamptz parsing is deterministic
-  event_datetime: normalizeDateTimeLocalToISO(data.event_datetime) || null,
+          event_datetime: normalizeDateTimeLocalToISO(data.event_datetime) || null,
         event_location: data.event_location || '',
         max_participants: data.max_participants || undefined,
         registration_deadline: data.registration_deadline || '',
@@ -321,21 +365,22 @@ export default function VendorServices() {
         cancellation_policy: data.cancellation_policy || ''
       } as any)
 
-      // Persist ticket types if provided (internal ticketing)
       try {
-        const ticketTypes: any[] = (data as any).ticket_types || []
-        for (const tt of ticketTypes) {
-          // Ensure numeric values
-          const metadata = { ...(tt.metadata || {}) }
-          await createTicketType(created.id, {
-            title: tt.title,
-            description: tt.description || '',
-            price: Number(tt.price || 0),
-            quantity: Number(tt.quantity || 0),
-            metadata,
-            sale_start: normalizeDateTimeLocalToISO(tt.sale_start) ?? undefined,
-            sale_end: normalizeDateTimeLocalToISO(tt.sale_end) ?? undefined
-          })
+        // Persist ticket types (if any) for events
+        const tickets = (data as any).ticket_types || []
+        if (tickets.length > 0 && created?.id) {
+          for (const t of tickets) {
+            const payload = {
+              title: t.title || t.name || 'Ticket',
+              description: t.description || '',
+              price: Number(t.price) || 0,
+              quantity: Number(t.quantity) || 0,
+              metadata: t.metadata || {},
+              sale_start: normalizeDateTimeLocalToISO(t.sale_start) || t.sale_start || null,
+              sale_end: normalizeDateTimeLocalToISO(t.sale_end) || t.sale_end || null
+            }
+            await createTicketType(created.id, payload)
+          }
         }
       } catch (ticketErr) {
         console.warn('Failed to persist ticket types:', ticketErr)
@@ -389,6 +434,8 @@ export default function VendorServices() {
       if (updates.pickup_locations !== undefined) validUpdates.pickup_locations = updates.pickup_locations
       if (updates.dropoff_locations !== undefined) validUpdates.dropoff_locations = updates.dropoff_locations
       if (updates.route_description !== undefined) validUpdates.route_description = updates.route_description
+      if ((updates as any).price_within_town !== undefined) validUpdates.price_within_town = (updates as any).price_within_town
+      if ((updates as any).price_upcountry !== undefined) validUpdates.price_upcountry = (updates as any).price_upcountry
       if (updates.license_required !== undefined) validUpdates.license_required = updates.license_required
       if (updates.booking_notice_hours !== undefined) validUpdates.booking_notice_hours = updates.booking_notice_hours
       if (updates.air_conditioning !== undefined) validUpdates.air_conditioning = updates.air_conditioning
@@ -400,6 +447,11 @@ export default function VendorServices() {
       if (updates.usb_charging !== undefined) validUpdates.usb_charging = updates.usb_charging
       if (updates.child_seat !== undefined) validUpdates.child_seat = updates.child_seat
       if (updates.roof_rack !== undefined) validUpdates.roof_rack = updates.roof_rack
+      if (updates.vehicle_features !== undefined) validUpdates.vehicle_features = updates.vehicle_features
+      if (updates.vehicle_ccs !== undefined) validUpdates.vehicle_ccs = updates.vehicle_ccs
+      if (updates.vehicle_engine !== undefined) validUpdates.vehicle_engine = updates.vehicle_engine
+      if (updates.fuel_type !== undefined) validUpdates.fuel_type = updates.fuel_type
+      if (updates.fuel_km_per_liter !== undefined) validUpdates.fuel_km_per_liter = updates.fuel_km_per_liter
       if (updates.towing_capacity !== undefined) validUpdates.towing_capacity = updates.towing_capacity
       if (updates.four_wheel_drive !== undefined) validUpdates.four_wheel_drive = updates.four_wheel_drive
       if (updates.automatic_transmission !== undefined) validUpdates.automatic_transmission = updates.automatic_transmission
@@ -517,17 +569,47 @@ export default function VendorServices() {
   // Load ticket types for a service and open the edit form
   const handleOpenEdit = async (s: Service) => {
     try {
+      // Prefer server-side getter that can apply owner scoping and returns full service
+      let fresh: any = null
+      try {
+        fresh = await getServiceById(s.id, { vendorId: vendorId || undefined, includeUnapproved: true })
+      } catch (fetchErr) {
+        console.warn('getServiceById failed, falling back to inline fetch:', fetchErr)
+      }
+
+      // If getServiceById didn't return, fallback to direct supabase select
+      if (!fresh) {
+        const { data: direct, error: directErr } = await supabase
+          .from('services')
+          .select(`*, vendors ( id, business_name, business_description, business_email, status ), service_categories ( id, name, icon )`)
+          .eq('id', s.id)
+          .single()
+        if (directErr) console.warn('Direct service fetch failed:', directErr)
+        fresh = direct || null
+      }
+
       // try to fetch ticket types from DB (if any) so the form is fully populated
       const types = await getTicketTypes(s.id)
-      // Convert ISO/timestamptz values to datetime-local format for the inputs
-      const mapped = (types || []).map((t: any) => ({
-        ...t,
-        sale_start: formatISOToDatetimeLocal(t.sale_start),
-        sale_end: formatISOToDatetimeLocal(t.sale_end)
-      }))
-      setEditing({ ...s, ticket_types: mapped })
+      const mapped = (types || []).map((t: any) => ({ ...t, sale_start: formatISOToDatetimeLocal(t.sale_start), sale_end: formatISOToDatetimeLocal(t.sale_end) }))
+
+      const toUse = fresh || s
+      // Log transport-related fields explicitly for debugging (avoids collapsed [Object])
+      try {
+        console.log('Opening edit form with service:', JSON.stringify({
+          id: toUse?.id,
+          vehicle_engine: (toUse as any)?.vehicle_engine,
+          vehicle_ccs: (toUse as any)?.vehicle_ccs,
+          fuel_type: (toUse as any)?.fuel_type,
+          fuel_km_per_liter: (toUse as any)?.fuel_km_per_liter,
+          price_within_town: (toUse as any)?.price_within_town,
+          price_upcountry: (toUse as any)?.price_upcountry
+        }, null, 2))
+      } catch (e) {
+        console.log('Opening edit form with service (raw):', toUse)
+      }
+      setEditing({ ...toUse, ticket_types: mapped } as Service)
     } catch (err) {
-      console.warn('Failed to load ticket types for edit, falling back to service object:', err)
+      console.warn('Failed to load service for edit, falling back to provided object:', err)
       setEditing(s)
     } finally {
       setShowForm(true)
@@ -767,7 +849,7 @@ export default function VendorServices() {
           ) : (
             <div className="divide-y divide-slate-100">
               {paginatedServices.map(s => (
-                <div key={s.id} className="p-6 hover:bg-slate-50/50 transition-colors duration-200 group">
+                <div key={s.id} className="p-5 hover:bg-slate-50/50 transition-colors duration-200 group">
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-base font-semibold text-slate-900 truncate mb-1 group-hover:text-blue-600 transition-colors">
@@ -775,13 +857,19 @@ export default function VendorServices() {
                       </h3>
                       <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">{s.description}</p>
                     </div>
-                    <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                      s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                      'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}>
-                      {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
-                    </span>
+                    {(() => {
+                      const autoDeactivated = isPast24HoursAfterEvent(s);
+                      const available = s.status === 'approved' && !autoDeactivated;
+                      return (
+                        <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                          available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}>
+                          {available ? 'Live' : s.status === 'rejected' ? 'Rejected' : (autoDeactivated ? 'Unavailable' : 'Pending')}
+                        </span>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-4 mb-4 text-sm">
@@ -852,21 +940,21 @@ export default function VendorServices() {
           <table className="w-full">
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-200">
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500">Loading services...</td></tr>
+                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-slate-500">Loading services...</td></tr>
               ) : error ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-sm text-red-500">Error: {error}</td></tr>
+                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={5} className="px-5 py-14 text-center">
                     <p className="text-sm text-slate-500">No services found.</p>
                     <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-slate-900 hover:underline">Create your first service →</button>
                   </td>
@@ -874,50 +962,61 @@ export default function VendorServices() {
               ) : (
                 paginatedServices.map(s => (
                   <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{s.title}</p>
                       <p className="text-xs text-slate-500 truncate max-w-xs mt-0.5">{s.description}</p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className="text-sm text-slate-600">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
                         <div className="mt-1">
                           {s.scan_enabled ? (
                             <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">Scan link ↗</a>
                           ) : (
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                  alert('Activation request submitted.')
-                                } catch (err) {
-                                  console.error('Failed to create activation request:', err)
-                                  alert('Failed to submit request.')
-                                }
-                              }}
-                              className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
-                            >
-                              Request scan activation
-                            </button>
-                          )}
+                                <div>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                        alert('Activation request submitted.')
+                                      } catch (err) {
+                                        console.error('Failed to create activation request:', err)
+                                        alert('Failed to submit request.')
+                                      }
+                                    }}
+                                    className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
+                                  >
+                                    Request scan activation
+                                  </button>
+                                  {isPast24HoursAfterEvent(s) && (
+                                    <div className="text-[11px] text-gray-500 italic mt-1">Auto-deactivated after 24h</div>
+                                  )}
+                                </div>
+                              )}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className="text-sm font-semibold text-slate-900">
                         {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                        s.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
-                        {s.status === 'approved' ? 'Live' : s.status === 'rejected' ? 'Rejected' : 'Pending'}
-                      </span>
+                    <td className="px-5 py-3">
+                      {(() => {
+                        const autoDeactivated = isPast24HoursAfterEvent(s);
+                        const available = s.status === 'approved' && !autoDeactivated;
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                            available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {available ? 'Live' : s.status === 'rejected' ? 'Rejected' : (autoDeactivated ? 'Unavailable' : 'Pending')}
+                          </span>
+                        )
+                      })()}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-5 py-3 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           onClick={() => { handleOpenEdit(s) }}
@@ -1019,12 +1118,12 @@ export default function VendorServices() {
 
       {showForm && (
         <ServiceForm
-          initial={editing || undefined}
+          initial={formInitial || editing || undefined}
           vendorId={vendorId}
           selectedCurrency={selectedCurrency}
           selectedLanguage={selectedLanguage}
           calculateFee={calculateFee}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setFormInitial(null) }}
           onSubmit={(payload) => {
             if (editing) {
               onUpdate(editing.id, payload)
@@ -1032,6 +1131,7 @@ export default function VendorServices() {
               onCreate(payload)
             }
             setShowForm(false)
+            setFormInitial(null)
           }}
         />
       )}
@@ -1050,11 +1150,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
   onSubmit: (payload: Partial<Service>) => void 
 }) {
   const { categories } = useServiceCategories()
-  const [form, setForm] = useState<Partial<Service>>({
+  const baseForm: any = {
     title: initial?.title || '',
     description: initial?.description || '',
     category_id: initial?.category_id || categories[0]?.id || '',
-    price: initial?.price || 0,
+    price: initial?.price ?? 0,
     currency: initial?.currency || 'UGX',
     images: initial?.images || [],
     location: initial?.location || '',
@@ -1097,6 +1197,10 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
     // Transport fields
     vehicle_type: initial?.vehicle_type || '',
     vehicle_capacity: initial?.vehicle_capacity || undefined,
+    vehicle_engine: initial?.vehicle_engine || '',
+    vehicle_ccs: initial?.vehicle_ccs || undefined,
+    fuel_type: initial?.fuel_type || '',
+    fuel_km_per_liter: initial?.fuel_km_per_liter || undefined,
     pickup_locations: initial?.pickup_locations || [],
     dropoff_locations: initial?.dropoff_locations || [],
     route_description: initial?.route_description || '',
@@ -1189,15 +1293,32 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
     contact_info: initial?.contact_info || {},
     booking_requirements: initial?.booking_requirements || '',
     cancellation_policy: initial?.cancellation_policy || ''
-  })
+  }
+
+  // If existing service is transport or has transport prices, include the specialized price fields
+  if ((initial as any)?.category_id === 'cat_transport' || (initial as any)?.price_within_town !== undefined || (initial as any)?.price_upcountry !== undefined) {
+    baseForm.price_within_town = (initial as any)?.price_within_town ?? initial?.price ?? 0
+    baseForm.price_upcountry = (initial as any)?.price_upcountry ?? initial?.price ?? 0
+  }
+
+  const [form, setForm] = useState<Partial<Service>>(baseForm as Partial<Service>)
 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [arrayInputs, setArrayInputs] = useState<{[key: string]: string}>({})
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapModalInitialCoords, setMapModalInitialCoords] = useState<{ lat: number; lon: number } | null>(null)
   const [flexibleTierComment, setFlexibleTierComment] = useState('')
+  // Used to determine which location (service/event) is being set in the map modal
+  const [mapContext, setMapContext] = useState<'event' | 'service'>('event')
 
   const update = (k: keyof Service, v: any) => setForm(prev => ({ ...prev, [k]: v }))
+
+  // Ensure form reflects updated `initial` prop when ServiceForm is re-used
+  useEffect(() => {
+    setForm(baseForm as Partial<Service>)
+    // reset array input helpers so they reflect current service
+    setArrayInputs({})
+  }, [initial])
 
   // Ticket types form helpers
   const [ticketPreset, setTicketPreset] = useState<'general' | 'vip' | 'early_general' | 'early_vip' | 'free' | 'custom'>('general')
@@ -1677,6 +1798,43 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Engine (make/model)</label>
+                <input type="text" value={form.vehicle_engine || ''} onChange={(e) => update('vehicle_engine', e.target.value)} placeholder="e.g., Toyota 1NZ-FE" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Engine CC (cc)</label>
+                <input type="number" value={form.vehicle_ccs || ''} onChange={(e) => update('vehicle_ccs', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 1500" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel Type</label>
+                <select value={form.fuel_type || ''} onChange={(e) => update('fuel_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select fuel type</option>
+                  <option value="petrol">Petrol</option>
+                  <option value="diesel">Diesel</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="electric">Electric</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel efficiency (km / L)</label>
+                <input type="number" step="0.1" min="0" value={form.fuel_km_per_liter || ''} onChange={(e) => {
+                    const kmPerL = e.target.value ? Number(e.target.value) : undefined
+                    // Also update legacy per-100km value for storage/compatibility
+                    const per100km = kmPerL ? Number((100 / kmPerL).toFixed(2)) : undefined
+                    update('fuel_km_per_liter', kmPerL)
+                    update('fuel_consumption_per_100km', per100km)
+                  }} placeholder="e.g., 12.0" className="mt-1 w-full border rounded-md px-3 py-2" />
+                {form.fuel_km_per_liter ? (
+                  <p className="text-xs text-gray-500 mt-1">Equivalent: {Number((100 / (form.fuel_km_per_liter as any)).toFixed(2))} L / 100km</p>
+                ) : null}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Vehicle Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
@@ -1716,6 +1874,28 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   <input type="checkbox" checked={form.automatic_transmission || false} onChange={(e) => update('automatic_transmission', e.target.checked)} className="mr-2" />
                   Automatic Transmission
                 </label>
+              </div>
+            </div>
+
+            <div className="mt-2">
+              <label className="block text-sm font-medium text-gray-700">Additional Vehicle Features</label>
+              <div className="flex gap-2 mt-2">
+                <input
+                  value={arrayInputs.vehicle_features || ''}
+                  onChange={(e) => setArrayInputs(prev => ({ ...prev, vehicle_features: e.target.value }))}
+                  placeholder="Add custom feature and press Add (e.g., reclining seats)"
+                  className="flex-1 border rounded-md px-3 py-2"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('vehicle_features', arrayInputs.vehicle_features || ''))}
+                />
+                <button type="button" onClick={() => addToArray('vehicle_features', arrayInputs.vehicle_features || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(form.vehicle_features || []).map((feat: string, idx: number) => (
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                    {feat}
+                    <button type="button" onClick={() => removeFromArray('vehicle_features', idx)} className="ml-1 text-gray-600 hover:text-gray-900">×</button>
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -1761,6 +1941,35 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   </span>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Service Location</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  value={form.location ?? ''}
+                  onChange={(e) => update('location', e.target.value)}
+                  placeholder="Primary service location or base (optional)"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMapContext('service')
+                    if ((form as any).service_lat && (form as any).service_lon) {
+                      setMapModalInitialCoords({ lat: (form as any).service_lat, lon: (form as any).service_lon })
+                    } else {
+                      setMapModalInitialCoords(null)
+                    }
+                    setShowMapModal(true)
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors border border-blue-600"
+                >
+                  <Map size={16} />
+                  {(form as any).service_lat && (form as any).service_lon ? 'Edit Location' : 'Select on Map'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Optional: mark a primary base or meeting point for this service</p>
             </div>
 
             <div>
@@ -2043,6 +2252,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   <button
                     type="button"
                     onClick={() => {
+                      setMapContext('event')
                       if ((form as any).event_lat && (form as any).event_lon) {
                         // If coordinates exist, open in view/edit mode
                         setMapModalInitialCoords({ lat: (form as any).event_lat, lon: (form as any).event_lon })
@@ -3547,9 +3757,9 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
-        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
+        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Plus className="h-5 w-5 text-white" />
@@ -3561,16 +3771,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <form
-          className="flex-1 px-8 py-6 space-y-8 overflow-y-auto"
+          className="flex-1 px-2 sm:px-8 py-4 sm:py-6 space-y-8 overflow-y-auto w-full"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           onSubmit={(e) => { 
             e.preventDefault(); 
-            
             if (form.category_id === 'cat_activities') {
               if (!form.event_datetime?.trim()) {
                 alert('Event Date & Time is required for events');
@@ -3581,13 +3791,29 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 return;
               }
             }
-
             // Handle flexible tier comment
             if (flexibleTierComment.trim()) {
               // For now, just show an alert. In production, this should be sent to admin
               alert(`Flexible tier request submitted: ${flexibleTierComment}\n\nOur team will review your request and contact you if needed.`);
             }
 
+            // Pricing validation: for transport require at least one transport price,
+            // for other categories require legacy `price`.
+            if (form.category_id === 'cat_transport') {
+              const within = (form as any).price_within_town
+              const upcountry = (form as any).price_upcountry
+              const withinEmpty = within === undefined || within === null || String(within).trim() === ''
+              const upcountryEmpty = upcountry === undefined || upcountry === null || String(upcountry).trim() === ''
+              if (withinEmpty && upcountryEmpty) {
+                alert('Please set at least one transport price: Within Town or Upcountry')
+                return
+              }
+            } else if (form.category_id !== 'cat_activities') {
+              if (form.price === undefined || form.price === null || String(form.price).trim() === '') {
+                alert('Please set a price')
+                return
+              }
+            }
             onSubmit(form) 
           }}
         >
@@ -3617,30 +3843,45 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               Event-specific fields (event_datetime, registration_deadline, event_location, ticket_types, etc.) are shown below. */}
           {form.category_id !== 'cat_activities' && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                  <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              {form.category_id === 'cat_transport' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Within Town Price</label>
+                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Upcountry Price</label>
+                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
-                  {form.price && form.price > 0 && (
-                    <PricingNotification
-                      price={form.price}
-                      currency={form.currency || 'UGX'}
-                      fee={calculateFee(form.price).fee}
-                      description={calculateFee(form.price).description}
-                      selectedCurrency={selectedCurrency}
-                      selectedLanguage={selectedLanguage}
-                    />
-                  )}
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                    {form.price && form.price > 0 && (
+                      <PricingNotification
+                        price={form.price}
+                        currency={form.currency || 'UGX'}
+                        fee={calculateFee(form.price).fee}
+                        description={calculateFee(form.price).description}
+                        selectedCurrency={selectedCurrency}
+                        selectedLanguage={selectedLanguage}
+                      />
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input value={form.location as any} onChange={(e) => update('location', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -3696,7 +3937,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <div className="flex flex-wrap gap-2">
                   {(form.images as string[]).map((src, idx) => (
                     <div key={idx} className="relative group">
-                      <img src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                      <img loading="lazy" decoding="async" src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
                       <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-gray-900 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                     </div>
                   ))}
@@ -3707,17 +3948,17 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
           {renderCategorySpecificFields()}
 
-          <div className="flex justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-8 px-8 py-6 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-2 sm:-mx-8 px-2 sm:px-8 py-4 sm:py-6 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm"
+              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-8 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="min-h-[44px] w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-gray-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
             >
               {initial?.id ? 'Save Changes' : 'Create Service'}
             </button>
@@ -3744,7 +3985,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   setShowMapModal(false)
                   setMapModalInitialCoords(null)
                 }}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -3754,9 +3995,15 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               <SearchMap
                 initialCoords={mapModalInitialCoords}
                 onLocationSelect={(location) => {
-                  update('event_location', location.display_name as any)
-                  update('event_lat' as any, location.lat)
-                  update('event_lon' as any, location.lon)
+                  if (mapContext === 'service') {
+                    update('location', location.display_name as any)
+                    update('service_lat', location.lat)
+                    update('service_lon', location.lon)
+                  } else {
+                    update('event_location', location.display_name as any)
+                    update('event_lat', location.lat)
+                    update('event_lon', location.lon)
+                  }
                   setShowMapModal(false)
                   setMapModalInitialCoords(null)
                 }}

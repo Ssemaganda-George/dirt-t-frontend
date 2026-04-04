@@ -6,8 +6,9 @@ import { EditServiceModal } from '../../components/EditServiceModal';
 import SearchBar from '../../components/SearchBar';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
+import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { useState, useEffect } from 'react';
-import { getAllVendors } from '../../lib/database';
+import { getAllVendors, createTicketType, updateTicketType, deleteTicketType } from '../../lib/database';
 import { createServicePricingOverride } from '../../lib/pricingService';
 import type { Service } from '../../types';
 
@@ -37,6 +38,15 @@ function formatServicePrice(service: Service, selectedCurrency: string, selected
 export function Services() {
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const { services, loading, error, updateServiceStatus, updateService, deleteService } = useServices();
+  // Helper to determine if a service should be auto-inactive
+  function isPast24HoursAfterEvent(service: Service): boolean {
+    const eventDateTimeStr = service.event_datetime || service.event_date;
+    if (!eventDateTimeStr) return false;
+    const eventDate = new Date(eventDateTimeStr);
+    if (isNaN(eventDate.getTime())) return false;
+    const now = new Date();
+    return now.getTime() > eventDate.getTime() + 24 * 60 * 60 * 1000;
+  }
   const { categories } = useServiceCategories();
   const { deleteRequests, error: deleteRequestsError, updateDeleteRequestStatus } = useServiceDeleteRequests();
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
@@ -290,6 +300,34 @@ export function Services() {
     setSaveMessage(null); // Clear any previous messages
     
     try {
+      // Persist ticket type changes (create/update/delete) separately
+      try {
+        const original = (editingService as any).ticket_types || [];
+        const updated = (updatedServiceData as any).ticket_types;
+        if (Array.isArray(updated)) {
+          const removed = original.filter((o: any) => o.id && !updated.some((u: any) => u.id === o.id));
+          for (const r of removed) {
+            if (r.id) await deleteTicketType(r.id);
+          }
+          for (const t of updated) {
+            const payload: any = {
+              title: t.title,
+              description: t.description,
+              price: t.price,
+              quantity: t.quantity,
+              metadata: t.metadata,
+              sale_start: t.sale_start,
+              sale_end: t.sale_end
+            };
+            if (t.id) await updateTicketType(t.id, payload);
+            else await createTicketType(editingService.id, payload);
+          }
+          delete (updatedServiceData as any).ticket_types;
+        }
+      } catch (ticketErr) {
+        console.error('Failed to persist ticket types:', ticketErr);
+      }
+
       await updateService(editingService.id, updatedServiceData);
       
       // Show success message
@@ -429,6 +467,9 @@ export function Services() {
                     Availability
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Toggle
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Event Link
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -467,10 +508,32 @@ export function Services() {
                       <StatusBadge status={service.status} variant="small" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge 
-                        status={service.status === 'approved' ? 'available' : 'unavailable'} 
-                        variant="small" 
+                      <StatusBadge
+                        status={service.status === 'approved' && !isPast24HoursAfterEvent(service) ? 'available' : 'unavailable'}
+                        variant="small"
                       />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {/* Availability toggle for approved and inactive services */}
+                      {(service.status === 'approved' || service.status === 'inactive') && (
+                        <ToggleSwitch
+                          checked={service.status === 'approved' && !isPast24HoursAfterEvent(service)}
+                          onChange={async () => {
+                            setUpdatingStatus(service.id);
+                            try {
+                              await updateServiceStatus(service.id, service.status === 'approved' ? 'inactive' : 'approved');
+                            } catch (err) {
+                              console.error('Failed to toggle service availability:', err);
+                              alert('Failed to update service availability.');
+                            } finally {
+                              setUpdatingStatus(null);
+                            }
+                          }}
+                          disabled={updatingStatus === service.id || isPast24HoursAfterEvent(service)}
+                          size="sm"
+                          label={isPast24HoursAfterEvent(service) ? 'Auto-deactivated after 24h' : ''}
+                        />
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {/* Show event scan link status for activities */}
@@ -654,9 +717,9 @@ export function Services() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge 
-                          status={request.service?.status === 'approved' ? 'available' : 'unavailable'} 
-                          variant="small" 
+                        <StatusBadge
+                          status={request.service && request.service.status === 'approved' && !isPast24HoursAfterEvent(request.service) ? 'available' : 'unavailable'}
+                          variant="small"
                         />
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">

@@ -103,7 +103,7 @@ export default function ReferBusiness() {
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-gray-500 mr-3" />
-                  <span className="text-gray-600">referrals@dirtrails.com</span>
+                  <span className="text-gray-600">safaris.dirttrails@gmail.com</span>
                 </div>
               </div>
             </div>

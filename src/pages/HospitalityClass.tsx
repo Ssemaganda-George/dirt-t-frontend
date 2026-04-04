@@ -245,7 +245,7 @@ export default function HospitalityClass() {
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-gray-500 mr-3" />
-                  <span className="text-gray-600">training@dirtrails.com</span>
+                  <span className="text-gray-600">safaris.dirttrails@gmail.com</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-5 w-5 text-gray-500 mr-3" />

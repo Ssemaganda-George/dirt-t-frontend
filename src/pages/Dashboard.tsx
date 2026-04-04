@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom'
 import { User, Mail, Calendar, Settings, Heart } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
+import { formatCurrency } from '../lib/utils'
 
 export default function Dashboard() {
   const { profile } = useAuth()
-  const { t } = usePreferences()
+  const { t, selectedCurrency } = usePreferences()
 
   if (!profile) {
     return (
@@ -179,7 +180,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right md:text-center">
-                      <p className="text-2xl font-bold text-gray-900 mb-2">UGX 450,000</p>
+                      <p className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(450000, selectedCurrency || 'UGX')}</p>
                       <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-gray-100 text-gray-800 border border-gray-200">
                         <div className="h-2 w-2 bg-gray-500 rounded-full mr-2"></div>
                         Confirmed

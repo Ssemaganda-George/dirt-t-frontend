@@ -165,7 +165,7 @@ export function useAdminTransactions() {
   return { transactions, loading, error, refetch: fetchTransactions };
 }
 
-export function useServices(vendorId?: string, options?: { skipInitialFetch?: boolean }) {
+export function useServices(vendorId?: string, options?: { skipInitialFetch?: boolean; includeExpired?: boolean }) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +177,48 @@ export function useServices(vendorId?: string, options?: { skipInitialFetch?: bo
 
       const data = await getServices(vendorId);
 
-      setServices(data);
+      // Ensure numeric types for price fields returned from DB (supabase may return strings)
+      const normalized = (data || []).map((s: any) => {
+        const service = { ...s };
+        // Coerce top-level price
+        if (service.price !== undefined && service.price !== null) {
+          if (typeof service.price === 'string') {
+            const parsed = parseFloat(service.price);
+            service.price = Number.isFinite(parsed) ? parsed : 0;
+          } else if (typeof service.price !== 'number') {
+            service.price = Number(service.price) || 0;
+          }
+        } else {
+          service.price = 0;
+        }
+
+        // Coerce ticket type prices if present
+        if (Array.isArray(service.ticket_types)) {
+          service.ticket_types = service.ticket_types.map((t: any) => ({
+            ...t,
+            price: t?.price !== undefined && t?.price !== null ? (typeof t.price === 'string' ? (Number.isFinite(parseFloat(t.price)) ? parseFloat(t.price) : 0) : Number(t.price) || 0) : 0
+          }));
+        }
+
+        return service as Service;
+      });
+
+      // Optionally filter out services that have auto-deactivated (events older than 24h)
+      if (options && options.includeExpired === false) {
+        const filtered = normalized.filter((service: Service) => {
+          const eventDateTimeStr = (service as any).event_datetime || (service as any).event_date;
+          if (!eventDateTimeStr) return true;
+          const eventDate = new Date(eventDateTimeStr);
+          if (isNaN(eventDate.getTime())) return true;
+          const now = Date.now();
+          const expired = now > eventDate.getTime() + 24 * 60 * 60 * 1000;
+          return !expired;
+        });
+        setServices(filtered);
+      } else {
+        setServices(normalized);
+      }
+      // normalized data set into hook state
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

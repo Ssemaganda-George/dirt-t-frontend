@@ -20,11 +20,13 @@ import {
   ChevronRight,
   Eye,
   Star
+  , TreePine
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
 import { usePreferences } from '../contexts/PreferencesContext'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 
 const navigation = [
   {
@@ -32,6 +34,7 @@ const navigation = [
     items: [
       { labelKey: 'dashboard', href: '/admin', icon: BarChart3 },
       { labelKey: 'visitor_activity', href: '/admin/visitor-activity', icon: Eye }
+      ,{ labelKey: 'performance', href: '/admin/performance', icon: BarChart3 }
     ]
   },
   {
@@ -64,13 +67,16 @@ const navigation = [
       { labelKey: 'shops_bookings', href: '/admin/bookings/shops', icon: MapPin },
       { labelKey: 'tours_bookings', href: '/admin/bookings/tours', icon: MapPin },
       { labelKey: 'transport_bookings', href: '/admin/bookings/transport', icon: MapPin },
-      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket }
+      { labelKey: 'tickets', href: '/admin/tickets', icon: Ticket },
+      { labelKey: 'flagged_bookings', href: '/admin/bookings/flagged', icon: Eye }
     ]
   },
   {
     category: 'Finance',
     items: [
       { labelKey: 'dirt_trails_wallet', href: '/admin/dirt-trails-wallet', icon: CreditCard },
+        { labelKey: 'tourist_wallets', href: '/admin/tourist-wallets', icon: Users },
+        { labelKey: 'conservation_wallet', href: '/admin/conservation-wallet', icon: CreditCard },
       { labelKey: 'business_wallets', href: '/admin/wallets', icon: CreditCard },
       { labelKey: 'finance', href: '/admin/finance', icon: DollarSign },
       { labelKey: 'vendor_tiers', href: '/admin/vendor-tiers', icon: BarChart3 }
@@ -81,6 +87,12 @@ const navigation = [
     items: [
       { labelKey: 'reviews', href: '/admin/reviews', icon: Star },
       { labelKey: 'hero_video', href: '/admin/hero-video', icon: BarChart3 }
+    ]
+  },
+  {
+    category: 'Conservation',
+    items: [
+      { labelKey: 'trees', href: '/admin/conservation/trees', icon: TreePine }
     ]
   },
   {
@@ -172,6 +184,8 @@ export default function Layout() {
   const cancelSignOut = () => {
     setShowLogoutConfirm(false)
   }
+
+  const { unreadCount } = useUnreadMessages()
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -309,6 +323,24 @@ export default function Layout() {
               >
                 <Search className="h-4 w-4 text-gray-500" />
               </button>
+
+              {/* Messages icon for admin top bar */}
+              {profile?.role === 'admin' && (
+                <Link
+                  to="/admin/messages"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition"
+                  title={t('messages')}
+                >
+                  <div className="relative">
+                    <MessageSquare className="h-4 w-4 text-gray-500" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )}
 
               {/* Preferences */}
               <button

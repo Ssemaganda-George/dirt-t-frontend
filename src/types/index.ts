@@ -57,9 +57,36 @@ export interface Vendor {
   manual_tier_expires_at?: string;
   manual_tier_reason?: string;
   manual_tier?: VendorTier;
+  // Optional payout fields added by migration 015
+  bank_details?: {
+    name?: string;
+    account_name?: string;
+    account_number?: string;
+    branch?: string;
+    swift?: string;
+    [key: string]: any;
+  };
+  mobile_money_accounts?: Array<{
+    provider?: string;
+    phone?: string;
+    country_code?: string;
+    name?: string;
+    [key: string]: any;
+  }>;
+  crypto_accounts?: Array<{
+    currency?: string;
+    address?: string;
+    label?: string;
+    [key: string]: any;
+  }>;
+  preferred_payout?: string;
 }
 
 export interface Service {
+    /** Event location latitude (optional) */
+    event_lat?: number;
+    /** Event location longitude (optional) */
+    event_lon?: number;
   id: string
   slug?: string
   vendor_id: string
@@ -91,6 +118,12 @@ export interface Service {
   sustainability_certified?: boolean
   eco_friendly?: boolean
 
+    /** Service base location (display name, optional) */
+    service_location?: string;
+    /** Service base latitude (optional) */
+    service_lat?: number;
+    /** Service base longitude (optional) */
+    service_lon?: number;
   // Hotel-specific fields
   room_types?: string[]
   check_in_time?: string
@@ -139,6 +172,14 @@ export interface Service {
   dropoff_locations?: string[]
   route_description?: string
   driver_included?: boolean
+  price_within_town?: number
+  price_upcountry?: number
+  vehicle_engine?: string
+  vehicle_ccs?: number
+  fuel_type?: string
+  fuel_consumption_per_100km?: number
+  fuel_km_per_liter?: number
+  vehicle_features?: string[]
   air_conditioning?: boolean
   gps_tracking?: boolean
   fuel_included?: boolean
@@ -365,6 +406,7 @@ export interface Transaction {
   status: 'pending' | 'approved' | 'completed' | 'failed' | 'rejected';
   payment_method: 'card' | 'mobile_money' | 'bank_transfer';
   reference: string;
+  payout_meta?: any
   receipt_url?: string;
   payment_notes?: string;
   processed_by?: string;

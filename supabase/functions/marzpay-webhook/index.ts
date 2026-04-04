@@ -3,23 +3,46 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") || ""
-const TELEGRAM_CHAT_IDS = (Deno.env.get("TELEGRAM_CHAT_ID") || "")
-  .split(",")
-  .map((id) => id.trim())
-  .filter(Boolean)
+const PROCESS_QUEUE_SECRET = Deno.env.get("PROCESS_QUEUE_SECRET") || ""
 
-async function sendTelegramMessage(text: string): Promise<void> {
-  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_CHAT_IDS.length === 0) return
-  await Promise.all(
-    TELEGRAM_CHAT_IDS.map((chatId) =>
-      fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
-      }).then((r) => r.json()).catch((e) => console.error("Telegram send error:", e.message))
+const HIRER_TRANSPORT_FEE_RATE = 0.02
+const PROVIDER_TRANSPORT_FEE_RATE = 0.02
+
+async function enqueueFulfillmentJob(
+  supabase: any,
+  jobType: "booking_fulfillment" | "order_fulfillment",
+  sourceId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const idempotencyKey = `${jobType}:${sourceId}:${payload.reference || ""}`
+  const { error } = await supabase
+    .from("payment_fulfillment_jobs")
+    .upsert(
+      {
+        job_type: jobType,
+        source_id: sourceId,
+        payload,
+        idempotency_key: idempotencyKey,
+        status: "pending",
+        scheduled_for: new Date().toISOString(),
+      },
+      { onConflict: "idempotency_key" }
     )
-  )
+
+  if (error) throw error
+}
+
+function triggerQueueWorker(): void {
+  const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+  const workerUrl = `${baseUrl}/functions/v1/process-payment-fulfillment-queue`
+  fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(PROCESS_QUEUE_SECRET ? { "x-worker-secret": PROCESS_QUEUE_SECRET } : {}),
+    },
+    body: JSON.stringify({ batch_size: 8 }),
+  }).catch((e) => console.warn("Webhook: queue worker trigger failed", e?.message || e))
 }
 
 serve(async (req) => {
@@ -51,7 +74,6 @@ serve(async (req) => {
   }
 
   let transaction = body.transaction
-  const collection = body.collection || body.data?.collection
   if (body.data?.transaction) transaction = body.data.transaction
 
   if (!transaction?.reference) {
@@ -70,7 +92,7 @@ serve(async (req) => {
 
   const { data: payments, error: payErr } = await supabase
     .from("payments")
-    .select("id, order_id, amount, phone_number")
+    .select("id, order_id, booking_id, amount, phone_number")
     .eq("reference", reference)
 
   const payment = payments?.[0]
@@ -92,6 +114,97 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     })
     .eq("reference", reference)
+
+  // If this payment completed and is linked to a booking, mark the booking paid/confirmed
+  if (paymentStatus === "completed" && payment.booking_id) {
+    const bookingId = payment.booking_id
+    try {
+      const { data: booking, error: bookingFetchErr } = await supabase
+        .from("bookings")
+        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+        .eq("id", bookingId)
+        .single()
+
+      if (!booking || bookingFetchErr) {
+        console.warn("Webhook: booking not found for payment.booking_id", bookingId)
+      } else {
+        await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            payment_status: "paid",
+            payment_reference: reference,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId)
+
+        try {
+          await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
+            reference,
+            amount: Number(payment.amount || 0),
+            transport_fee_rates: {
+              hirer: HIRER_TRANSPORT_FEE_RATE,
+              provider: PROVIDER_TRANSPORT_FEE_RATE,
+            },
+          })
+          triggerQueueWorker()
+        } catch (queueErr) {
+          console.warn("Webhook: failed to enqueue booking fulfillment job", bookingId, queueErr)
+        }
+      }
+    } catch (err) {
+      console.warn("Webhook: error handling booking-linked payment", err)
+    }
+  }
+
+  // Transport fallback: payment can complete before booking is created/linked.
+  // In that case, attach by booking.payment_reference and enqueue queue work.
+  if (paymentStatus === "completed" && !payment.booking_id && !payment.order_id) {
+    try {
+      const { data: bookingByReference, error: bookingByRefErr } = await supabase
+        .from("bookings")
+        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+        .eq("payment_reference", reference)
+        .maybeSingle()
+
+      if (bookingByRefErr) {
+        console.warn("Webhook: booking lookup by payment_reference failed", reference, bookingByRefErr)
+      } else if (bookingByReference?.id) {
+        const bookingId = bookingByReference.id
+
+        await supabase
+          .from("payments")
+          .update({ booking_id: bookingId, updated_at: new Date().toISOString() })
+          .eq("id", payment.id)
+
+        await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            payment_status: "paid",
+            payment_reference: reference,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", bookingId)
+
+        try {
+          await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
+            reference,
+            amount: Number(payment.amount || 0),
+            transport_fee_rates: {
+              hirer: HIRER_TRANSPORT_FEE_RATE,
+              provider: PROVIDER_TRANSPORT_FEE_RATE,
+            },
+          })
+          triggerQueueWorker()
+        } catch (queueErr) {
+          console.warn("Webhook: failed to enqueue fallback booking fulfillment job", bookingId, queueErr)
+        }
+      }
+    } catch (err) {
+      console.warn("Webhook: fallback payment_reference reconciliation failed", err)
+    }
+  }
 
   if (paymentStatus === "completed" && payment.order_id) {
     const orderId = payment.order_id
@@ -121,19 +234,13 @@ serve(async (req) => {
       .eq("id", orderId)
 
     try {
-      await supabase.rpc("create_transaction_atomic", {
-        p_vendor_id: order.vendor_id,
-        p_amount: payment.amount,
-        p_transaction_type: "payment",
-        p_booking_id: null,
-        p_tourist_id: order.user_id || null,
-        p_currency: order.currency || "UGX",
-        p_status: "completed",
-        p_payment_method: "mobile_money",
-        p_reference: reference,
+      await enqueueFulfillmentJob(supabase, "order_fulfillment", orderId, {
+        reference,
+        amount: Number(payment.amount || 0),
       })
-    } catch (txErr) {
-      console.warn("Webhook: create_transaction_atomic failed", txErr)
+      triggerQueueWorker()
+    } catch (queueErr) {
+      console.warn("Webhook: failed to enqueue order fulfillment job", orderId, queueErr)
     }
 
     const { data: items, error: itemsErr } = await supabase

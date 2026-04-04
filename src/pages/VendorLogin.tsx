@@ -1,26 +1,64 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { getServiceClient } from '../lib/serviceClient'
 import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
+import CitySearchInput from '../components/CitySearchInput'
 
 export default function VendorLogin() {
-  const [isSignUp, setIsSignUp] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(true)
+  const [currentStep, setCurrentStep] = useState(1)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [personalCity, setPersonalCity] = useState('')
+  const [personalCountry, setPersonalCountry] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [businessType, setBusinessType] = useState('')
+  const [businessDescription, setBusinessDescription] = useState('')
+  const [businessAddress, setBusinessAddress] = useState('')
+  const [businessCity, setBusinessCity] = useState('')
   const [businessPhone, setBusinessPhone] = useState('')
   const [businessPhoneCountryCode, setBusinessPhoneCountryCode] = useState('+256')
+  const [businessEmail, setBusinessEmail] = useState('')
+  const [businessWebsite, setBusinessWebsite] = useState('')
+  const [yearsInBusiness, setYearsInBusiness] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [showStepValidationErrors, setShowStepValidationErrors] = useState(false)
+  const [showPostSignupBenefits, setShowPostSignupBenefits] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Country search state for business phone
+  const [businessPhoneCountrySearch, setBusinessPhoneCountrySearch] = useState('')
+  const [businessPhoneCountryDropdownOpen, setBusinessPhoneCountryDropdownOpen] = useState(false)
+
   const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const openSignUp = searchParams.get('signup')
+
+    if (openSignUp === 'false') {
+      setIsSignUp(false)
+      setCurrentStep(1)
+      setError('')
+      return
+    }
+
+    if (openSignUp === 'true') {
+      setIsSignUp(true)
+      setCurrentStep(1)
+      setError('')
+    }
+  }, [location.search])
 
   // Countries array for phone codes
   const countries = [
@@ -234,6 +272,116 @@ export default function VendorLogin() {
     { code: '+998', name: 'Uzbekistan', flag: '🇺🇿' }
   ]
 
+  // Filtered countries for business phone
+  const filteredBusinessPhoneCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(businessPhoneCountrySearch.toLowerCase()) ||
+    country.code.includes(businessPhoneCountrySearch)
+  )
+
+  // Close business phone country dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (businessPhoneCountryDropdownOpen && !(event.target as Element).closest('.business-phone-country-dropdown')) {
+        setBusinessPhoneCountryDropdownOpen(false)
+        setBusinessPhoneCountrySearch('')
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [businessPhoneCountryDropdownOpen])
+
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        return fullName.trim() !== '' && email.trim() !== '' && email.includes('@') && personalCity.trim() !== ''
+      case 2:
+        return businessName.trim() !== '' && businessType !== '' && businessDescription.trim() !== '' &&
+               businessAddress.trim() !== '' && businessCity.trim() !== '' &&
+               businessPhone.trim() !== ''
+      case 3:
+        return password.length >= 6 && password === confirmPassword
+      default:
+        return false
+    }
+  }
+
+  const handleNextStep = () => {
+    if (validateStep(currentStep)) {
+      setError('')
+      setShowStepValidationErrors(false)
+      setCurrentStep(currentStep + 1)
+    } else {
+      setShowStepValidationErrors(true)
+      setError('Please fill in all required fields correctly.')
+    }
+  }
+
+  const handlePrevStep = () => {
+    setError('')
+    setShowStepValidationErrors(false)
+    setCurrentStep(currentStep - 1)
+  }
+
+  const resetForm = () => {
+    setCurrentStep(1)
+    setFullName('')
+    setEmail('')
+    setPersonalCity('')
+    setPersonalCountry('')
+    setBusinessName('')
+    setBusinessType('')
+    setBusinessDescription('')
+    setBusinessAddress('')
+    setBusinessCity('')
+    setBusinessPhone('')
+    setBusinessPhoneCountryCode('+256')
+    setBusinessEmail('')
+    setBusinessWebsite('')
+    setYearsInBusiness('')
+    setPassword('')
+    setConfirmPassword('')
+    setAgreedToTerms(false)
+    setShowStepValidationErrors(false)
+    setError('')
+  }
+
+  const getFieldClass = (invalid: boolean) => {
+    if (invalid) {
+      return 'w-full border border-red-400 px-4 py-3 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors'
+    }
+    return 'w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors'
+  }
+
+  const getSelectClass = (invalid: boolean) => {
+    if (invalid) {
+      return 'w-full border border-red-400 px-4 py-3 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors'
+    }
+    return 'w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors'
+  }
+
+  const getLabelClass = (invalid: boolean) => {
+    return `block text-sm font-medium mb-2 tracking-tight antialiased ${invalid ? 'text-red-600' : 'text-gray-700'}`
+  }
+
+  const stepOneHasErrors = showStepValidationErrors && currentStep === 1
+  const fullNameInvalid = stepOneHasErrors && fullName.trim() === ''
+  const emailInvalid = stepOneHasErrors && (email.trim() === '' || !email.includes('@'))
+  const personalCityInvalid = stepOneHasErrors && personalCity.trim() === ''
+
+  const stepTwoHasErrors = showStepValidationErrors && currentStep === 2
+  const businessNameInvalid = stepTwoHasErrors && businessName.trim() === ''
+  const businessTypeInvalid = stepTwoHasErrors && businessType === ''
+  const businessDescriptionInvalid = stepTwoHasErrors && businessDescription.trim() === ''
+  const businessCityInvalid = stepTwoHasErrors && businessCity.trim() === ''
+  const businessAddressInvalid = stepTwoHasErrors && businessAddress.trim() === ''
+  const businessPhoneInvalid = stepTwoHasErrors && businessPhone.trim() === ''
+
+  const stepThreeHasErrors = showStepValidationErrors && currentStep === 3
+  const passwordInvalid = stepThreeHasErrors && password.length < 6
+  const confirmPasswordInvalid = stepThreeHasErrors && (confirmPassword === '' || password !== confirmPassword)
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -253,6 +401,7 @@ export default function VendorLogin() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccessMessage('')
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -267,7 +416,7 @@ export default function VendorLogin() {
       const lastName = nameParts.slice(1).join(' ') || ''
 
       // First create the user account (this also creates profile and basic vendor record)
-      await signUp(email, password, firstName, lastName, 'vendor')
+      await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined)
 
       // Get the current user
       const { data: user } = await supabase.auth.getUser()
@@ -279,40 +428,25 @@ export default function VendorLogin() {
           full_name: fullName,
           role: 'vendor',
         }, { onConflict: 'id' })
-
+        
         if (profileCheckError) {
           console.error('Profile creation error:', profileCheckError)
         }
 
-        // Get the Bronze tier ID (default tier for new vendors)
-        const { data: bronzeTier, error: tierError } = await supabase
-          .from('vendor_tiers')
-          .select('id, commission_type, commission_value, commission_rate')
-          .eq('name', 'Bronze')
-          .eq('is_active', true)
-          .single();
-
-        if (tierError) {
-          console.error('Error fetching Bronze tier:', tierError);
-          setError('Account created but tier assignment failed. Please contact support.');
-          return;
-        }
-
-        // Update or create the vendor record with business details and default Bronze tier
+        // Update or create the vendor record with business details
         const serviceClient = getServiceClient()
         const { error: vendorError } = await serviceClient
           .from('vendors')
           .upsert({
             user_id: user.user.id,
             business_name: businessName,
-            business_email: email,
+            business_description: businessDescription,
+            business_email: businessEmail || email,
+            business_address: businessAddress,
             business_phone: `${businessPhoneCountryCode}${businessPhone}`,
-            status: 'pending',
-            current_tier_id: bronzeTier.id,
-            current_commission_rate:
-              bronzeTier.commission_type === 'flat'
-                ? 0
-                : Number(bronzeTier.commission_rate ?? 0)
+            business_website: businessWebsite,
+            years_in_business: yearsInBusiness || null,
+            status: 'pending'
           }, { onConflict: 'user_id' })
 
         if (vendorError) {
@@ -322,7 +456,13 @@ export default function VendorLogin() {
         }
       }
 
-      navigate('/', { replace: true })
+      setSuccessMessage('Business account created successfully. Review the information below while your account is being prepared.')
+      setShowPostSignupBenefits(true)
+      setIsSignUp(false)
+      setCurrentStep(1)
+      setShowStepValidationErrors(false)
+      setPassword('')
+      setConfirmPassword('')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
@@ -333,14 +473,14 @@ export default function VendorLogin() {
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="text-center">
-            <Store className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-white mx-auto mb-2 sm:mb-3 lg:mb-4" />
-            <h1 className="text-xl sm:text-2xl font-black text-white mb-1 sm:mb-2 tracking-tight antialiased">Business Portal</h1>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed antialiased">
+            <Store className="h-12 w-12 sm:h-14 sm:w-14 text-gray-900 mx-auto mb-3 sm:mb-4" />
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2 sm:mb-3 tracking-tight antialiased">Business Portal</h1>
+            <p className="text-sm sm:text-base text-gray-600 max-w-3xl mx-auto leading-relaxed antialiased">
               Join our network of trusted service providers. Manage your listings, bookings, and grow your business with DirtTrails.
             </p>
           </div>
@@ -348,15 +488,15 @@ export default function VendorLogin() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Authentication Section - Moved to Top */}
-        <div className="bg-white shadow-sm border border-gray-200 p-8 mb-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Authentication Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8 mb-8 sm:mb-12">
           <div className="max-w-md mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-black mb-4 tracking-tight antialiased">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 tracking-tight antialiased">
                 {isSignUp ? 'Create Business Account' : 'Business Sign In'}
               </h2>
-              <p className="text-gray-700 leading-snug antialiased">
+              <p className="text-gray-600 leading-snug antialiased">
                 {isSignUp ? 'Join our network of trusted service providers' : 'Access your business dashboard and manage your business'}
               </p>
             </div>
@@ -367,29 +507,35 @@ export default function VendorLogin() {
               </div>
             )}
 
+            {successMessage && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-lg mb-6 text-sm">
+                {successMessage}
+              </div>
+            )}
+
             {!isSignUp ? (
               // Sign In Form
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                    className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     placeholder="your@email.com"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
+                      className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors pr-12"
                       placeholder="Enter your password"
                       required
                     />
@@ -406,192 +552,411 @@ export default function VendorLogin() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-3 px-6 rounded-lg font-bold text-lg hover:bg-gray-800 active:bg-gray-900 focus:bg-gray-800 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="w-full bg-gray-900 text-white py-3.5 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
                   {loading ? 'Signing in...' : 'Sign In to Business Portal'}
                 </button>
 
-                <div className="text-center mt-4">
+                <div className="text-center mt-6">
                   <button
                     type="button"
                     onClick={() => {
                       setIsSignUp(true)
+                      resetForm()
                     }}
-                    className="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium text-base hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-sm text-emerald-700 font-medium hover:text-emerald-800 transition-colors"
                   >
                     Don't have an account? Create one
                   </button>
                 </div>
               </form>
             ) : (
-              // Sign Up Form - Simplified Single Step Process
-              <form onSubmit={handleSignUpSubmit} className="space-y-6">
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                    {error}
-                  </div>
-                )}
+              // Sign Up Form - Multi-step Process
+              <div className="space-y-5 sm:space-y-6">
+                <form onSubmit={handleSignUpSubmit} className="space-y-5 sm:space-y-6">
 
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Full Name *</label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                      placeholder="Your full name"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Email *</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                      placeholder="your@email.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Name *</label>
-                    <input
-                      type="text"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                      placeholder="Your business name"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Business Phone *</label>
-                    <div className="flex">
-                      <select
-                        value={businessPhoneCountryCode}
-                        onChange={(e) => setBusinessPhoneCountryCode(e.target.value)}
-                        className="border border-gray-300 p-4 rounded-l-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors w-32"
-                      >
-                        {countries.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.flag} {country.code}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="tel"
-                        value={businessPhone}
-                        onChange={(e) => setBusinessPhone(e.target.value)}
-                        className="flex-1 border border-l-0 border-gray-300 p-4 rounded-r-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
-                        placeholder="700 000 000"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Password *</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
-                        placeholder="Create a password (min 6 characters)"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-black mb-2 tracking-tight antialiased">Confirm Password *</label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full border border-gray-300 p-4 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-colors pr-12"
-                        placeholder="Confirm your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-green-600 text-white py-3 px-6 rounded-lg font-bold text-lg hover:bg-green-700 active:bg-green-800 focus:bg-green-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  {loading ? 'Creating account...' : 'Create Business Account'}
-                </button>
-
-                <div className="text-center mt-4">
                   <button
                     type="button"
                     onClick={() => {
+                      if (currentStep > 1) {
+                        handlePrevStep()
+                        return
+                      }
+
                       setIsSignUp(false)
+                      resetForm()
                     }}
-                    className="bg-blue-600 text-white py-2 px-4 rounded-lg font-medium text-base hover:bg-blue-700 active:bg-blue-800 focus:bg-blue-700 hover:scale-105 active:scale-95 focus:scale-105 transition-all duration-200 shadow-md hover:shadow-lg active:shadow-xl focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                   >
-                    Already have an account? Sign in
+                    ← Back
                   </button>
-                </div>
-              </form>
+
+                  {/* Step 1: Personal Information */}
+                  {currentStep === 1 && (
+                    <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                      <div>
+                        <label className={getLabelClass(fullNameInvalid)}>Your Full Names</label>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className={getFieldClass(fullNameInvalid)}
+                          placeholder="Your full name"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className={getLabelClass(emailInvalid)}>Your Personal Email</label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className={getFieldClass(emailInvalid)}
+                          placeholder="your@email.com"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className={getLabelClass(personalCityInvalid)}>Home city *</label>
+                        <div className={personalCityInvalid ? 'rounded-xl border border-red-400 p-0.5' : ''}>
+                          <CitySearchInput
+                            city={personalCity}
+                            onSelect={(c, co) => { setPersonalCity(c); setPersonalCountry(co) }}
+                            placeholder="Search your city..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Business Information */}
+                  {currentStep === 2 && (
+                    <div className="space-y-6">
+                      <div className="text-center mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight antialiased">Business Details</h4>
+                        <p className="text-gray-600 text-sm antialiased">Tell us about your business</p>
+                      </div>
+
+                      <div className="space-y-5">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Basic Information</h5>
+
+                          <div className="space-y-4">
+                            <div>
+                              <label className={getLabelClass(businessNameInvalid)}>Business name *</label>
+                              <input
+                                type="text"
+                                value={businessName}
+                                onChange={(e) => setBusinessName(e.target.value)}
+                                className={getFieldClass(businessNameInvalid)}
+                                placeholder="Enter your business name"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className={getLabelClass(businessTypeInvalid)}>Business type *</label>
+                              <select
+                                value={businessType}
+                                onChange={(e) => setBusinessType(e.target.value)}
+                                className={getSelectClass(businessTypeInvalid)}
+                                required
+                              >
+                                <option value="">Select business type</option>
+                                <option value="hotel">Hotel/Resort</option>
+                                <option value="restaurant">Restaurant</option>
+                                <option value="transport">Transport Service</option>
+                                <option value="activity">Activity/Experience</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className={getLabelClass(businessDescriptionInvalid)}>Business description *</label>
+                              <textarea
+                                value={businessDescription}
+                                onChange={(e) => setBusinessDescription(e.target.value)}
+                                className={getFieldClass(businessDescriptionInvalid)}
+                                placeholder="Describe your business, services offered, and what makes you unique..."
+                                rows={4}
+                                required
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Location & Contact</h5>
+
+                          <div className="space-y-4">
+                            <div>
+                              <label className={getLabelClass(businessCityInvalid)}>Business city *</label>
+                              <div className={businessCityInvalid ? 'rounded-xl border border-red-400 p-0.5' : ''}>
+                                <CitySearchInput
+                                  city={businessCity}
+                                  onSelect={(c) => setBusinessCity(c)}
+                                  placeholder="City"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className={getLabelClass(businessAddressInvalid)}>Business address *</label>
+                              <input
+                                type="text"
+                                value={businessAddress}
+                                onChange={(e) => setBusinessAddress(e.target.value)}
+                                className={getFieldClass(businessAddressInvalid)}
+                                placeholder="Street address"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className={getLabelClass(businessPhoneInvalid)}>Business phone *</label>
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <div className="relative business-phone-country-dropdown w-full sm:w-auto sm:flex-shrink-0">
+                                  <button
+                                    type="button"
+                                    className={`${businessPhoneInvalid ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'} border px-3 py-3 rounded-xl focus:ring-2 transition-colors bg-white flex items-center justify-between w-full sm:min-w-[90px] text-sm font-medium`}
+                                    onClick={() => setBusinessPhoneCountryDropdownOpen(!businessPhoneCountryDropdownOpen)}
+                                  >
+                                    <span className="truncate">
+                                      {businessPhoneCountryCode}
+                                    </span>
+                                    <svg className="w-4 h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                  {businessPhoneCountryDropdownOpen && (
+                                    <div className="absolute top-full left-0 z-50 w-full sm:w-64 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                      <div className="p-2 border-b">
+                                        <input
+                                          type="text"
+                                          placeholder="Search country..."
+                                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:border-gray-400"
+                                          value={businessPhoneCountrySearch}
+                                          onChange={(e) => setBusinessPhoneCountrySearch(e.target.value)}
+                                        />
+                                      </div>
+                                      <div className="max-h-40 overflow-y-auto">
+                                        {filteredBusinessPhoneCountries.map((country) => (
+                                          <button
+                                            key={country.code + country.name}
+                                            type="button"
+                                            className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 text-sm"
+                                            onClick={() => {
+                                              setBusinessPhoneCountryCode(country.code)
+                                              setBusinessPhoneCountrySearch('')
+                                              setBusinessPhoneCountryDropdownOpen(false)
+                                            }}
+                                          >
+                                            <span className="text-sm">{country.name}</span>
+                                            <span className="text-sm text-gray-500 ml-auto">{country.code}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <input
+                                  type="tel"
+                                  value={businessPhone}
+                                  onChange={(e) => setBusinessPhone(e.target.value)}
+                                  className={`${businessPhoneInvalid ? 'border-red-400 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-emerald-500 focus:border-emerald-500'} flex-1 border px-4 py-3 rounded-xl focus:ring-2 transition-colors`}
+                                  placeholder="700 000 000"
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Business email</label>
+                              <input
+                                type="email"
+                                value={businessEmail}
+                                onChange={(e) => setBusinessEmail(e.target.value)}
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                placeholder="business@email.com"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Website/Social media</label>
+                              <input
+                                type="url"
+                                value={businessWebsite}
+                                onChange={(e) => setBusinessWebsite(e.target.value)}
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                                placeholder="https://yourwebsite.com or @socialhandle"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                          <h5 className="text-base font-semibold text-gray-900 mb-4 tracking-tight antialiased">Business Operations</h5>
+
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2 tracking-tight antialiased">Years in business</label>
+                              <select
+                                value={yearsInBusiness}
+                                onChange={(e) => setYearsInBusiness(e.target.value)}
+                                className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                              >
+                                <option value="">Select years in business</option>
+                                <option value="0-1">0-1 years</option>
+                                <option value="2-5">2-5 years</option>
+                                <option value="6-10">6-10 years</option>
+                                <option value="11-20">11-20 years</option>
+                                <option value="20+">20+ years</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Account Setup */}
+                  {currentStep === 3 && (
+                    <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                      <div>
+                        <label className={getLabelClass(passwordInvalid)}>Password</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className={getFieldClass(passwordInvalid)}
+                            placeholder="Create a password (min 6 characters)"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={getLabelClass(confirmPasswordInvalid)}>Confirm Password</label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className={`${getFieldClass(confirmPasswordInvalid)} pr-12`}
+                            placeholder="Confirm your password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <input
+                          id="vendorAgreeTerms"
+                          name="vendorAgreeTerms"
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => setAgreedToTerms(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <label htmlFor="vendorAgreeTerms" className="text-xs text-gray-600 leading-relaxed">
+                          I agree to the{' '}
+                          <a href="/terms" className="text-emerald-700 hover:text-emerald-800 underline">
+                            Terms and Conditions
+                          </a>
+                          .
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Navigation Buttons */}
+                  <div className="flex flex-row gap-3 mt-7 sm:mt-8">
+                    {currentStep < 3 ? (
+                      <button
+                        type="button"
+                        onClick={handleNextStep}
+                        className="w-full min-w-0 whitespace-nowrap bg-gray-900 text-white py-3.5 px-3 sm:px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      >
+                        Next
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={loading || !agreedToTerms}
+                        className="w-full min-w-0 whitespace-nowrap bg-emerald-600 text-white py-3.5 px-3 sm:px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        {loading ? 'Creating account...' : 'Create Business Account'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-center mt-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSignUp(false)
+                        resetForm()
+                      }}
+                        className="text-sm text-emerald-700 font-medium hover:text-emerald-800 transition-colors"
+                    >
+                      Already have an account? Sign in
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Benefits Section - Moved Below Auth */}
-        <div className="bg-white shadow-sm border border-gray-200 p-8">
-          <h2 className="text-3xl font-black text-black mb-8 tracking-tight antialiased text-center">Why Join Our Business Network?</h2>
+        {/* Benefits Section - shown only after successful business account creation */}
+        {showPostSignupBenefits && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 sm:mb-8 tracking-tight antialiased">Why Join Our Business Network?</h2>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <User className="h-8 w-8 text-white" />
+            <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <User className="h-7 w-7 text-gray-700" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Easy Management</h3>
+                <p className="text-gray-600 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
               </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Easy Management</h3>
-              <p className="text-gray-700 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
-            </div>
 
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <Store className="h-8 w-8 text-white" />
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <Store className="h-7 w-7 text-gray-700" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Grow Your Business</h3>
+                <p className="text-gray-600 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
               </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Grow Your Business</h3>
-              <p className="text-gray-700 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
-            </div>
 
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-black flex items-center justify-center mx-auto mb-6">
-                <Shield className="h-8 w-8 text-white" />
+              <div className="text-center p-4 sm:p-6">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <Shield className="h-7 w-7 text-gray-700" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Secure & Reliable</h3>
+                <p className="text-gray-600 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
               </div>
-              <h3 className="text-xl font-bold text-black mb-4 tracking-tight antialiased">Secure & Reliable</h3>
-              <p className="text-gray-700 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

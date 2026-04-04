@@ -6,7 +6,7 @@ import { getVendorStats } from '../../lib/database'
 import { supabase } from '../../lib/supabaseClient'
 import { formatDateTime, getVendorDisplayStatus, formatCurrencyWithConversion } from '../../lib/utils'
 import { useVendorPricing } from '../../hooks/hook'
-import { Calendar, TrendingUp } from 'lucide-react'
+import { Calendar, TrendingUp, RefreshCw, Home, FileText, DollarSign, MessageSquare, Settings } from 'lucide-react'
 
 export default function VendorDashboard() {
   const { profile, user, loading: authLoading } = useAuth()
@@ -241,27 +241,33 @@ export default function VendorDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Welcome back, {profile?.full_name || 'Vendor'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">Monitor your business performance and manage bookings</p>
+      {/* Header - mobile card style */}
+      <div className="bg-white rounded-2xl shadow-md p-4 sm:bg-transparent sm:shadow-none sm:rounded-none sm:p-0">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-semibold text-gray-900">
+              Welcome back, {profile?.full_name || 'Vendor'}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Monitor your business performance and manage bookings</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refresh}
+              className="inline-flex items-center justify-center rounded-lg bg-gray-900 text-white p-2 sm:px-4 sm:py-2 text-xs sm:text-sm hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+              aria-label="Refresh"
+            >
+              <RefreshCw size={16} />
+              <span className="sr-only sm:not-sr-only sm:ml-2">Refresh</span>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={refresh}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Refresh
-        </button>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div
           onClick={() => navigate('/vendor/transactions')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
           <p className="text-xs font-medium text-gray-500">Balance</p>
           <p className="text-lg font-semibold text-gray-900 mt-2">
@@ -274,7 +280,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/services')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
           <p className="text-xs font-medium text-gray-500">Services</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.servicesCount}</p>
@@ -283,7 +289,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
           <p className="text-xs font-medium text-gray-500">Pending</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pendingBookings}</p>
@@ -292,7 +298,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
           <p className="text-xs font-medium text-gray-500">Completed</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completedBookings}</p>
@@ -301,7 +307,7 @@ export default function VendorDashboard() {
 
         <div
           onClick={() => navigate('/vendor/inquiries')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
           <p className="text-xs font-medium text-gray-500">Inquiries</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.inquiriesCount}</p>
@@ -445,6 +451,41 @@ export default function VendorDashboard() {
           </div>
         </div>
       </div>
+      {/* Bottom navigation - mobile app feel */}
+      <nav className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-white rounded-xl shadow-lg sm:hidden z-40">
+        <ul className="flex justify-between items-center px-3 py-2">
+          <li>
+            <button onClick={() => navigate('/vendor')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
+              <Home size={18} />
+              <span className="text-[10px] mt-1">Home</span>
+            </button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/vendor/bookings')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
+              <FileText size={18} />
+              <span className="text-[10px] mt-1">Bookings</span>
+            </button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/vendor/transactions')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
+              <DollarSign size={18} />
+              <span className="text-[10px] mt-1">Wallet</span>
+            </button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/vendor/messages')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
+              <MessageSquare size={18} />
+              <span className="text-[10px] mt-1">Messages</span>
+            </button>
+          </li>
+          <li>
+            <button onClick={() => navigate('/vendor/settings')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
+              <Settings size={18} />
+              <span className="text-[10px] mt-1">More</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   )
 }

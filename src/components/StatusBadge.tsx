@@ -9,7 +9,7 @@ const statusConfig = {
   pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
   approved: { color: 'bg-green-100 text-green-800', label: 'Approved' },
   rejected: { color: 'bg-red-100 text-red-800', label: 'Rejected' },
-  confirmed: { color: 'bg-blue-100 text-blue-800', label: 'Confirmed' },
+  confirmed: { color: 'bg-emerald-100 text-emerald-800', label: 'Confirmed' },
   cancelled: { color: 'bg-gray-100 text-gray-800', label: 'Cancelled' },
   completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
   paid: { color: 'bg-green-100 text-green-800', label: 'Paid' },

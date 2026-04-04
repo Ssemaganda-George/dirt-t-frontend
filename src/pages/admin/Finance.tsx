@@ -4,6 +4,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { useState } from 'react';
 import { usePreferences } from '../../contexts/PreferencesContext'
+import type { Transaction } from '../../lib/database';
 import { supabase } from '../../lib/supabaseClient';
 
 export function Finance() {
@@ -13,6 +14,8 @@ export function Finance() {
   const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
   const [paymentNotes, setPaymentNotes] = useState<{[key: string]: string}>({});
   const [dateRange, setDateRange] = useState<'all' | 'month' | 'quarter' | 'year'>('all');
+
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Filter transactions by date range
   const getFilteredTransactions = () => {
@@ -97,6 +100,29 @@ export function Finance() {
     }));
 
     exportToCSV(trendsData, `monthly-trends-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+  };
+
+  const exportConservationReport = () => {
+    const cons = filteredTransactions.filter(t => {
+      const ref = (t.reference || '') as string;
+      const notes = (t.payment_notes || '') as string;
+      return /otx-|offset|conservation|carbon/i.test(ref) || /conservation|offset|carbon|otx-/i.test(notes);
+    }).map(t => ({
+      'Transaction ID': t.id,
+      'Amount': t.amount,
+      'Currency': t.currency,
+      'Status': t.status,
+      'Reference': t.reference,
+      'Notes': t.payment_notes || '',
+      'Created At': format(new Date(t.created_at), 'yyyy-MM-dd HH:mm:ss')
+    }));
+
+    if (cons.length === 0) {
+      alert('No conservation transactions found for the selected range.');
+      return;
+    }
+
+    exportToCSV(cons, `conservation-transactions-${format(new Date(), 'yyyy-MM-dd')}.csv`);
   };
 
   if (loading) {
@@ -229,6 +255,16 @@ export function Finance() {
 
   const totalRefunds = filteredTransactions
     .filter(t => t.transaction_type === 'refund' && t.status === 'completed')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Conservation wallet: sum payments or donations tagged for conservation/offsets
+  const conservationBalance = filteredTransactions
+    .filter(t => (t.transaction_type === 'payment' || t.transaction_type === 'refund') && t.status === 'completed')
+    .filter(t => {
+      const ref = (t.reference || '') as string;
+      const notes = (t.payment_notes || '') as string;
+      return /otx-|offset|conservation|carbon/i.test(ref) || /conservation|offset|carbon|otx-/i.test(notes);
+    })
     .reduce((sum, t) => sum + t.amount, 0);
 
   const pendingWithdrawals = transactions.filter(t =>
@@ -503,6 +539,22 @@ export function Finance() {
         </div>
       </div>
 
+      {/* Conservation Wallet */}
+      <div className="mt-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Conservation Wallet</p>
+            <p className="text-lg font-semibold text-gray-900 mt-2">
+              {formatCurrencyWithConversion(conservationBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Funds tagged for conservation & carbon offsets</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={exportConservationReport} className="px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition">Export</button>
+          </div>
+        </div>
+      </div>
+
       {/* Monthly Trends Chart */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="border-b border-gray-100 px-5 py-3">
@@ -721,7 +773,7 @@ export function Finance() {
                       {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {transaction.payment_method.replace('_', ' ')}
+                      <button onClick={() => setSelectedTransaction(transaction)} className="text-blue-600 hover:underline">{transaction.payment_method.replace('_', ' ')}</button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(transaction.status)}
@@ -740,6 +792,46 @@ export function Finance() {
               </tbody>
             </table>
           </div>
+
+          {/* Payment details modal */}
+          {selectedTransaction && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
+              <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedTransaction(null)} />
+              <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold">Payment Details</h2>
+                  <button onClick={() => setSelectedTransaction(null)} className="text-gray-500 hover:text-black">Close</button>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                  <p className="text-sm text-gray-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_', ' ')}</span></p>
+                  <div className="mt-4">
+                    {selectedTransaction.payout_meta ? (
+                      selectedTransaction.payout_meta.type === 'bank' ? (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.name || selectedTransaction.payout_meta.account_name}</div>
+                          <div className="text-sm text-gray-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy account number</button></div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-sm font-medium">{selectedTransaction.payout_meta.provider || 'Mobile Money'}</div>
+                          {selectedTransaction.payout_meta.name && (
+                            <div className="text-sm text-gray-700">Account name: <span className="font-medium">{selectedTransaction.payout_meta.name}</span>
+                              <button className="ml-3 text-gray-500" onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.name || '')}>Copy</button>
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy phone number</button></div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-sm text-gray-500">No payout details available for this transaction.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {currentTransactions.length === 0 && (
             <div className="text-center py-12">

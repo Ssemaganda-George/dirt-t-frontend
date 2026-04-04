@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
@@ -11,6 +12,8 @@ import {
   customerTotalFromAggregatePricingCalc,
   type PaymentCalculation
 } from '../lib/pricingService'
+import CityPickerModal from '../components/CityPickerModal'
+import MapModal from '../components/MapModal'
 
 interface ServiceDetail {
   id: string
@@ -40,6 +43,16 @@ interface ServiceDetail {
   vehicle_capacity?: number
   driver_included?: boolean
   fuel_included?: boolean
+  // Optional transport/fuel metadata (may be present for transport services)
+  avgSpeedKmph?: number
+  fuel_km_per_liter?: number
+  fuelKmPerL?: number
+  fuel_consumption_per_100km?: number
+  price_within_town?: number
+  price_upcountry?: number
+  vehicle_engine?: string
+  vehicle_ccs?: number
+  fuel_type?: string
   pickup_locations?: string[]
   dropoff_locations?: string[]
 }
@@ -191,6 +204,7 @@ const countries = [
   { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
   { code: '+504', name: 'Honduras', flag: '🇭🇳' },
   { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+  
   { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
   { code: '+507', name: 'Panama', flag: '🇵🇦' },
   { code: '+508', name: 'Saint Pierre and Miquelon', flag: '🇵🇲' },
@@ -324,7 +338,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [currentStep, setCurrentStep] = useState(1)
   // Removed unused cartSaved state
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
+  const [bookingResult, setBookingResult] = useState<any | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [pollingMessage, setPollingMessage] = useState('')
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
+  const [isReceiptFinalizing, setIsReceiptFinalizing] = useState(false)
+  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const finaliseInFlightRef = useRef(false)
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
@@ -334,6 +358,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     passengers: 1,
     returnTrip: false,
     specialRequests: '',
+    tripSetoff: '',
+    tripStopovers: '',
+    tripDestination: '',
+    tripReturnOption: '',
+    // Journey estimation inputs
+    avgSpeedKmph: 60,
+    fuelConsumptionPer100Km: 10,
     contactName: '',
     contactEmail: '',
     contactPhone: '',
@@ -350,6 +381,84 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Pricing calculation for transport (platform fee / splits)
   const [pricingCalc, setPricingCalc] = useState<PaymentCalculation | null>(null)
 
+  const [journeyStep, setJourneyStep] = useState<'setoff' | 'stopovers' | 'destination'>('setoff')
+
+  // Whether the user has saved the journey summary
+  const [journeySaved, setJourneySaved] = useState(false)
+
+  const buildJourneySummary = () => {
+    const parts: string[] = []
+    if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
+    if (stopovers && stopovers.length > 0) parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
+    else if ((bookingData as any).tripStopovers) parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
+    if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
+    if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
+
+    const coordDistance = computeTotalDistanceKm()
+    if (coordDistance > 0) {
+      const { hours, liters } = computeEstimatesFromDistance(
+        coordDistance,
+        Number((bookingData as any).avgSpeedKmph || 60),
+        Number((bookingData as any).fuelConsumptionPer100Km || 10),
+        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+      )
+      parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
+      parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
+      parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+      const routeCheck = detectAbnormalRoute()
+      if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
+    } else {
+      const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+      if (estHours > 0) {
+        const { distanceKm, liters } = estimateFuel(
+          estHours,
+          Number((bookingData as any).avgSpeedKmph || 60),
+          Number((bookingData as any).fuelConsumptionPer100Km || 10),
+          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+        )
+        parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
+        if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
+        parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+      }
+    }
+
+    return parts.join('\n')
+  }
+
+  const saveJourney = () => {
+    const summary = buildJourneySummary()
+    setBookingData(prev => ({ ...prev, journeySummary: summary }))
+    setJourneySaved(true)
+  }
+
+  // Spinner state for return option calculation
+  const [isCalculatingReturn, setIsCalculatingReturn] = useState(false)
+  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleReturnOptionChange = (option: 'return' | 'drop') => {
+    // Set the selection immediately so the radio updates, then show a brief spinner
+    setBookingData(prev => ({ ...prev, tripReturnOption: option }))
+    setIsCalculatingReturn(true)
+    if (calcTimeoutRef.current) {
+      clearTimeout(calcTimeoutRef.current)
+      calcTimeoutRef.current = null
+    }
+    calcTimeoutRef.current = setTimeout(() => {
+      setIsCalculatingReturn(false)
+      calcTimeoutRef.current = null
+    }, 5000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (calcTimeoutRef.current) {
+        clearTimeout(calcTimeoutRef.current)
+        calcTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  const hasDestination = Boolean((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())
   // Blocked dates (single-booking categories)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
@@ -406,16 +515,107 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
 
+  // City picker modal for selecting destination
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false)
+
+  const handleCitySelect = (city: string, country: string) => {
+    const label = `${city}, ${country}`
+    handleInputChange('tripDestination', label)
+    // Try to geocode the selected city to get coordinates so distance estimates can use them
+    ;(async () => {
+      try {
+        const q = encodeURIComponent(label)
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${q}&limit=1`
+        const res = await fetch(url, { headers: { Accept: 'application/json' } })
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data) && data.length > 0) {
+            const d = data[0]
+            setDestinationLocation({ lat: Number(d.lat), lng: Number(d.lon), label: d.display_name || label })
+          }
+        }
+      } catch (e) {
+        // ignore geocode failures — estimates will fall back to time-based calculation
+        console.warn('City geocode failed', e)
+      }
+    })()
+    setIsCityModalOpen(false)
+  }
+
+  // Map modal state used for picking set-off / stopovers / destination
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
+  const [mapModalMode, setMapModalMode] = useState<'setoff' | 'stopover' | 'destination' | null>(null)
+  const [mapInitialMarker, setMapInitialMarker] = useState<{ lat: number; lng: number; label?: string } | undefined>(undefined)
+
+  // set-off location stored separately for lat/lng; keep bookingData.tripSetoff string for compatibility
+  const [setoffLocation, setSetoffLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
+
+  // destination location stored separately when selected on map
+  const [destinationLocation, setDestinationLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
+  
+  // Map search/autocomplete state
+  const [activeSearchTarget, setActiveSearchTarget] = useState<'setoff' | 'destination' | 'stopover' | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<any>>([])
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // stopovers as structured array with duration (hours)
+  const [stopovers, setStopovers] = useState<Array<{ id: string; lat: number; lng: number; label: string; durationHours: number }>>([])
+
+  const openMapFor = (mode: 'setoff' | 'stopover' | 'destination') => {
+    setMapModalMode(mode)
+    setIsMapModalOpen(true)
+    // set initial marker depending on existing data
+    if (mode === 'setoff' && setoffLocation) setMapInitialMarker({ lat: setoffLocation.lat, lng: setoffLocation.lng, label: setoffLocation.label })
+    else if (mode === 'destination' && destinationLocation) setMapInitialMarker({ lat: destinationLocation.lat, lng: destinationLocation.lng, label: destinationLocation.label })
+    else setMapInitialMarker(undefined)
+  }
+
+  const handleMapSelect = (lat: number, lng: number, label?: string) => {
+    const place = label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    if (mapModalMode === 'setoff') {
+      setSetoffLocation({ lat, lng, label: place })
+      handleInputChange('tripSetoff', place)
+    } else if (mapModalMode === 'destination') {
+      // store both a human readable label and structured coords when selecting destination on map
+      // call handleInputChange first (which will clear any previous coords), then set structured coords
+      handleInputChange('tripDestination', place)
+      setDestinationLocation({ lat, lng, label: place })
+    } else if (mapModalMode === 'stopover') {
+      const id = `s_${Date.now().toString(36).slice(2,8)}`
+      const next = [...stopovers, { id, lat, lng, label: place, durationHours: 1 }]
+      setStopovers(next)
+      // store serialized stopovers in bookingData.tripStopovers for persistence
+      handleInputChange('tripStopovers', JSON.stringify(next))
+    }
+    // clear modal mode
+    setMapModalMode(null)
+  }
+
+  const removeStopover = (id: string) => {
+    const next = stopovers.filter(s => s.id !== id)
+    setStopovers(next)
+    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
+  }
+
+  const updateStopoverDuration = (id: string, hours: number) => {
+    const next = stopovers.map(s => s.id === id ? { ...s, durationHours: hours } : s)
+    setStopovers(next)
+    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
+  }
+
   // Pre-fill dates from navigation state if available
   useEffect(() => {
     if (location.state) {
       const { startDate, endDate, selectedDate } = location.state as any
+      const { transportZone: incomingZone } = location.state as any
       if (startDate && endDate) {
         setBookingData(prev => ({
           ...prev,
           startDate,
           endDate
         }))
+        if (incomingZone) setTransportZone(incomingZone)
       } else if (selectedDate) {
         setBookingData(prev => ({
           ...prev,
@@ -428,6 +628,58 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   useEffect(() => {
     if (service?.images && service.images.length > 0) {
       setSelectedImage(service.images[0])
+    }
+  }, [service])
+
+  // Populate booking defaults from service transport metadata (fuel, engine, etc.)
+  useEffect(() => {
+    if (!service) return
+    try {
+      const fuelKmPerL = (service as any).fuel_km_per_liter ?? (service as any).fuelKmPerL ?? null
+      const fuelPer100Km = (service as any).fuel_consumption_per_100km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : null)
+      // If the service provides fuel metadata, prefer it and override defaults so estimates use vendor values
+      if (fuelKmPerL || fuelPer100Km) {
+        setBookingData(prev => ({
+          ...prev,
+          avgSpeedKmph: service?.avgSpeedKmph ?? prev.avgSpeedKmph ?? 60,
+          fuelConsumptionPer100Km: fuelPer100Km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : prev.fuelConsumptionPer100Km ?? 10),
+          fuel_km_per_liter: fuelKmPerL ?? (prev as any).fuel_km_per_liter,
+          fuelKmPerL: fuelKmPerL ?? (prev as any).fuelKmPerL
+        }))
+      }
+    } catch (e) {
+      console.warn('Failed to populate booking defaults from service:', e)
+    }
+  }, [service])
+
+  function getTransportUnitPrice(): number | null {
+    const rawWithin = (service as any).price_within_town
+    const rawUp = (service as any).price_upcountry
+    const within = rawWithin !== undefined && rawWithin !== null ? Number(rawWithin) : undefined
+    const up = rawUp !== undefined && rawUp !== null ? Number(rawUp) : undefined
+    const fallback = service.price !== undefined && service.price !== null ? Number(service.price) : null
+    if (service.service_categories?.name?.toLowerCase() !== 'transport') return fallback
+    if (transportZone === 'within') return !isNaN(within as number) ? (within as number) : fallback
+    if (transportZone === 'upcountry') return !isNaN(up as number) ? (up as number) : fallback
+    // No selection: if only one exists, return that, otherwise fallback to service.price
+    if (!isNaN(within as number) && (isNaN(up as number) || up === undefined)) return within as number
+    if (!isNaN(up as number) && (isNaN(within as number) || within === undefined)) return up as number
+    return fallback
+  }
+
+  const [transportZone, setTransportZone] = useState<'within' | 'upcountry' | ''>('')
+
+  // Auto-default transport zone when only one transport price exists
+  useEffect(() => {
+    try {
+      const hasWithin = typeof (service as any).price_within_town === 'number' && (service as any).price_within_town !== null
+      const hasUp = typeof (service as any).price_upcountry === 'number' && (service as any).price_upcountry !== null
+      if (service.service_categories?.name?.toLowerCase() === 'transport') {
+        if (hasWithin && !hasUp) setTransportZone('within')
+        else if (!hasWithin && hasUp) setTransportZone('upcountry')
+      }
+    } catch (e) {
+      // ignore
     }
   }, [service])
 
@@ -565,8 +817,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             return false
           }
         }
-        if (bookingData.passengers < 1 || bookingData.passengers > (service.vehicle_capacity || service.max_capacity)) {
-          alert(`Number of passengers must be between 1 and ${service.vehicle_capacity || service.max_capacity}.`)
+        // Only enforce an upper bound when the service specifies a capacity
+        const maxCapacity = (service.vehicle_capacity ?? service.max_capacity) ?? null
+        if (bookingData.passengers < 1 || (maxCapacity !== null && bookingData.passengers > maxCapacity)) {
+          alert(`Number of passengers must be between 1 and ${maxCapacity !== null ? maxCapacity : 'unlimited'}.`)
           return false
         }
         // Validate contact details
@@ -592,76 +846,365 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         return
       }
 
-      // If completing booking (step 1), create the actual booking
+      // If completing booking (step 1), handle payment then create booking
       if (currentStep === 1) {
         setBookingError(null)
-        // Prepare booking data for localStorage (vendor panel)
-        const bookingDataToSave = {
-          service_id: service.id,
-          vendor_id: service.vendor_id || 'vendor_demo',
-          booking_date: new Date().toISOString(),
-          service_date: bookingData.startDate,
-          guests: bookingData.passengers,
-          total_amount: transportCustomerPaysTotal,
-          currency: service.currency,
-          status: 'confirmed' as const,
-          payment_status: 'paid' as const, // keep vendor demo as paid
-          special_requests: bookingData.specialRequests,
-          // Add transport-specific data
-          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-          driver_option: bookingData.driverOption,
-          return_trip: bookingData.returnTrip,
-          start_time: bookingData.startTime,
-          end_time: bookingData.endTime,
-          end_date: bookingData.endDate
-        }
-        // Save to vendor localStorage for demo panel
-        createVendorBooking(service.vendor_id || 'vendor_demo', bookingDataToSave)
 
-        // Prepare booking data for Supabase (admin/vendor visibility)
-        console.log('TransportBooking: Creating booking with user:', user)
-        console.log('TransportBooking: User ID:', user?.id)
-        const bookingDataToInsert = {
-          service_id: service.id,
-          tourist_id: user?.id,
-          vendor_id: service.vendor_id || 'vendor_demo',
-          booking_date: new Date().toISOString(),
-          service_date: bookingData.startDate,
-          guests: bookingData.passengers,
-          total_amount: transportCustomerPaysTotal,
-          pricing_base_amount: totalPrice,
-          currency: service.currency,
-          status: 'confirmed' as const,
-          payment_status: 'pending' as const, // always pending for admin
-          special_requests: bookingData.specialRequests,
-          // Guest booking fields
-          guest_name: profile ? undefined : bookingData.contactName,
-          guest_email: profile ? undefined : bookingData.contactEmail,
-          guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
-          // Transport-specific fields
-          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-          driver_option: bookingData.driverOption,
-          return_trip: bookingData.returnTrip,
-          start_time: bookingData.startTime,
-          end_time: bookingData.endTime,
-          end_date: bookingData.endDate
-        }
-        try {
-          const result = await createDatabaseBooking(bookingDataToInsert)
-          if (result && result.id) {
-            setBookingConfirmed(true)
-            setCurrentStep(currentStep + 1)
-          } else {
-            setBookingError('Booking could not be confirmed. Please try again.')
+        if (bookingData.paymentMethod === 'mobile') {
+          // Validate phone number
+          const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
+          const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+          if (!phone || phone.length < 12) {
+            setBookingError('Please enter a valid mobile money phone number (e.g. 0712345678).')
+            return
           }
-        } catch (error: any) {
-          setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
+          if (!bookingData.mobileProvider) {
+            setBookingError('Please select a mobile money provider (MTN or Airtel).')
+            return
+          }
+
+          setIsPaymentProcessing(true)
+          setIsReceiptFinalizing(false)
+          setPollingMessage('Initiating payment…')
+
+          try {
+            const { data: session } = await supabase.auth.getSession()
+            const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+            const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                amount: Math.round(transportCustomerPaysTotal),
+                phone_number: phone,
+                booking_id: tempRef,
+                description: `${service.title} transport booking`,
+                user_id: session?.session?.user?.id || undefined,
+              }),
+            })
+
+            let resultBody: any = {}
+            try {
+              const text = await collectRes.text()
+              try { resultBody = JSON.parse(text) } catch { resultBody = { raw: text } }
+            } catch (e) {
+              resultBody = { error: 'Failed to read response body' }
+            }
+
+            if (!collectRes.ok) {
+              const msg = resultBody?.error || resultBody?.message || resultBody?.raw || JSON.stringify(resultBody)
+              console.error('marzpay-collect failed', collectRes.status, msg)
+              setBookingError(`Payment initiation failed: ${msg}`)
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              return
+            }
+
+            const ref = resultBody?.data?.reference || resultBody?.reference || (resultBody?.data && resultBody.data.reference)
+            if (!ref) {
+              const msg = resultBody?.error || resultBody?.message || 'No payment reference returned'
+              console.error('marzpay-collect missing reference', msg, resultBody)
+              setBookingError(`Payment initiation failed: ${msg}`)
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              return
+            }
+            setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
+
+            const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
+              try {
+                const res = await fetch(
+                  `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`,
+                  { cache: 'no-store' }
+                )
+                const data = await res.json().catch(() => ({})) as { status?: string }
+                if (data?.status === 'completed') return 'completed'
+                if (data?.status === 'failed') return 'failed'
+                return null
+              } catch { return null }
+            }
+
+            const finalise = () => {
+              // Match tickets/payment UX parity: move forward immediately on payment completion,
+              // and finalize booking/receipt in background.
+              setIsReceiptFinalizing(true)
+              setPollingMessage('Payment confirmed! Finalizing your receipt in background…')
+              void createTransportBooking('paid', ref).catch((e) => {
+                console.warn('Background booking finalization failed:', e)
+              })
+            }
+
+            const channel = supabase
+              .channel(`payment_trp_${ref}`)
+              .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
+                async (payload) => {
+                  const row = payload.new as { status: string }
+                  if (row.status === 'completed') {
+                    channel.unsubscribe()
+                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                    await finalise()
+                  } else if (row.status === 'failed') {
+                    channel.unsubscribe()
+                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                    setPollingMessage('')
+                    setIsPaymentProcessing(false)
+                    setIsReceiptFinalizing(false)
+                    setBookingError('Payment was not completed or was declined. Please try again.')
+                  }
+                })
+              .subscribe()
+
+            const immediate = await checkStatus()
+            if (immediate === 'completed') {
+              channel.unsubscribe()
+              finalise()
+              return
+            } else if (immediate === 'failed') {
+              channel.unsubscribe()
+              setPollingMessage('')
+              setIsPaymentProcessing(false)
+              setIsReceiptFinalizing(false)
+              setBookingError('Payment was not completed or was declined. Please try again.')
+              return
+            }
+
+            // Fast-start polling burst to reduce latency after user confirms on phone.
+            for (let i = 0; i < 6; i++) {
+              const status = await checkStatus()
+              if (status === 'completed') {
+                channel.unsubscribe()
+                finalise()
+                return
+              } else if (status === 'failed') {
+                channel.unsubscribe()
+                setPollingMessage('')
+                setIsPaymentProcessing(false)
+                setBookingError('Payment was not completed or was declined. Please try again.')
+                return
+              }
+              await new Promise<void>(r => setTimeout(r, 800))
+            }
+
+            backupPollRef.current = setInterval(async () => {
+              const status = await checkStatus()
+              if (status === 'completed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                finalise()
+              } else if (status === 'failed') {
+                channel.unsubscribe()
+                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                setPollingMessage('')
+                setIsPaymentProcessing(false)
+                setIsReceiptFinalizing(false)
+                setBookingError('Payment was not completed or was declined. Please try again.')
+              }
+            }, 1500)
+            setTimeout(() => {
+              if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            }, 120000)
+
+          } catch (err: any) {
+            console.error('Payment error:', err)
+            setPollingMessage('')
+            setIsPaymentProcessing(false)
+            setIsReceiptFinalizing(false)
+            setBookingError(err?.message || 'Payment failed. Please try again.')
+          }
+          return
         }
-        return // Only advance step if booking is successful
+
+        // Non-mobile-money: create booking directly
+        await createTransportBooking('pending')
+        return
       }
       setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const createTransportBooking = async (paymentStatus: 'paid' | 'pending', paymentReference?: string) => {
+    if (finaliseInFlightRef.current) return
+    finaliseInFlightRef.current = true
+    try {
+      // Compute journey estimates (prefer coords) and prepare persisted journey fields
+      const _coordDistance = computeTotalDistanceKm()
+      let _estHours = 0
+      let _estDistance = 0
+      let _estLiters = 0
+      if (_coordDistance > 0) {
+        const res = computeEstimatesFromDistance(
+          _coordDistance,
+          Number((bookingData as any).avgSpeedKmph || 60),
+          Number((bookingData as any).fuelConsumptionPer100Km || 10),
+          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+        )
+        _estHours = res.hours
+        _estLiters = res.liters
+        _estDistance = _coordDistance
+      } else {
+        const _estH = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+        if (_estH > 0) {
+          const res = estimateFuel(
+            _estH,
+            Number((bookingData as any).avgSpeedKmph || 60),
+            Number((bookingData as any).fuelConsumptionPer100Km || 10),
+            Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+          )
+          _estHours = _estH
+          _estDistance = res.distanceKm
+          _estLiters = res.liters
+        }
+      }
+
+      // Save to vendor localStorage for demo panel
+      createVendorBooking(service.vendor_id || 'vendor_demo', {
+        service_id: service.id,
+        vendor_id: service.vendor_id || 'vendor_demo',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.startDate,
+        guests: bookingData.passengers,
+        total_amount: transportCustomerPaysTotal,
+        currency: service.currency,
+        status: 'confirmed' as const,
+        special_requests: (() => {
+          const parts = [] as string[]
+          if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
+          if (stopovers && stopovers.length > 0) {
+            parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
+          } else if ((bookingData as any).tripStopovers) {
+            parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
+          }
+          if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
+          if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
+          const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+          // Prefer coordinate-based distance estimates when possible
+          const coordDistance = computeTotalDistanceKm()
+          if (coordDistance > 0) {
+            const { hours, liters } = computeEstimatesFromDistance(
+              coordDistance,
+              Number((bookingData as any).avgSpeedKmph || 60),
+              Number((bookingData as any).fuelConsumptionPer100Km || 10),
+              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+            )
+            parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
+            parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
+            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+            // Route sanity check
+            const routeCheck = detectAbnormalRoute()
+            if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
+          } else if (estHours > 0) {
+            const { distanceKm, liters } = estimateFuel(
+              estHours,
+              Number((bookingData as any).avgSpeedKmph || 60),
+              Number((bookingData as any).fuelConsumptionPer100Km || 10),
+              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+            )
+            parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
+            if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
+            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
+          }
+          if (bookingData.specialRequests) parts.push(bookingData.specialRequests)
+          return parts.join('\n')
+        })(),
+        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+        driver_option: bookingData.driverOption,
+        return_trip: bookingData.returnTrip,
+        start_time: bookingData.startTime,
+        end_time: bookingData.endTime,
+        end_date: bookingData.endDate,
+        trip_setoff: (bookingData as any).tripSetoff || null,
+        trip_setoff_lat: setoffLocation?.lat ?? null,
+        trip_setoff_lng: setoffLocation?.lng ?? null,
+        trip_destination: (bookingData as any).tripDestination || null,
+        trip_destination_lat: destinationLocation?.lat ?? null,
+        trip_destination_lng: destinationLocation?.lng ?? null,
+        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
+        trip_return_option: (bookingData as any).tripReturnOption || null,
+        journey_estimated_hours: _estHours || null,
+        journey_estimated_distance: _estDistance || null,
+        journey_estimated_fuel: _estLiters || null,
+        journey_summary: (bookingData as any).journeySummary || buildJourneySummary()
+      } as any)
+
+      const result = await createDatabaseBooking({
+        service_id: service.id,
+        tourist_id: user?.id,
+        vendor_id: service.vendor_id || 'vendor_demo',
+        booking_date: new Date().toISOString(),
+        service_date: bookingData.startDate,
+        guests: bookingData.passengers,
+        total_amount: transportCustomerPaysTotal,
+        pricing_base_amount: totalPrice,
+        currency: service.currency,
+        status: 'confirmed' as const,
+        payment_status: paymentStatus as any,
+        payment_reference: paymentReference || undefined,
+        special_requests: `${(bookingData as any).tripSetoff ? 'Set-off: ' + (bookingData as any).tripSetoff + '\n' : ''}${stopovers && stopovers.length > 0 ? 'Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; ') + '\n' : ((bookingData as any).tripStopovers ? 'Stop-overs: ' + (bookingData as any).tripStopovers + '\n' : '')}${(bookingData as any).tripDestination ? 'Destination: ' + (bookingData as any).tripDestination + '\n' : ''}${(bookingData as any).tripReturnOption ? 'Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave') + '\n\n' : ''}${bookingData.specialRequests || ''}`,
+        trip_setoff: (bookingData as any).tripSetoff || null,
+        trip_setoff_lat: setoffLocation?.lat ?? null,
+        trip_setoff_lng: setoffLocation?.lng ?? null,
+        trip_destination: (bookingData as any).tripDestination || null,
+        trip_destination_lat: destinationLocation?.lat ?? null,
+        trip_destination_lng: destinationLocation?.lng ?? null,
+        trip_destination_extra: (typeof (bookingData as any).tripDestinationExtra === 'number' && !isNaN((bookingData as any).tripDestinationExtra)) ? (bookingData as any).tripDestinationExtra : 0.0,
+        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
+        trip_return_option: (bookingData as any).tripReturnOption || null,
+        journey_estimated_hours: (_estHours as number) || null,
+        journey_estimated_distance: (_estDistance as number) || null,
+        journey_estimated_fuel: (_estLiters as number) || null,
+        journey_summary: (bookingData as any).journeySummary || buildJourneySummary(),
+        guest_name: profile ? undefined : bookingData.contactName,
+        guest_email: profile ? undefined : bookingData.contactEmail,
+        guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
+        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+        driver_option: bookingData.driverOption,
+        return_trip: bookingData.returnTrip,
+        start_time: bookingData.startTime,
+        end_time: bookingData.endTime,
+        end_date: bookingData.endDate
+      } as any)
+
+      if (result && result.id) {
+        // Trigger a lightweight webhook reconciliation for transport bookings created after
+        // payment completion so payment->booking linkage and queue jobs are guaranteed.
+        if (paymentStatus === 'paid' && paymentReference) {
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/marzpay-webhook`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                transaction: {
+                  reference: paymentReference,
+                  status: 'completed',
+                },
+              }),
+            })
+          } catch (e) {
+            console.warn('Transport payment reconciliation trigger failed:', e)
+          }
+        }
+
+        setBookingResult(result)
+        setBookingConfirmed(true)
+        setPollingMessage('')
+        setIsPaymentProcessing(false)
+        setIsReceiptFinalizing(false)
+        setCurrentStep(2)
+      } else {
+        setBookingError('Booking could not be confirmed. Please try again.')
+        setIsPaymentProcessing(false)
+        setIsReceiptFinalizing(false)
+      }
+    } catch (error: any) {
+      finaliseInFlightRef.current = false
+      setBookingError(error?.message || 'Booking could not be confirmed. Please try again.')
+      setIsPaymentProcessing(false)
+      setIsReceiptFinalizing(false)
     }
   }
 
@@ -673,10 +1216,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const handleInputChange = (field: string, value: string | number | boolean) => {
+  const handleInputChange = (field: string, value: string | number | boolean | undefined) => {
     // Clear blocked error on change
     setBlockedError(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
+
+    // If user edited destination or setoff as text or via city picker, clear any previously stored coordinates
+    if (field === 'tripDestination') {
+      setDestinationLocation(null)
+    }
+    if (field === 'tripSetoff') {
+      setSetoffLocation(null)
+    }
 
     // Validate blocked dates immediately when startDate changes
     if (field === 'startDate' && value && blockedDates.has(value as string)) {
@@ -711,13 +1262,350 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     return Math.ceil(diffHours / 24) || 1
   }
 
-  const totalPrice = (() => {
-    const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-    const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0 // 30% extra for driver only if not already included
-    return basePrice + driverCost
+  const calculateHours = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
+    if (!startDate || !endDate) return 0
+    const start = new Date(`${startDate}T${startTime}`)
+    const end = new Date(`${endDate}T${endTime}`)
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
+    const diffMs = end.getTime() - start.getTime()
+    if (diffMs <= 0) return 0
+    return diffMs / (1000 * 60 * 60)
+  }
+
+  const FUEL_ERROR_PCT = 0.15 // 15% buffer for extreme conditions
+
+  const estimateFuel = (hours: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
+    if (!hours || !avgSpeedKmph) return { distanceKm: 0, liters: 0 }
+    const distance = hours * avgSpeedKmph
+    let liters = 0
+    if (fuelKmPerL && fuelKmPerL > 0) {
+      liters = distance / fuelKmPerL
+    } else if (fuelPer100Km && fuelPer100Km > 0) {
+      liters = (distance * fuelPer100Km) / 100
+    }
+    liters = liters * (1 + (errorPct || 0))
+    return { distanceKm: distance, liters }
+  }
+
+  // Haversine distance between two points (km)
+  const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const toRad = (v: number) => (v * Math.PI) / 180
+    const R = 6371 // Earth radius km
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
+  // Build waypoints from setoff, stopovers, destination and compute total distance (optionally doubling for return)
+  const computeTotalDistanceKm = (): number => {
+    const pts: Array<{ lat: number; lng: number }> = []
+    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
+    if (stopovers && stopovers.length > 0) {
+      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
+    }
+    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
+
+    if (pts.length < 2) return 0
+
+    let total = 0
+    for (let i = 0; i < pts.length - 1; i++) {
+      total += haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
+    }
+
+    // If the user selected 'return', approximate by doubling the outbound distance
+    // If driver needs to return (either explicit return or drop-and-leave where driver returns), double outbound distance
+    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
+    return total
+  }
+
+  const computeEstimatesFromDistance = (distanceKm: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
+    if (!distanceKm || !avgSpeedKmph) return { hours: 0, liters: 0 }
+    const hours = distanceKm / avgSpeedKmph
+    let liters = 0
+    if (fuelKmPerL && fuelKmPerL > 0) {
+      liters = distanceKm / fuelKmPerL
+    } else if (fuelPer100Km && fuelPer100Km > 0) {
+      liters = (distanceKm * fuelPer100Km) / 100
+    }
+    liters = liters * (1 + (errorPct || 0))
+    return { hours, liters }
+  }
+
+  // Detect abnormal routing: large legs, huge detours vs direct distance, or very long totals
+  const detectAbnormalRoute = () => {
+    const pts: Array<{ lat: number; lng: number }> = []
+    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
+    if (stopovers && stopovers.length > 0) {
+      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
+    }
+    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
+
+    const reasons: string[] = []
+    if (pts.length < 2) return { abnormal: false, reasons }
+
+    const direct = (setoffLocation && destinationLocation) ? haversineKm(setoffLocation.lat, setoffLocation.lng, destinationLocation.lat, destinationLocation.lng) : 0
+    let total = 0
+    for (let i = 0; i < pts.length - 1; i++) {
+      const leg = haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
+      total += leg
+      if (leg > 2000) reasons.push(`Very long leg: ${leg.toFixed(1)} km between waypoint ${i + 1} and ${i + 2}`)
+    }
+    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
+
+    if (direct > 0 && total > direct * 3) reasons.push(`Total route ${total.toFixed(1)} km is > 3× direct distance ${direct.toFixed(1)} km`)
+    if (total > 5000) reasons.push(`Total route unusually long: ${total.toFixed(0)} km`)
+
+    return { abnormal: reasons.length > 0, reasons }
+  }
+
+  // Perform a debounced Nominatim search for suggestions
+  const performSearch = async (q: string) => {
+    if (!q || q.trim().length < 2) {
+      setSearchResults([])
+      return
+    }
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(q)}&limit=6`
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setSearchResults(data.map((d: any) => ({ place_id: d.place_id, display_name: d.display_name, lat: d.lat, lon: d.lon })))
+      } else {
+        setSearchResults([])
+      }
+    } catch (e) {
+      console.warn('Map search failed', e)
+      setSearchResults([])
+    }
+  }
+
+  // Trigger debounced search when query changes
+  useEffect(() => {
+    if (!activeSearchTarget) return
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery)
+    }, 300)
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [searchQuery, activeSearchTarget])
+
+  const selectSuggestion = (target: 'setoff' | 'destination' | 'stopover', item: any) => {
+    const label = item.display_name || `${item.lat}, ${item.lon}`
+    if (target === 'setoff') {
+      setSetoffLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
+      handleInputChange('tripSetoff', label)
+    } else if (target === 'destination') {
+      setDestinationLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
+      handleInputChange('tripDestination', label)
+    } else {
+      // add a stopover entry
+      const id = `s_${Date.now().toString(36).slice(2,8)}`
+      const next = [...stopovers, { id, lat: Number(item.lat), lng: Number(item.lon), label, durationHours: 1 }]
+      setStopovers(next)
+      handleInputChange('tripStopovers', JSON.stringify(next))
+    }
+    setSearchResults([])
+    setActiveSearchTarget(null)
+    setSearchQuery('')
+  }
+
+  // Geocode a free-text place label using Nominatim (returns {lat,lng,display_name} or null)
+  const geocodeLabel = async (label: string) => {
+    if (!label || !label.trim()) return null
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(label)}&limit=1`
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (!Array.isArray(data) || data.length === 0) return null
+      const d = data[0]
+      return { lat: Number(d.lat), lng: Number(d.lon), display_name: d.display_name }
+    } catch (e) {
+      console.warn('geocodeLabel error', e)
+      return null
+    }
+  }
+
+  // Ensure coordinates exist for setoff/destination when user provides text labels
+  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    // debounce to avoid rapid geocoding while typing
+    if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current)
+    geocodeTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (!setoffLocation && (bookingData as any).tripSetoff && (bookingData as any).tripSetoff.toString().trim().length > 3) {
+          const res = await geocodeLabel((bookingData as any).tripSetoff)
+          if (res) setSetoffLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripSetoff })
+        }
+        if (!destinationLocation && (bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim().length > 3) {
+          const res = await geocodeLabel((bookingData as any).tripDestination)
+          if (res) setDestinationLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripDestination })
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 400)
+    return () => { if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current) }
+  }, [(bookingData as any).tripSetoff, (bookingData as any).tripDestination, stopovers.length])
+
+  // ...existing code...
+
+  // Generate and download a PDF receipt using jsPDF
+  const downloadReceiptPDF = (result: any) => {
+    try {
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const left = 40
+      let y = 48
+
+      const vendorName = service.vendors?.business_name || 'DIRT TRAILS'
+      const receiptShort = (result.id || '').toString().replace(/-/g, '').slice(0, 8).toUpperCase()
+
+      // Header - Vendor name and receipt title
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text(vendorName, left, y)
+      y += 20
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Adventure Booking Receipt', left, y)
+      y += 20
+
+      // Receipt meta
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text(`Receipt #: ${receiptShort}`, left, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(new Date().toLocaleDateString(), pageWidth - left, y, { align: 'right' })
+      y += 18
+
+      // Status
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.text('BOOKING CONFIRMED', left, y)
+      y += 18
+
+      // Customer info
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.text('CUSTOMER INFORMATION', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Name: ${bookingData.contactName || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Email: ${bookingData.contactEmail || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Phone: ${bookingData.countryCode || ''}${bookingData.contactPhone || ''}`, left + 8, y)
+      y += 18
+
+      // Service details
+      doc.setFont('helvetica', 'bold')
+      doc.text('SERVICE DETAILS', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Activity: ${service.title}`, left + 8, y)
+      y += 12
+      doc.text(`Location: ${service.location || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Category: ${service.service_categories?.name || 'N/A'}`, left + 8, y)
+      y += 12
+      const dateText = bookingData.startDate ? new Date(bookingData.startDate).toLocaleDateString() : 'N/A'
+      doc.text(`Date: ${dateText}`, left + 8, y)
+      y += 12
+      const durationHours = Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
+      doc.text(`Duration: ${durationHours} hours`, left + 8, y)
+      y += 12
+      doc.text(`Participants: ${bookingData.passengers || 1}`, left + 8, y)
+      y += 18
+
+      // Provider
+      doc.setFont('helvetica', 'bold')
+      doc.text('SERVICE PROVIDER', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Provider: ${service.vendors?.business_name || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Contact: ${service.vendors?.business_phone || 'N/A'}`, left + 8, y)
+      y += 18
+
+      // Trip details (pickup/dropoff, duration, locations, special requests)
+      doc.setFont('helvetica', 'bold')
+      doc.text('TRIP DETAILS', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      const pickupTxt = `${bookingData.startDate || 'N/A'}${bookingData.startTime ? ' at ' + bookingData.startTime : ''}`
+      const dropTxt = `${bookingData.endDate || 'N/A'}${bookingData.endTime ? ' at ' + bookingData.endTime : ''}`
+      doc.text(`Pick-up: ${pickupTxt}`, left + 8, y)
+      y += 12
+      doc.text(`Drop-off: ${dropTxt}`, left + 8, y)
+      y += 12
+      const durDays = bookingData.startDate && bookingData.endDate ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime) : null
+      const durHours = bookingData.startDate && bookingData.endDate ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime))) : null
+      doc.text(`Duration: ${durDays !== null ? `${durDays} days` : 'N/A'} ${durHours !== null ? `(${durHours} hrs)` : ''}`, left + 8, y)
+      y += 12
+      doc.text(`Pick-up Location: ${bookingData.pickupLocation || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Drop-off Location: ${bookingData.dropoffLocation || 'N/A'}`, left + 8, y)
+      y += 12
+      doc.text(`Driver Option: ${bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}`, left + 8, y)
+      y += 12
+      doc.text(`Special Requests: ${bookingData.specialRequests || 'None'}`, left + 8, y)
+      y += 16
+
+      // Payment Summary
+      doc.setFont('helvetica', 'bold')
+      doc.text('PAYMENT SUMMARY', left, y)
+      y += 14
+      doc.setFont('helvetica', 'normal')
+      const unitPrice = basePrice || 0
+      doc.text(`Unit Price: ${unitPrice ? formatCurrencyWithConversion(unitPrice, service.currency) : `UGXNaN`}`, left + 8, y)
+      y += 12
+      doc.text(`Quantity: ${bookingData.passengers || 1}`, left + 8, y)
+      y += 12
+      doc.setFont('helvetica', 'bold')
+      doc.text(`TOTAL: ${formatCurrencyWithConversion(totalPrice, service.currency)}`, left + 8, y)
+      y += 20
+
+      doc.setFont('helvetica', 'normal')
+      doc.text('Thank you for choosing Dirt Trails!', left, y)
+      y += 18
+
+      doc.setFontSize(10)
+      doc.text(`Booking Reference: ${result.id || ''}`, left, y)
+
+      doc.save(`receipt-${result.id || 'booking'}.pdf`)
+    } catch (e) {
+      console.error('Failed to generate PDF receipt:', e)
+      alert('Failed to download PDF receipt.')
+    }
+  }
+
+  const HIRER_SERVICE_FEE_RATE = 0.02
+  const pricingBreakdown = (() => {
+    // Compute using transport-specific unit price when available.
+    const unit = getTransportUnitPrice()
+    const days = calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+    const base = (unit || 0) * days
+    const driverCostLocal = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? base * 0.3 : 0
+    const transportSubtotal = base + driverCostLocal
+    const hirerServiceFee = transportSubtotal * HIRER_SERVICE_FEE_RATE
+    const customerTotal = transportSubtotal + hirerServiceFee
+    return { transportSubtotal, hirerServiceFee, customerTotal }
   })()
 
-  const basePrice = service.price * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+  const totalPrice = pricingBreakdown.customerTotal
+  // Expose basePrice and driverCost for UI breakdown
+  const [unitPrice, setUnitPrice] = useState<number | null>(() => getTransportUnitPrice())
+  useEffect(() => {
+    setUnitPrice(getTransportUnitPrice())
+  }, [transportZone, service])
+
+  const basePrice = (unitPrice || service.price || 0) * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
   const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
 
   // Recalculate platform fee and split when price/selection changes
@@ -796,7 +1684,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Passengers *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-xs sm:text-sm"
                   value={bookingData.passengers}
                   onChange={(e) => handleInputChange('passengers', parseInt(e.target.value))}
                 >
@@ -808,7 +1696,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Driver Option *</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
                   value={bookingData.driverOption || (service.driver_included ? 'with-driver' : 'self-drive')}
                   onChange={(e) => handleInputChange('driverOption', e.target.value)}
                 >
@@ -850,14 +1738,347 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                rows={2}
-                placeholder="Any special requirements..."
-                value={bookingData.specialRequests}
-                onChange={(e) => handleInputChange('specialRequests', e.target.value)}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Journey Design</label>
+              <div className="mb-3">
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('setoff')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Set-off
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('stopovers')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Stop-overs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJourneyStep('destination')}
+                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    Destination
+                  </button>
+                </div>
+
+                <div className="p-3 border border-gray-200 rounded-lg bg-white">
+                  {journeyStep === 'setoff' && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Set-off</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Enter start point and time (e.g., Kampala, 08:00)"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          value={(bookingData as any).tripSetoff}
+                          onFocus={() => { setActiveSearchTarget('setoff'); setSearchQuery((bookingData as any).tripSetoff || '') }}
+                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                          onChange={(e) => { handleInputChange('tripSetoff', e.target.value); setSearchQuery(e.target.value) }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => openMapFor('setoff')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                        >
+                          Map
+                        </button>
+
+                        {activeSearchTarget === 'setoff' && searchResults && searchResults.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                            {searchResults.map(r => (
+                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('setoff', r)}>
+                                {r.display_name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {setoffLocation && <p className="text-xs text-gray-500 mt-2">Picked: {setoffLocation.label}</p>}
+                    </div>
+                  )}
+
+                  {journeyStep === 'stopovers' && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Stop-overs</label>
+                      <div className="space-y-2">
+                        {stopovers.length === 0 && <p className="text-xs text-gray-400">No stop-overs added yet.</p>}
+                        <div className="mt-2">
+                          <label className="sr-only">Add stop-over by typing</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              placeholder="Type to search stop-over..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                              onFocus={() => { setActiveSearchTarget('stopover'); setSearchQuery('') }}
+                              onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                              value={activeSearchTarget === 'stopover' ? searchQuery : ''}
+                              onChange={(e) => { setSearchQuery(e.target.value) }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => openMapFor('stopover')}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                            >
+                              Map
+                            </button>
+
+                            {activeSearchTarget === 'stopover' && searchResults && searchResults.length > 0 && (
+                              <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                                {searchResults.map(r => (
+                                  <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('stopover', r)}>
+                                    {r.display_name}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                        {stopovers.map(s => (
+                          <div key={s.id} className="flex items-center gap-2">
+                            <div className="flex-1 text-sm">
+                              <div className="font-medium">{s.label}</div>
+                              <div className="text-xs text-gray-500">{s.lat.toFixed(5)}, {s.lng.toFixed(5)}</div>
+                            </div>
+                            <div className="w-28">
+                              <label className="text-xs text-gray-500">Duration (hrs)</label>
+                              <input type="number" min={0} step={0.5} value={s.durationHours} onChange={(e) => updateStopoverDuration(s.id, Number(e.target.value || 0))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm" />
+                            </div>
+                            <button type="button" onClick={() => removeStopover(s.id)} className="text-red-600 text-sm">Remove</button>
+                          </div>
+                        ))}
+
+                        
+                      </div>
+                    </div>
+                  )}
+
+                  {journeyStep === 'destination' && !journeySaved && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Destination</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Final drop-off destination"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          value={(bookingData as any).tripDestination}
+                          onFocus={() => { setActiveSearchTarget('destination'); setSearchQuery((bookingData as any).tripDestination || '') }}
+                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
+                          onChange={(e) => { handleInputChange('tripDestination', e.target.value); setSearchQuery(e.target.value) }}
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openMapFor('destination')}
+                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                          >
+                            Map
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsCityModalOpen(true)}
+                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
+                          >
+                            List
+                          </button>
+                        </div>
+
+                        {activeSearchTarget === 'destination' && searchResults && searchResults.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
+                            {searchResults.map(r => (
+                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('destination', r)}>
+                                {r.display_name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">Return option</label>
+                        <div className="flex gap-3 items-center">
+                          <label className="inline-flex items-center text-sm">
+                            <input
+                              type="radio"
+                              name="tripReturnOption"
+                              value="return"
+                              checked={(bookingData as any).tripReturnOption === 'return'}
+                              onChange={() => handleReturnOptionChange('return')}
+                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
+                              className="mr-2"
+                            />
+                            Return back to set-off point
+                          </label>
+                          <label className="inline-flex items-center text-sm">
+                            <input
+                              type="radio"
+                              name="tripReturnOption"
+                              value="drop"
+                              checked={(bookingData as any).tripReturnOption === 'drop'}
+                              onChange={() => handleReturnOptionChange('drop')}
+                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
+                              className="mr-2"
+                            />
+                            Drop and leave
+                          </label>
+
+                        {/* Require a destination before allowing return-option selection */}
+                        {!(bookingData as any).tripDestination || !(bookingData as any).tripDestination.toString().trim() ? (
+                          <p className="text-xs text-gray-500 mt-2">Enter or select a destination first to enable return options.</p>
+                        ) : null}
+                        </div>
+
+                        {/** Show estimation inputs and results only after user explicitly selects a return option and a destination exists */}
+                        {hasDestination ? (
+                          (bookingData as any).tripReturnOption ? (
+                            isCalculatingReturn ? (
+                              <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
+                                <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                <span>Calculating journey estimates…</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Average speed (km/h)</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={(bookingData as any).avgSpeedKmph}
+                                      onChange={(e) => handleInputChange('avgSpeedKmph', Number(e.target.value || 0))}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Fuel efficiency (km / L)</label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step={0.1}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                      value={(bookingData as any).fuel_km_per_liter ?? (bookingData as any).fuelKmPerL ?? ((bookingData as any).fuelConsumptionPer100Km ? Number((100 / (bookingData as any).fuelConsumptionPer100Km).toFixed(2)) : '')}
+                                      onChange={(e) => {
+                                        const kmPerL = e.target.value ? Number(e.target.value) : undefined
+                                        const per100km = kmPerL ? Number((100 / kmPerL).toFixed(2)) : undefined
+                                        handleInputChange('fuel_km_per_liter', kmPerL)
+                                        // keep legacy field in sync for any code paths relying on it
+                                        handleInputChange('fuelConsumptionPer100Km', per100km ?? 0)
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 text-sm text-gray-700">
+                                  {(() => {
+                                    // Prefer coordinate-based estimates when coordinates are available
+                                    const coordDistance = computeTotalDistanceKm()
+                                    if (coordDistance > 0) {
+                                      const { hours, liters } = computeEstimatesFromDistance(
+                                        coordDistance,
+                                        Number((bookingData as any).avgSpeedKmph || 60),
+                                        Number((bookingData as any).fuelConsumptionPer100Km || 10),
+                                        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+                                      )
+                                      return (
+                                          <div className="space-y-1">
+                                            <div>Estimated hours: <span className="font-medium">{hours > 0 ? `${hours.toFixed(1)} hrs` : '—'}</span></div>
+                                            <div>Estimated distance: <span className="font-medium">{coordDistance > 0 ? `${coordDistance.toFixed(1)} km` : '—'}</span></div>
+                                            <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
+                                            {(() => {
+                                              const rc = detectAbnormalRoute()
+                                              if (rc.abnormal) return (<div className="mt-2 text-xs text-red-700">Route warning: {rc.reasons.join(' ; ')}</div>)
+                                              return null
+                                            })()}
+                                          </div>
+                                        )
+                                    }
+                                    const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+                                    const { distanceKm, liters } = estimateFuel(
+                                      estHours,
+                                      Number((bookingData as any).avgSpeedKmph || 60),
+                                      Number((bookingData as any).fuelConsumptionPer100Km || 10),
+                                      Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
+                                    )
+                                    return (
+                                      <div className="space-y-1">
+                                        <div>Estimated hours: <span className="font-medium">{estHours > 0 ? `${estHours.toFixed(1)} hrs` : '—'}</span></div>
+                                        <div>Estimated distance: <span className="font-medium">{distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—'}</span></div>
+                                        <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+                              </>
+                            )
+                          ) : (
+                            <div className="mt-3 text-sm text-gray-500">Select a return option to run journey estimates.</div>
+                          )
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+
+                  
+
+                  {journeySaved ? (
+                    <div className="mt-4 p-4 border rounded-md bg-gray-50">
+                      <div className="text-sm whitespace-pre-line text-gray-800">{(bookingData as any).journeySummary || buildJourneySummary()}</div>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => { setJourneySaved(false); setJourneyStep('destination') }}
+                          className="px-3 py-2 bg-yellow-500 text-white rounded-md"
+                        >
+                          Edit trip
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between mt-3">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (journeyStep === 'setoff') setJourneyStep('setoff')
+                            else if (journeyStep === 'stopovers') setJourneyStep('setoff')
+                            else setJourneyStep('stopovers')
+                          }}
+                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md mr-2"
+                        >
+                          Back
+                        </button>
+                      </div>
+                      <div>
+                        {/** Disable Next on Destination until a return option is selected */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (journeyStep === 'setoff') setJourneyStep('stopovers')
+                            else if (journeyStep === 'stopovers') setJourneyStep('destination')
+                            else saveJourney()
+                          }}
+                          disabled={journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)}
+                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
+                        >
+                          {journeyStep === 'destination' ? 'Save my trip' : 'Next'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
+                  rows={2}
+                  placeholder="Any special requirements..."
+                  value={bookingData.specialRequests}
+                  onChange={(e) => handleInputChange('specialRequests', e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Contact Information Section */}
@@ -1038,19 +2259,57 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 )}
               </div>
 
-              {/* Mobile Money Provider */}
+              {/* Mobile Money Phone + Provider */}
               {bookingData.paymentMethod === 'mobile' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    value={bookingData.mobileProvider}
-                    onChange={(e) => handleInputChange('mobileProvider', e.target.value)}
-                  >
-                    <option value="">Select provider</option>
-                    <option value="MTN">MTN Mobile Money</option>
-                    <option value="Airtel">Airtel Money</option>
-                  </select>
+                <div className="space-y-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.trimStart())}
+                      placeholder="0712345678 or +256712345678"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'MTN')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'MTN' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#FFD200"/><text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text></svg>
+                        <span className="text-sm font-medium">MTN</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('mobileProvider', 'Airtel')}
+                        className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${bookingData.mobileProvider === 'Airtel' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
+                      >
+                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><rect width="18" height="14" rx="2" fill="#E60000"/><text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text></svg>
+                        <span className="text-sm font-medium">Airtel</span>
+                      </button>
+                    </div>
+                  </div>
+                  {pollingMessage && (
+                    <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">{pollingMessage}</p>
+                  )}
+                  {isPaymentProcessing && isReceiptFinalizing && !bookingConfirmed && (
+                    <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
+                      <div className="flex items-start gap-2">
+                        <svg className="mt-0.5 h-4 w-4 animate-spin text-emerald-700" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <div>
+                          <p className="text-sm font-medium text-emerald-800">Payment received</p>
+                          <p className="text-xs text-emerald-700">Preparing your booking receipt now. This usually takes a few seconds.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1069,6 +2328,36 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <p className="text-gray-600 text-sm sm:text-base">
                 Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
               </p>
+
+              {/* Booking reference & quick actions */}
+              {bookingResult?.id && (
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="bg-gray-100 px-3 py-2 rounded-lg text-sm flex items-center gap-3">
+                    <span className="font-semibold">Reference:</span>
+                    <span className="break-all">{bookingResult.id}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => { try { await navigator.clipboard.writeText(bookingResult.id); alert('Booking reference copied'); } catch { /* ignore */ } }}
+                      className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
+                    >
+                      Copy reference
+                    </button>
+                    <button
+                      onClick={() => downloadReceiptPDF(bookingResult || {})}
+                      className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
+                    >
+                      Download receipt (PDF)
+                    </button>
+                    <button
+                      onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm"
+                    >
+                      Message provider
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Service Details */}
@@ -1201,7 +2490,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Message Provider
               </button>
@@ -1215,11 +2504,14 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
             {/* Similar Services Carousel */}
             {service.category_id && (
-              <SimilarServicesCarousel
-                categoryId={service.category_id}
-                excludeServiceId={service.id}
-                limit={8}
-              />
+              <div className="pt-6">
+                <h3 className="text-sm font-semibold mb-3">Other services you may like</h3>
+                <SimilarServicesCarousel
+                  categoryId={service.category_id}
+                  excludeServiceId={service.id}
+                  limit={8}
+                />
+              </div>
             )}
           </div>
         )
@@ -1231,172 +2523,251 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
+    // NOTE: Keep this confirmation receipt manually in sync with
+    // supabase/functions/send-booking-emails/index.ts (tourist receipt design).
+    // ── Design tokens — identical to send-booking-emails PDF ──
+    const T = {
+      green:   '#1B3A2D',
+      amber:   '#C9873A',
+      ivory:   '#FAF6EE',
+      dark:    '#1C1917',
+      sage:    '#8FAF9B',
+      cream:   '#F2EDE4',
+      paid:    '#2D6A4F',
+      pending: '#C9873A',
+    }
+    const SH = ({ children }: { children: React.ReactNode }) => (
+      <div style={{ marginBottom: '12px', marginTop: '4px' }}>
+        <div style={{ height: '1px', background: '#EEE9DF', marginBottom: '8px' }} />
+        <p style={{ margin: 0, fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>{children}</p>
+      </div>
+    )
+    const RR = ({ label, value }: { label: string; value: React.ReactNode }) => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '7px' }}>
+        <span style={{ color: T.sage, fontSize: '12px', flexShrink: 0, width: '38%', fontFamily: 'Arial, sans-serif' }}>{label}</span>
+        <span style={{ color: T.dark, fontSize: '13px', fontWeight: 600, textAlign: 'right' as const, wordBreak: 'break-word' as const, maxWidth: '58%', fontFamily: 'Arial, sans-serif' }}>{value}</span>
+      </div>
+    )
+
+    const payColor  = (bookingResult?.payment_status || 'pending') === 'paid' ? T.paid : T.pending
+    const fullPhone = (bookingData.countryCode || '') + (bookingData.contactPhone || '')
+    const durDays  = bookingData.startDate && bookingData.endDate
+      ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
+      : null
+    const durHrs   = durDays !== null
+      ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
+      : null
+    const durationStr = durDays !== null ? `${durDays} day${durDays !== 1 ? 's' : ''} (${durHrs} hrs)` : 'N/A'
+
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32 min-h-screen">
-        <div className="space-y-4 sm:space-y-6 -mt-20 sm:-mt-24">
-          {/* Success Header */}
-          <div className="text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-            <p className="text-gray-600 text-sm sm:text-base">
-              Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
-            </p>
+      <>
+      <div style={{ maxWidth: '560px', margin: '0 auto', fontFamily: 'Arial, Helvetica, sans-serif', padding: '24px 16px' }}>
+
+        {/* ── TOP SCALLOPED EDGE ── */}
+        <div style={{
+          height: '14px',
+          background: T.ivory,
+          backgroundImage: `radial-gradient(circle at 10px 14px, #E8E0D0 10px, transparent 11px)`,
+          backgroundSize: '20px 14px',
+          backgroundRepeat: 'repeat-x',
+          borderLeft: '1px solid #D4C9B8',
+          borderRight: '1px solid #D4C9B8',
+        }} />
+
+        {/* ── RECEIPT BODY ── */}
+        <div style={{
+          background: T.ivory,
+          border: '1px solid #D4C9B8',
+          borderTop: 'none',
+          borderBottom: 'none',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 8px 48px rgba(27,58,45,.14)',
+        }}>
+
+          {/* Faint CONFIRMED watermark */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+            <span style={{ fontSize: '64px', fontWeight: 900, letterSpacing: '4px', color: T.green, opacity: 0.03, transform: 'rotate(-22deg)', whiteSpace: 'nowrap', userSelect: 'none' as const, fontFamily: 'Georgia, serif', textTransform: 'uppercase' as const }}>
+              CONFIRMED
+            </span>
           </div>
 
-          {/* Service Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Service:</span>
-                <span className="font-medium text-right">{service.title}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Location:</span>
-                <span className="font-medium text-right">{service.location}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Category:</span>
-                <span className="font-medium text-right">{service.service_categories.name}</span>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+
+            {/* ── HEADER — matches PDF: amber rules, DIRT TRAILS centred ── */}
+            <div style={{ background: T.green, padding: '32px 44px', textAlign: 'center' }}>
+              <div style={{ display: 'inline-block', borderTop: `1px solid rgba(201,135,58,0.55)`, borderBottom: `1px solid rgba(201,135,58,0.55)`, padding: '7px 28px' }}>
+                <h1 style={{ margin: '0 0 4px', color: T.ivory, fontSize: '26px', letterSpacing: '8px', fontFamily: 'Georgia, serif', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1.1 }}>
+                  DIRT TRAILS
+                </h1>
+                <p style={{ margin: 0, color: T.amber, fontSize: '9px', letterSpacing: '5px', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                  ADVENTURE BOOKING RECEIPT
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Service Provider */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Provider:</span>
-                <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Phone:</span>
-                <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Trip Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Pick-up Date & Time:</span>
-                <span className="font-medium text-right">{bookingData.startDate || 'Not set'} {bookingData.startTime ? `at ${bookingData.startTime}` : ''}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Drop-off Date & Time:</span>
-                <span className="font-medium text-right">{bookingData.endDate || 'Not set'} {bookingData.endTime ? `at ${bookingData.endTime}` : ''}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Duration:</span>
-                <span className="font-medium text-right">
-                  {bookingData.startDate && bookingData.endDate 
-                    ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days`
-                    : 'N/A'
-                  }
+            {/* ── STATUS STRIPE ── */}
+            <div style={{ background: T.amber, padding: '13px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
+                <CheckCircle size={11} color={T.green} />
+                <span style={{ color: T.green, fontSize: '11px', letterSpacing: '4px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
+                  BOOKING CONFIRMED
                 </span>
               </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Pick-up Location:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.pickupLocation || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Drop-off Location:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.dropoffLocation || 'N/A'}</span>
-              </div>
             </div>
-          </div>
 
-          {/* Passenger & Payment Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Passengers:</span>
-                <span className="font-medium">{bookingData.passengers}</span>
+            {/* ── CONTENT ── */}
+            <div style={{ padding: '32px 44px' }}>
+
+              {/* Reference box: cream bg + amber left border — matches PDF */}
+              <div style={{ background: T.cream, borderLeft: `3px solid ${T.amber}`, padding: '16px 20px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>BOOKING REFERENCE</p>
+                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '13px', fontWeight: 700, letterSpacing: '2px', color: T.green, wordBreak: 'break-all' as const }}>
+                    {(bookingResult?.id || '').toUpperCase() || 'N/A'}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>DATE BOOKED</p>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: T.dark, fontFamily: 'Arial, sans-serif' }}>
+                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Driver Option:</span>
-                <span className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</span>
+
+              {/* ── GUEST ── */}
+              <SH>Guest</SH>
+              <RR label="Name"  value={bookingData.contactName  || 'N/A'} />
+              <RR label="Email" value={bookingData.contactEmail || '—'} />
+              <RR label="Phone" value={fullPhone || '—'} />
+
+              {/* ── SERVICE DETAILS ── */}
+              <SH>Service Details</SH>
+              <RR label="Service"  value={service.title} />
+              <RR label="Provider" value={service.vendors?.business_name || 'N/A'} />
+              <RR label="Location" value={service.location || 'N/A'} />
+              <RR label="Experience Date" value={bookingData.startDate || 'N/A'} />
+              <RR label="Guests"   value={`${bookingData.passengers || 1} guest${(bookingData.passengers || 1) !== 1 ? 's' : ''}`} />
+
+              {/* ── SERVICE PROVIDER ── */}
+              <SH>Service Provider</SH>
+              <RR label="Business" value={service.vendors?.business_name  || 'N/A'} />
+              <RR label="Email"    value={service.vendors?.business_email || 'N/A'} />
+              {service.vendors?.business_phone && <RR label="Phone" value={service.vendors.business_phone} />}
+
+              {/* ── TRIP DETAILS ── */}
+              <SH>Trip Details</SH>
+              <RR label="Pick-up"  value={`${bookingData.startDate || 'N/A'}${bookingData.startTime ? ` at ${bookingData.startTime}` : ''}`} />
+              <RR label="Drop-off" value={`${bookingData.endDate   || 'N/A'}${bookingData.endTime   ? ` at ${bookingData.endTime}`   : ''}`} />
+              <RR label="Duration" value={durationStr} />
+              {bookingData.pickupLocation  && <RR label="Pick-up Loc"  value={bookingData.pickupLocation} />}
+              {bookingData.dropoffLocation && <RR label="Drop-off Loc" value={bookingData.dropoffLocation} />}
+              <RR label="Driver" value={bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'} />
+              {bookingData.paymentMethod === 'mobile' && bookingData.mobileProvider && (
+                <RR label="Payment Provider" value={bookingData.mobileProvider} />
+              )}
+
+              {/* ── PAYMENT SUMMARY — cream box, large amount + status — matches PDF ── */}
+              <SH>Payment Summary</SH>
+              <RR label="Subtotal"       value={formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency)} />
+              <RR label="Hirer Fee (2%)" value={formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee,   service.currency)} />
+              <RR label="Quantity"       value={String(bookingData.passengers || 1)} />
+
+              <div style={{ background: '#F0F7F4', borderLeft: '3px solid #2D6A4F', padding: '16px 20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>TOTAL AMOUNT</p>
+                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '20px', fontWeight: 700, color: T.green }}>
+                    {formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>STATUS</p>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: payColor, fontFamily: 'Arial, sans-serif' }}>
+                    {(bookingResult?.payment_status || 'pending').toUpperCase()}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Special Requests:</span>
-                <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Payment Method:</span>
-                <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
-              </div>
-              {bookingData.paymentMethod === 'mobile' && (
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Provider:</span>
-                  <span className="font-medium">{bookingData.mobileProvider}</span>
+
+              {/* SPECIAL REQUESTS */}
+              {bookingData.specialRequests && (
+                <div style={{ marginTop: '12px' }}>
+                  <SH>Special Requests</SH>
+                  <p style={{ margin: 0, color: T.dark, fontSize: '13px', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
+                    "{bookingData.specialRequests}"
+                  </p>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Contact Details */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
-            <div className="space-y-3 text-xs sm:text-sm">
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Name:</span>
-                <span className="font-medium text-right">{bookingData.contactName}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
-              </div>
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Phone:</span>
-                <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
+            </div>
+
+            {/* ── GREEN FOOTER BAND — matches PDF footer exactly ── */}
+            <div style={{ background: T.green, padding: '28px 44px', textAlign: 'center' }}>
+              <div style={{ borderTop: `1px solid rgba(201,135,58,0.4)`, paddingTop: '10px', paddingBottom: '10px' }}>
+                <div style={{ borderBottom: `1px solid rgba(201,135,58,0.4)`, paddingBottom: '10px' }}>
+                  <p style={{ margin: '0 0 8px', color: T.amber, fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif' }}>
+                    DIRTTRAILS ADVENTURES
+                  </p>
+                  <p style={{ margin: 0, color: '#5D8070', fontSize: '12px', fontFamily: 'Arial, sans-serif', lineHeight: 1.7 }}>
+                    Questions? Contact your service provider or visit our platform.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Price Summary */}
-          <div className="pt-4 sm:pt-6 border-t border-gray-200">
-            <div className="flex justify-between items-center">
-              <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
-            </div>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
-            <button
-              onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-              className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-            >
-              Message Provider
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-            >
-              Home
-            </button>
-          </div>
+        {/* ── BOTTOM SCALLOPED EDGE ── */}
+        <div style={{
+          height: '14px',
+          background: T.ivory,
+          backgroundImage: `radial-gradient(circle at 10px 0px, #E8E0D0 10px, transparent 11px)`,
+          backgroundSize: '20px 14px',
+          backgroundRepeat: 'repeat-x',
+          borderLeft: '1px solid #D4C9B8',
+          borderRight: '1px solid #D4C9B8',
+          borderBottom: '1px solid #D4C9B8',
+        }} />
 
-          {/* Similar Services Carousel */}
-          {service.category_id && (
+        {/* ── ACTION BUTTONS ── */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <button
+            onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+            style={{ flex: 1, background: T.green, color: T.ivory, border: 'none', padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Message Provider
+          </button>
+          <button
+            onClick={() => downloadReceiptPDF(bookingResult || {})}
+            style={{ background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+            title="Download receipt PDF"
+          >
+            <CreditCard size={14} color={T.green} />
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            style={{ flex: 1, background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Home
+          </button>
+        </div>
+
+        {/* ── SIMILAR SERVICES ── */}
+        {service.category_id && (
+          <div style={{ marginTop: '28px' }}>
+            <h3 style={{ textAlign: 'center', fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, color: T.green, fontFamily: 'Arial, sans-serif', marginBottom: '14px', fontWeight: 700 }}>
+              You may also like
+            </h3>
             <SimilarServicesCarousel
               categoryId={service.category_id}
               excludeServiceId={service.id}
               limit={8}
             />
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
+      </>
     )
   }
 
@@ -1414,7 +2785,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
           <button
             onClick={() => setCurrentStep(1)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
             Try Again
           </button>
@@ -1444,169 +2815,192 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         </div>
       </div>
 
-      {/* Progress Steps - Sticky */}
-      <div className="bg-white shadow-sm sticky top-16 z-20 border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between w-full flex-nowrap">
-            {steps.map((step, index) => {
-              const Icon = step.icon
-              const isActive = step.id === currentStep
-              const isCompleted = step.id < currentStep
+      {/* Progress Steps removed as requested */}
+      {/* City Picker Modal */}
+      <CityPickerModal
+        isOpen={isCityModalOpen}
+        onClose={() => setIsCityModalOpen(false)}
+        onSelect={handleCitySelect}
+        selectedCity={(bookingData as any).tripDestination || ''}
+      />
 
-              return (
-                <div key={step.id} className="flex items-center flex-none">
-                  <div className={`flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full ${
-                    isCompleted
-                      ? 'bg-green-600 text-white'
-                      : isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    <Icon className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                  </div>
-                  <span className={`ml-0.5 md:ml-1 text-[10px] md:text-xs font-medium ${
-                    isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <div className={`${isCompleted ? 'bg-green-600' : 'bg-gray-200'} w-2 md:w-3 h-0.5 mx-0.5 md:mx-1`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Map Modal (used for set-off / stopovers / destination) */}
+      <MapModal
+        isOpen={isMapModalOpen}
+        onClose={() => { setIsMapModalOpen(false); setMapModalMode(null) }}
+        onSelect={handleMapSelect}
+        initialMarker={mapInitialMarker}
+      />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32">
-
-        {/* Main Layout: Image on Left, Form on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 -mt-32">
-          
-          {/* Service Image - Sticky on Desktop */}
-          <div className="lg:col-span-5 -mx-3 sm:-mx-0 lg:mx-0">
-            <div className="sticky top-4">
-              <div className="relative">
-                <img
-                  src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                  alt={service.title}
-                  className="w-screen lg:w-full h-64 md:h-80 object-cover cursor-pointer"
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={handleTouchEnd}
-                />
-                {service.images && service.images.length > 0 && (
-                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs">
-                    {currentImageIndex + 1} / {service.images.length}
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 -mt-32">
+          {/* Images on top for web: use order classes */}
+          <div className="order-1 lg:order-1 lg:col-span-7">
+            {/* Professional image gallery with sliding effect */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-full max-w-4xl mx-auto flex flex-col lg:grid lg:grid-cols-3 gap-6 items-center">
+                {/* Main image and arrows - left 2/3 */}
+                <div className="relative flex items-center justify-center w-full col-span-2">
+                  {/* Left arrow */}
+                  {service.images && service.images.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1;
+                        setCurrentImageIndex(prevIndex);
+                        setSelectedImage(service.images[prevIndex]);
+                      }}
+                      className="absolute left-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
+                      aria-label="Previous image"
+                    >
+                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  )}
+                  {/* Main image - bigger, cleaner */}
+                  <img
+                    src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                    alt={service.title}
+                    className="rounded-xl object-cover mx-auto border border-gray-100 shadow-sm"
+                    style={{ width: '100%', maxWidth: 720, height: 420, objectFit: 'cover', background: '#f8fafc' }}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                  />
+                  {/* Right arrow */}
+                  {service.images && service.images.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const nextIndex = (currentImageIndex + 1) % service.images.length;
+                        setCurrentImageIndex(nextIndex);
+                        setSelectedImage(service.images[nextIndex]);
+                      }}
+                      className="absolute right-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
+                      style={{ top: '50%', transform: 'translateY(-50%)' }}
+                      aria-label="Next image"
+                    >
+                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  )}
+                  {/* Image count indicator */}
+                  {service.images && service.images.length > 0 && (
+                    <div className="absolute bottom-3 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wide shadow">
+                      {currentImageIndex + 1} / {service.images.length}
+                    </div>
+                  )}
+                </div>
+                {/* Thumbnails - right 1/3, vertically centered */}
+                {service.images && service.images.length > 1 && (
+                  <div className="w-full flex lg:block overflow-x-auto pb-1 lg:pb-0 col-span-1 flex-col justify-center items-center h-full">
+                    <div className="flex lg:grid lg:grid-cols-2 lg:grid-rows-3 gap-3 lg:gap-4 w-full lg:h-[420px] items-center content-center">
+                      {service.images.map((img, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setCurrentImageIndex(index);
+                            setSelectedImage(img);
+                          }}
+                          className={`w-20 h-20 lg:w-[104px] lg:h-[128px] rounded-xl border-2 transition-all ${
+                            currentImageIndex === index ? 'border-blue-600' : 'border-gray-200 hover:border-blue-400'
+                          } flex-shrink-0 overflow-hidden bg-white shadow-sm`}
+                          style={{ outline: currentImageIndex === index ? '2px solid #059669' : 'none' }}
+                          aria-label={`Show image ${index + 1}`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-              
-              {/* Image Thumbnails - Desktop Only */}
-              {service.images && service.images.length > 1 && (
-                <div className="hidden lg:flex gap-2 mt-3">
-                  {service.images.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setCurrentImageIndex(index)
-                        setSelectedImage(img)
-                      }}
-                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        currentImageIndex === index ? 'border-blue-600' : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Thumbnail ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
-
-          {/* Form and Details - Right Side */}
-          <div className="lg:col-span-7 space-y-3 sm:space-y-4 pt-2 sm:pt-4">
+          {/* Details below images for web, but stacked for mobile */}
+          <div className="order-2 lg:order-2 lg:col-span-7 space-y-6 pt-2 sm:pt-4">
             {/* Service Info Header */}
-            <div>
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-1">
-                {service.title} <span className="text-gray-600 font-normal">in {service.location}</span>
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <h2 className="text-lg md:text-2xl font-bold text-gray-900 mb-1">
+                {service.title} <span className="text-gray-600 font-normal text-base">in {service.location}</span>
               </h2>
-              <p className="text-gray-600 text-xs sm:text-sm mb-3">{service.service_categories.name}</p>
-              
-              {/* Price Summary */}
+              <p className="text-gray-600 text-xs sm:text-sm mb-2">{service.service_categories.name}</p>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg sm:text-xl font-bold text-gray-900">
                     {formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    One way {bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}
+                    {service.service_categories?.name?.toLowerCase() === 'transport'
+                      ? `per day${bookingData.startDate && bookingData.endDate ? ` • ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`
+                      : `One way${bookingData.startDate && bookingData.endDate ? ` • ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}`}
                   </div>
                 </div>
               </div>
             </div>
-
+            {/* Transport zone selector (move above Trip Dates & Times) */}
+            {service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && (
+              <div className="mb-6 p-4 rounded-lg bg-emerald-50 border border-emerald-100">
+                <label className="block text-sm font-semibold text-emerald-900 mb-2">Service Area *</label>
+                <div className="flex items-center gap-4 text-sm mb-2">
+                  {(service as any).price_within_town !== undefined && (
+                    <label className="inline-flex items-center">
+                      <input type="radio" name="transportZoneTop" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                      <span>Within Town {typeof (service as any).price_within_town === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_within_town, service.currency)}` : ''}</span>
+                    </label>
+                  )}
+                  {(service as any).price_upcountry !== undefined && (
+                    <label className="inline-flex items-center">
+                      <input type="radio" name="transportZoneTop" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                      <span>Upcountry {typeof (service as any).price_upcountry === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_upcountry, service.currency)}` : ''}</span>
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-700">Select whether this trip is within town or upcountry to see the correct price.</p>
+              </div>
+            )}
             {/* Step Content */}
-            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
+            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 shadow-sm">
               {renderStepContent()}
             </div>
-
-        {/* Navigation */}
-        {currentStep < 2 && (
-          <div className="mt-4 sm:mt-6">
-            {/* Mobile: Horizontal layout with smaller buttons */}
-            <div className="flex md:hidden justify-between gap-2">
-              <button
-                onClick={handleBack}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-xs sm:text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={
-                  !bookingData.startDate ||
-                  !bookingData.endDate ||
-                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                  !bookingData.contactName ||
-                  !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card'
-                }
-                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium"
-              >
-                Complete Booking
-              </button>
-            </div>
-
-            {/* Desktop: Horizontal layout */}
-            <div className="hidden md:flex justify-between gap-3 mt-4">
-              <button
-                onClick={handleBack}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={
-                  !bookingData.startDate ||
-                  !bookingData.endDate ||
-                  (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                  !bookingData.contactName ||
-                  !bookingData.contactEmail ||
-                  bookingData.paymentMethod === 'card'
-                }
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                Complete Booking
-              </button>
-            </div>
-          </div>
-        )}
+            {/* Navigation */}
+            {currentStep < 2 && (
+              <div className="mt-6 flex flex-col md:flex-row gap-3 justify-end">
+                <button
+                  onClick={handleNext}
+                  disabled={
+                    isPaymentProcessing ||
+                    !bookingData.startDate ||
+                    !bookingData.endDate ||
+                    (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
+                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
+                    !bookingData.contactName ||
+                    !bookingData.contactEmail ||
+                    bookingData.paymentMethod === 'card' ||
+                    (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
+                  }
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
+                >
+                  {isPaymentProcessing
+                    ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
+                    : 'Pay with Mobile Money'}
+                </button>
+                {/* Up Arrow Icon below button on all screens, scrolls to top */}
+                <div className="w-full flex justify-center mt-4">
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    aria-label="Back to top"
+                    title="Back to top"
+                    className="bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-full shadow-xl border-2 border-white p-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all duration-200"
+                    style={{ boxShadow: '0 6px 32px 0 rgba(0,0,0,0.18)' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
