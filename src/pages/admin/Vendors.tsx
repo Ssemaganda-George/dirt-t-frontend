@@ -2,20 +2,24 @@ import { useEffect, useState } from 'react'
 import { formatDate, getStatusColor, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, Store, UserCog } from 'lucide-react'
 import { getAllVendors, updateVendorStatus, Vendor } from '../../lib/database'
-import { getActiveTiers } from '../../lib/commissionService'
+import { getActiveTiers, getAutomaticTierForVendor } from '../../lib/commissionService'
 import { VendorTier } from '../../types'
 import { supabase } from '../../lib/supabaseClient'
 
-const getCurrentTierDisplay = (vendor: Vendor) => {
-  if (vendor.manual_tier_id) {
-    const tierName = vendor.manual_tier_id === '1' ? 'Bronze' : 
-                    vendor.manual_tier_id === '2' ? 'Silver' : 'Gold';
-    const isExpired = vendor.manual_tier_expires_at && new Date(vendor.manual_tier_expires_at) < new Date();
+function tierBadge(
+  vendor: Vendor,
+  tierNameById: Record<string, string>
+) {
+  const now = new Date()
+  const manualActive =
+    !!vendor.manual_tier_id &&
+    (!vendor.manual_tier_expires_at || new Date(vendor.manual_tier_expires_at) > now)
+
+  if (manualActive) {
+    const tierName = tierNameById[vendor.manual_tier_id!] ?? 'Unknown'
     return (
       <div className="flex flex-col">
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          isExpired ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-800'
-        }`}>
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
           {tierName} (Manual)
         </span>
         {vendor.manual_tier_expires_at && (
@@ -24,17 +28,28 @@ const getCurrentTierDisplay = (vendor: Vendor) => {
           </span>
         )}
       </div>
-    );
-  } else {
-    const tierName = vendor.current_tier_id === '1' ? 'Bronze' : 
-                    vendor.current_tier_id === '2' ? 'Silver' : 'Gold';
-    return (
-      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-        {tierName} (Auto)
-      </span>
-    );
+    )
   }
-};
+
+  if (vendor.manual_tier_id && vendor.manual_tier_expires_at && new Date(vendor.manual_tier_expires_at) <= now) {
+    const tierName = tierNameById[vendor.current_tier_id ?? ''] ?? 'Unknown'
+    return (
+      <div className="flex flex-col">
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
+          {tierName} (Auto)
+        </span>
+        <span className="text-xs text-gray-500 mt-1">Manual tier expired</span>
+      </div>
+    )
+  }
+
+  const autoName = tierNameById[vendor.current_tier_id ?? ''] ?? 'Unknown'
+  return (
+    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+      {autoName} (Auto)
+    </span>
+  )
+}
 
 export default function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -44,6 +59,7 @@ export default function Vendors() {
   const [showTierModal, setShowTierModal] = useState(false)
   const [tierVendor, setTierVendor] = useState<Vendor | null>(null)
   const [availableTiers, setAvailableTiers] = useState<VendorTier[]>([])
+  const [tierNameById, setTierNameById] = useState<Record<string, string>>({})
   const [tierForm, setTierForm] = useState({
     tierId: '',
     expiresAt: '',
@@ -52,6 +68,20 @@ export default function Vendors() {
 
   useEffect(() => {
     fetchVendors()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    getActiveTiers()
+      .then((tiers) => {
+        if (!cancelled) {
+          setTierNameById(Object.fromEntries(tiers.map((t) => [t.id, t.name])))
+        }
+      })
+      .catch((e) => console.error('Error loading tier names:', e))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const fetchVendors = async () => {
@@ -78,7 +108,7 @@ export default function Vendors() {
   const handleAssignTier = (vendor: Vendor) => {
     setTierVendor(vendor)
     setTierForm({
-      tierId: vendor.manual_tier_id || '',
+      tierId: vendor.manual_tier_id || vendor.current_tier_id || '',
       expiresAt: vendor.manual_tier_expires_at ? new Date(vendor.manual_tier_expires_at).toISOString().split('T')[0] : '',
       reason: vendor.manual_tier_reason || ''
     })
@@ -143,6 +173,21 @@ export default function Vendors() {
         .eq('id', vendor.id)
 
       if (error) throw error
+
+      const automaticTier = await getAutomaticTierForVendor(vendor.id)
+      if (automaticTier) {
+        await supabase
+          .from('vendors')
+          .update({
+            current_tier_id: automaticTier.id,
+            current_commission_rate:
+              automaticTier.commission_type === 'flat'
+                ? 0
+                : automaticTier.commission_rate ??
+                  Number(automaticTier.commission_value || 0) / 100
+          })
+          .eq('id', vendor.id)
+      }
 
       await fetchVendors()
     } catch (error) {
@@ -263,7 +308,7 @@ export default function Vendors() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getCurrentTierDisplay(vendor)}
+                    {tierBadge(vendor, tierNameById)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(vendor.created_at)}
@@ -407,7 +452,7 @@ export default function Vendors() {
                     Current Tier
                   </label>
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    {getCurrentTierDisplay(tierVendor)}
+                    {tierBadge(tierVendor, tierNameById)}
                   </div>
                 </div>
 

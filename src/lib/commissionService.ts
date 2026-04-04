@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { Vendor, Booking, VendorTier } from '../types';
+import { commissionPercentValueToRate, effectiveVendorTierId } from './pricingService';
 
 export interface CommissionCalculation {
   commissionRate: number;
@@ -18,10 +19,9 @@ export async function calculateCommission(
   vendorId: string,
   servicePrice: number
 ): Promise<CommissionCalculation> {
-  // Get vendor's current tier from pricing_tiers
   const { data: vendor, error } = await supabase
     .from('vendors')
-    .select('current_tier_id')
+    .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
     .eq('id', vendorId)
     .single();
 
@@ -32,23 +32,22 @@ export async function calculateCommission(
   let commissionRate = 0.15; // Default to 15%
   let commissionAmount = 0;
 
-  if (vendor.current_tier_id) {
-    // Try pricing_tiers first
+  const tierRowId = effectiveVendorTierId(vendor);
+  if (tierRowId) {
     let tier: { commission_type?: string; commission_value?: number } | null = null;
     const { data: pt } = await supabase
       .from('pricing_tiers')
       .select('commission_type, commission_value')
-      .eq('id', vendor.current_tier_id)
+      .eq('id', tierRowId)
       .eq('is_active', true)
       .maybeSingle();
     if (pt) tier = pt;
 
-    // Fallback: vendor_tiers (vendors may point here; now supports flat)
     if (!tier) {
       const { data: vt } = await supabase
         .from('vendor_tiers')
         .select('commission_type, commission_value')
-        .eq('id', vendor.current_tier_id)
+        .eq('id', tierRowId)
         .eq('is_active', true)
         .maybeSingle();
       if (vt && (vt.commission_type || vt.commission_value != null)) tier = vt;
@@ -61,7 +60,7 @@ export async function calculateCommission(
         commissionAmount = commissionValue;
         commissionRate = servicePrice > 0 ? commissionAmount / servicePrice : 0;
       } else {
-        commissionRate = commissionValue > 1 ? commissionValue / 100 : commissionValue;
+        commissionRate = commissionPercentValueToRate(commissionValue);
         commissionAmount = servicePrice * commissionRate;
       }
     }

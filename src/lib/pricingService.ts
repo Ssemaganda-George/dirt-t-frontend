@@ -62,6 +62,30 @@ export interface PricingPreview {
 }
 
 /**
+ * Normalizes stored commission "value" for percentage tiers: percent points (12 → 12%)
+ * or decimal rate (0.12 → 12%).
+ */
+export function commissionPercentValueToRate(value: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  if (n > 1) return Math.min(1, n / 100);
+  return Math.min(1, n);
+}
+
+/** Active manual tier overrides automatic tier for pricing and display. */
+export function effectiveVendorTierId(v: {
+  current_tier_id: string | null;
+  manual_tier_id?: string | null;
+  manual_tier_expires_at?: string | null;
+}): string | null {
+  const manualActive =
+    !!v.manual_tier_id &&
+    (!v.manual_tier_expires_at || new Date(v.manual_tier_expires_at) > new Date());
+  if (manualActive) return v.manual_tier_id!;
+  return v.current_tier_id;
+}
+
+/**
  * Resolves vendor tier to commission config. Vendors may have current_tier_id pointing to
  * either pricing_tiers (new) or vendor_tiers (legacy). When it points to vendor_tiers,
  * we look up the tier name and use the matching pricing_tiers row so admin-edited
@@ -86,7 +110,7 @@ async function resolveTierCommission(
     if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
       const platformFee = pt.commission_type === 'flat'
         ? Number(pt.commission_value)
-        : basePrice * (Number(pt.commission_value) / 100);
+        : basePrice * commissionPercentValueToRate(Number(pt.commission_value));
       return { platformFee, pricingReferenceId: pt.id };
     }
   }
@@ -106,7 +130,7 @@ async function resolveTierCommission(
     if (vtCommissionType && vtCommissionValue != null) {
       const platformFee = vtCommissionType === 'flat'
         ? vtCommissionValue
-        : basePrice * (vtCommissionValue > 1 ? vtCommissionValue / 100 : vtCommissionValue);
+        : basePrice * commissionPercentValueToRate(vtCommissionValue);
       return { platformFee, pricingReferenceId: vt.id };
     }
 
@@ -127,7 +151,7 @@ async function resolveTierCommission(
         if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
           const platformFee = ptByName.commission_type === 'flat'
             ? Number(ptByName.commission_value)
-            : basePrice * (Number(ptByName.commission_value) / 100);
+            : basePrice * commissionPercentValueToRate(Number(ptByName.commission_value));
           return { platformFee, pricingReferenceId: ptByName.id };
         }
       }
@@ -253,21 +277,22 @@ export async function calculatePayment(
       };
     }
 
-    // Use vendor tier pricing
+    // Use vendor tier pricing (manual tier wins when active)
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
-      .select('current_tier_id')
+      .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
       .eq('id', service.vendor_id)
       .single();
 
     let platformFee = 0;
     let pricingReferenceId = '';
 
-    if (vendor && !vendorError && vendor.current_tier_id) {
+    const tierId = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
+    if (tierId) {
       try {
-        console.debug('calculatePayment: resolving tier', { vendorId: service.vendor_id, tierId: vendor.current_tier_id });
+        console.debug('calculatePayment: resolving tier', { vendorId: service.vendor_id, tierId });
       } catch (e) {}
-      const resolved = await resolveTierCommission(vendor.current_tier_id, basePrice, purchaseDate);
+      const resolved = await resolveTierCommission(tierId, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
     } else {
@@ -415,19 +440,20 @@ export async function calculatePaymentForAmount(
       };
     }
 
-    // Use vendor tier pricing
+    // Use vendor tier pricing (manual tier wins when active)
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
-      .select('current_tier_id')
+      .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
       .eq('id', service.vendor_id)
       .single();
 
     let platformFee = 0;
     let pricingReferenceId = '';
 
-    if (vendor && !vendorError && vendor.current_tier_id) {
-      try { console.debug('calculatePaymentForAmount: resolving tier', { vendorId: service.vendor_id, tierId: vendor.current_tier_id }); } catch (e) {}
-      const resolved = await resolveTierCommission(vendor.current_tier_id, basePrice, purchaseDate);
+    const tierIdForAmount = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
+    if (tierIdForAmount) {
+      try { console.debug('calculatePaymentForAmount: resolving tier', { vendorId: service.vendor_id, tierId: tierIdForAmount }); } catch (e) {}
+      const resolved = await resolveTierCommission(tierIdForAmount, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
     } else {
@@ -491,14 +517,13 @@ export async function getActivePricingTiers(): Promise<PricingTier[]> {
  */
 export async function getVendorCountsByTier(): Promise<Record<string, number>> {
   try {
-    // Get active pricing tiers first
     const tiers = await getActivePricingTiers();
+    const counts: Record<string, number> = {};
+    for (const t of tiers) counts[t.id] = 0;
 
-    // Get vendor counts - currently all approved vendors with tiers are assumed to be on Bronze
-    // TODO: Update vendor current_tier_id to point to correct pricing_tiers IDs
-    const { data, error } = await supabase
+    const { data: vendors, error } = await supabase
       .from('vendors')
-      .select('id')
+      .select('current_tier_id')
       .eq('status', 'approved')
       .not('current_tier_id', 'is', null);
 
@@ -506,16 +531,22 @@ export async function getVendorCountsByTier(): Promise<Record<string, number>> {
       throw new Error(`Failed to get vendor tier counts: ${error.message}`);
     }
 
-    const totalApprovedVendorsWithTiers = data?.length || 0;
+    const vtIds = [...new Set((vendors || []).map(v => v.current_tier_id).filter(Boolean))] as string[];
+    if (vtIds.length === 0) return counts;
 
-    // For now, assign all vendors to Bronze tier (priority_order = 1)
-    // This is a temporary fix until vendor current_tier_id values are updated
-    const counts: Record<string, number> = {};
+    const { data: vtRows } = await supabase
+      .from('vendor_tiers')
+      .select('id, name')
+      .in('id', vtIds);
 
-    // Find the Bronze tier (lowest priority)
-    const bronzeTier = tiers.find(t => t.priority_order === 1);
-    if (bronzeTier) {
-      counts[bronzeTier.id] = totalApprovedVendorsWithTiers;
+    const idToName = Object.fromEntries((vtRows || []).map(r => [r.id, r.name]));
+
+    for (const v of vendors || []) {
+      const tid = v.current_tier_id as string;
+      const name = idToName[tid];
+      if (!name) continue;
+      const pt = tiers.find(t => t.name === name);
+      if (pt) counts[pt.id] = (counts[pt.id] || 0) + 1;
     }
 
     return counts;
@@ -884,37 +915,52 @@ export async function getPricingPreview(
 export async function getVendorCurrentTier(vendorId: string): Promise<PricingTier | null> {
   const { data, error } = await supabase
     .from('vendors')
-    .select('current_tier_id')
+    .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
     .eq('id', vendorId)
     .single();
 
-  if (error || !data?.current_tier_id) {
+  if (error || !data) {
+    return null;
+  }
+
+  const tierId = effectiveVendorTierId(data);
+  if (!tierId) {
     return null;
   }
 
   const { data: pt, error: ptError } = await supabase
     .from('pricing_tiers')
     .select('*')
-    .eq('id', data.current_tier_id)
+    .eq('id', tierId)
     .single();
 
   if (pt && !ptError) {
     return pt;
   }
 
-  // Fallback: vendor_tiers (vendors may point here; now supports flat)
   const { data: vt, error: vtError } = await supabase
     .from('vendor_tiers')
     .select('*')
-    .eq('id', data.current_tier_id)
+    .eq('id', tierId)
     .eq('is_active', true)
     .single();
 
   if (vt && !vtError) {
+    const ct = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
+    let displayValue: number;
+    if (ct === 'flat') {
+      displayValue = Number(vt.commission_value ?? 0);
+    } else if (vt.commission_value != null && vt.commission_value !== '') {
+      const n = Number(vt.commission_value);
+      displayValue = n > 1 ? n : n * 100;
+    } else {
+      const r = Number(vt.commission_rate ?? 0);
+      displayValue = r <= 1 ? r * 100 : r;
+    }
     return {
       ...vt,
-      commission_type: (vt.commission_type || 'percentage') as 'percentage' | 'flat',
-      commission_value: Number(vt.commission_value ?? vt.commission_rate * 100)
+      commission_type: ct,
+      commission_value: displayValue
     } as PricingTier;
   }
 
@@ -1044,17 +1090,37 @@ export async function updateVendorTierWithServiceImpact(
   };
 }> {
   try {
-    // Get the tier details to update commission rate
-    const { data: tier, error: tierError } = await supabase
+    let tier: { commission_type: string; commission_value: number } | null = null;
+    const { data: pt, error: ptError } = await supabase
       .from('pricing_tiers')
       .select('commission_type, commission_value')
       .eq('id', tierId)
-      .single();
+      .maybeSingle();
 
-    if (tierError || !tier) {
+    if (pt && !ptError) {
+      tier = { commission_type: pt.commission_type, commission_value: Number(pt.commission_value) };
+    }
+
+    if (!tier) {
+      const { data: vt, error: vtError } = await supabase
+        .from('vendor_tiers')
+        .select('commission_type, commission_value')
+        .eq('id', tierId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (vt && !vtError) {
+        tier = {
+          commission_type: vt.commission_type || 'percentage',
+          commission_value: Number(vt.commission_value ?? 0)
+        };
+      }
+    }
+
+    if (!tier) {
       return {
         success: false,
-        error: `Failed to get tier details: ${tierError?.message || 'Tier not found'}`,
+        error: 'Tier not found in pricing_tiers or vendor_tiers',
         affectedServices: {
           totalServices: 0,
           servicesUsingNewTier: 0,
@@ -1063,9 +1129,6 @@ export async function updateVendorTierWithServiceImpact(
         }
       };
     }
-
-  // Commission rate calculated if needed by callers
-  // (kept here for completeness but not used directly in this helper)
 
     // Get all services for this vendor
     const { data: services, error: servicesError } = await supabase

@@ -2545,29 +2545,35 @@ export async function deleteUser(userId: string): Promise<void> {
 
 // Admin dashboard functions
 export async function getAllVendors(): Promise<Vendor[]> {
-  console.log('getAllVendors: Function called - using simple query without profiles join')
-
-  // First try a simple query without joins to test RLS
   const { data: simpleData, error: simpleError } = await supabase
     .from('vendors')
-    .select('id, user_id, business_name, business_email, status, created_at, updated_at')
+    .select(`
+      id,
+      user_id,
+      business_name,
+      business_description,
+      business_address,
+      business_phone,
+      business_email,
+      status,
+      created_at,
+      updated_at,
+      current_tier_id,
+      current_commission_rate,
+      manual_tier_id,
+      manual_tier_assigned_at,
+      manual_tier_expires_at,
+      manual_tier_reason
+    `)
     .order('created_at', { ascending: false })
-    .limit(10)
 
   if (simpleError) {
-    console.error('Error fetching vendors (simple query):', simpleError)
+    console.error('Error fetching vendors:', simpleError)
     throw simpleError
   }
 
-  console.log('getAllVendors: Found', simpleData?.length || 0, 'vendors')
-
-  // Return simple data with mock profiles object to match Vendor interface
-  // Note: The profiles join is not working due to schema constraints
-  return simpleData.map(vendor => ({
+  return (simpleData || []).map(vendor => ({
     ...vendor,
-    business_description: undefined,
-    business_address: undefined,
-    business_phone: undefined,
     business_website: undefined,
     business_type: undefined,
     operating_hours: undefined,
@@ -2583,9 +2589,6 @@ export async function getAllVendors(): Promise<Vendor[]> {
       phone: undefined
     }
   })) as Vendor[]
-
-  // If no data from simple query, return empty array
-  return []
 }
 
 export async function getAllBookings(): Promise<Booking[]> {

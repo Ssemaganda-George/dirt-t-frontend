@@ -72,17 +72,30 @@ async function testPricingCalculation() {
     if (vendor && vendor.current_tier_id) {
       console.log('Vendor has tier:', vendor.current_tier_id);
 
-      const { data: tierData, error: tierError } = await supabase
-        .from('pricing_tiers')
-        .select('id, name, commission_type, commission_value')
-        .eq('id', vendor.current_tier_id)
-        .eq('is_active', true)
-        .single();
+      let tierData =
+        (
+          await supabase
+            .from('pricing_tiers')
+            .select('id, name, commission_type, commission_value')
+            .eq('id', vendor.current_tier_id)
+            .eq('is_active', true)
+            .maybeSingle()
+        ).data;
+
+      if (!tierData) {
+        const vt = await supabase
+          .from('vendor_tiers')
+          .select('id, name, commission_type, commission_value, commission_rate')
+          .eq('id', vendor.current_tier_id)
+          .eq('is_active', true)
+          .maybeSingle();
+        tierData = vt.data;
+      }
 
       if (tierData) {
         console.log('Tier data:', tierData);
       } else {
-        console.log('Tier lookup error:', tierError);
+        console.log('No tier row in pricing_tiers or vendor_tiers for current_tier_id');
       }
     } else {
       console.log('Vendor has no tier or vendor lookup error:', vendorError);

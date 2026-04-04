@@ -3,6 +3,7 @@ import type { Service, Booking, Transaction, Flight } from '../types';
 import type { ServiceCategory, ServiceDeleteRequest } from '../lib/database';
 import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, getAllTransactionsForAdmin, updateVendorStatus as updateVendorStatusDB, updateBooking } from '../lib/database';
 import { supabase } from '../lib/supabaseClient';
+import { commissionPercentValueToRate } from '../lib/pricingService';
 
 // Placeholder hooks - to be updated later
 export function useVendors() {
@@ -632,14 +633,23 @@ export function useVendorPricing(vendorId: string | null) {
       };
     }
 
-    const fee = tier.commission_type === 'flat'
-      ? tier.commission_value
-      : price * (tier.commission_value / 100);
+    const fee =
+      tier.commission_type === 'flat'
+        ? Number(tier.commission_value)
+        : price * commissionPercentValueToRate(Number(tier.commission_value));
+
+    const pctLabel =
+      tier.commission_type === 'flat'
+        ? null
+        : Math.round(commissionPercentValueToRate(Number(tier.commission_value)) * 10000) / 100;
 
     return {
       fee,
       feeType: tier.commission_type,
-      description: `${tier.name} tier: ${tier.commission_type === 'flat' ? `${tier.commission_value} ${tier.currency || 'UGX'} flat fee` : `${tier.commission_value}% commission`}`
+      description:
+        tier.commission_type === 'flat'
+          ? `${tier.name} tier: ${tier.commission_value} ${tier.currency || 'UGX'} flat fee`
+          : `${tier.name} tier: ${pctLabel}% commission`
     };
   };
 
