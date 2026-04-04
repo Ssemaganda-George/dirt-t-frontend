@@ -1568,7 +1568,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       doc.text(`Quantity: ${bookingData.passengers || 1}`, left + 8, y)
       y += 12
       doc.setFont('helvetica', 'bold')
-      doc.text(`TOTAL: ${formatCurrencyWithConversion(totalPrice, service.currency)}`, left + 8, y)
+      doc.text(
+        `TOTAL: ${formatCurrencyWithConversion(customerTotalFromAggregatePricingCalc(pricingCalc, totalPrice), service.currency)}`,
+        left + 8,
+        y
+      )
       y += 20
 
       doc.setFont('helvetica', 'normal')
@@ -1585,21 +1589,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     }
   }
 
-  const HIRER_SERVICE_FEE_RATE = 0.02
-  const pricingBreakdown = (() => {
-    // Compute using transport-specific unit price when available.
-    const unit = getTransportUnitPrice()
-    const days = calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-    const base = (unit || 0) * days
-    const driverCostLocal = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? base * 0.3 : 0
-    const transportSubtotal = base + driverCostLocal
-    const hirerServiceFee = transportSubtotal * HIRER_SERVICE_FEE_RATE
-    const customerTotal = transportSubtotal + hirerServiceFee
-    return { transportSubtotal, hirerServiceFee, customerTotal }
-  })()
-
-  const totalPrice = pricingBreakdown.customerTotal
-  // Expose basePrice and driverCost for UI breakdown
   const [unitPrice, setUnitPrice] = useState<number | null>(() => getTransportUnitPrice())
   useEffect(() => {
     setUnitPrice(getTransportUnitPrice())
@@ -1607,6 +1596,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const basePrice = (unitPrice || service.price || 0) * calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
   const driverCost = (bookingData.driverOption === 'with-driver' && !service.driver_included) ? basePrice * 0.3 : 0
+  /** Trip subtotal before vendor-tier platform fee (base × days + optional driver uplift). */
+  const totalPrice = basePrice + driverCost
 
   // Recalculate platform fee and split when price/selection changes
   useEffect(() => {
@@ -1614,7 +1605,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     ;(async () => {
       if (!service?.id) return
       try {
-        // Pass totalPrice (includes driverCost) so platform fee is calculated on full payable amount
         const calc = await calculatePaymentForAmount(service.id, totalPrice)
         if (!mounted) return
         setPricingCalc(calc.success ? calc : null)
@@ -2669,8 +2659,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
               {/* ── PAYMENT SUMMARY — cream box, large amount + status — matches PDF ── */}
               <SH>Payment Summary</SH>
-              <RR label="Subtotal"       value={formatCurrencyWithConversion(pricingBreakdown.transportSubtotal, service.currency)} />
-              <RR label="Hirer Fee (2%)" value={formatCurrencyWithConversion(pricingBreakdown.hirerServiceFee,   service.currency)} />
+              <RR label="Subtotal (trip)" value={formatCurrencyWithConversion(totalPrice, service.currency)} />
+              {pricingCalc && typeof pricingCalc.platform_fee === 'number' && pricingCalc.platform_fee > 0 && (
+                <RR
+                  label="Platform fee (tier)"
+                  value={formatCurrencyWithConversion(pricingCalc.platform_fee, service.currency)}
+                />
+              )}
               <RR label="Quantity"       value={String(bookingData.passengers || 1)} />
 
               <div style={{ background: '#F0F7F4', borderLeft: '3px solid #2D6A4F', padding: '16px 20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

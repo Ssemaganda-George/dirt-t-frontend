@@ -594,7 +594,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             Authorization: `Bearer ${supabaseAnonKey}`,
           },
           body: JSON.stringify({
-            amount: Math.round(totalPrice),
+            amount: Math.round(hotelGrandTotal),
             phone_number: phone,
             booking_id: tempRef,
             description: `${service.title} hotel booking — ${nights} night${nights > 1 ? 's' : ''}`,

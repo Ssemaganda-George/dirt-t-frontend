@@ -666,11 +666,11 @@ export function useVendorPricing(vendorId: string | null) {
     }
 
     if (!tier) {
-      // If no tier is available at all, use default 15%
+      // No tier yet — do not invent a percentage; vendor UI should wait for tier resolution
       return {
-        fee: price * 0.15,
+        fee: 0,
         feeType: 'percentage',
-        description: 'Default 15% platform fee'
+        description: loading ? 'Loading your pricing tier…' : 'No pricing tier available — contact support if this persists'
       };
     }
 

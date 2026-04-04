@@ -1086,6 +1086,45 @@ export async function getPricingPreview(
 }
 
 /**
+ * Pricing preview using an explicit unit/base amount (e.g. transport zone rates where `services.price` is unused).
+ */
+export async function getPricingPreviewForAmount(
+  serviceId: string,
+  basePricePerUnit: number,
+  purchaseDate: Date = new Date()
+): Promise<PricingPreview> {
+  const calculation = await calculatePaymentForAmount(serviceId, basePricePerUnit, purchaseDate);
+
+  if (!calculation.success) {
+    throw new Error(calculation.error || 'Failed to calculate pricing');
+  }
+
+  let appliedRule = '';
+  if (calculation.pricing_source === 'override') {
+    appliedRule = `Service override (${calculation.fee_payer} pays fee)`;
+  } else {
+    const fp = calculation.fee_payer;
+    appliedRule =
+      fp === 'shared'
+        ? 'Vendor tier commission (shared fee)'
+        : `Vendor tier commission (${fp} pays fee)`;
+  }
+
+  return {
+    base_price: calculation.base_price,
+    platform_fee: calculation.platform_fee,
+    tourist_fee: calculation.tourist_fee,
+    vendor_fee: calculation.vendor_fee,
+    vendor_payout: calculation.vendor_payout,
+    total_customer_payment: calculation.total_customer_payment,
+    fee_payer: calculation.fee_payer,
+    pricing_source: calculation.pricing_source,
+    applied_rule: appliedRule,
+    pricing_reference_id: calculation.pricing_reference_id
+  };
+}
+
+/**
  * Get vendor's effective tier (vendor_tiers)
  */
 export async function getVendorCurrentTier(vendorId: string): Promise<PricingTier | null> {

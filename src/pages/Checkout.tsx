@@ -387,10 +387,20 @@ export default function CheckoutPage() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
+  const ticketPricingReady =
+    items.length === 0 ||
+    items.every(
+      (it: any) =>
+        Number(it.quantity ?? 0) === 0 ||
+        (ticketCalculations[it.ticket_type_id] &&
+          ticketCalculations[it.ticket_type_id].success !== false)
+    )
+
   const isNextEnabled = Boolean(
     buyer.name?.trim() &&
     buyer.surname?.trim() &&
-    validateEmail(buyer.email || '')
+    validateEmail(buyer.email || '') &&
+    ticketPricingReady
   )
 
   const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
@@ -441,19 +451,27 @@ export default function CheckoutPage() {
     return sum + unit * qty
   }, 0)
 
-  // Determine service/platform fees using pricing logic per ticket type when available
-  const serviceFeesAmount = items.reduce((sum: number, it: any) => {
+  // Tourist-visible fees from tier / overrides only (share split uses tourist_fee)
+  const effectiveServiceFees = items.reduce((sum: number, it: any) => {
     const qty = Number(it.quantity ?? 0)
+    if (qty === 0) return sum
     const calc = ticketCalculations[it.ticket_type_id]
-    if (calc && typeof calc.platform_fee === 'number') {
-      return sum + calc.platform_fee * qty
-    }
-    return sum
+    if (!calc || calc.success === false) return sum
+    return sum + Number(calc.tourist_fee || 0) * qty
   }, 0)
 
-  // fallback minimum fee if no calculations available (preserves previous UX)
-  const effectiveServiceFees = serviceFeesAmount > 0 ? serviceFeesAmount : Math.max(100, Math.round(subtotalAmount * 0.01))
-  const totalAmount = subtotalAmount + effectiveServiceFees
+  const totalAmount = ticketPricingReady
+    ? items.reduce((sum: number, it: any) => {
+        const qty = Number(it.quantity ?? 0)
+        if (qty === 0) return sum
+        const calc = ticketCalculations[it.ticket_type_id]
+        if (calc && calc.success !== false && typeof calc.total_customer_payment === 'number') {
+          return sum + Number(calc.total_customer_payment) * qty
+        }
+        const unit = Number(it.unit_price ?? it.price ?? 0)
+        return sum + unit * qty
+      }, 0)
+    : subtotalAmount
 
   if (isLoading) return <PageSkeleton type="checkout" />
   if (error || !order) return <div className="p-6">Order not found</div>
@@ -674,6 +692,9 @@ export default function CheckoutPage() {
                           <div className="text-sm font-medium">{formatCurrencyWithConversion(subtotalAmount, order.currency)}</div>
                         </div>
 
+                        {!ticketPricingReady && items.some((it: any) => Number(it.quantity ?? 0) > 0) && (
+                          <p className="text-xs text-amber-700">Loading platform fees from your vendor tier…</p>
+                        )}
                         <div className="flex justify-between">
                           <div className="text-sm text-gray-700">Service Fees</div>
                           <div className="text-sm font-medium">{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</div>

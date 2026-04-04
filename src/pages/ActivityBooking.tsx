@@ -456,9 +456,10 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     return () => { cancelled = true }
   }, [service.id, service.price])
 
-  const platformFeePer = pricingCalc && typeof pricingCalc.platform_fee === 'number'
-    ? Number(pricingCalc.platform_fee)
-    : Math.max(100, Math.round(service.price * 0.01))
+  const platformFeePer =
+    pricingCalc && typeof pricingCalc.platform_fee === 'number'
+      ? Number(pricingCalc.platform_fee)
+      : 0
 
   /** What the customer pays (aligns with tier/override fee_payer). */
   const customerPaysTotal = customerTotalFromUnitPricingCalc(
@@ -505,8 +506,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${supabaseAnonKey}`,
           },
-          body: JSON.stringify({
-            amount: Math.round(totalPrice),
+            body: JSON.stringify({
+            amount: Math.round(grandTotal),
             phone_number: phone,
             booking_id: tempRef,
             description: `${service.title} booking — ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`,

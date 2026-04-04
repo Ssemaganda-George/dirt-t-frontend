@@ -1,20 +1,45 @@
-import { useState, useEffect } from 'react';
-import { getPricingPreview, PricingPreview, getServicePricingOverrides, ServicePricingOverride } from '../lib/pricingService';
+import { useState, useEffect, useCallback } from 'react';
+import { getPricingPreview, getPricingPreviewForAmount, PricingPreview, getServicePricingOverrides, ServicePricingOverride } from '../lib/pricingService';
 import { supabase } from '../lib/supabaseClient';
 
 interface PricingBreakdownProps {
   serviceId: string;
   quantity?: number;
+  /** When set (e.g. transport per-day zone price), tier/override math uses this instead of `services.price`. */
+  basePricePerUnit?: number;
   refreshKey?: string | number;
   className?: string;
 }
 
-export default function PricingBreakdown({ serviceId, quantity = 1, refreshKey, className = '' }: PricingBreakdownProps) {
+export default function PricingBreakdown({ serviceId, quantity = 1, basePricePerUnit, refreshKey, className = '' }: PricingBreakdownProps) {
   const [pricing, setPricing] = useState<PricingPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRealtimeAt, setLastRealtimeAt] = useState<number | null>(null);
   const [overrideRows, setOverrideRows] = useState<ServicePricingOverride[] | null>(null);
+
+  const loadPricing = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const useExplicitBase =
+        basePricePerUnit != null && Number.isFinite(basePricePerUnit) && basePricePerUnit > 0;
+      const preview = useExplicitBase
+        ? await getPricingPreviewForAmount(serviceId, basePricePerUnit)
+        : await getPricingPreview(serviceId);
+      setPricing(preview);
+      try {
+        const rows = await getServicePricingOverrides(serviceId);
+        setOverrideRows(rows || []);
+      } catch {
+        setOverrideRows(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load pricing');
+    } finally {
+      setLoading(false);
+    }
+  }, [serviceId, basePricePerUnit]);
 
   // Currency formatting function - always display in UGX
   const formatCurrency = (amount: number) => {
@@ -68,7 +93,7 @@ export default function PricingBreakdown({ serviceId, quantity = 1, refreshKey, 
         }
       }
     };
-  }, [serviceId, refreshKey]);
+  }, [serviceId, refreshKey, loadPricing]);
 
   // Polling fallback: if we haven't received a realtime event recently, poll every 10s.
   useEffect(() => {
@@ -85,28 +110,7 @@ export default function PricingBreakdown({ serviceId, quantity = 1, refreshKey, 
     }, POLL_MS);
 
     return () => clearInterval(id);
-  }, [lastRealtimeAt, serviceId, refreshKey]);
-
-  const loadPricing = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const preview = await getPricingPreview(serviceId);
-      setPricing(preview);
-      // Fetch raw overrides (for debug/verification) in dev mode
-      try {
-        const rows = await getServicePricingOverrides(serviceId);
-        setOverrideRows(rows || []);
-      } catch (err) {
-        // ignore - debug overlay isn't critical
-        setOverrideRows(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load pricing');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [lastRealtimeAt, serviceId, refreshKey, loadPricing]);
 
   if (loading) {
     return (
@@ -234,7 +238,7 @@ export default function PricingBreakdown({ serviceId, quantity = 1, refreshKey, 
 }
 
 // Compact version for smaller spaces
-export function CompactPricingBreakdown({ serviceId, quantity = 1, refreshKey, className = '' }: PricingBreakdownProps) {
+export function CompactPricingBreakdown({ serviceId, quantity = 1, basePricePerUnit, refreshKey, className = '' }: PricingBreakdownProps) {
   const [pricing, setPricing] = useState<PricingPreview | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -252,21 +256,25 @@ export function CompactPricingBreakdown({ serviceId, quantity = 1, refreshKey, c
     }
   };
 
-  useEffect(() => {
-    loadPricing();
-  }, [serviceId, refreshKey]);
-
-  const loadPricing = async () => {
+  const loadPricing = useCallback(async () => {
     try {
       setLoading(true);
-      const preview = await getPricingPreview(serviceId);
+      const useExplicitBase =
+        basePricePerUnit != null && Number.isFinite(basePricePerUnit) && basePricePerUnit > 0;
+      const preview = useExplicitBase
+        ? await getPricingPreviewForAmount(serviceId, basePricePerUnit)
+        : await getPricingPreview(serviceId);
       setPricing(preview);
     } catch (err) {
       console.error('Failed to load pricing:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [serviceId, basePricePerUnit]);
+
+  useEffect(() => {
+    loadPricing();
+  }, [serviceId, refreshKey, loadPricing]);
 
   if (loading || !pricing) {
     return <div className={`text-gray-500 text-sm ${className}`}>Loading pricing...</div>;

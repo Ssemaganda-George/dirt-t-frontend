@@ -2119,6 +2119,11 @@ export default function ServiceDetail() {
                   {/* Pricing Breakdown */}
                   <PricingBreakdown
                     serviceId={service.id}
+                    basePricePerUnit={
+                      service.service_categories?.name?.toLowerCase() === 'transport'
+                        ? getTransportUnitPrice()
+                        : undefined
+                    }
                     quantity={service.service_categories?.name?.toLowerCase() === 'transport'
                       ? calculateDays(startDate, startTime, endDate, endTime)
                       : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')

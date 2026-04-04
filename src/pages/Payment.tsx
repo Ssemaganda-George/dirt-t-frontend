@@ -76,16 +76,36 @@ export default function PaymentPage() {
 
   const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
 
-  // Prefer per-ticket calculated platform fees (from tier/override) when available
-  const serviceFeesAmount = items.reduce((sum: number, it: any) => {
+  // Tourist-visible platform charges from tier/ overrides only (tourist_fee), never a synthetic % fallback
+  const ticketPricingReady =
+    items.length === 0 ||
+    items.every(
+      (it: any) =>
+        Number(it.quantity ?? 0) === 0 ||
+        (ticketCalculations[it.ticket_type_id] &&
+          ticketCalculations[it.ticket_type_id].success !== false)
+    )
+
+  const effectiveServiceFees = items.reduce((sum: number, it: any) => {
     const qty = Number(it.quantity ?? 0)
+    if (qty === 0) return sum
     const calc = ticketCalculations[it.ticket_type_id]
-    if (calc && typeof calc.platform_fee === 'number') return sum + calc.platform_fee * qty
-    return sum
+    if (!calc || calc.success === false) return sum
+    return sum + Number(calc.tourist_fee || 0) * qty
   }, 0)
 
-  const effectiveServiceFees = serviceFeesAmount > 0 ? serviceFeesAmount : Math.max(100, Math.round(subtotalAmount * 0.01))
-  const totalAmount = subtotalAmount + effectiveServiceFees
+  const totalAmount = ticketPricingReady
+    ? items.reduce((sum: number, it: any) => {
+        const qty = Number(it.quantity ?? 0)
+        if (qty === 0) return sum
+        const calc = ticketCalculations[it.ticket_type_id]
+        if (calc && calc.success !== false && typeof calc.total_customer_payment === 'number') {
+          return sum + Number(calc.total_customer_payment) * qty
+        }
+        const unit = Number(it.unit_price ?? it.price ?? 0)
+        return sum + unit * qty
+      }, 0)
+    : subtotalAmount
   // summary toggle removed — details always visible
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
@@ -326,6 +346,10 @@ export default function PaymentPage() {
 
   const handlePayment = useCallback(async () => {
   if (!orderId || !order) return
+  if (!ticketPricingReady) {
+    alert('Pricing is still loading. Please wait a moment and try again.')
+    return
+  }
   // Use derived totals from items (keeps payment amount in sync with edits)
   const totalWithFee = Math.round(totalAmount)
     const rawPhone = (phoneNumber || order?.guest_phone || '').trim().replace(/^\+256/, '')
@@ -388,7 +412,8 @@ export default function PaymentPage() {
       setProcessing(false)
       alert((err as Error).message || 'Payment failed. Please try again.')
     }
-  }, [orderId, order, phoneNumber, navigate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startWatchingReference is stable enough for UX; expanding deps rebinds every render
+  }, [orderId, order, phoneNumber, navigate, ticketPricingReady, totalAmount, ticketEmail])
 
   if (isLoading) return <PageSkeleton type="payment" />
   if (error || !order) {
@@ -524,6 +549,9 @@ export default function PaymentPage() {
                 </div>
 
                 <div className="border-t pt-2">
+          {!ticketPricingReady && items.some((it: any) => Number(it.quantity ?? 0) > 0) && (
+            <p className="text-xs text-amber-700 mb-2">Loading platform fees from your vendor tier…</p>
+          )}
           <div className="flex justify-between items-center">
             <span className="text-gray-600 text-sm">Service Fee</span>
             <span className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
@@ -737,12 +765,14 @@ export default function PaymentPage() {
               disabled={
                 processing ||
                 paymentMethod === 'card' ||
+                !ticketPricingReady ||
                 (paymentMethod === 'mobile_money' && (!mobileProvider || !phoneNumber.trim()))
               }
               style={{
                 backgroundColor:
                   processing ||
                   paymentMethod === 'card' ||
+                  !ticketPricingReady ||
                   !mobileProvider ||
                   !phoneNumber.trim()
                     ? '#d1d5db'
