@@ -287,7 +287,7 @@ export function DirtTrailsWallet() {
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
           <div>
             <p className="text-xs font-medium text-gray-600">Platform fees &amp; commission</p>
-            <p className="text-xs text-gray-500 mt-0.5">From linked bookings (our cut)</p>
+            <p className="text-xs text-gray-500 mt-0.5">From linked bookings / ticket orders (our cut)</p>
             <p className="text-xl font-semibold text-gray-900 mt-2">
               {formatCurrencyWithConversion(stats.totalPlatformFees, selectedCurrency)}
             </p>
@@ -435,8 +435,9 @@ export function DirtTrailsWallet() {
                   Showing {startIndex + 1}-{Math.min(endIndex, currentTransactions.length)} of {currentTransactions.length} transactions
                 </p>
                 <p className="text-xs text-gray-500 max-w-xl">
-                  Platform fee is read from the linked booking (commission + platform fee).{' '}
-                  <span className="text-gray-600">0</span> means the booking has no platform cut recorded.{' '}
+                  Platform fee comes from the linked booking (commission + platform fee) or from a ticket order via payment reference (
+                  <code className="text-[10px] sm:text-xs">orders.platform_fee</code>).{' '}
+                  <span className="text-gray-600">0</span> means no platform cut recorded on that row.{' '}
                   <span className="text-amber-800">N/A</span> means the booking row is missing. Unlinked payments show —.
                 </p>
                 {totalPages > 1 && (

@@ -360,10 +360,52 @@ export default function PaymentPage() {
       return
     }
 
-    // Save ticket email to order so webhook can send ticket email even if user leaves the page
+    // Persist tier/pricing breakdown on the order before collect so admin finance (Dirt Trails Wallet)
+    // can resolve platform fee via payments.reference → order_id (transactions are not booking-linked).
     const emailToSave = (ticketEmail || order?.guest_email || '').trim()
-    if (emailToSave) {
-      await supabase.from('orders').update({ guest_email: emailToSave, updated_at: new Date().toISOString() }).eq('id', orderId)
+    const activeItems = items.filter((it: any) => Number(it.quantity ?? 0) > 0)
+    let orderPatch: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      ...(emailToSave ? { guest_email: emailToSave } : {}),
+    }
+    if (activeItems.length > 0) {
+      let platformFeeSum = 0
+      let vendorPayoutSum = 0
+      let basePriceSum = 0
+      let feePayer: string | null = null
+      let pricingSource: string | null = null
+      let pricingReferenceId: string | null = null
+      for (const it of activeItems) {
+        const qty = Number(it.quantity ?? 0)
+        const calc = ticketCalculations[it.ticket_type_id]
+        if (!calc || calc.success === false) {
+          alert('Pricing is incomplete for one or more tickets. Please wait a moment or refresh the page.')
+          return
+        }
+        platformFeeSum += Number(calc.platform_fee || 0) * qty
+        vendorPayoutSum += Number(calc.vendor_payout || 0) * qty
+        basePriceSum += Number(calc.base_price || 0) * qty
+        if (feePayer === null) feePayer = String(calc.fee_payer || 'vendor')
+        if (pricingSource === null) pricingSource = String(calc.pricing_source || 'tier')
+        if (!pricingReferenceId && calc.pricing_reference_id) pricingReferenceId = String(calc.pricing_reference_id)
+      }
+      orderPatch = {
+        ...orderPatch,
+        total_amount: totalWithFee,
+        base_price: Math.round(basePriceSum),
+        platform_fee: Math.round(platformFeeSum),
+        vendor_payout: Math.round(vendorPayoutSum),
+        fee_payer: feePayer,
+        pricing_source: pricingSource,
+        pricing_reference_id: pricingReferenceId,
+      }
+    }
+
+    const { error: orderUpdateErr } = await supabase.from('orders').update(orderPatch).eq('id', orderId)
+    if (orderUpdateErr) {
+      console.error('[Payment] failed to persist order pricing', orderUpdateErr)
+      alert('Could not save order totals before payment. Please try again.')
+      return
     }
 
     setProcessing(true)
@@ -413,7 +455,7 @@ export default function PaymentPage() {
       alert((err as Error).message || 'Payment failed. Please try again.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startWatchingReference is stable enough for UX; expanding deps rebinds every render
-  }, [orderId, order, phoneNumber, navigate, ticketPricingReady, totalAmount, ticketEmail])
+  }, [orderId, order, phoneNumber, navigate, ticketPricingReady, totalAmount, ticketEmail, items, ticketCalculations])
 
   if (isLoading) return <PageSkeleton type="payment" />
   if (error || !order) {

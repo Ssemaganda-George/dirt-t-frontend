@@ -45,6 +45,22 @@ function triggerQueueWorker(): void {
   }).catch((e) => console.warn("Webhook: queue worker trigger failed", e?.message || e))
 }
 
+async function sendTelegramMessage(text: string): Promise<void> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN")
+  const chatRaw = Deno.env.get("TELEGRAM_CHAT_ID") || ""
+  const chatIds = chatRaw.split(",").map((s) => s.trim()).filter(Boolean)
+  if (!token || chatIds.length === 0) return
+  await Promise.all(
+    chatIds.map((id) =>
+      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: id, text }),
+      }).catch((e) => console.warn("Webhook: telegram send failed", e?.message || e))
+    )
+  )
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -309,6 +325,7 @@ serve(async (req) => {
       }
     }
 
+    const collection = body?.collection ?? (transaction as any)?.collection
     const amountFmt = (collection?.amount as any)?.formatted || `${payment.amount} UGX`
     await sendTelegramMessage(
       `🎉 Payment completed\nOrder #${orderId}\nAmount: ${amountFmt}\nPhone: ${payment.phone_number}\nRef: ${reference}`

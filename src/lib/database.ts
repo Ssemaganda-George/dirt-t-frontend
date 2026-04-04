@@ -3436,13 +3436,64 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
       }
     }
 
+    /** Ticket/order payments: MarzPay reference is on payments + transactions but booking_id is null. */
+    const txRefs = [
+      ...new Set(
+        transactions
+          .map(t => (typeof t.reference === 'string' ? t.reference.trim() : ''))
+          .filter(Boolean)
+      )
+    ]
+    let referenceToOrderFees = new Map<string, BookingFeeSnapshot>()
+    if (txRefs.length > 0) {
+      const { data: payRows, error: payErr } = await supabase
+        .from('payments')
+        .select('reference, order_id')
+        .in('reference', txRefs)
+        .not('order_id', 'is', null)
+      if (payErr) {
+        console.error('Error fetching payments for admin transaction references:', payErr)
+      } else {
+        const orderIdsFromPay = [...new Set((payRows || []).map((p: { order_id: string }) => p.order_id).filter(Boolean))]
+        if (orderIdsFromPay.length > 0) {
+          const { data: orderRows, error: ordErr } = await supabase
+            .from('orders')
+            .select('id, total_amount, platform_fee, fee_payer')
+            .in('id', orderIdsFromPay)
+          if (ordErr) {
+            console.error('Error fetching orders for payment-linked transactions:', ordErr)
+          } else {
+            const orderById = new Map((orderRows || []).map((o: any) => [String(o.id), o]))
+            for (const p of payRows || []) {
+              const ref = typeof p.reference === 'string' ? p.reference.trim() : ''
+              const oid = p.order_id ? String(p.order_id) : ''
+              if (!ref || !oid) continue
+              const o = orderById.get(oid)
+              if (!o) continue
+              referenceToOrderFees.set(ref, {
+                id: String(o.id),
+                total_amount: o.total_amount,
+                platform_fee: o.platform_fee,
+                commission_amount: 0,
+                fee_payer: o.fee_payer ?? null
+              })
+            }
+          }
+        }
+      }
+    }
+
     const resolveBookingRow = (t: Transaction): BookingFeeSnapshot | null => {
       if (t.booking_id) {
         return bookingMap.get(String(t.booking_id)) || null
       }
       const ref = typeof t.reference === 'string' ? t.reference.trim() : ''
       if (ref && looksLikeBookingUuid(ref)) {
-        return bookingMap.get(ref) || null
+        const fromBooking = bookingMap.get(ref)
+        if (fromBooking) return fromBooking
+      }
+      if (ref && referenceToOrderFees.has(ref)) {
+        return referenceToOrderFees.get(ref) || null
       }
       return null
     }
