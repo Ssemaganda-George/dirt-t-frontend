@@ -38,6 +38,9 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
     name: '',
     commission_type: 'percentage' as 'percentage' | 'flat',
     commission_value: 0,
+    fee_payer: 'vendor' as 'vendor' | 'tourist' | 'shared',
+    tourist_percentage: 0,
+    vendor_percentage: 100,
     min_monthly_bookings: 0,
     min_rating: undefined as number | undefined,
     priority_order: 0,
@@ -119,6 +122,15 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
   };
 
   const handleCreateTier = async () => {
+    const validFeePayers = ['vendor', 'tourist', 'shared'];
+    if (!validFeePayers.includes(tierForm.fee_payer)) {
+      alert(`Invalid fee payer: ${tierForm.fee_payer}`);
+      return;
+    }
+    if (tierForm.fee_payer === 'shared' && tierForm.tourist_percentage + tierForm.vendor_percentage !== 100) {
+      alert('Shared fee: tourist and vendor percentages must sum to 100.');
+      return;
+    }
     try {
       await createPricingTier({
         ...tierForm,
@@ -134,6 +146,15 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
 
   const handleUpdateTier = async () => {
     if (!editingTier) return;
+    const validFeePayers = ['vendor', 'tourist', 'shared'];
+    if (!validFeePayers.includes(tierForm.fee_payer)) {
+      alert(`Invalid fee payer: ${tierForm.fee_payer}`);
+      return;
+    }
+    if (tierForm.fee_payer === 'shared' && tierForm.tourist_percentage + tierForm.vendor_percentage !== 100) {
+      alert('Shared fee: tourist and vendor percentages must sum to 100.');
+      return;
+    }
     try {
       await updatePricingTier(editingTier.id, {
         ...tierForm,
@@ -245,6 +266,9 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
       name: '',
       commission_type: 'percentage',
       commission_value: 0,
+      fee_payer: 'vendor',
+      tourist_percentage: 0,
+      vendor_percentage: 100,
       min_monthly_bookings: 0,
       min_rating: undefined,
       priority_order: 0,
@@ -281,10 +305,14 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
   const openTierModal = (tier?: PricingTier) => {
     if (tier) {
       setEditingTier(tier);
+      const fp = tier.fee_payer ?? 'vendor';
       setTierForm({
         name: tier.name,
         commission_type: tier.commission_type,
         commission_value: tier.commission_value,
+        fee_payer: fp,
+        tourist_percentage: tier.tourist_percentage ?? 0,
+        vendor_percentage: tier.vendor_percentage ?? (fp === 'shared' ? 50 : 100),
         min_monthly_bookings: tier.min_monthly_bookings,
         min_rating: tier.min_rating,
         priority_order: tier.priority_order,
@@ -381,6 +409,9 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
                     Commission
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fee payer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Requirements
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -407,6 +438,17 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
                           : `${tier.commission_value}%`
                         }
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        tier.fee_payer === 'vendor'
+                          ? 'bg-blue-100 text-blue-800'
+                          : tier.fee_payer === 'tourist'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {tier.fee_payer === 'vendor' ? 'Vendor' : tier.fee_payer === 'tourist' ? 'Tourist' : 'Shared'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
@@ -597,6 +639,77 @@ export default function AdminPricingManagement({ adminId }: AdminPricingManageme
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Fee Payer</label>
+                  <select
+                    value={tierForm.fee_payer}
+                    onChange={(e) => {
+                      const newFeePayer = e.target.value as 'vendor' | 'tourist' | 'shared';
+                      let touristPercentage = tierForm.tourist_percentage;
+                      let vendorPercentage = tierForm.vendor_percentage;
+                      if (newFeePayer === 'shared' && tierForm.fee_payer !== 'shared') {
+                        touristPercentage = 50;
+                        vendorPercentage = 50;
+                      } else if (newFeePayer !== 'shared') {
+                        touristPercentage = 0;
+                        vendorPercentage = 100;
+                      }
+                      setTierForm({
+                        ...tierForm,
+                        fee_payer: newFeePayer,
+                        tourist_percentage: touristPercentage,
+                        vendor_percentage: vendorPercentage
+                      });
+                    }}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="vendor">Vendor</option>
+                    <option value="tourist">Tourist</option>
+                    <option value="shared">Shared</option>
+                  </select>
+                </div>
+
+                {tierForm.fee_payer === 'shared' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Tourist fee share (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={isNaN(tierForm.tourist_percentage) ? '' : tierForm.tourist_percentage}
+                        onChange={(e) => {
+                          const touristPct = parseFloat(e.target.value) || 0;
+                          setTierForm({
+                            ...tierForm,
+                            tourist_percentage: touristPct,
+                            vendor_percentage: 100 - touristPct
+                          });
+                        }}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Vendor fee share (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={isNaN(tierForm.vendor_percentage) ? '' : tierForm.vendor_percentage}
+                        onChange={(e) => {
+                          const vendorPct = parseFloat(e.target.value) || 0;
+                          setTierForm({
+                            ...tierForm,
+                            vendor_percentage: vendorPct,
+                            tourist_percentage: 100 - vendorPct
+                          });
+                        }}
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Min Monthly Bookings</label>

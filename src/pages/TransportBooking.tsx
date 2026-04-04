@@ -6,7 +6,11 @@ import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import SimilarServicesCarousel from '../components/SimilarServicesCarousel'
-import { calculatePaymentForAmount, PaymentCalculation } from '../lib/pricingService'
+import {
+  calculatePaymentForAmount,
+  customerTotalFromAggregatePricingCalc,
+  type PaymentCalculation
+} from '../lib/pricingService'
 
 interface ServiceDetail {
   id: string
@@ -598,7 +602,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           booking_date: new Date().toISOString(),
           service_date: bookingData.startDate,
           guests: bookingData.passengers,
-          total_amount: totalPrice,
+          total_amount: transportCustomerPaysTotal,
           currency: service.currency,
           status: 'confirmed' as const,
           payment_status: 'paid' as const, // keep vendor demo as paid
@@ -625,7 +629,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           booking_date: new Date().toISOString(),
           service_date: bookingData.startDate,
           guests: bookingData.passengers,
-          total_amount: totalPrice,
+          total_amount: transportCustomerPaysTotal,
+          pricing_base_amount: totalPrice,
           currency: service.currency,
           status: 'confirmed' as const,
           payment_status: 'pending' as const, // always pending for admin
@@ -732,6 +737,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     })()
     return () => { mounted = false }
   }, [service?.id, bookingData.startDate, bookingData.endDate, bookingData.startTime, bookingData.endTime, bookingData.driverOption, bookingData.passengers, totalPrice])
+
+  const transportCustomerPaysTotal = customerTotalFromAggregatePricingCalc(pricingCalc, totalPrice)
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -983,7 +990,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                         <span>Total</span>
-                        <span>{formatCurrencyWithConversion(pricingCalc.total_customer_payment, service.currency)}</span>
+                        <span>{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
                       </div>
                     </>
                   ) : (
@@ -1186,7 +1193,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <div className="pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(pricingCalc ? pricingCalc.total_customer_payment : totalPrice, service.currency)}</span>
+                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
               </div>
             </div>
 
@@ -1360,7 +1367,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           <div className="pt-4 sm:pt-6 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(pricingCalc ? pricingCalc.total_customer_payment : totalPrice, service.currency)}</span>
+              <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
             </div>
           </div>
 
@@ -1534,7 +1541,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg sm:text-xl font-bold text-gray-900">
-                    {formatCurrencyWithConversion(totalPrice, service.currency)}
+                    {formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}
                   </div>
                   <div className="text-xs text-gray-500">
                     One way {bookingData.startDate && bookingData.endDate ? `• ${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days` : ''}

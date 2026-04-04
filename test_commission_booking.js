@@ -108,6 +108,7 @@ async function testCommissionCalculation() {
       p_guest_phone: testBooking.guest_phone,
       p_pickup_location: null,
       p_dropoff_location: null,
+      p_pricing_base_amount: testBooking.total_amount,
     })
 
     if (bookingError) {

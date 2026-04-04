@@ -11,6 +11,9 @@ export interface PricingTier {
   effective_from: string;
   effective_until?: string;
   is_active: boolean;
+  fee_payer: 'vendor' | 'tourist' | 'shared';
+  tourist_percentage?: number | null;
+  vendor_percentage?: number | null;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -72,6 +75,83 @@ export function commissionPercentValueToRate(value: number): number {
   return Math.min(1, n);
 }
 
+const VALID_FEE_PAYERS = ['vendor', 'tourist', 'shared'] as const;
+
+export function normalizeFeePayer(raw: unknown): 'vendor' | 'tourist' | 'shared' {
+  const s = String(raw ?? 'vendor').trim().toLowerCase();
+  return (VALID_FEE_PAYERS as readonly string[]).includes(s)
+    ? (s as 'vendor' | 'tourist' | 'shared')
+    : 'vendor';
+}
+
+/** Same split rules as service overrides (platform fee is precomputed on base). */
+export function applyFeePayerSplitFromPlatformFee(
+  basePrice: number,
+  platformFee: number,
+  feePayer: 'vendor' | 'tourist' | 'shared',
+  touristPct?: number | null,
+  vendorPct?: number | null
+): Pick<
+  PaymentCalculation,
+  'tourist_fee' | 'vendor_fee' | 'vendor_payout' | 'total_customer_payment'
+> {
+  const tp = Number(touristPct ?? 0);
+  const vp = Number(vendorPct ?? 0);
+  if (feePayer === 'shared') {
+    const touristFee = platformFee * (tp / 100);
+    const vendorFee = platformFee * (vp / 100);
+    return {
+      tourist_fee: touristFee,
+      vendor_fee: vendorFee,
+      total_customer_payment: basePrice + touristFee,
+      vendor_payout: basePrice - vendorFee
+    };
+  }
+  if (feePayer === 'tourist') {
+    return {
+      tourist_fee: platformFee,
+      vendor_fee: 0,
+      total_customer_payment: basePrice + platformFee,
+      vendor_payout: basePrice
+    };
+  }
+  return {
+    tourist_fee: 0,
+    vendor_fee: platformFee,
+    total_customer_payment: basePrice,
+    vendor_payout: basePrice - platformFee
+  };
+}
+
+/** Per-unit pricing calc × number of billable units (guests, room-nights, etc.). */
+export function customerTotalFromUnitPricingCalc(
+  calc: PaymentCalculation | null | undefined,
+  billableUnits: number,
+  fallbackTotal: number
+): number {
+  if (!calc || calc.success === false) return fallbackTotal;
+  return Number(calc.total_customer_payment) * billableUnits;
+}
+
+/** When calculatePaymentForAmount used the full line as a single base (e.g. transport trip total). */
+export function customerTotalFromAggregatePricingCalc(
+  calc: PaymentCalculation | null | undefined,
+  fallbackTotal: number
+): number {
+  if (!calc || calc.success === false) return fallbackTotal;
+  return Number(calc.total_customer_payment);
+}
+
+/** Tourist-visible fee line amounts × units (for receipts). */
+export function touristFeeTotalFromUnitCalc(
+  calc: PaymentCalculation | null | undefined,
+  billableUnits: number,
+  legacyPerUnitEstimate: number
+): number {
+  if (!calc || calc.success === false) return legacyPerUnitEstimate * billableUnits;
+  return Number(calc.tourist_fee) * billableUnits;
+}
+
 /** Active manual tier overrides automatic tier for pricing and display. */
 export function effectiveVendorTierId(v: {
   current_tier_id: string | null;
@@ -102,6 +182,15 @@ export function mapVendorTierRowToPricingTier(vt: Record<string, unknown>): Pric
     effective_from: effFrom,
     effective_until: (vt.effective_until as string | undefined) ?? undefined,
     is_active: (vt.is_active as boolean) ?? true,
+    fee_payer: normalizeFeePayer(vt.fee_payer),
+    tourist_percentage:
+      vt.tourist_percentage != null && vt.tourist_percentage !== ''
+        ? Number(vt.tourist_percentage)
+        : null,
+    vendor_percentage:
+      vt.vendor_percentage != null && vt.vendor_percentage !== ''
+        ? Number(vt.vendor_percentage)
+        : null,
     created_by: vt.created_by as string | undefined,
     created_at: (vt.created_at as string) ?? '',
     updated_at: (vt.updated_at as string) ?? ''
@@ -119,51 +208,80 @@ export function vendorTierCommissionRateForDb(
   return Math.min(1, Math.max(0, rate));
 }
 
-async function resolveTierCommission(
+export type TierCommissionResolve = {
+  platformFee: number;
+  pricingReferenceId: string;
+  fee_payer: 'vendor' | 'tourist' | 'shared';
+  tourist_percentage: number | null;
+  vendor_percentage: number | null;
+};
+
+export async function resolveTierCommission(
   currentTierId: string,
   basePrice: number,
   purchaseDate: Date
-): Promise<{ platformFee: number; pricingReferenceId: string }> {
+): Promise<TierCommissionResolve> {
+  const empty = (): TierCommissionResolve => ({
+    platformFee: 0,
+    pricingReferenceId: '',
+    fee_payer: 'vendor',
+    tourist_percentage: null,
+    vendor_percentage: null
+  });
+
   const { data: vt, error: vtErr } = await supabase
     .from('vendor_tiers')
     .select(
-      'id, commission_type, commission_value, commission_rate, effective_from, effective_until, is_active'
+      'id, commission_type, commission_value, commission_rate, effective_from, effective_until, is_active, fee_payer, tourist_percentage, vendor_percentage'
     )
     .eq('id', currentTierId)
     .eq('is_active', true)
     .maybeSingle();
 
   if (!vt || vtErr) {
-    return { platformFee: 0, pricingReferenceId: '' };
+    return empty();
   }
 
   const effFrom = vt.effective_from ? new Date(vt.effective_from as string) : null;
   const effUntil = vt.effective_until ? new Date(vt.effective_until as string) : null;
   if (effFrom && effFrom > purchaseDate) {
-    return { platformFee: 0, pricingReferenceId: '' };
+    return empty();
   }
   if (effUntil && effUntil < purchaseDate) {
-    return { platformFee: 0, pricingReferenceId: '' };
+    return empty();
   }
 
+  const feePayer = normalizeFeePayer(vt.fee_payer);
+  const touristPct =
+    vt.tourist_percentage != null && vt.tourist_percentage !== ''
+      ? Number(vt.tourist_percentage)
+      : null;
+  const vendorPct =
+    vt.vendor_percentage != null && vt.vendor_percentage !== ''
+      ? Number(vt.vendor_percentage)
+      : null;
+
+  let platformFee = 0;
   const vtCommissionType = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
   if (vtCommissionType === 'flat') {
-    return {
-      platformFee: Number(vt.commission_value ?? 0),
-      pricingReferenceId: vt.id as string
-    };
+    platformFee = Number(vt.commission_value ?? 0);
+  } else {
+    const val = vt.commission_value != null ? Number(vt.commission_value) : null;
+    if (val != null && !Number.isNaN(val)) {
+      platformFee = basePrice * commissionPercentValueToRate(val);
+    } else {
+      const r = Number(vt.commission_rate ?? 0);
+      platformFee = basePrice * Math.min(1, Math.max(0, r));
+    }
   }
 
-  const val = vt.commission_value != null ? Number(vt.commission_value) : null;
-  if (val != null && !Number.isNaN(val)) {
-    return {
-      platformFee: basePrice * commissionPercentValueToRate(val),
-      pricingReferenceId: vt.id as string
-    };
-  }
-
-  const r = Number(vt.commission_rate ?? 0);
-  return { platformFee: basePrice * Math.min(1, Math.max(0, r)), pricingReferenceId: vt.id as string };
+  return {
+    platformFee,
+    pricingReferenceId: vt.id as string,
+    fee_payer: feePayer,
+    tourist_percentage: touristPct,
+    vendor_percentage: vendorPct
+  };
 }
 
 /**
@@ -243,29 +361,23 @@ export async function calculatePayment(
         ? override.override_value
         : basePrice * (override.override_value / 100);
 
-      const feePayer = override.fee_payer;
+      const feePayer = normalizeFeePayer(override.fee_payer);
       let totalCustomerPayment: number;
       let vendorPayout: number;
       let touristFee: number;
       let vendorFee: number;
 
-      if (feePayer === 'shared') {
-        // Split the fee between tourist and vendor
-        touristFee = platformFee * (override.tourist_percentage! / 100);
-        vendorFee = platformFee * (override.vendor_percentage! / 100);
-        totalCustomerPayment = basePrice + touristFee;
-        vendorPayout = basePrice - vendorFee;
-      } else if (feePayer === 'tourist') {
-        touristFee = platformFee;
-        vendorFee = 0;
-        totalCustomerPayment = basePrice + platformFee;
-        vendorPayout = basePrice;
-      } else {
-        touristFee = 0;
-        vendorFee = platformFee;
-        totalCustomerPayment = basePrice;
-        vendorPayout = basePrice - platformFee;
-      }
+      const split = applyFeePayerSplitFromPlatformFee(
+        basePrice,
+        platformFee,
+        feePayer,
+        override.tourist_percentage,
+        override.vendor_percentage
+      );
+      touristFee = split.tourist_fee;
+      vendorFee = split.vendor_fee;
+      totalCustomerPayment = split.total_customer_payment;
+      vendorPayout = split.vendor_payout;
 
       return {
         success: true,
@@ -291,6 +403,9 @@ export async function calculatePayment(
 
     let platformFee = 0;
     let pricingReferenceId = '';
+    let tierFeePayer: 'vendor' | 'tourist' | 'shared' = 'vendor';
+    let tierTouristPct: number | null = null;
+    let tierVendorPct: number | null = null;
 
     const tierId = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
     if (tierId) {
@@ -300,17 +415,28 @@ export async function calculatePayment(
       const resolved = await resolveTierCommission(tierId, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
+      tierFeePayer = resolved.fee_payer;
+      tierTouristPct = resolved.tourist_percentage;
+      tierVendorPct = resolved.vendor_percentage;
     }
+
+    const tierSplit = applyFeePayerSplitFromPlatformFee(
+      basePrice,
+      platformFee,
+      tierFeePayer,
+      tierTouristPct,
+      tierVendorPct
+    );
 
     return {
       success: true,
       base_price: basePrice,
       platform_fee: platformFee,
-      tourist_fee: 0,
-      vendor_fee: platformFee,
-      vendor_payout: basePrice - platformFee,
-      total_customer_payment: basePrice,
-      fee_payer: 'vendor',
+      tourist_fee: tierSplit.tourist_fee,
+      vendor_fee: tierSplit.vendor_fee,
+      vendor_payout: tierSplit.vendor_payout,
+      total_customer_payment: tierSplit.total_customer_payment,
+      fee_payer: tierFeePayer,
       pricing_source: 'tier',
       pricing_reference_id: pricingReferenceId,
       service_id: serviceId
@@ -404,28 +530,23 @@ export async function calculatePaymentForAmount(
         ? Number(override.override_value)
         : basePrice * (Number(override.override_value) / 100);
 
-      const feePayer = override.fee_payer as 'vendor' | 'tourist' | 'shared';
+      const feePayer = normalizeFeePayer(override.fee_payer);
       let totalCustomerPayment: number;
       let vendorPayout: number;
       let touristFee: number;
       let vendorFee: number;
 
-      if (feePayer === 'shared') {
-        touristFee = platformFee * (Number(override.tourist_percentage || 0) / 100);
-        vendorFee = platformFee * (Number(override.vendor_percentage || 0) / 100);
-        totalCustomerPayment = basePrice + touristFee;
-        vendorPayout = basePrice - vendorFee;
-      } else if (feePayer === 'tourist') {
-        touristFee = platformFee;
-        vendorFee = 0;
-        totalCustomerPayment = basePrice + platformFee;
-        vendorPayout = basePrice;
-      } else {
-        touristFee = 0;
-        vendorFee = platformFee;
-        totalCustomerPayment = basePrice;
-        vendorPayout = basePrice - platformFee;
-      }
+      const splitAmt = applyFeePayerSplitFromPlatformFee(
+        basePrice,
+        platformFee,
+        feePayer,
+        override.tourist_percentage,
+        override.vendor_percentage
+      );
+      touristFee = splitAmt.tourist_fee;
+      vendorFee = splitAmt.vendor_fee;
+      totalCustomerPayment = splitAmt.total_customer_payment;
+      vendorPayout = splitAmt.vendor_payout;
 
       return {
         success: true,
@@ -451,6 +572,9 @@ export async function calculatePaymentForAmount(
 
     let platformFee = 0;
     let pricingReferenceId = '';
+    let tierFeePayerFA: 'vendor' | 'tourist' | 'shared' = 'vendor';
+    let tierTouristPctFA: number | null = null;
+    let tierVendorPctFA: number | null = null;
 
     const tierIdForAmount = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
     if (tierIdForAmount) {
@@ -458,17 +582,28 @@ export async function calculatePaymentForAmount(
       const resolved = await resolveTierCommission(tierIdForAmount, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
+      tierFeePayerFA = resolved.fee_payer;
+      tierTouristPctFA = resolved.tourist_percentage;
+      tierVendorPctFA = resolved.vendor_percentage;
     }
+
+    const tierSplitFA = applyFeePayerSplitFromPlatformFee(
+      basePrice,
+      platformFee,
+      tierFeePayerFA,
+      tierTouristPctFA,
+      tierVendorPctFA
+    );
 
     return {
       success: true,
       base_price: basePrice,
       platform_fee: platformFee,
-      tourist_fee: 0,
-      vendor_fee: platformFee,
-      vendor_payout: basePrice - platformFee,
-      total_customer_payment: basePrice,
-      fee_payer: 'vendor',
+      tourist_fee: tierSplitFA.tourist_fee,
+      vendor_fee: tierSplitFA.vendor_fee,
+      vendor_payout: tierSplitFA.vendor_payout,
+      total_customer_payment: tierSplitFA.total_customer_payment,
+      fee_payer: tierFeePayerFA,
       pricing_source: 'tier',
       pricing_reference_id: pricingReferenceId,
       service_id: serviceId
@@ -564,6 +699,16 @@ export async function createPricingTier(
     tier.commission_type,
     Number(tier.commission_value)
   );
+  const fp = normalizeFeePayer(tier.fee_payer);
+  let touristPct: number | null = null;
+  let vendorPct: number | null = null;
+  if (fp === 'shared') {
+    touristPct = Number(tier.tourist_percentage ?? 0);
+    vendorPct = Number(tier.vendor_percentage ?? 0);
+    if (touristPct + vendorPct !== 100) {
+      throw new Error('Shared fee payer requires tourist and vendor percentages to sum to 100');
+    }
+  }
   const { data, error } = await supabase
     .from('vendor_tiers')
     .insert({
@@ -575,6 +720,9 @@ export async function createPricingTier(
       min_rating: tier.min_rating ?? null,
       priority_order: tier.priority_order,
       is_active: tier.is_active,
+      fee_payer: fp,
+      tourist_percentage: touristPct,
+      vendor_percentage: vendorPct,
       effective_from: tier.effective_from ? new Date(tier.effective_from).toISOString() : undefined,
       effective_until: tier.effective_until ? new Date(tier.effective_until).toISOString() : null,
       ...(adminId ? { created_by: adminId } : {})
@@ -632,6 +780,39 @@ export async function updatePricingTier(
     payload.effective_until = updates.effective_until
       ? new Date(updates.effective_until).toISOString()
       : null;
+  }
+
+  const existingFp = normalizeFeePayer((existing as Record<string, unknown>).fee_payer);
+  const mergedFeePayer =
+    updates.fee_payer !== undefined ? normalizeFeePayer(updates.fee_payer) : existingFp;
+
+  if (updates.fee_payer !== undefined) {
+    payload.fee_payer = mergedFeePayer;
+  }
+
+  if (
+    updates.fee_payer !== undefined ||
+    updates.tourist_percentage !== undefined ||
+    updates.vendor_percentage !== undefined
+  ) {
+    if (mergedFeePayer === 'shared') {
+      const tp =
+        updates.tourist_percentage !== undefined
+          ? Number(updates.tourist_percentage)
+          : Number((existing as Record<string, unknown>).tourist_percentage ?? 0);
+      const vp =
+        updates.vendor_percentage !== undefined
+          ? Number(updates.vendor_percentage)
+          : Number((existing as Record<string, unknown>).vendor_percentage ?? 0);
+      if (tp + vp !== 100) {
+        throw new Error('Shared fee payer requires tourist and vendor percentages to sum to 100');
+      }
+      payload.tourist_percentage = tp;
+      payload.vendor_percentage = vp;
+    } else {
+      payload.tourist_percentage = null;
+      payload.vendor_percentage = null;
+    }
   }
 
   if (updates.commission_type !== undefined || updates.commission_value !== undefined) {
@@ -883,7 +1064,11 @@ export async function getPricingPreview(
   if (calculation.pricing_source === 'override') {
     appliedRule = `Service override (${calculation.fee_payer} pays fee)`;
   } else {
-    appliedRule = 'Vendor tier commission (vendor pays fee)';
+    const fp = calculation.fee_payer;
+    appliedRule =
+      fp === 'shared'
+        ? 'Vendor tier commission (shared fee)'
+        : `Vendor tier commission (${fp} pays fee)`;
   }
 
   return {

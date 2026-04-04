@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { calculatePaymentForAmount } from '../lib/pricingService'
+import {
+  calculatePaymentForAmount,
+  customerTotalFromUnitPricingCalc,
+  touristFeeTotalFromUnitCalc
+} from '../lib/pricingService'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle } from 'lucide-react'
 // using local formatCurrencyWithConversion helper (based on user preferences defined in this file)
@@ -449,8 +453,20 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     ? Number(pricingCalc.platform_fee)
     : Math.max(100, Math.round(service.price * 0.01))
 
-  const serviceFeeTotal = platformFeePer * bookingData.guests
-  const grandTotal = totalPrice + serviceFeeTotal
+  /** What the customer pays (aligns with tier/override fee_payer). */
+  const customerPaysTotal = customerTotalFromUnitPricingCalc(
+    pricingCalc,
+    bookingData.guests,
+    totalPrice
+  )
+
+  const touristFeeTotal = touristFeeTotalFromUnitCalc(
+    pricingCalc,
+    bookingData.guests,
+    platformFeePer
+  )
+
+  const grandTotal = customerPaysTotal
 
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
@@ -463,7 +479,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         booking_date: new Date().toISOString(),
         service_date: bookingData.date,
         guests: bookingData.guests,
-        total_amount: totalPrice,
+        total_amount: customerPaysTotal,
         currency: service.currency,
         status: 'pending',
         payment_status: 'pending',
@@ -472,7 +488,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         tourist_id: user?.id,
         guest_name: user ? undefined : bookingData.contactName,
         guest_email: user ? undefined : bookingData.contactEmail,
-        guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`
+        guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
+        pricing_base_amount: totalPrice
       })
 
       setCurrentStep(5) // Go to confirmation step
@@ -644,8 +661,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 </div>
 
                 <div className="flex justify-between items-center text-sm text-gray-700">
-                  <span>Service Fee</span>
-                  <span>{formatCurrencyWithConversion(serviceFeeTotal, service.currency)}</span>
+                  <span>Fee (your portion)</span>
+                  <span>{formatCurrencyWithConversion(touristFeeTotal, service.currency)}</span>
                 </div>
 
                 {pricingCalc?.fee_payer === 'shared' && (
@@ -772,7 +789,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           booking_date: new Date().toISOString(),
           service_date: bookingData.date,
           guests: bookingData.guests,
-          total_amount: totalPrice,
+          total_amount: grandTotal,
           currency: service.currency,
           status: 'confirmed' as const,
           payment_status: 'paid' as const,

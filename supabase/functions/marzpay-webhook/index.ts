@@ -172,6 +172,7 @@ serve(async (req) => {
             p_guest_phone: order.guest_phone || null,
             p_pickup_location: null,
             p_dropoff_location: null,
+            p_pricing_base_amount: groups[sid].total,
           })
           if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
             await supabase.rpc("update_booking_status_atomic", {

@@ -1,9 +1,7 @@
 /**
- * Named arguments for `public.create_booking_atomic` (14-parameter overload).
- * Use this shape everywhere so PostgREST/Postgres resolve a single function.
- *
- * Identity order in Postgres: service → vendor → booking_date → guests → total_amount
- * → tourist → service_date → currency → special_requests → guest fields → locations.
+ * Named arguments for `public.create_booking_atomic`.
+ * Optional p_pricing_base_amount: pre-fee line total for commission (e.g. rooms×nights×price, transport total).
+ * When omitted/null, DB uses service.price × guests.
  */
 export interface CreateBookingAtomicRpcInput {
   p_service_id: string
@@ -20,6 +18,8 @@ export interface CreateBookingAtomicRpcInput {
   p_guest_phone?: string | null
   p_pickup_location?: string | null
   p_dropoff_location?: string | null
+  /** Pre-tax/pre-fee booking line amount for tier commission (not necessarily equal to total_amount when tourist pays fee). */
+  p_pricing_base_amount?: number | null
 }
 
 export function buildCreateBookingAtomicRpcPayload(
@@ -39,6 +39,7 @@ export function buildCreateBookingAtomicRpcPayload(
     p_guest_email: input.p_guest_email ?? null,
     p_guest_phone: input.p_guest_phone ?? null,
     p_pickup_location: input.p_pickup_location ?? null,
-    p_dropoff_location: input.p_dropoff_location ?? null
+    p_dropoff_location: input.p_dropoff_location ?? null,
+    p_pricing_base_amount: input.p_pricing_base_amount ?? null
   }
 }

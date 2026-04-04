@@ -4,6 +4,12 @@ import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 // use the local formatCurrencyWithConversion helper defined below
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
+import {
+  calculatePaymentForAmount,
+  customerTotalFromUnitPricingCalc,
+  touristFeeTotalFromUnitCalc,
+  type PaymentCalculation
+} from '../lib/pricingService'
 import { supabase } from '../lib/supabaseClient'
 
 interface ServiceDetail {
@@ -341,6 +347,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
+  const [hotelPricingCalc, setHotelPricingCalc] = useState<PaymentCalculation | null>(null)
 
   // Pre-fill form data from navigation state
   useEffect(() => {
@@ -518,6 +525,38 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     : 0
 
   const totalPrice = service.price * bookingData.rooms * nights
+  const hotelBillableUnits = Math.max(0, bookingData.rooms * nights)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!service?.id || hotelBillableUnits <= 0) {
+      setHotelPricingCalc(null)
+      return () => {
+        cancelled = true
+      }
+    }
+    ;(async () => {
+      try {
+        const calc = await calculatePaymentForAmount(service.id, Number(service.price || 0))
+        if (cancelled) return
+        setHotelPricingCalc(calc.success ? calc : null)
+      } catch (e) {
+        console.error('Hotel pricing calc failed:', e)
+        if (!cancelled) setHotelPricingCalc(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [service.id, service.price, hotelBillableUnits])
+
+  const customerPaysTotal = customerTotalFromUnitPricingCalc(
+    hotelPricingCalc,
+    hotelBillableUnits,
+    totalPrice
+  )
+  const hotelTouristFeeTotal = touristFeeTotalFromUnitCalc(hotelPricingCalc, hotelBillableUnits, 0)
+  const hotelGrandTotal = customerPaysTotal
 
   const handleCompleteBooking = async () => {
     setIsSubmitting(true)
@@ -528,7 +567,8 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         booking_date: new Date().toISOString(),
         service_date: bookingData.checkInDate,
         guests: bookingData.guests,
-        total_amount: totalPrice,
+        total_amount: hotelGrandTotal,
+        pricing_base_amount: totalPrice,
         currency: 'UGX',
         status: 'pending',
         payment_status: 'pending',
@@ -752,10 +792,20 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             {/* Payment */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
-              <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700 font-light">Total Amount Due:</span>
-                  <span className="text-2xl font-semibold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+              <div className="bg-blue-50 p-4 rounded-lg mb-4 space-y-2">
+                <div className="flex justify-between items-center text-sm text-gray-700 font-light">
+                  <span>Room subtotal ({nights} night{nights !== 1 ? 's' : ''})</span>
+                  <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                </div>
+                {hotelTouristFeeTotal > 0 && (
+                  <div className="flex justify-between items-center text-sm text-gray-700 font-light">
+                    <span>Fee (your portion)</span>
+                    <span>{formatCurrencyWithConversion(hotelTouristFeeTotal, service.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-blue-100">
+                  <span className="text-gray-800 font-medium">Total amount due</span>
+                  <span className="text-2xl font-semibold text-blue-600">{formatCurrencyWithConversion(hotelGrandTotal, service.currency)}</span>
                 </div>
               </div>
               <div className="space-y-3">
@@ -967,7 +1017,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t">
                   <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(hotelGrandTotal, service.currency)}</span>
                 </div>
               </div>
             </div>

@@ -172,7 +172,11 @@ class OperationQueue {
         p_guest_email: data.guest_email ?? null,
         p_guest_phone: data.guest_phone ?? null,
         p_pickup_location: data.pickup_location ?? null,
-        p_dropoff_location: data.dropoff_location ?? null
+        p_dropoff_location: data.dropoff_location ?? null,
+        p_pricing_base_amount:
+          data.pricing_base_amount !== undefined && data.pricing_base_amount !== null
+            ? Number(data.pricing_base_amount)
+            : null
       })
     );
 

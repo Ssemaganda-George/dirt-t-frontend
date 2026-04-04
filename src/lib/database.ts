@@ -1985,6 +1985,7 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
             service_date: new Date().toISOString(),
             guests: groups[sid].qty,
             total_amount: groups[sid].total,
+            pricing_base_amount: groups[sid].total,
             currency: order.currency,
             status: 'confirmed',
             payment_status: 'paid',
@@ -2649,7 +2650,13 @@ export async function getAllBookings(): Promise<Booking[]> {
   return transformedData
 }
 
-export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'vendor_id'> & { vendor_id?: string }): Promise<Booking> {
+export async function createBooking(
+  booking: Omit<Booking, 'id' | 'created_at' | 'updated_at' | 'vendor_id'> & {
+    vendor_id?: string
+    /** Pre-fee line total for commission in create_booking_atomic; optional. */
+    pricing_base_amount?: number | null
+  }
+): Promise<Booking> {
   console.log('createBooking called with:', booking)
 
   // Check if this is a guest booking
@@ -2703,7 +2710,11 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
       p_guest_email: bookingData.guest_email || null,
       p_guest_phone: bookingData.guest_phone || null,
       p_pickup_location: bookingData.pickup_location || null,
-      p_dropoff_location: bookingData.dropoff_location || null
+      p_dropoff_location: bookingData.dropoff_location || null,
+      p_pricing_base_amount:
+        bookingData.pricing_base_amount !== undefined && bookingData.pricing_base_amount !== null
+          ? Number(bookingData.pricing_base_amount)
+          : null
     })
   );
 
