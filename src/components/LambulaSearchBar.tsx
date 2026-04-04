@@ -1,10 +1,11 @@
+import React from 'react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { format } from 'date-fns'
-import { Search, MapPin, Calendar, Users, Hotel, Map, Car, Utensils, ShoppingBag, Target, Minus, Plus, Loader2, SlidersHorizontal, LayoutGrid, ChevronDown } from 'lucide-react'
+import { Search, MapPin, Users, Hotel, Map, Car, Utensils, ShoppingBag, Target, Minus, Plus, Loader2, LayoutGrid, ChevronDown } from 'lucide-react'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabaseClient'
 
@@ -42,21 +43,7 @@ const CATEGORY_CONFIG: Record<string, { showDates: boolean; showGuests: boolean;
   'shops': { showDates: false, showGuests: false, dateLabel: '', guestsLabel: '' }
 }
 
-// Price ranges for filtering
-const PRICE_RANGES = [
-  { id: 'budget', label: 'Budget', min: 0, max: 50000 },
-  { id: 'moderate', label: 'Moderate', min: 50000, max: 200000 },
-  { id: 'premium', label: 'Premium', min: 200000, max: 500000 },
-  { id: 'luxury', label: 'Luxury', min: 500000, max: 999999999 }
-]
 
-// Difficulty levels
-const DIFFICULTY_LEVELS = [
-  { id: 'easy', label: 'Easy' },
-  { id: 'moderate', label: 'Moderate' },
-  { id: 'challenging', label: 'Challenging' },
-  { id: 'difficult', label: 'Difficult' }
-]
 
 export default function LambulaSearchBar({ className = '', onCategoryChange, onLocationChange, onDatesChange, activeCategory }: LambulaSearchBarProps) {
   const navigate = useNavigate()
@@ -73,28 +60,22 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
   const [adults, setAdults] = useState(1)
   const [children, setChildren] = useState(0)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [datePickerPosition, setDatePickerPosition] = useState({ top: 0, left: 0 })
-  const [showFilters, setShowFilters] = useState(false)
+  const [showCheckInPicker, setShowCheckInPicker] = useState(false)
+  const [showCheckOutPicker, setShowCheckOutPicker] = useState(false)
+  const [checkInPickerPosition, setCheckInPickerPosition] = useState({ top: 0, left: 0 })
+  const [checkOutPickerPosition, setCheckOutPickerPosition] = useState({ top: 0, left: 0 })
+
   const [locations, setLocations] = useState<Location[]>([])
   const [loadingLocations, setLoadingLocations] = useState(false)
   
-  // Dynamic filters from DB
-  const [amenities, setAmenities] = useState<string[]>([])
-  const [facilities, setFacilities] = useState<string[]>([])
-  const [activityTypes, setActivityTypes] = useState<string[]>([])
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
-  const [selectedFacilities, setSelectedFacilities] = useState<string[]>([])
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('')
-  const [selectedPriceRange, setSelectedPriceRange] = useState<string>('')
-  const [selectedActivityType, setSelectedActivityType] = useState<string>('')
-  const [duration, setDuration] = useState<string>('')
+
   
   const locationRef = useRef<HTMLDivElement>(null)
   const locationInputRef = useRef<HTMLInputElement>(null)
   const guestRef = useRef<HTMLDivElement>(null)
   const datePickerRef = useRef<HTMLDivElement>(null)
-  const dateInputRef = useRef<HTMLInputElement>(null)
+  const checkInInputRef = useRef<HTMLInputElement>(null)
+  const checkOutInputRef = useRef<HTMLInputElement>(null)
 
   // Get current category config
   const categoryConfig = CATEGORY_CONFIG[activeTab] || CATEGORY_CONFIG['all']
@@ -213,47 +194,7 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
     fetchLocations()
   }, [activeTab])
 
-  // Fetch filter options based on category
-  useEffect(() => {
-    const fetchFilterOptions = async () => {
-      const categorySlug = SERVICE_TAB_MAP[activeTab]
-      
-      try {
-        // Fetch amenities, facilities, and activity types from services
-        const { data, error } = await supabase
-          .from('services')
-          .select('amenities, facilities, activity_type, difficulty_level, price')
-          .eq('status', 'approved')
-          .eq('category_id', categorySlug)
-        
-        if (error) throw error
-        
-        if (data) {
-          // Extract unique amenities
-          const allAmenities = data
-            .flatMap(s => s.amenities || [])
-            .filter(Boolean) as string[]
-          setAmenities([...new Set(allAmenities)].sort())
-          
-          // Extract unique facilities
-          const allFacilities = data
-            .flatMap(s => s.facilities || [])
-            .filter(Boolean) as string[]
-          setFacilities([...new Set(allFacilities)].sort())
-          
-          // Extract unique activity types
-          const allActivityTypes = data
-            .map(s => s.activity_type)
-            .filter(Boolean) as string[]
-          setActivityTypes([...new Set(allActivityTypes)].sort())
-        }
-      } catch (error) {
-        console.error('Error fetching filter options:', error)
-      }
-    }
-    
-    fetchFilterOptions()
-  }, [activeTab])
+
 
   // Filter locations based on query
   const filteredLocations = locationQuery 
@@ -270,28 +211,13 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
         setShowGuestDropdown(false)
       }
       if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
-        setShowDatePicker(false)
+        setShowCheckInPicker(false)
+        setShowCheckOutPicker(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Format date for display
-  const formatDateDisplay = () => {
-    if (checkIn && checkOut) {
-      const startDate = new Date(checkIn)
-      const endDate = new Date(checkOut)
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-      return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`
-    }
-    if (checkIn) {
-      const date = new Date(checkIn)
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-      return date.toLocaleDateString('en-US', options)
-    }
-    return ''
-  }
 
   // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
@@ -343,71 +269,9 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
       }
     }
     
-    // Add advanced filters
-    if (selectedAmenities.length > 0) {
-      params.set('amenities', selectedAmenities.join(','))
-    }
-    if (selectedFacilities.length > 0) {
-      params.set('facilities', selectedFacilities.join(','))
-    }
-    if (selectedDifficulty) {
-      params.set('difficulty', selectedDifficulty)
-    }
-    if (selectedPriceRange) {
-      const range = PRICE_RANGES.find(r => r.id === selectedPriceRange)
-      if (range) {
-        params.set('min_price', range.min.toString())
-        params.set('max_price', range.max.toString())
-      }
-    }
-    if (selectedActivityType) {
-      params.set('activity_type', selectedActivityType)
-    }
-    if (duration) {
-      params.set('duration', duration)
-    }
-    
     // Navigate to services page with search params
     navigate(`/services?${params.toString()}`)
   }
-
-  // Toggle amenity selection
-  const toggleAmenity = (amenity: string) => {
-    setSelectedAmenities(prev => 
-      prev.includes(amenity) 
-        ? prev.filter(a => a !== amenity)
-        : [...prev, amenity]
-    )
-  }
-
-  // Toggle facility selection
-  const toggleFacility = (facility: string) => {
-    setSelectedFacilities(prev => 
-      prev.includes(facility) 
-        ? prev.filter(f => f !== facility)
-        : [...prev, facility]
-    )
-  }
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSelectedAmenities([])
-    setSelectedFacilities([])
-    setSelectedDifficulty('')
-    setSelectedPriceRange('')
-    setSelectedActivityType('')
-    setDuration('')
-  }
-
-  // Count active filters
-  const activeFilterCount = [
-    selectedAmenities.length > 0,
-    selectedFacilities.length > 0,
-    selectedDifficulty !== '',
-    selectedPriceRange !== '',
-    selectedActivityType !== '',
-    duration !== ''
-  ].filter(Boolean).length
 
   // Handle location selection
   const handleLocationSelect = (location: Location, e: React.MouseEvent) => {
@@ -430,44 +294,30 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
     setShowLocationDropdown(!showLocationDropdown)
   }
 
-  // Handle react-datepicker date range selection
-  const handleDateRangeChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates
-    setCheckInDate(start)
-    setCheckOutDate(end)
-    if (start) {
-      setCheckIn(format(start, 'yyyy-MM-dd'))
-    } else {
-      setCheckIn('')
-    }
-    if (end) {
-      setCheckOut(format(end, 'yyyy-MM-dd'))
-      // Both dates selected - notify parent component
-      if (onDatesChange) {
-        onDatesChange({ 
-          checkIn: format(start!, 'yyyy-MM-dd'), 
-          checkOut: format(end, 'yyyy-MM-dd') 
-        })
-      }
-    } else {
-      setCheckOut('')
-    }
-  }
-
-  // Toggle date picker and calculate position
-  const toggleDatePicker = () => {
-    console.log('=== toggleDatePicker called ===')
-    console.log('showDatePicker:', showDatePicker)
-    if (!showDatePicker && dateInputRef.current) {
-      const rect = dateInputRef.current.getBoundingClientRect()
-      console.log('Date input rect:', rect)
-      // Open upward to avoid being cut off at bottom
-      setDatePickerPosition({
+  // Toggle check-in date picker
+  const toggleCheckInPicker = () => {
+    if (!showCheckInPicker && checkInInputRef.current) {
+      const rect = checkInInputRef.current.getBoundingClientRect()
+      setCheckInPickerPosition({
         top: rect.top + window.scrollY - 10,
         left: rect.left + window.scrollX
       })
     }
-    setShowDatePicker(!showDatePicker)
+    setShowCheckInPicker(!showCheckInPicker)
+    if (showCheckInPicker) setShowCheckOutPicker(false)
+  }
+
+  // Toggle check-out date picker
+  const toggleCheckOutPicker = () => {
+    if (!showCheckOutPicker && checkOutInputRef.current) {
+      const rect = checkOutInputRef.current.getBoundingClientRect()
+      setCheckOutPickerPosition({
+        top: rect.top + window.scrollY - 10,
+        left: rect.left + window.scrollX
+      })
+    }
+    setShowCheckOutPicker(!showCheckOutPicker)
+    if (showCheckOutPicker) setShowCheckInPicker(false)
   }
 
   // Service tabs configuration
@@ -633,108 +483,130 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
               </div>
             </div>
 
-            {/* Date Field - Only for certain categories */}
+            {/* Date Fields - Separate Check-in and Check-out like Airbnb */}
             {categoryConfig.showDates && (
-              <div 
-                className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-100 relative" 
-                ref={datePickerRef}
-                onClick={() => {
-                  console.log('Date field div clicked!')
-                  toggleDatePicker()
-                }}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">
-                      {categoryConfig.dateLabel}
-                    </label>
-                    <input
-                      ref={dateInputRef}
-                      type="text"
-                      className="w-full text-gray-900 placeholder-gray-400 focus:outline-none text-sm bg-transparent cursor-pointer"
-                      placeholder={t('select_dates') || 'Select dates'}
-                      value={formatDateDisplay()}
-                      readOnly
-                    />
-                  </div>
-                </div>
-                
-                {/* Date Picker - Rendered via Portal to appear above modals */}
-                {showDatePicker && createPortal(
-                  <div 
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    style={{
-                      position: 'fixed',
-                      top: `${datePickerPosition.top}px`,
-                      left: `${datePickerPosition.left}px`,
-                      zIndex: 99998,
-                      backgroundColor: '#fff',
-                      borderRadius: '12px',
-                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
-                      padding: '12px',
-                      border: '1px solid #e5e7eb',
-                      width: 'auto',
-                      maxWidth: '100vw'
-                    }}
-                  >
-                    {activeTab === 'events' ? (
-                      // Single date picker for events
+              <div className="flex-1 flex border-b md:border-b-0 md:border-r border-gray-100">
+                {/* Check-in Field */}
+                <div 
+                  className="flex-1 p-3 relative" 
+                  ref={datePickerRef}
+                  onClick={() => toggleCheckInPicker()}
+                  style={{ cursor: 'pointer', borderRight: '1px solid #f3f4f6' }}
+                >
+                  <label className="block text-xs font-semibold text-gray-900 mb-0.5">
+                    {activeTab === 'events' ? t('date') || 'Date' : t('check_in') || 'Check-in'}
+                  </label>
+                  <input
+                    ref={checkInInputRef}
+                    type="text"
+                    className="w-full text-gray-500 placeholder-gray-400 focus:outline-none text-sm bg-transparent cursor-pointer"
+                    placeholder={t('add_date') || 'Add date'}
+                    value={checkIn ? format(new Date(checkIn), 'MMM d') : ''}
+                    readOnly
+                  />
+                  
+                  {/* Check-in Date Picker */}
+                  {showCheckInPicker && createPortal(
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'fixed',
+                        top: `${checkInPickerPosition.top}px`,
+                        left: `${checkInPickerPosition.left}px`,
+                        zIndex: 99998,
+                        backgroundColor: '#fff',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+                        padding: '12px',
+                        border: '1px solid #e5e7eb'
+                      }}
+                    >
                       <DatePicker
                         selected={checkInDate}
                         onChange={(date: Date | null) => {
+                          console.log('Check-in date selected:', date)
                           if (date) {
+                            console.log('Setting checkIn to:', format(date, 'yyyy-MM-dd'))
                             setCheckInDate(date)
                             setCheckIn(format(date, 'yyyy-MM-dd'))
+                            if (onDatesChange) {
+                              onDatesChange({ checkIn: format(date, 'yyyy-MM-dd'), checkOut })
+                            }
+                            // Don't close the picker - let user see selection and choose check-out
+                            // Auto-open check-out after selecting check-in
+                            setTimeout(() => toggleCheckOutPicker(), 200)
                           }
-                          setShowDatePicker(false)
                         }}
                         minDate={new Date()}
                         inline
                         monthsShown={1}
-                      />
-                    ) : (
-                      // Date range picker for other categories
-                      <DatePicker
-                        selected={checkInDate}
-                        startDate={checkInDate}
-                        endDate={checkOutDate}
-                        onChange={handleDateRangeChange}
-                        minDate={new Date()}
-                        selectsRange
-                        monthsShown={2}
-                        inline
-                        showPopperArrow={false}
-                        popperPlacement="bottom-start"
                         forceShowMonthNavigation={true}
                       />
-                    )}
-                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                      <button
-                        type="button"
-                        style={{ padding: '8px 16px', fontSize: '14px', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}
-                        onClick={() => {
-                          setCheckIn('')
-                          setCheckOut('')
-                          setCheckInDate(null)
-                          setCheckOutDate(null)
-                          setShowDatePicker(false)
+                    </div>,
+                    document.body
+                  )}
+                </div>
+
+                {/* Check-out Field */}
+                {activeTab !== 'events' && (
+                  <div 
+                    className="flex-1 p-3 relative"
+                    onClick={() => toggleCheckOutPicker()}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <label className="block text-xs font-semibold text-gray-900 mb-0.5">
+                      {t('check_out') || 'Check-out'}
+                    </label>
+                    <input
+                      ref={checkOutInputRef}
+                      type="text"
+                      className="w-full text-gray-500 placeholder-gray-400 focus:outline-none text-sm bg-transparent cursor-pointer"
+                      placeholder={t('add_date') || 'Add date'}
+                      value={checkOut ? format(new Date(checkOut), 'MMM d') : ''}
+                      readOnly
+                    />
+                    
+                    {/* Check-out Date Picker */}
+                    {showCheckOutPicker && createPortal(
+                      <div 
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'fixed',
+                          top: `${checkOutPickerPosition.top}px`,
+                          left: `${checkOutPickerPosition.left}px`,
+                          zIndex: 99998,
+                          backgroundColor: '#fff',
+                          borderRadius: '12px',
+                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+                          padding: '12px',
+                          border: '1px solid #e5e7eb'
                         }}
                       >
-                        {t('clear') || 'Clear'}
-                      </button>
-                      <button
-                        type="button"
-                        style={{ padding: '8px 16px', fontSize: '14px', color: '#fff', background: '#10b981', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                        onClick={() => setShowDatePicker(false)}
-                      >
-                        {t('apply') || 'Apply'}
-                      </button>
-                    </div>
-                  </div>,
-                  document.body
+                        <DatePicker
+                          selected={checkOutDate}
+                          onChange={(date: Date | null) => {
+                            console.log('Check-out date selected:', date)
+                            if (date) {
+                              console.log('Setting checkOut to:', format(date, 'yyyy-MM-dd'))
+                              setCheckOutDate(date)
+                              setCheckOut(format(date, 'yyyy-MM-dd'))
+                              if (onDatesChange && checkIn) {
+                                onDatesChange({ checkIn, checkOut: format(date, 'yyyy-MM-dd') })
+                              }
+                            }
+                            // Don't close the picker - let user see selection
+                          }}
+                          minDate={checkInDate || new Date()}
+                          inline
+                          monthsShown={1}
+                          forceShowMonthNavigation={true}
+                        />
+                      </div>,
+                      document.body
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -761,9 +633,17 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                   </div>
                 </div>
 
-                {/* Guests Dropdown */}
+                {/* Guests Dropdown - Modal Style */}
                 {showGuestDropdown && (
-                  <div className="dropdown-menu absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50">
+                  <div 
+                    className="fixed inset-0 bg-black/50 z-40"
+                    style={{ zIndex: 99997 }}
+                    onClick={() => setShowGuestDropdown(false)}
+                  >
+                    <div 
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl p-6 w-80"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                     {/* Adults */}
                     <div className="guest-selector flex items-center justify-between mb-4">
                       <div className="label font-medium text-gray-900">{t('adults') || 'Adults'}</div>
@@ -847,22 +727,7 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
             {/* Search Button */}
             <div className="g-button-submit p-2 flex items-center gap-2">
               {/* Advanced Filters Button */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setShowFilters(!showFilters)
-                }}
-                className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium transition-colors relative"
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-                <span className="hidden sm:inline">{t('filters') || 'Filters'}</span>
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+
 
               {/* Search Button */}
               <button
@@ -873,151 +738,10 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                 <span>{t('search') || 'Search'}</span>
               </button>
             </div>
-
-            {/* Advanced Filters Panel */}
-            {showFilters && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 z-50 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{t('advanced_filters') || 'Advanced Filters'}</h3>
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                  >
-                    {t('clear_all') || 'Clear All'}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Price Range */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('price_range') || 'Price Range'}
-                    </label>
-                    <div className="space-y-2">
-                      {PRICE_RANGES.map(range => (
-                        <label key={range.id} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="priceRange"
-                            value={range.id}
-                            checked={selectedPriceRange === range.id}
-                            onChange={(e) => setSelectedPriceRange(e.target.value)}
-                            className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
-                          />
-                          <span className="text-sm text-gray-600">{range.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Difficulty Level */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('difficulty') || 'Difficulty Level'}
-                    </label>
-                    <select
-                      value={selectedDifficulty}
-                      onChange={(e) => setSelectedDifficulty(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">{t('any') || 'Any'}</option>
-                      {DIFFICULTY_LEVELS.map(level => (
-                        <option key={level.id} value={level.id}>{level.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Duration */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('duration') || 'Duration'}
-                    </label>
-                    <select
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">{t('any') || 'Any'}</option>
-                      <option value="half_day">{t('half_day') || 'Half Day'}</option>
-                      <option value="full_day">{t('full_day') || 'Full Day'}</option>
-                      <option value="1_3_days">{t('1_3_days') || '1-3 Days'}</option>
-                      <option value="4_7_days">{t('4_7_days') || '4-7 Days'}</option>
-                      <option value="week_plus">{t('week_plus') || 'Week+'}</option>
-                    </select>
-                  </div>
-
-                  {/* Activity Type */}
-                  {activityTypes.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('activity_type') || 'Activity Type'}
-                      </label>
-                      <select
-                        value={selectedActivityType}
-                        onChange={(e) => setSelectedActivityType(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      >
-                        <option value="">{t('any') || 'Any'}</option>
-                        {activityTypes.map(type => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                {/* Amenities */}
-                {amenities.length > 0 && (
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('amenities') || 'Amenities'}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {amenities.slice(0, 12).map(amenity => (
-                        <button
-                          key={amenity}
-                          onClick={() => toggleAmenity(amenity)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                            selectedAmenities.includes(amenity)
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {amenity}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Facilities */}
-                {facilities.length > 0 && (
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {t('facilities') || 'Facilities'}
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {facilities.slice(0, 12).map(facility => (
-                        <button
-                          key={facility}
-                          onClick={() => toggleFacility(facility)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                            selectedFacilities.includes(facility)
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {facility}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </form>
     </div>
   )
 }
+
