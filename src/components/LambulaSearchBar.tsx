@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { format } from 'date-fns'
-import { Search, MapPin, Users, Hotel, Map, Car, Utensils, ShoppingBag, Target, Minus, Plus, Loader2, LayoutGrid, ChevronDown } from 'lucide-react'
+import { Search, MapPin, Users, Hotel, Map, Car, Utensils, ShoppingBag, Target, Loader2, LayoutGrid, ChevronDown } from 'lucide-react'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabaseClient'
 
@@ -486,25 +486,18 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
             {/* Date Fields - Separate Check-in and Check-out like Airbnb */}
             {categoryConfig.showDates && (
               <div className="flex-1 flex border-b md:border-b-0 md:border-r border-gray-100">
-                {/* Check-in Field */}
-                <div 
-                  className="flex-1 p-3 relative" 
-                  ref={datePickerRef}
-                  onClick={() => toggleCheckInPicker()}
-                  style={{ cursor: 'pointer', borderRight: '1px solid #f3f4f6' }}
-                >
-                  <label className="block text-xs font-semibold text-gray-900 mb-0.5">
-                    {activeTab === 'events' ? t('date') || 'Date' : t('check_in') || 'Check-in'}
-                  </label>
-                  <input
-                    ref={checkInInputRef}
-                    type="text"
-                    className="w-full text-gray-500 placeholder-gray-400 focus:outline-none text-sm bg-transparent cursor-pointer"
-                    placeholder={t('add_date') || 'Add date'}
-                    value={checkIn ? format(new Date(checkIn), 'MMM d') : ''}
-                    readOnly
-                  />
-                  
+                {/* Date Summary Field */}
+                <div className="flex-1 p-4 relative cursor-pointer" onClick={() => { toggleCheckInPicker(); }}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{activeTab === 'events' ? t('date') || 'Date' : `${t('check_in') || 'Check-in'} & ${t('check_out') || 'Check-out'}`}</label>
+                  <div className="render text-sm text-gray-900 min-h-[20px]">
+                    {checkIn && checkOut ? (
+                      <span>{format(new Date(checkIn), 'MMM d')} - {format(new Date(checkOut), 'MMM d')}</span>
+                    ) : checkIn ? (
+                      <span>{format(new Date(checkIn), 'MMM d')} - {t('add_date') || 'Add date'}</span>
+                    ) : (
+                      <span className="text-gray-400">{t('add_date') || 'Add date'}</span>
+                    )}
+                  </div>
                   {/* Check-in Date Picker */}
                   {showCheckInPicker && createPortal(
                     <div 
@@ -519,22 +512,29 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                         borderRadius: '12px',
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
                         padding: '12px',
-                        border: '1px solid #e5e7eb'
+                        border: '1px solid #e5e7eb',
+                        minWidth: '320px'
                       }}
                     >
+                      <button
+                        type="button"
+                        aria-label="Close"
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-lg font-bold focus:outline-none"
+                        style={{zIndex: 100000}}
+                        onClick={(e) => { e.stopPropagation(); setShowCheckInPicker(false); }}
+                      >
+                        ×
+                      </button>
+                      <div className="text-center mb-2 text-sm font-semibold text-gray-700">{t('select_checkin_date') || 'Select check-in date'}</div>
                       <DatePicker
                         selected={checkInDate}
                         onChange={(date: Date | null) => {
-                          console.log('Check-in date selected:', date)
                           if (date) {
-                            console.log('Setting checkIn to:', format(date, 'yyyy-MM-dd'))
                             setCheckInDate(date)
                             setCheckIn(format(date, 'yyyy-MM-dd'))
                             if (onDatesChange) {
                               onDatesChange({ checkIn: format(date, 'yyyy-MM-dd'), checkOut })
                             }
-                            // Don't close the picker - let user see selection and choose check-out
-                            // Auto-open check-out after selecting check-in
                             setTimeout(() => toggleCheckOutPicker(), 200)
                           }
                         }}
@@ -546,68 +546,54 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                     </div>,
                     document.body
                   )}
-                </div>
-
-                {/* Check-out Field */}
-                {activeTab !== 'events' && (
-                  <div 
-                    className="flex-1 p-3 relative"
-                    onClick={() => toggleCheckOutPicker()}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <label className="block text-xs font-semibold text-gray-900 mb-0.5">
-                      {t('check_out') || 'Check-out'}
-                    </label>
-                    <input
-                      ref={checkOutInputRef}
-                      type="text"
-                      className="w-full text-gray-500 placeholder-gray-400 focus:outline-none text-sm bg-transparent cursor-pointer"
-                      placeholder={t('add_date') || 'Add date'}
-                      value={checkOut ? format(new Date(checkOut), 'MMM d') : ''}
-                      readOnly
-                    />
-                    
-                    {/* Check-out Date Picker */}
-                    {showCheckOutPicker && createPortal(
-                      <div 
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        style={{
-                          position: 'fixed',
-                          top: `${checkOutPickerPosition.top}px`,
-                          left: `${checkOutPickerPosition.left}px`,
-                          zIndex: 99998,
-                          backgroundColor: '#fff',
-                          borderRadius: '12px',
-                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
-                          padding: '12px',
-                          border: '1px solid #e5e7eb'
-                        }}
+                  {/* Check-out Date Picker */}
+                  {showCheckOutPicker && createPortal(
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      style={{
+                        position: 'fixed',
+                        top: `${checkOutPickerPosition.top}px`,
+                        left: `${checkOutPickerPosition.left}px`,
+                        zIndex: 99998,
+                        backgroundColor: '#fff',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+                        padding: '12px',
+                        border: '1px solid #e5e7eb',
+                        minWidth: '320px'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        aria-label="Close"
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-lg font-bold focus:outline-none"
+                        style={{zIndex: 100000}}
+                        onClick={(e) => { e.stopPropagation(); setShowCheckOutPicker(false); }}
                       >
-                        <DatePicker
-                          selected={checkOutDate}
-                          onChange={(date: Date | null) => {
-                            console.log('Check-out date selected:', date)
-                            if (date) {
-                              console.log('Setting checkOut to:', format(date, 'yyyy-MM-dd'))
-                              setCheckOutDate(date)
-                              setCheckOut(format(date, 'yyyy-MM-dd'))
-                              if (onDatesChange && checkIn) {
-                                onDatesChange({ checkIn, checkOut: format(date, 'yyyy-MM-dd') })
-                              }
+                        ×
+                      </button>
+                      <div className="text-center mb-2 text-sm font-semibold text-gray-700">{t('select_checkout_date') || 'Select check-out date'}</div>
+                      <DatePicker
+                        selected={checkOutDate}
+                        onChange={(date: Date | null) => {
+                          if (date) {
+                            setCheckOutDate(date)
+                            setCheckOut(format(date, 'yyyy-MM-dd'))
+                            if (onDatesChange && checkIn) {
+                              onDatesChange({ checkIn, checkOut: format(date, 'yyyy-MM-dd') })
                             }
-                            // Don't close the picker - let user see selection
-                          }}
-                          minDate={checkInDate || new Date()}
-                          inline
-                          monthsShown={1}
-                          forceShowMonthNavigation={true}
-                        />
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                )}
+                          }
+                        }}
+                        minDate={checkInDate || new Date()}
+                        inline
+                        monthsShown={1}
+                        forceShowMonthNavigation={true}
+                      />
+                    </div>,
+                    document.body
+                  )}
+                </div>
               </div>
             )}
 
@@ -656,18 +642,9 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                               if (adults > 1) setAdults(adults - 1)
                             }}
                           >
-                            <Minus className="w-4 h-4" />
+                            -
                           </button>
-                          <input
-                            type="number"
-                            name="adults"
-                            value={adults}
-                            min={1}
-                            max={20}
-                            className="w-12 text-center py-1 border border-gray-200 rounded-lg"
-                            onChange={(e) => setAdults(Math.max(1, parseInt(e.target.value) || 1))}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          <span className="w-12 text-center py-1">{adults}</span>
                           <button
                             type="button"
                             className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -676,7 +653,7 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                               if (adults < 20) setAdults(adults + 1)
                             }}
                           >
-                            <Plus className="w-4 h-4" />
+                            +
                           </button>
                         </div>
                       </div>
@@ -694,18 +671,9 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                                 if (children > 0) setChildren(children - 1)
                               }}
                             >
-                              <Minus className="w-4 h-4" />
+                              -
                             </button>
-                            <input
-                              type="number"
-                              name="children"
-                              value={children}
-                              min={0}
-                              max={20}
-                              className="w-12 text-center py-1 border border-gray-200 rounded-lg"
-                              onChange={(e) => setChildren(Math.max(0, parseInt(e.target.value) || 0))}
-                              onClick={(e) => e.stopPropagation()}
-                            />
+                            <span className="w-12 text-center py-1">{children}</span>
                             <button
                               type="button"
                               className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -714,7 +682,7 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                                 if (children < 20) setChildren(children + 1)
                               }}
                             >
-                              <Plus className="w-4 h-4" />
+                              +
                             </button>
                           </div>
                         </div>
@@ -727,8 +695,27 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
 
             {/* Search Button */}
             <div className="g-button-submit p-2 flex items-center gap-2">
-              {/* Advanced Filters Button */}
-
+              {/* Clear Filters Button (smaller, above search) */}
+              <div className="w-full flex justify-end mb-2">
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded font-medium text-xs border border-gray-300"
+                  onClick={() => {
+                    setLocationQuery('');
+                    setSelectedLocation(null);
+                    setCheckIn('');
+                    setCheckOut('');
+                    setCheckInDate(null);
+                    setCheckOutDate(null);
+                    setAdults(1);
+                    setChildren(0);
+                    setActiveTab('all');
+                    if (onCategoryChange) onCategoryChange('all');
+                  }}
+                >
+                  {t('clear_filters') || 'Clear Filters'}
+                </button>
+              </div>
 
               {/* Search Button */}
               <button
