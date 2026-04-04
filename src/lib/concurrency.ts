@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { buildCreateBookingAtomicRpcPayload } from './createBookingAtomicRpc'
 
 // Rate limiting and queuing utilities for high-traffic scenarios
 
@@ -155,22 +156,25 @@ class OperationQueue {
 
   private async createBooking(data: any): Promise<void> {
     // Use atomic booking creation with capacity validation
-    const { data: result, error } = await supabase.rpc('create_booking_atomic', {
-      p_service_id: data.service_id,
-      p_tourist_id: data.tourist_id,
-      p_vendor_id: data.vendor_id,
-      p_booking_date: data.booking_date,
-      p_service_date: data.service_date,
-      p_guests: data.guests,
-      p_total_amount: data.total_amount,
-      p_currency: data.currency,
-      p_special_requests: data.special_requests,
-      p_guest_name: data.guest_name,
-      p_guest_email: data.guest_email,
-      p_guest_phone: data.guest_phone,
-      p_pickup_location: data.pickup_location,
-      p_dropoff_location: data.dropoff_location
-    });
+    const { data: result, error } = await supabase.rpc(
+      'create_booking_atomic',
+      buildCreateBookingAtomicRpcPayload({
+        p_service_id: data.service_id,
+        p_vendor_id: data.vendor_id,
+        p_booking_date: data.booking_date,
+        p_guests: data.guests,
+        p_total_amount: data.total_amount,
+        p_tourist_id: data.tourist_id ?? null,
+        p_service_date: data.service_date ?? null,
+        p_currency: data.currency ?? 'UGX',
+        p_special_requests: data.special_requests ?? null,
+        p_guest_name: data.guest_name ?? null,
+        p_guest_email: data.guest_email ?? null,
+        p_guest_phone: data.guest_phone ?? null,
+        p_pickup_location: data.pickup_location ?? null,
+        p_dropoff_location: data.dropoff_location ?? null
+      })
+    );
 
     if (error || !result?.success) {
       throw new Error(result?.error || error?.message || 'Failed to create booking');

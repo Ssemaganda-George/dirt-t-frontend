@@ -51,7 +51,7 @@ async function testCommissionCalculation() {
 
     const vendor = vendors[0]
     console.log(`📋 Testing with vendor: ${vendor.business_name}`)
-    console.log(`   Tier: ${vendor.vendor_tiers?.name} (${vendor.vendor_tiers?.commission_rate}% commission)`)
+    console.log(`   Tier: ${vendor.vendor_tiers?.name} (commission_rate ${vendor.vendor_tiers?.commission_rate} as fraction)`)
 
     // Get one of their services
     const { data: services, error: serviceError } = await supabase
@@ -89,7 +89,7 @@ async function testCommissionCalculation() {
 
     console.log('📋 Creating test booking...')
     console.log(`   Amount: ${testBooking.total_amount} ${testBooking.currency}`)
-    console.log(`   Expected commission: ${(testBooking.total_amount * (vendor.vendor_tiers?.commission_rate || 0) / 100).toFixed(2)}`)
+    console.log(`   Expected commission: ${(testBooking.total_amount * (vendor.vendor_tiers?.commission_rate || 0)).toFixed(2)} (rate is 0–1)`)
 
     // This would normally be called through the createBooking function
     // For testing, we'll call the RPC function directly
@@ -99,11 +99,15 @@ async function testCommissionCalculation() {
       p_booking_date: testBooking.booking_date,
       p_guests: testBooking.guests,
       p_total_amount: testBooking.total_amount,
+      p_tourist_id: null,
       p_service_date: testBooking.service_date,
       p_currency: testBooking.currency,
+      p_special_requests: null,
       p_guest_name: testBooking.guest_name,
       p_guest_email: testBooking.guest_email,
-      p_guest_phone: testBooking.guest_phone
+      p_guest_phone: testBooking.guest_phone,
+      p_pickup_location: null,
+      p_dropoff_location: null,
     })
 
     if (bookingError) {
@@ -131,13 +135,13 @@ async function testCommissionCalculation() {
     }
 
     console.log('📋 Booking commission details:')
-    console.log(`   Commission Rate: ${booking.commission_rate_at_booking}%`)
+    console.log(`   Commission Rate (fraction): ${booking.commission_rate_at_booking}`)
     console.log(`   Commission Amount: ${booking.commission_amount}`)
     console.log(`   Vendor Payout: ${booking.vendor_payout_amount}`)
     console.log(`   Tourist Paid: ${booking.total_amount}`)
 
     // Verify calculations
-    const expectedCommission = Math.round((booking.total_amount * booking.commission_rate_at_booking / 100) * 100) / 100
+    const expectedCommission = Math.round((booking.total_amount * booking.commission_rate_at_booking) * 100) / 100
     const expectedPayout = booking.total_amount - expectedCommission
 
     if (Math.abs(booking.commission_amount - expectedCommission) < 0.01 &&

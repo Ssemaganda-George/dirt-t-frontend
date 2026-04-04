@@ -2,6 +2,7 @@
 import { supabase } from './supabaseClient';
 import { formatCurrency } from './utils';
 import { executeWithCircuitBreaker } from './concurrency';
+import { buildCreateBookingAtomicRpcPayload } from './createBookingAtomicRpc';
 import type { UserPreferences, VendorTier } from '../types'
 
 /**
@@ -2681,25 +2682,30 @@ export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' |
 
   console.log('Final booking data with vendor_id:', bookingData.vendor_id)
 
-  // Use atomic function to create booking with capacity validation
-  // Note: Supabase RPC calls use named parameters, so order in object doesn't matter
-  // But we need to ensure the parameter names match exactly
-  const result = await supabase.rpc('create_booking_atomic', {
-    p_service_id: bookingData.service_id,
-    p_vendor_id: bookingData.vendor_id,
-    p_booking_date: bookingData.booking_date,
-    p_guests: bookingData.guests,
-    p_total_amount: bookingData.total_amount,
-    p_tourist_id: bookingData.tourist_id || null,
-    p_service_date: bookingData.service_date || null,
-    p_currency: bookingData.currency || 'UGX',
-    p_special_requests: bookingData.special_requests || null,
-    p_guest_name: bookingData.guest_name || null,
-    p_guest_email: bookingData.guest_email || null,
-    p_guest_phone: bookingData.guest_phone || null,
-    p_pickup_location: bookingData.pickup_location || null,
-    p_dropoff_location: bookingData.dropoff_location || null
-  });
+  if (!bookingData.vendor_id) {
+    throw new Error('vendor_id is required to create a booking (could not resolve from service)')
+  }
+
+  // Use atomic function to create booking with capacity validation (14-arg overload; see createBookingAtomicRpc.ts)
+  const result = await supabase.rpc(
+    'create_booking_atomic',
+    buildCreateBookingAtomicRpcPayload({
+      p_service_id: bookingData.service_id,
+      p_vendor_id: bookingData.vendor_id,
+      p_booking_date: bookingData.booking_date,
+      p_guests: bookingData.guests,
+      p_total_amount: bookingData.total_amount,
+      p_tourist_id: bookingData.tourist_id || null,
+      p_service_date: bookingData.service_date || null,
+      p_currency: bookingData.currency || 'UGX',
+      p_special_requests: bookingData.special_requests || null,
+      p_guest_name: bookingData.guest_name || null,
+      p_guest_email: bookingData.guest_email || null,
+      p_guest_phone: bookingData.guest_phone || null,
+      p_pickup_location: bookingData.pickup_location || null,
+      p_dropoff_location: bookingData.dropoff_location || null
+    })
+  );
 
   if (result.error) throw result.error;
 

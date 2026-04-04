@@ -156,6 +156,7 @@ serve(async (req) => {
         const vendorId = (svc as any)?.vendor_id || order.vendor_id
         const today = new Date().toISOString().slice(0, 10)
         try {
+          // Must match public.create_booking_atomic (14-arg) parameter names — see src/lib/createBookingAtomicRpc.ts
           const createRes = await supabase.rpc("create_booking_atomic", {
             p_service_id: sid,
             p_vendor_id: vendorId,
@@ -165,9 +166,12 @@ serve(async (req) => {
             p_tourist_id: order.user_id || null,
             p_service_date: today,
             p_currency: order.currency || "UGX",
+            p_special_requests: null,
             p_guest_name: order.guest_name || null,
             p_guest_email: order.guest_email || null,
             p_guest_phone: order.guest_phone || null,
+            p_pickup_location: null,
+            p_dropoff_location: null,
           })
           if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
             await supabase.rpc("update_booking_status_atomic", {
