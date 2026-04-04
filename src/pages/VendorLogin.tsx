@@ -286,8 +286,8 @@ export default function VendorLogin() {
 
         // Get the Bronze tier ID (default tier for new vendors)
         const { data: bronzeTier, error: tierError } = await supabase
-          .from('pricing_tiers')
-          .select('id, commission_value')
+          .from('vendor_tiers')
+          .select('id, commission_type, commission_value, commission_rate')
           .eq('name', 'Bronze')
           .eq('is_active', true)
           .single();
@@ -309,7 +309,10 @@ export default function VendorLogin() {
             business_phone: `${businessPhoneCountryCode}${businessPhone}`,
             status: 'pending',
             current_tier_id: bronzeTier.id,
-            current_commission_rate: bronzeTier.commission_value
+            current_commission_rate:
+              bronzeTier.commission_type === 'flat'
+                ? 0
+                : Number(bronzeTier.commission_rate ?? 0)
           }, { onConflict: 'user_id' })
 
         if (vendorError) {

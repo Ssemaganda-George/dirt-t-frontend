@@ -34,26 +34,14 @@ export async function calculateCommission(
 
   const tierRowId = effectiveVendorTierId(vendor);
   if (tierRowId) {
-    let tier: { commission_type?: string; commission_value?: number } | null = null;
-    const { data: pt } = await supabase
-      .from('pricing_tiers')
+    const { data: tier } = await supabase
+      .from('vendor_tiers')
       .select('commission_type, commission_value')
       .eq('id', tierRowId)
       .eq('is_active', true)
       .maybeSingle();
-    if (pt) tier = pt;
 
-    if (!tier) {
-      const { data: vt } = await supabase
-        .from('vendor_tiers')
-        .select('commission_type, commission_value')
-        .eq('id', tierRowId)
-        .eq('is_active', true)
-        .maybeSingle();
-      if (vt && (vt.commission_type || vt.commission_value != null)) tier = vt;
-    }
-
-    if (tier) {
+    if (tier && (tier.commission_type || tier.commission_value != null)) {
       const commissionType = tier.commission_type || 'percentage';
       const commissionValue = Number(tier.commission_value ?? 0);
       if (commissionType === 'flat') {

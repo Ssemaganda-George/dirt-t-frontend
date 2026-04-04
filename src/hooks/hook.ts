@@ -658,13 +658,12 @@ export function useVendorPricing(vendorId: string | null) {
 
     // Set up real-time subscription for pricing tier changes
     const subscription = supabase
-      .channel('pricing_tiers_changes')
+      .channel('vendor_tiers_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'pricing_tiers'
+        table: 'vendor_tiers'
       }, () => {
-        // Refetch tier data when pricing tiers are updated
         fetchVendorTier();
       })
       .subscribe();

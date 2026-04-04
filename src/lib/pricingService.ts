@@ -85,80 +85,85 @@ export function effectiveVendorTierId(v: {
   return v.current_tier_id;
 }
 
-/**
- * Resolves vendor tier to commission config. Vendors may have current_tier_id pointing to
- * either pricing_tiers (new) or vendor_tiers (legacy). When it points to vendor_tiers,
- * we look up the tier name and use the matching pricing_tiers row so admin-edited
- * commission (e.g. flat amount) from the Pricing Management page is applied.
- */
+/** Maps vendor_tiers row to admin/UI PricingTier shape. */
+export function mapVendorTierRowToPricingTier(vt: Record<string, unknown>): PricingTier {
+  const effFrom =
+    (vt.effective_from as string | undefined) ??
+    (vt.created_at as string | undefined) ??
+    new Date().toISOString();
+  return {
+    id: vt.id as string,
+    name: vt.name as string,
+    commission_type: (vt.commission_type as 'percentage' | 'flat') ?? 'percentage',
+    commission_value: Number(vt.commission_value ?? 0),
+    min_monthly_bookings: Number(vt.min_monthly_bookings ?? 0),
+    min_rating: vt.min_rating != null ? Number(vt.min_rating) : undefined,
+    priority_order: Number(vt.priority_order ?? 0),
+    effective_from: effFrom,
+    effective_until: (vt.effective_until as string | undefined) ?? undefined,
+    is_active: (vt.is_active as boolean) ?? true,
+    created_by: vt.created_by as string | undefined,
+    created_at: (vt.created_at as string) ?? '',
+    updated_at: (vt.updated_at as string) ?? ''
+  };
+}
+
+export function vendorTierCommissionRateForDb(
+  commissionType: 'percentage' | 'flat',
+  commissionValue: number
+): number {
+  if (commissionType === 'flat') return 0;
+  const n = Number(commissionValue);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  const rate = n > 1 ? n / 100 : n;
+  return Math.min(1, Math.max(0, rate));
+}
+
 async function resolveTierCommission(
   currentTierId: string,
   basePrice: number,
   purchaseDate: Date
 ): Promise<{ platformFee: number; pricingReferenceId: string }> {
-  // 1. Try pricing_tiers by ID (direct match)
-  const { data: pt, error: ptErr } = await supabase
-    .from('pricing_tiers')
-    .select('id, commission_type, commission_value, effective_from, effective_until, is_active')
-    .eq('id', currentTierId)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  if (pt && !ptErr) {
-    const effFrom = pt.effective_from ? new Date(pt.effective_from) : null;
-    const effUntil = pt.effective_until ? new Date(pt.effective_until) : null;
-    if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
-      const platformFee = pt.commission_type === 'flat'
-        ? Number(pt.commission_value)
-        : basePrice * commissionPercentValueToRate(Number(pt.commission_value));
-      return { platformFee, pricingReferenceId: pt.id };
-    }
-  }
-
-  // 2. Fallback: vendor_tiers by ID (vendors point to this table)
   const { data: vt, error: vtErr } = await supabase
     .from('vendor_tiers')
-    .select('id, name, commission_type, commission_value')
+    .select(
+      'id, commission_type, commission_value, commission_rate, effective_from, effective_until, is_active'
+    )
     .eq('id', currentTierId)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (vt && !vtErr) {
-    // Use vendor_tiers directly if it has commission_type/commission_value (flat support)
-    const vtCommissionType = vt.commission_type as 'percentage' | 'flat' | null;
-    const vtCommissionValue = vt.commission_value != null ? Number(vt.commission_value) : null;
-    if (vtCommissionType && vtCommissionValue != null) {
-      const platformFee = vtCommissionType === 'flat'
-        ? vtCommissionValue
-        : basePrice * commissionPercentValueToRate(vtCommissionValue);
-      return { platformFee, pricingReferenceId: vt.id };
-    }
-
-    // Legacy: vendor_tiers has only commission_rate - try pricing_tiers by name
-    if (vt.name) {
-      const { data: ptByName, error: ptByNameErr } = await supabase
-        .from('pricing_tiers')
-        .select('id, commission_type, commission_value, effective_from, effective_until, is_active')
-        .eq('name', vt.name)
-        .eq('is_active', true)
-        .order('priority_order', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (ptByName && !ptByNameErr) {
-        const effFrom = ptByName.effective_from ? new Date(ptByName.effective_from) : null;
-        const effUntil = ptByName.effective_until ? new Date(ptByName.effective_until) : null;
-        if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
-          const platformFee = ptByName.commission_type === 'flat'
-            ? Number(ptByName.commission_value)
-            : basePrice * commissionPercentValueToRate(Number(ptByName.commission_value));
-          return { platformFee, pricingReferenceId: ptByName.id };
-        }
-      }
-    }
+  if (!vt || vtErr) {
+    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
   }
 
-  return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+  const effFrom = vt.effective_from ? new Date(vt.effective_from as string) : null;
+  const effUntil = vt.effective_until ? new Date(vt.effective_until as string) : null;
+  if (effFrom && effFrom > purchaseDate) {
+    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+  }
+  if (effUntil && effUntil < purchaseDate) {
+    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+  }
+
+  const vtCommissionType = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
+  if (vtCommissionType === 'flat') {
+    return {
+      platformFee: Number(vt.commission_value ?? 0),
+      pricingReferenceId: vt.id as string
+    };
+  }
+
+  const val = vt.commission_value != null ? Number(vt.commission_value) : null;
+  if (val != null && !Number.isNaN(val)) {
+    return {
+      platformFee: basePrice * commissionPercentValueToRate(val),
+      pricingReferenceId: vt.id as string
+    };
+  }
+
+  const r = Number(vt.commission_rate ?? 0);
+  return { platformFee: basePrice * Math.min(1, Math.max(0, r)), pricingReferenceId: vt.id as string };
 }
 
 /**
@@ -494,33 +499,27 @@ export async function calculatePaymentForAmount(
 }
 
 /**
- * Get all active pricing tiers
- * @returns Array of active pricing tiers
+ * Active commission tiers (public.vendor_tiers — single source of truth).
  */
 export async function getActivePricingTiers(): Promise<PricingTier[]> {
   const { data, error } = await supabase
-    .from('pricing_tiers')
+    .from('vendor_tiers')
     .select('*')
     .eq('is_active', true)
     .order('priority_order', { ascending: true });
 
   if (error) {
-    throw new Error(`Failed to get active pricing tiers: ${error.message}`);
+    throw new Error(`Failed to get active tiers: ${error.message}`);
   }
 
-  return data || [];
+  return (data || []).map((row) => mapVendorTierRowToPricingTier(row as Record<string, unknown>));
 }
 
 /**
- * Get vendor count for each active pricing tier
- * @returns Object mapping tier IDs to vendor counts
+ * Vendor count per tier id (vendor_tiers.id)
  */
 export async function getVendorCountsByTier(): Promise<Record<string, number>> {
   try {
-    const tiers = await getActivePricingTiers();
-    const counts: Record<string, number> = {};
-    for (const t of tiers) counts[t.id] = 0;
-
     const { data: vendors, error } = await supabase
       .from('vendors')
       .select('current_tier_id')
@@ -531,24 +530,12 @@ export async function getVendorCountsByTier(): Promise<Record<string, number>> {
       throw new Error(`Failed to get vendor tier counts: ${error.message}`);
     }
 
-    const vtIds = [...new Set((vendors || []).map(v => v.current_tier_id).filter(Boolean))] as string[];
-    if (vtIds.length === 0) return counts;
-
-    const { data: vtRows } = await supabase
-      .from('vendor_tiers')
-      .select('id, name')
-      .in('id', vtIds);
-
-    const idToName = Object.fromEntries((vtRows || []).map(r => [r.id, r.name]));
-
+    const counts: Record<string, number> = {};
     for (const v of vendors || []) {
       const tid = v.current_tier_id as string;
-      const name = idToName[tid];
-      if (!name) continue;
-      const pt = tiers.find(t => t.name === name);
-      if (pt) counts[pt.id] = (counts[pt.id] || 0) + 1;
+      if (!tid) continue;
+      counts[tid] = (counts[tid] || 0) + 1;
     }
-
     return counts;
   } catch (error) {
     console.error('Error in getVendorCountsByTier:', error);
@@ -556,107 +543,118 @@ export async function getVendorCountsByTier(): Promise<Record<string, number>> {
   }
 }
 
-/**
- * Sync commission from pricing_tiers to vendor_tiers when a tier is created or updated.
- * vendor_tiers now supports both percentage and flat (commission_type + commission_value).
- */
-async function syncPricingTierToVendorTier(
-  name: string,
-  commissionType: 'percentage' | 'flat',
-  commissionValue: number
-): Promise<void> {
-  let commissionRate: number;
-  if (commissionType === 'flat') {
-    commissionRate = 0;
-  } else {
-    commissionRate = commissionValue > 1 ? commissionValue / 100 : commissionValue;
-    commissionRate = Math.min(1, Math.max(0, commissionRate));
-  }
-
-  const { error } = await supabase
-    .from('vendor_tiers')
-    .update({
-      commission_type: commissionType,
-      commission_value: commissionValue,
-      commission_rate: commissionRate
-    })
-    .eq('name', name);
-
-  if (error) {
-    console.warn(`Could not sync pricing tier "${name}" to vendor_tiers:`, error.message);
-  }
-}
-
-/**
- * Get pricing tier by ID
- * @param tierId - The pricing tier ID
- * @returns Pricing tier details
- */
 export async function getPricingTier(tierId: string): Promise<PricingTier | null> {
   const { data, error } = await supabase
-    .from('pricing_tiers')
+    .from('vendor_tiers')
     .select('*')
     .eq('id', tierId)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') return null; // Not found
-    throw new Error(`Failed to get pricing tier: ${error.message}`);
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Failed to get tier: ${error.message}`);
   }
 
-  return data;
+  return mapVendorTierRowToPricingTier(data as Record<string, unknown>);
 }
 
 /**
- * Create a new pricing tier
- * @param tier - Pricing tier data
- * @param adminId - Admin user ID creating the tier
- * @returns Created pricing tier
+ * Create tier row in vendor_tiers
  */
 export async function createPricingTier(
   tier: Omit<PricingTier, 'id' | 'created_at' | 'updated_at' | 'created_by'>,
   adminId: string
 ): Promise<PricingTier> {
+  const commissionRate = vendorTierCommissionRateForDb(
+    tier.commission_type,
+    Number(tier.commission_value)
+  );
   const { data, error } = await supabase
-    .from('pricing_tiers')
+    .from('vendor_tiers')
     .insert({
-      ...tier,
-      created_by: adminId
+      name: tier.name,
+      commission_type: tier.commission_type,
+      commission_value: tier.commission_value,
+      commission_rate: commissionRate,
+      min_monthly_bookings: tier.min_monthly_bookings,
+      min_rating: tier.min_rating ?? null,
+      priority_order: tier.priority_order,
+      is_active: tier.is_active,
+      effective_from: tier.effective_from ? new Date(tier.effective_from).toISOString() : undefined,
+      effective_until: tier.effective_until ? new Date(tier.effective_until).toISOString() : null,
+      ...(adminId ? { created_by: adminId } : {})
     })
     .select()
     .single();
 
   if (error) {
-    throw new Error(`Failed to create pricing tier: ${error.message}`);
+    throw new Error(`Failed to create tier: ${error.message}`);
   }
 
-  await syncPricingTierToVendorTier(data.name, data.commission_type, Number(data.commission_value));
-  return data;
+  return mapVendorTierRowToPricingTier(data as Record<string, unknown>);
 }
 
 /**
- * Update a pricing tier
- * @param tierId - The pricing tier ID
- * @param updates - Fields to update
- * @returns Updated pricing tier
+ * Update tier in vendor_tiers
  */
 export async function updatePricingTier(
   tierId: string,
   updates: Partial<PricingTier>
 ): Promise<PricingTier> {
+  const { data: existing, error: fetchErr } = await supabase
+    .from('vendor_tiers')
+    .select('*')
+    .eq('id', tierId)
+    .single();
+
+  if (fetchErr || !existing) {
+    throw new Error(`Failed to load tier: ${fetchErr?.message || 'not found'}`);
+  }
+
+  const commission_type = (updates.commission_type ?? existing.commission_type) as
+    | 'percentage'
+    | 'flat';
+  const commission_value = Number(
+    updates.commission_value ?? existing.commission_value ?? 0
+  );
+
+  const payload: Record<string, unknown> = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.commission_type !== undefined) payload.commission_type = updates.commission_type;
+  if (updates.commission_value !== undefined) payload.commission_value = updates.commission_value;
+  if (updates.min_monthly_bookings !== undefined)
+    payload.min_monthly_bookings = updates.min_monthly_bookings;
+  if (updates.min_rating !== undefined) payload.min_rating = updates.min_rating;
+  if (updates.priority_order !== undefined) payload.priority_order = updates.priority_order;
+  if (updates.is_active !== undefined) payload.is_active = updates.is_active;
+
+  if (updates.effective_from !== undefined) {
+    payload.effective_from = updates.effective_from
+      ? new Date(updates.effective_from).toISOString()
+      : existing.effective_from;
+  }
+  if (updates.effective_until !== undefined) {
+    payload.effective_until = updates.effective_until
+      ? new Date(updates.effective_until).toISOString()
+      : null;
+  }
+
+  if (updates.commission_type !== undefined || updates.commission_value !== undefined) {
+    payload.commission_rate = vendorTierCommissionRateForDb(commission_type, commission_value);
+  }
+
   const { data, error } = await supabase
-    .from('pricing_tiers')
-    .update(updates)
+    .from('vendor_tiers')
+    .update(payload)
     .eq('id', tierId)
     .select()
     .single();
 
   if (error) {
-    throw new Error(`Failed to update pricing tier: ${error.message}`);
+    throw new Error(`Failed to update tier: ${error.message}`);
   }
 
-  await syncPricingTierToVendorTier(data.name, data.commission_type, Number(data.commission_value));
-  return data;
+  return mapVendorTierRowToPricingTier(data as Record<string, unknown>);
 }
 
 /**
@@ -908,9 +906,7 @@ export async function getPricingPreview(
 }
 
 /**
- * Get vendor's current tier (from pricing_tiers or vendor_tiers)
- * @param vendorId - The vendor ID
- * @returns Current tier with commission_type/commission_value, or null
+ * Get vendor's effective tier (vendor_tiers)
  */
 export async function getVendorCurrentTier(vendorId: string): Promise<PricingTier | null> {
   const { data, error } = await supabase
@@ -928,16 +924,6 @@ export async function getVendorCurrentTier(vendorId: string): Promise<PricingTie
     return null;
   }
 
-  const { data: pt, error: ptError } = await supabase
-    .from('pricing_tiers')
-    .select('*')
-    .eq('id', tierId)
-    .single();
-
-  if (pt && !ptError) {
-    return pt;
-  }
-
   const { data: vt, error: vtError } = await supabase
     .from('vendor_tiers')
     .select('*')
@@ -945,26 +931,24 @@ export async function getVendorCurrentTier(vendorId: string): Promise<PricingTie
     .eq('is_active', true)
     .single();
 
-  if (vt && !vtError) {
-    const ct = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
-    let displayValue: number;
-    if (ct === 'flat') {
-      displayValue = Number(vt.commission_value ?? 0);
-    } else if (vt.commission_value != null && vt.commission_value !== '') {
-      const n = Number(vt.commission_value);
-      displayValue = n > 1 ? n : n * 100;
-    } else {
-      const r = Number(vt.commission_rate ?? 0);
-      displayValue = r <= 1 ? r * 100 : r;
-    }
-    return {
-      ...vt,
-      commission_type: ct,
-      commission_value: displayValue
-    } as PricingTier;
+  if (!vt || vtError) {
+    return null;
   }
 
-  return null;
+  const ct = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
+  let displayValue: number;
+  if (ct === 'flat') {
+    displayValue = Number(vt.commission_value ?? 0);
+  } else if (vt.commission_value != null && vt.commission_value !== '') {
+    const n = Number(vt.commission_value);
+    displayValue = n > 1 ? n : n * 100;
+  } else {
+    const r = Number(vt.commission_rate ?? 0);
+    displayValue = r <= 1 ? r * 100 : r;
+  }
+
+  const mapped = mapVendorTierRowToPricingTier(vt as Record<string, unknown>);
+  return { ...mapped, commission_type: ct, commission_value: displayValue };
 }
 
 /**
@@ -1090,37 +1074,25 @@ export async function updateVendorTierWithServiceImpact(
   };
 }> {
   try {
-    let tier: { commission_type: string; commission_value: number } | null = null;
-    const { data: pt, error: ptError } = await supabase
-      .from('pricing_tiers')
+    const { data: vt, error: vtError } = await supabase
+      .from('vendor_tiers')
       .select('commission_type, commission_value')
       .eq('id', tierId)
+      .eq('is_active', true)
       .maybeSingle();
 
-    if (pt && !ptError) {
-      tier = { commission_type: pt.commission_type, commission_value: Number(pt.commission_value) };
-    }
-
-    if (!tier) {
-      const { data: vt, error: vtError } = await supabase
-        .from('vendor_tiers')
-        .select('commission_type, commission_value')
-        .eq('id', tierId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (vt && !vtError) {
-        tier = {
-          commission_type: vt.commission_type || 'percentage',
-          commission_value: Number(vt.commission_value ?? 0)
-        };
-      }
-    }
+    const tier =
+      vt && !vtError
+        ? {
+            commission_type: vt.commission_type || 'percentage',
+            commission_value: Number(vt.commission_value ?? 0)
+          }
+        : null;
 
     if (!tier) {
       return {
         success: false,
-        error: 'Tier not found in pricing_tiers or vendor_tiers',
+        error: 'Tier not found in vendor_tiers',
         affectedServices: {
           totalServices: 0,
           servicesUsingNewTier: 0,
