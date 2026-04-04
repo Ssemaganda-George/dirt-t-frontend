@@ -473,15 +473,17 @@ export default function Businesses() {
 
   const getCurrentTierDisplay = (user: UserWithDetails) => {
     if (!user.vendor) return null;
-    
-    if (user.vendor.manual_tier_id) {
-      const tierName = user.vendor.manual_tier?.name || 'Unknown';
-      const isExpired = user.vendor.manual_tier_expires_at && new Date(user.vendor.manual_tier_expires_at) < new Date();
+
+    const now = new Date()
+    const manualActive =
+      !!user.vendor.manual_tier_id &&
+      (!user.vendor.manual_tier_expires_at || new Date(user.vendor.manual_tier_expires_at) > now)
+
+    if (manualActive) {
+      const tierName = user.vendor.manual_tier?.name || 'Unknown'
       return (
         <div className="flex flex-col">
-          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            isExpired ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-800'
-          }`}>
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
             {tierName} (Manual)
           </span>
           {user.vendor.manual_tier_expires_at && (
@@ -491,8 +493,22 @@ export default function Businesses() {
           )}
         </div>
       );
-    } else {
-      const tierName = user.vendor.current_tier?.name || 'Unknown';
+    }
+
+    if (user.vendor.manual_tier_id && user.vendor.manual_tier_expires_at && new Date(user.vendor.manual_tier_expires_at) <= now) {
+      const tierName = user.vendor.current_tier?.name || 'Unknown'
+      return (
+        <div className="flex flex-col">
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
+            {tierName} (Auto)
+          </span>
+          <span className="text-xs text-gray-500 mt-1">Manual tier expired</span>
+        </div>
+      )
+    }
+
+    {
+      const tierName = user.vendor.current_tier?.name || 'Unknown'
       return (
         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
           {tierName} (Auto)
