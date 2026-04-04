@@ -134,16 +134,16 @@ async function resolveTierCommission(
     .maybeSingle();
 
   if (!vt || vtErr) {
-    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+    return { platformFee: 0, pricingReferenceId: '' };
   }
 
   const effFrom = vt.effective_from ? new Date(vt.effective_from as string) : null;
   const effUntil = vt.effective_until ? new Date(vt.effective_until as string) : null;
   if (effFrom && effFrom > purchaseDate) {
-    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+    return { platformFee: 0, pricingReferenceId: '' };
   }
   if (effUntil && effUntil < purchaseDate) {
-    return { platformFee: basePrice * 0.15, pricingReferenceId: '' };
+    return { platformFee: 0, pricingReferenceId: '' };
   }
 
   const vtCommissionType = (vt.commission_type || 'percentage') as 'percentage' | 'flat';
@@ -300,9 +300,6 @@ export async function calculatePayment(
       const resolved = await resolveTierCommission(tierId, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
-    } else {
-      // Default commission if no tier found
-      platformFee = basePrice * 0.15; // 15% default
     }
 
     return {
@@ -461,8 +458,6 @@ export async function calculatePaymentForAmount(
       const resolved = await resolveTierCommission(tierIdForAmount, basePrice, purchaseDate);
       platformFee = resolved.platformFee;
       pricingReferenceId = resolved.pricingReferenceId;
-    } else {
-      platformFee = basePrice * 0.15; // 15% default
     }
 
     return {
