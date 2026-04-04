@@ -1,11 +1,41 @@
 import { format } from 'date-fns';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useAdminTransactions } from '../../hooks/hook';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { updateTransactionStatus, getAllVendorWallets, getAllTransactionsForAdmin, getAllBookings } from '../../lib/database';
-import { useState, useEffect } from 'react';
-import type { Transaction } from '../../lib/database';
+import {
+  updateTransactionStatus,
+  getAllVendorWallets,
+  getAllTransactionsForAdmin,
+  getAllBookings,
+  getAllVendors,
+  platformTakeFromBooking,
+  platformTakeFromTransaction,
+} from '../../lib/database';
+import type { Transaction, Vendor } from '../../lib/database';
+
+function walletsPlatformFeeCell(
+  tx: { transaction_type: string; booking_id?: string | null; bookings?: unknown },
+  serviceCurrency: string,
+  targetCurrency: string,
+  locale: string
+): ReactNode {
+  if (tx.transaction_type !== 'payment') return '—';
+  const bookings = tx.bookings as { id?: string } | null | undefined;
+  if (bookings?.id) {
+    return formatCurrencyWithConversion(
+      platformTakeFromTransaction(tx as never),
+      serviceCurrency,
+      targetCurrency,
+      locale
+    );
+  }
+  if (tx.booking_id) {
+    return <span className="text-amber-700 font-normal text-xs">N/A</span>;
+  }
+  return '—';
+}
 
 interface VendorWallet {
   id: string;
@@ -23,10 +53,19 @@ interface VendorWallet {
 }
 
 interface WalletStats {
-  totalVendors: number;
-  activeVendors: number;
+  /** Rows in `vendors` (directory) */
+  registeredVendorsCount: number;
+  /** `vendors.status = approved` */
+  approvedVendorsCount: number;
+  /** Rows in `wallets` */
+  vendorWalletRowsCount: number;
+  /** Wallets whose vendor_id exists in `vendors` */
+  walletsLinkedCount: number;
+  /** Wallets with no matching vendor row (data cleanup needed) */
+  orphanWalletsCount: number;
   totalBalance: number;
-  totalEarnings: number;
+  /** Platform take: sum of platform_fee + commission_amount on qualifying bookings */
+  totalPlatformFeesFromBookings: number;
   totalWithdrawn: number;
   pendingWithdrawals: number;
   recentTransactions: number;
@@ -37,6 +76,7 @@ export function Transactions() {
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [vendorWallets, setVendorWallets] = useState<VendorWallet[]>([]);
+  const [allVendors, setAllVendors] = useState<Vendor[]>([]);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
   const [allBookings, setAllBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,14 +94,15 @@ export function Transactions() {
       setLoading(true);
       setError(null);
 
-      const [walletsData, transactionsData, bookingsData] = await Promise.all([
+      const [walletsData, vendorsData, transactionsData, bookingsData] = await Promise.all([
         getAllVendorWallets(),
-        // Use admin version so admins see all transactions (not limited by RLS for non-admins)
+        getAllVendors(),
         getAllTransactionsForAdmin(),
         getAllBookings()
       ]);
 
       setVendorWallets(walletsData);
+      setAllVendors(vendorsData || []);
       setAllTransactions(transactionsData);
       setAllBookings(bookingsData);
     } catch (err) {
@@ -88,12 +129,22 @@ export function Transactions() {
 
   // Calculate comprehensive stats
   const calculateStats = (): WalletStats => {
-    const totalVendors = vendorWallets.length;
-    const activeVendors = vendorWallets.filter(w => w.vendors?.status === 'approved').length;
+    const registeredVendorsCount = allVendors.length;
+    const approvedVendorsCount = allVendors.filter(v => v.status === 'approved').length;
+    const vendorWalletRowsCount = vendorWallets.length;
+    const walletsLinkedCount = vendorWallets.filter(w => w.vendors != null).length;
+    const orphanWalletsCount = vendorWallets.filter(w => w.vendors == null).length;
     const totalBalance = vendorWallets.reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
-    const totalEarnings = allBookings
-      .filter(b => b.commission_amount && b.status === 'confirmed')
-      .reduce((sum, b) => sum + (Number(b.commission_amount) || 0), 0);
+    const bookingCountsAsPaid = (b: (typeof allBookings)[0]) => {
+      const st = (b as { status?: string }).status;
+      const paid = (b as { payment_status?: string }).payment_status;
+      if (st !== 'confirmed' && st !== 'completed') return false;
+      if (paid === 'refunded') return false;
+      return paid === 'paid' || paid == null || paid === '';
+    };
+    const totalPlatformFeesFromBookings = allBookings
+      .filter(bookingCountsAsPaid)
+      .reduce((sum, b) => sum + platformTakeFromBooking(b as never), 0);
     const totalWithdrawn = allTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'completed')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -101,14 +152,17 @@ export function Transactions() {
       t.transaction_type === 'withdrawal' && t.status === 'pending'
     ).length;
     const recentTransactions = allTransactions.filter(t =>
-      new Date(t.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      new Date(t.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     ).length;
 
     return {
-      totalVendors,
-      activeVendors,
+      registeredVendorsCount,
+      approvedVendorsCount,
+      vendorWalletRowsCount,
+      walletsLinkedCount,
+      orphanWalletsCount,
       totalBalance,
-      totalEarnings,
+      totalPlatformFeesFromBookings,
       totalWithdrawn,
       pendingWithdrawals,
       recentTransactions
@@ -176,16 +230,16 @@ export function Transactions() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-gray-200 px-2 sm:px-4">
+        <nav className="flex w-full flex-wrap sm:flex-nowrap" aria-label="Wallet management tabs">
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              type="button"
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex-1 min-w-[7.5rem] sm:min-w-0 py-3 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm text-center whitespace-nowrap transition-colors ${
                 tab.current
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -199,17 +253,28 @@ export function Transactions() {
       {activeTab === 'overview' && (
         <>
           {/* Key Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
-              <p className="text-xs font-medium text-gray-500">Total Vendors</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.totalVendors}</p>
-              <p className="text-xs text-gray-400 mt-1">Registered</p>
+              <p className="text-xs font-medium text-gray-500">Registered vendors</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.registeredVendorsCount}</p>
+              <p className="text-xs text-gray-400 mt-1">Rows in vendors table</p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
-              <p className="text-xs font-medium text-gray-500">Active Vendors</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.activeVendors}</p>
-              <p className="text-xs text-gray-400 mt-1">With balance</p>
+              <p className="text-xs font-medium text-gray-500">Approved vendors</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.approvedVendorsCount}</p>
+              <p className="text-xs text-gray-400 mt-1">status = approved (directory)</p>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-indigo-500 p-4 hover:shadow-sm transition-all">
+              <p className="text-xs font-medium text-gray-500">Vendor wallets</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.vendorWalletRowsCount}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {stats.walletsLinkedCount} linked ·{' '}
+                <span className={stats.orphanWalletsCount > 0 ? 'text-amber-700 font-medium' : ''}>
+                  {stats.orphanWalletsCount} orphan{stats.orphanWalletsCount === 1 ? '' : 's'}
+                </span>
+              </p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
@@ -230,11 +295,12 @@ export function Transactions() {
           {/* Financial Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
-              <p className="text-xs font-medium text-gray-500">Total Earnings</p>
+              <p className="text-xs font-medium text-gray-500">Platform fees &amp; commission</p>
+              <p className="text-xs text-gray-400 mt-0.5">From paid bookings (our cut)</p>
               <p className="text-lg font-semibold text-gray-900 mt-2">
-                {formatCurrencyWithConversion(stats.totalEarnings, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+                {formatCurrencyWithConversion(stats.totalPlatformFeesFromBookings, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
               </p>
-              <p className="text-xs text-emerald-600 mt-1">↑ Incoming</p>
+              <p className="text-xs text-emerald-600 mt-1">↑ Booking fee totals</p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
@@ -255,7 +321,12 @@ export function Transactions() {
           {/* Top Performing Vendors */}
           <div className="bg-white shadow-sm rounded-xl border border-gray-200">
             <div className="border-b border-gray-100 px-5 py-3">
-              <h3 className="text-sm font-semibold text-gray-900">Top Performing Vendors</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Wallets by balance</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Vendor directory: {stats.registeredVendorsCount} registered ({stats.approvedVendorsCount} approved).
+                Ledger: {stats.vendorWalletRowsCount} wallet row{stats.vendorWalletRowsCount === 1 ? '' : 's'} — {stats.orphanWalletsCount} missing vendor row
+                {stats.orphanWalletsCount === 1 ? '' : 's'} in DB.
+              </p>
             </div>
             <div className="p-5">
               <div className="overflow-x-auto">
@@ -271,7 +342,13 @@ export function Transactions() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {vendorWallets
-                      .sort((a, b) => b.balance - a.balance)
+                      .slice()
+                      .sort((a, b) => {
+                        const aOk = a.vendors != null ? 1 : 0;
+                        const bOk = b.vendors != null ? 1 : 0;
+                        if (bOk !== aOk) return bOk - aOk;
+                        return Number(b.balance) - Number(a.balance);
+                      })
                       .slice(0, 10)
                       .map((wallet) => {
                         const name = wallet.vendors?.business_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown');
@@ -295,7 +372,10 @@ export function Transactions() {
                                   <div className="text-sm font-medium text-gray-900 truncate">{name}</div>
                                   <div className="text-xs text-gray-500 truncate">{email}</div>
                                   {wallet.vendors === null && (
-                                    <div className="text-xs text-red-600 mt-1">Missing vendor record — <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>View vendor</a></div>
+                                    <div className="text-xs text-red-600 mt-1">
+                                      No vendor row for this wallet&apos;s <span className="font-mono">vendor_id</span> — balance may be legacy.{' '}
+                                      <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>Open vendor id</a>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -356,7 +436,15 @@ export function Transactions() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {vendorWallets.map((wallet) => {
+                  {vendorWallets
+                    .slice()
+                    .sort((a, b) => {
+                      const aOk = a.vendors != null ? 1 : 0;
+                      const bOk = b.vendors != null ? 1 : 0;
+                      if (bOk !== aOk) return bOk - aOk;
+                      return Number(b.balance) - Number(a.balance);
+                    })
+                    .map((wallet) => {
                                     const vendorTransactions = allTransactions.filter(t => t.vendor_id === wallet.vendor_id);
                     return (
                       <tr key={wallet.id} className="hover:bg-gray-50">
@@ -370,7 +458,10 @@ export function Transactions() {
                                   {wallet.vendors?.business_email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—')}
                                 </div>
                                 {wallet.vendors === null && (
-                                  <div className="text-xs text-red-600 mt-1">Missing vendor record — <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>View vendor</a></div>
+                                  <div className="text-xs text-red-600 mt-1">
+                                    No vendor row for this wallet&apos;s <span className="font-mono">vendor_id</span> — balance may be legacy.{' '}
+                                    <a className="underline" href={`/admin/vendors/${wallet.vendor_id}`}>Open vendor id</a>
+                                  </div>
                                 )}
                             </div>
                           </div>
@@ -426,7 +517,10 @@ export function Transactions() {
                       Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      Platform fee
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer paid
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -450,6 +544,14 @@ export function Transactions() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                           {transaction.transaction_type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-800">
+                          {walletsPlatformFeeCell(
+                            transaction,
+                            transaction.currency || 'UGX',
+                            selectedCurrency || transaction.currency || 'UGX',
+                            selectedLanguage || 'en-US'
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                           {formatCurrencyWithConversion(transaction.amount, transaction.currency || 'UGX', selectedCurrency || transaction.currency || 'UGX', selectedLanguage || 'en-US')}

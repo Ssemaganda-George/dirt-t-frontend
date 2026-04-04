@@ -416,6 +416,14 @@ export interface Transaction {
     business_name: string;
     user_id: string;
   };
+  /** Joined in getAllTransactionsForAdmin for platform fee display */
+  bookings?: {
+    id: string;
+    total_amount?: number | string | null;
+    platform_fee?: number | string | null;
+    commission_amount?: number | string | null;
+    fee_payer?: string | null;
+  } | null;
 }
 
 export interface Wallet {

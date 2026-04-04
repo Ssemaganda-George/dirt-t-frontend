@@ -1,14 +1,25 @@
 import { format } from 'date-fns';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { TrendingUp, DollarSign, CreditCard } from 'lucide-react';
 
 import { useAdminTransactions } from '../../hooks/hook';
-import { getAdminProfileId, getVendorWallet } from '../../lib/database';
+import { getPlatformCompanyVendorId, getVendorWallet, platformTakeFromTransaction } from '../../lib/database';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion } from '../../lib/utils';
 import { usePreferences } from '../../contexts/PreferencesContext';
 
-// Assume commission rate is 5% (can be made configurable)
+/** Payment row: show fee from linked booking (including UGX 0), N/A if booking id missing server-side, — if no link. */
+function platformFeeTableCell(tx: { transaction_type: string; booking_id?: string | null; bookings?: unknown }, currency: string): ReactNode {
+  if (tx.transaction_type !== 'payment') return '—';
+  const bookings = tx.bookings as { id?: string } | null | undefined;
+  if (bookings?.id) {
+    return formatCurrencyWithConversion(platformTakeFromTransaction(tx as never), currency);
+  }
+  if (tx.booking_id) {
+    return <span className="text-amber-700 font-normal text-xs">N/A</span>;
+  }
+  return '—';
+}
 
 export function DirtTrailsWallet() {
   const { transactions, loading, error } = useAdminTransactions();
@@ -48,47 +59,48 @@ export function DirtTrailsWallet() {
   const stats = useMemo(() => {
     if (!filteredTransactions) {
       return {
-        totalRevenue: 0,
-        totalCommissions: 0,
+        totalGrossCustomerPayments: 0,
+        totalPlatformFees: 0,
+        companyWalletBalance: 0,
         totalRefunds: 0,
         totalWithdrawals: 0,
-        netBalance: 0,
         pendingWithdrawals: 0
       };
     }
 
-    // Total Revenue - all completed payments
-    const totalRevenue = filteredTransactions
-      .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+    const completedPayments = filteredTransactions.filter(
+      t => t.transaction_type === 'payment' && t.status === 'completed'
+    );
 
-    // Total Commissions - from admin wallet balance
-    const totalCommissions = adminWallet?.balance || 0;
+    // Gross customer payment volume (ledger transaction amount — not the platform's cut).
+    const totalGrossCustomerPayments = completedPayments.reduce((sum, t) => sum + Number(t.amount), 0);
+
+    // Platform earnings: commission + platform_fee from linked bookings (authoritative for our cut).
+    const totalPlatformFees = completedPayments.reduce((sum, t) => sum + platformTakeFromTransaction(t), 0);
+
+    const companyWalletBalance = Number(adminWallet?.balance) || 0;
 
     // Total Refunds - completed refunds
     const totalRefunds = filteredTransactions
       .filter(t => t.transaction_type === 'refund' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // Total Withdrawals - completed withdrawals
     const totalWithdrawals = filteredTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // Pending withdrawals
     const pendingWithdrawals = filteredTransactions
       .filter(t => t.transaction_type === 'withdrawal' && t.status === 'pending')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    // Net Balance
-    const netBalance = totalRevenue + totalCommissions - totalRefunds - totalWithdrawals;
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     return {
-      totalRevenue,
-      totalCommissions,
+      totalGrossCustomerPayments,
+      totalPlatformFees,
+      companyWalletBalance,
       totalRefunds,
       totalWithdrawals,
-      netBalance,
       pendingWithdrawals
     };
   }, [filteredTransactions, adminWallet]);
@@ -102,10 +114,12 @@ export function DirtTrailsWallet() {
     // Fetch admin wallet balance
     const loadAdminWallet = async () => {
       try {
-        const adminId = await getAdminProfileId();
-        if (adminId) {
-          const wallet = await getVendorWallet(adminId);
+        const platformVendorId = await getPlatformCompanyVendorId();
+        if (platformVendorId) {
+          const wallet = await getVendorWallet(platformVendorId);
           setAdminWallet(wallet);
+        } else {
+          setAdminWallet(null);
         }
       } catch (err) {
         console.error('Failed to load admin wallet for DirtTrailsWallet:', err);
@@ -117,8 +131,14 @@ export function DirtTrailsWallet() {
   }, [transactions]); // Removed dateRange from dependencies since filtering is now memoized
 
   // Memoize transaction category filters
-  const commissionTransactions = useMemo(() => 
-    filteredTransactions.filter((t: any) => t.transaction_type === 'payment' && t.status === 'completed'),
+  const commissionTransactions = useMemo(
+    () =>
+      filteredTransactions.filter(
+        (t: any) =>
+          t.transaction_type === 'payment' &&
+          t.status === 'completed' &&
+          platformTakeFromTransaction(t) > 0
+      ),
     [filteredTransactions]
   );
 
@@ -127,8 +147,8 @@ export function DirtTrailsWallet() {
     [filteredTransactions]
   );
 
-  const earningTransactions = useMemo(() => 
-    filteredTransactions.filter((t: any) => t.transaction_type === 'payment' && t.status === 'completed'),
+  const earningTransactions = useMemo(
+    () => filteredTransactions.filter((t: any) => t.transaction_type === 'payment' && t.status === 'completed'),
     [filteredTransactions]
   );
 
@@ -191,7 +211,15 @@ export function DirtTrailsWallet() {
     const reportData = currentTransactions.map((t: any) => ({
       'Transaction ID': t.id.slice(0, 8),
       'Type': t.transaction_type,
-      'Amount': t.amount,
+      'Platform fee (our cut)':
+        t.transaction_type !== 'payment'
+          ? ''
+          : t.bookings?.id
+            ? platformTakeFromTransaction(t)
+            : t.booking_id
+              ? 'N/A'
+              : '',
+      'Customer paid (gross)': t.amount,
       'Currency': t.currency,
       'Status': t.status,
       'Reference': t.reference,
@@ -230,36 +258,38 @@ export function DirtTrailsWallet() {
 
       {/* Overview Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Net Balance Card */}
+        {/* Company wallet balance (platform vendor ledger) */}
         <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-md p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-blue-100">Net Balance</p>
-              <p className="text-xl font-semibold text-gray-900 mt-2">
-                {formatCurrencyWithConversion(stats.netBalance, selectedCurrency)}
+              <p className="text-xs font-medium text-blue-100">Company wallet balance</p>
+              <p className="text-xl font-semibold mt-2 text-white">
+                {formatCurrencyWithConversion(stats.companyWalletBalance, selectedCurrency)}
               </p>
             </div>
             <DollarSign className="h-10 w-10 text-blue-200 opacity-50" />
           </div>
         </div>
 
-        {/* Total Revenue Card */}
+        {/* Gross customer payments (all vendor payment txs) */}
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
           <div>
-            <p className="text-xs font-medium text-gray-600">Total Revenue</p>
+            <p className="text-xs font-medium text-gray-600">Customer payments (gross)</p>
+            <p className="text-xs text-gray-500 mt-0.5">Full amounts recorded on payment transactions</p>
             <p className="text-xl font-semibold text-gray-900 mt-2">
-              {formatCurrencyWithConversion(stats.totalRevenue, selectedCurrency)}
+              {formatCurrencyWithConversion(stats.totalGrossCustomerPayments, selectedCurrency)}
             </p>
           </div>
           <TrendingUp className="mt-4 h-5 w-5 text-green-600" />
         </div>
 
-        {/* Total Commissions Card */}
+        {/* Platform fees from bookings */}
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600">
           <div>
-            <p className="text-xs font-medium text-gray-600">Commissions Earned</p>
+            <p className="text-xs font-medium text-gray-600">Platform fees &amp; commission</p>
+            <p className="text-xs text-gray-500 mt-0.5">From linked bookings (our cut)</p>
             <p className="text-xl font-semibold text-gray-900 mt-2">
-              {formatCurrencyWithConversion(stats.totalCommissions, selectedCurrency)}
+              {formatCurrencyWithConversion(stats.totalPlatformFees, selectedCurrency)}
             </p>
           </div>
           <CreditCard className="mt-4 h-5 w-5 text-purple-600" />
@@ -290,60 +320,34 @@ export function DirtTrailsWallet() {
 
       {/* Tabs Section */}
       <div className="bg-white rounded-xl shadow-md">
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <div className="flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'overview'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('earnings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'earnings'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              Earnings ({earningTransactions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('commissions')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'commissions'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              Commissions ({commissionTransactions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('refunds')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'refunds'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              Refunds ({refundTransactions.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('transactions')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'transactions'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              All Transactions ({allCompanyTransactions.length})
-            </button>
-          </div>
+        <div className="border-b border-gray-200 px-2 sm:px-4">
+          <nav
+            className="flex w-full flex-wrap sm:flex-nowrap"
+            aria-label="Wallet sections"
+          >
+            {(
+              [
+                { id: 'overview' as const, label: 'Overview' },
+                { id: 'earnings' as const, label: `Earnings (${earningTransactions.length})` },
+                { id: 'commissions' as const, label: `Commissions (${commissionTransactions.length})` },
+                { id: 'refunds' as const, label: `Refunds (${refundTransactions.length})` },
+                { id: 'transactions' as const, label: `All Transactions (${allCompanyTransactions.length})` },
+              ]
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`flex-1 min-w-[8.5rem] sm:min-w-0 py-3.5 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm text-center whitespace-nowrap transition-colors ${
+                  activeTab === id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Tab Content */}
@@ -354,11 +358,11 @@ export function DirtTrailsWallet() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Wallet Summary</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="border border-gray-200 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-600">Total Earnings</p>
+                    <p className="text-xs font-medium text-gray-600">Platform fees (our cut)</p>
                     <p className="text-xl font-bold text-green-600 mt-2">
-                      {formatCurrencyWithConversion(stats.totalRevenue + stats.totalCommissions, selectedCurrency)}
+                      {formatCurrencyWithConversion(stats.totalPlatformFees, selectedCurrency)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-2">Revenue + Commissions</p>
+                    <p className="text-xs text-gray-500 mt-2">Sum of commission + platform fee on bookings</p>
                   </div>
                   <div className="border border-gray-200 rounded-lg p-4">
                     <p className="text-xs font-medium text-gray-600">Refunds Processed</p>
@@ -374,15 +378,21 @@ export function DirtTrailsWallet() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Breakdown</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-700">Revenue from Bookings</span>
+                    <span className="text-gray-700">Customer payments (gross volume)</span>
                     <span className="font-semibold text-gray-900">
-                      {formatCurrencyWithConversion(stats.totalRevenue, selectedCurrency)}
+                      {formatCurrencyWithConversion(stats.totalGrossCustomerPayments, selectedCurrency)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <span className="text-gray-700">Commissions (calculated from bookings)</span>
+                    <span className="text-gray-700">Company wallet balance</span>
                     <span className="font-semibold text-gray-900">
-                      +{formatCurrencyWithConversion(stats.totalCommissions, selectedCurrency)}
+                      {formatCurrencyWithConversion(stats.companyWalletBalance, selectedCurrency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+                    <span className="text-gray-700">Platform fees &amp; commission (from bookings)</span>
+                    <span className="font-semibold text-gray-900">
+                      +{formatCurrencyWithConversion(stats.totalPlatformFees, selectedCurrency)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-gray-200 pb-3">
@@ -398,9 +408,9 @@ export function DirtTrailsWallet() {
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-3 bg-blue-50 px-4 py-2 rounded-lg">
-                    <span className="text-sm text-gray-900 font-semibold">Net Balance</span>
+                    <span className="text-sm text-gray-900 font-semibold">Company wallet (ledger)</span>
                     <span className="font-bold text-lg text-blue-600">
-                      {formatCurrencyWithConversion(stats.netBalance, selectedCurrency)}
+                      {formatCurrencyWithConversion(stats.companyWalletBalance, selectedCurrency)}
                     </span>
                   </div>
                 </div>
@@ -420,9 +430,14 @@ export function DirtTrailsWallet() {
           {activeTab !== 'overview' && (
             <div className="space-y-4">
               {/* Transaction count and pagination info */}
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
                 <p className="text-sm text-gray-600">
                   Showing {startIndex + 1}-{Math.min(endIndex, currentTransactions.length)} of {currentTransactions.length} transactions
+                </p>
+                <p className="text-xs text-gray-500 max-w-xl">
+                  Platform fee is read from the linked booking (commission + platform fee).{' '}
+                  <span className="text-gray-600">0</span> means the booking has no platform cut recorded.{' '}
+                  <span className="text-amber-800">N/A</span> means the booking row is missing. Unlinked payments show —.
                 </p>
                 {totalPages > 1 && (
                   <div className="flex items-center space-x-2">
@@ -460,7 +475,10 @@ export function DirtTrailsWallet() {
                             Type
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                            Amount
+                            Platform fee
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            Customer paid
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                             Status
@@ -479,7 +497,10 @@ export function DirtTrailsWallet() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 capitalize">
                               {transaction.transaction_type.replace(/_/g, ' ')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-800">
+                              {platformFeeTableCell(transaction, selectedCurrency)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">
                               {formatCurrencyWithConversion(transaction.amount, selectedCurrency)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">

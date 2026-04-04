@@ -691,6 +691,15 @@ export interface Wallet {
   updated_at: string
 }
 
+/** Booking columns joined for admin finance (platform fee + commission). */
+export interface BookingFeeSnapshot {
+  id: string
+  total_amount?: number | string | null
+  platform_fee?: number | string | null
+  commission_amount?: number | string | null
+  fee_payer?: string | null
+}
+
 export interface Transaction {
   id: string
   booking_id?: string
@@ -704,6 +713,18 @@ export interface Transaction {
   reference: string
   payout_meta?: any
   created_at: string
+  /** Populated by getAllTransactionsForAdmin when booking_id is set */
+  bookings?: BookingFeeSnapshot | null
+}
+
+/** Platform earnings for one booking row (fee + commission fields are mutually exclusive in practice). */
+export function platformTakeFromBooking(booking: BookingFeeSnapshot | null | undefined): number {
+  if (!booking) return 0
+  return (Number(booking.platform_fee) || 0) + (Number(booking.commission_amount) || 0)
+}
+
+export function platformTakeFromTransaction(transaction: { bookings?: BookingFeeSnapshot | null }): number {
+  return platformTakeFromBooking(transaction.bookings)
 }
 
 export interface Inquiry {
@@ -3338,7 +3359,7 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   }
 }
 
-export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
+export async function getAllTransactionsForAdmin(): Promise<(Transaction & { vendors?: any })[]> {
   try {
     // First check if user is admin
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -3371,14 +3392,73 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
       return []
     }
 
-    // Get vendor IDs from transactions
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const looksLikeBookingUuid = (s: unknown): s is string =>
+      typeof s === 'string' && UUID_RE.test(s.trim())
+
+    const bookingIds = [...new Set(transactions.map(t => t.booking_id).filter(Boolean).map(String))] as string[]
+    let bookingMap = new Map<string, BookingFeeSnapshot>()
+    const mergeBookingRows = (rows: any[] | null) => {
+      for (const b of rows || []) {
+        if (b?.id) bookingMap.set(String(b.id), b as BookingFeeSnapshot)
+      }
+    }
+    if (bookingIds.length > 0) {
+      const { data: bookingRows, error: bookingErr } = await supabase
+        .from('bookings')
+        .select('id, total_amount, platform_fee, commission_amount, fee_payer')
+        .in('id', bookingIds)
+      if (bookingErr) {
+        console.error('Error fetching bookings for admin transactions:', bookingErr)
+      } else {
+        mergeBookingRows(bookingRows)
+      }
+    }
+
+    // Some legacy rows store the booking id only in `reference`, not `booking_id`.
+    const refOnlyIds = [
+      ...new Set(
+        transactions
+          .filter(t => !t.booking_id && looksLikeBookingUuid(t.reference))
+          .map(t => String(t.reference).trim())
+          .filter(id => !bookingMap.has(id))
+      )
+    ]
+    if (refOnlyIds.length > 0) {
+      const { data: refBookingRows, error: refBookErr } = await supabase
+        .from('bookings')
+        .select('id, total_amount, platform_fee, commission_amount, fee_payer')
+        .in('id', refOnlyIds)
+      if (refBookErr) {
+        console.error('Error fetching bookings by transaction reference:', refBookErr)
+      } else {
+        mergeBookingRows(refBookingRows)
+      }
+    }
+
+    const resolveBookingRow = (t: Transaction): BookingFeeSnapshot | null => {
+      if (t.booking_id) {
+        return bookingMap.get(String(t.booking_id)) || null
+      }
+      const ref = typeof t.reference === 'string' ? t.reference.trim() : ''
+      if (ref && looksLikeBookingUuid(ref)) {
+        return bookingMap.get(ref) || null
+      }
+      return null
+    }
+
+    const attachBookings = (rows: (Transaction & { vendors?: any })[]) =>
+      rows.map(t => ({
+        ...t,
+        bookings: resolveBookingRow(t)
+      }))
+
     const vendorIds = transactions.map(t => t.vendor_id).filter(id => id)
 
     if (vendorIds.length === 0) {
-      return transactions
+      return attachBookings(transactions.map(t => ({ ...t, vendors: null })))
     }
 
-    // Fetch vendor information separately
     const { data: vendors, error: vendorsError } = await supabase
       .from('vendors')
       .select('id, business_name, business_email, status')
@@ -3386,11 +3466,9 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
 
     if (vendorsError) {
       console.error('Error fetching vendors for admin transactions:', vendorsError)
-      // Return transactions without vendor info rather than failing
-      return transactions
+      return attachBookings(transactions.map(t => ({ ...t, vendors: null })))
     }
 
-    // Map vendor information to transactions
     const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
 
     const transactionsWithVendors = transactions.map(transaction => ({
@@ -3398,10 +3476,28 @@ export async function getAllTransactionsForAdmin(): Promise<Transaction[]> {
       vendors: vendorMap.get(transaction.vendor_id) || null
     }))
 
-    return transactionsWithVendors
+    return attachBookings(transactionsWithVendors)
   } catch (error) {
     console.error('Error in getAllTransactionsForAdmin:', error)
     throw error
+  }
+}
+
+/**
+ * Vendor row used as the platform / company wallet (escrow). Matched by business name.
+ */
+export async function getPlatformCompanyVendorId(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('vendors')
+      .select('id')
+      .ilike('business_name', '%Dirt Trails%')
+      .limit(1)
+      .maybeSingle()
+    if (error || !data?.id) return null
+    return data.id
+  } catch {
+    return null
   }
 }
 
