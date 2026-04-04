@@ -384,7 +384,7 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
               <div className="flex items-start gap-3" ref={locationRef}>
                 <MapPin className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
                 <div className="flex-1 w-full relative">
-                    <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1">
                     <label className="text-xs font-medium text-gray-500">{t('location') || 'Location'}</label>
                     <button 
                       type="button"
@@ -644,66 +644,28 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                       className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl p-6 w-80"
                       onClick={(e) => e.stopPropagation()}
                     >
-                    {/* Adults */}
-                    <div className="guest-selector flex items-center justify-between mb-4">
-                      <div className="label font-medium text-gray-900">{t('adults') || 'Adults'}</div>
-                      <div className="val flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (adults > 1) setAdults(adults - 1)
-                          }}
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="number"
-                          name="adults"
-                          value={adults}
-                          min={1}
-                          max={20}
-                          className="w-12 text-center py-1 border border-gray-200 rounded-lg"
-                          onChange={(e) => setAdults(Math.max(1, parseInt(e.target.value) || 1))}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <button
-                          type="button"
-                          className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (adults < 20) setAdults(adults + 1)
-                          }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Children - only for hotels, tours, transport */}
-                    {(activeTab === 'hotels' || activeTab === 'tours' || activeTab === 'transport') && (
-                      <div className="guest-selector flex items-center justify-between">
-                        <div className="label font-medium text-gray-900">{t('children') || 'Children'}</div>
+                      {/* Adults */}
+                      <div className="guest-selector flex items-center justify-between mb-4">
+                        <div className="label font-medium text-gray-900">{t('adults') || 'Adults'}</div>
                         <div className="val flex items-center gap-2">
                           <button
                             type="button"
                             className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (children > 0) setChildren(children - 1)
+                              if (adults > 1) setAdults(adults - 1)
                             }}
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <input
                             type="number"
-                            name="children"
-                            value={children}
-                            min={0}
+                            name="adults"
+                            value={adults}
+                            min={1}
                             max={20}
                             className="w-12 text-center py-1 border border-gray-200 rounded-lg"
-                            onChange={(e) => setChildren(Math.max(0, parseInt(e.target.value) || 0))}
+                            onChange={(e) => setAdults(Math.max(1, parseInt(e.target.value) || 1))}
                             onClick={(e) => e.stopPropagation()}
                           />
                           <button
@@ -711,14 +673,53 @@ export default function LambulaSearchBar({ className = '', onCategoryChange, onL
                             className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (children < 20) setChildren(children + 1)
+                              if (adults < 20) setAdults(adults + 1)
                             }}
                           >
                             <Plus className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
-                    )}
+
+                      {/* Children - only for hotels, tours, transport */}
+                      {(activeTab === 'hotels' || activeTab === 'tours' || activeTab === 'transport') && (
+                        <div className="guest-selector flex items-center justify-between">
+                          <div className="label font-medium text-gray-900">{t('children') || 'Children'}</div>
+                          <div className="val flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (children > 0) setChildren(children - 1)
+                              }}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <input
+                              type="number"
+                              name="children"
+                              value={children}
+                              min={0}
+                              max={20}
+                              className="w-12 text-center py-1 border border-gray-200 rounded-lg"
+                              onChange={(e) => setChildren(Math.max(0, parseInt(e.target.value) || 0))}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                              type="button"
+                              className="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (children < 20) setChildren(children + 1)
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
