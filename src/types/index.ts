@@ -106,6 +106,9 @@ export interface Service {
   created_at: string
   updated_at: string
 
+  /** Service type (e.g. 'ticket', 'hotel', etc) */
+  type?: string;
+
   // Enhanced general fields
   duration_days?: number
   group_size_min?: number
