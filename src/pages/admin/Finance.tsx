@@ -324,12 +324,22 @@ export function Finance() {
     .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
     .slice(0, 5);
 
+  // Calculate platform fees and commissions
+  const platformFeesAndCommissions = filteredTransactions
+    .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
+    .reduce((sum, t) => {
+      const platformFee = t.bookings?.platform_fee || 0;
+      const commission = t.bookings?.commission_amount || 0;
+      return sum + platformFee + commission;
+    }, 0);
+
   // Calculate stats
   const stats = {
     totalRevenue,
     totalWithdrawals,
     totalRefunds,
     netRevenue: totalRevenue - totalWithdrawals - totalRefunds,
+    platformFeesAndCommissions,
     approvedWithdrawals: approvedWithdrawals.length,
     approvedAmount: approvedWithdrawals.reduce((sum, t) => sum + t.amount, 0),
     completedPayments: completedPayments.length,
@@ -480,7 +490,7 @@ export function Finance() {
       </div>
 
       {/* Business Overview Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Total Revenue</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">
@@ -499,6 +509,14 @@ export function Finance() {
             {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
           <p className="text-xs text-gray-400 mt-1">After withdrawals & refunds</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-orange-500 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-gray-500">Platform Fees & Commission</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">
+            {formatCurrencyWithConversion(stats.platformFeesAndCommissions, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">From linked bookings</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all">

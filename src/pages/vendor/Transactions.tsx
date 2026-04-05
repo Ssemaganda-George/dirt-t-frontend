@@ -53,7 +53,7 @@ export default function VendorTransactions() {
       totalTransactions: filteredTxs.length,
       completedTransactions: filteredTxs.filter(tx => tx.status === 'completed').length,
       failedTransactions: filteredTxs.filter(tx => tx.status === 'failed' || tx.status === 'rejected').length,
-      avgTransactionAmount: filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0) / filteredTxs.length : 0,
+      avgTransactionAmount: filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + Number(tx.bookings?.total_amount ?? tx.amount), 0) / filteredTxs.length : 0,
       successRate: filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0,
     }
     return getDailyRecommendations(vendorId, metrics)
@@ -285,7 +285,7 @@ export default function VendorTransactions() {
       formatDateTime(tx.created_at),
       tx.transaction_type,
       tx.reference,
-      (tx.vendor_payout_amount ?? tx.amount).toString(),
+      (tx.bookings?.total_amount ?? tx.amount).toString(),
       tx.currency,
       tx.status
     ])
@@ -307,7 +307,7 @@ export default function VendorTransactions() {
 
   const generateReport = () => {
     const totalTransactions = filteredTxs.length
-    const totalAmount = filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0)
+    const totalAmount = filteredTxs.reduce((sum, tx) => sum + Number(tx.bookings?.total_amount ?? tx.amount), 0)
     const avgTransaction = totalTransactions > 0 ? totalAmount / totalTransactions : 0
 
     const report = {
@@ -343,9 +343,10 @@ Date Range: ${report.filters.dateRange}
 Transaction Type: ${report.filters.transactionType}
 Status: ${report.filters.status}
 
+---------------------
 TRANSACTION BREAKDOWN
 ---------------------
-${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.vendor_payout_amount ?? tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
+${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.bookings?.total_amount ?? tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
 
 ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transactions` : ''}
     `.trim()
@@ -492,7 +493,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <p className="text-xs font-medium text-gray-600">Average Transaction</p>
                         <p className="text-xl font-bold text-gray-900 mt-2">
                           {formatCurrencyWithConversion(
-                            filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0) / filteredTxs.length : 0,
+                            filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + Number(tx.bookings?.total_amount ?? tx.amount), 0) / filteredTxs.length : 0,
                             currency,
                             selectedCurrency,
                             selectedLanguage
@@ -504,7 +505,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <p className="text-xs font-medium text-gray-600">Total Revenue</p>
                         <p className="text-xl font-bold text-gray-900 mt-2">
                           {formatCurrencyWithConversion(
-                            filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0),
+                            filteredTxs.reduce((sum, tx) => sum + Number(tx.bookings?.total_amount ?? tx.amount), 0),
                             currency,
                             selectedCurrency,
                             selectedLanguage
@@ -745,7 +746,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                     transaction.transaction_type === 'payment' ? 'text-green-600' : 'text-red-600'
                                   }`}>
                                     {transaction.transaction_type === 'payment' ? '+' : '-'}
-                                    {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
+                                    {formatCurrencyWithConversion(transaction.bookings?.total_amount ?? transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                   </div>
                                 </div>
                               </div>
@@ -804,7 +805,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                   {transaction.reference}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
+                                  {formatCurrencyWithConversion(transaction.bookings?.total_amount ?? transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
