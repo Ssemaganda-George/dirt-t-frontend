@@ -1,3 +1,6 @@
+// ...existing imports...
+// Hide nav bar when lightbox is open
+// (must be inside the component, after imports)
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
@@ -2225,33 +2228,61 @@ export default function ServiceDetail() {
 
       {/* Fullscreen Image Lightbox */}
       {lightboxOpen && service.images && service.images.length > 0 && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" style={{height: '100dvh', width: '100vw'}} onClick={() => setLightboxOpen(false)}>
           {/* Close */}
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="absolute right-4 top-20 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            style={{ touchAction: 'manipulation' }}
           >
             <X className="h-6 w-6" />
           </button>
 
-          {/* Counter */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+          {/* Counter - overlay on image */}
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 z-20 mt-2 px-3 py-1 rounded-full bg-black/60 text-white text-xs font-medium pointer-events-none select-none">
             {lightboxIndex + 1} / {service.images.length}
           </div>
 
-          {/* Prev arrow removed for mobile-only swipe */}
+          {/* Left Arrow */}
+          {service.images.length > 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + service.images.length) % service.images.length); }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+              aria-label="Previous image"
+              style={{ width: 32, height: 32 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <line x1="16" y1="6" x2="8" y2="12" />
+                <line x1="16" y1="18" x2="8" y2="12" />
+              </svg>
+            </button>
+          )}
 
-          {/* Image */}
+          {/* Image - edge to edge on mobile */}
           <img
             loading="eager"
             decoding="async"
             src={service.images[lightboxIndex]}
             alt={`${service.title} ${lightboxIndex + 1}`}
-            className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+            className="w-screen h-[100dvh] object-contain select-none"
             onClick={(e) => e.stopPropagation()}
+            style={{ touchAction: 'none', maxHeight: '100dvh' }}
           />
 
-          {/* Next arrow removed for mobile-only swipe */}
+          {/* Right Arrow */}
+          {service.images.length > 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % service.images.length); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+              aria-label="Next image"
+              style={{ width: 32, height: 32 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <line x1="8" y1="6" x2="16" y2="12" />
+                <line x1="8" y1="18" x2="16" y2="12" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 

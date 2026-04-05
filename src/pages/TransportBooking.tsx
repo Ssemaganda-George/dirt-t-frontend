@@ -336,6 +336,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   const [currentStep, setCurrentStep] = useState(1)
+  const [bookingSubStep, setBookingSubStep] = useState<'contact' | 'payment'>('contact')
   // Removed unused cartSaved state
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
   const [bookingResult, setBookingResult] = useState<any | null>(null)
@@ -793,8 +794,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
 
   const steps = [
-    { id: 1, title: 'Details & Payment', icon: CreditCard },
-    { id: 2, title: 'Confirmation', icon: CheckCircle }
+    { id: 1, title: 'Trip Details', icon: CreditCard },
+    { id: 2, title: 'Contact & Payment', icon: CreditCard },
+    { id: 3, title: 'Confirmation', icon: CheckCircle }
   ]
 
   const validateCurrentStep = () => {
@@ -2071,6 +2073,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               </div>
             </div>
 
+            {/* Contact & Payment - show on step 1 for now, will move to step 2 */}
+            {currentStep === 1 && (
+            <>
             {/* Contact Information Section */}
             <div className="border-t pt-4 sm:pt-6">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 sm:mb-4">Your Contact Information</h3>
@@ -2303,7 +2308,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 </div>
               )}
             </div>
-          </div>
+          </>
         )
 
       case 2:

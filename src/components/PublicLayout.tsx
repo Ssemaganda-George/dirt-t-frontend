@@ -114,7 +114,7 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
-      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent`}>
+      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent${typeof window !== 'undefined' && document.body.classList.contains('hide-main-navbar') ? ' hidden' : ''}` }>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
           <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
