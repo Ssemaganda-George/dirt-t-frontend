@@ -10,14 +10,11 @@ import {
   Clock, 
   Calendar,
   ArrowLeft,
-  ArrowRight,
   Heart,
   Share2,
   ShoppingCart,
   CheckCircle,
   X,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp
 } from 'lucide-react'
 import { createServiceReview, createOrder } from '../lib/database'

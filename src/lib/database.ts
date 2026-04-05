@@ -3661,7 +3661,7 @@ export async function updateVendorStatus(vendorId: string, status: VendorStatus)
 
 export async function getDashboardStats() {
       // Get pending vendors (with profile full_name)
-      let pendingVendorsList = [];
+      let pendingVendorsList: any[] = [];
       try {
         const { data: pending, error: pendingError } = await supabase
           .from('vendors')
