@@ -680,6 +680,9 @@ export interface Booking {
   start_time?: string
   end_time?: string
   end_date?: string
+  // Platform fees (optional, set during booking creation from pricing calculation)
+  platform_fee?: number | null
+  commission_amount?: number | null
 }
 
 export interface Wallet {
@@ -2836,6 +2839,14 @@ export async function createBooking(
       p_pricing_base_amount:
         bookingData.pricing_base_amount !== undefined && bookingData.pricing_base_amount !== null
           ? Number(bookingData.pricing_base_amount)
+          : null,
+      p_platform_fee:
+        bookingData.platform_fee !== undefined && bookingData.platform_fee !== null
+          ? Number(bookingData.platform_fee)
+          : null,
+      p_commission_amount:
+        bookingData.commission_amount !== undefined && bookingData.commission_amount !== null
+          ? Number(bookingData.commission_amount)
           : null
     })
   );

@@ -2,6 +2,8 @@
  * Named arguments for `public.create_booking_atomic`.
  * Optional p_pricing_base_amount: pre-fee line total for commission (e.g. rooms×nights×price, transport total).
  * When omitted/null, DB uses service.price × guests.
+ * Optional p_platform_fee: explicit platform fee to store with booking (overrides calculation if provided).
+ * Optional p_commission_amount: explicit commission to store with booking (separate from platform_fee).
  */
 export interface CreateBookingAtomicRpcInput {
   p_service_id: string
@@ -20,6 +22,10 @@ export interface CreateBookingAtomicRpcInput {
   p_dropoff_location?: string | null
   /** Pre-tax/pre-fee booking line amount for tier commission (not necessarily equal to total_amount when tourist pays fee). */
   p_pricing_base_amount?: number | null
+  /** Explicit platform fee (use when already calculated). If null, RPC will calculate from tiers/overrides. */
+  p_platform_fee?: number | null
+  /** Explicit commission amount (typically used separately from platform_fee if both are applicable). */
+  p_commission_amount?: number | null
 }
 
 export function buildCreateBookingAtomicRpcPayload(
@@ -40,6 +46,8 @@ export function buildCreateBookingAtomicRpcPayload(
     p_guest_phone: input.p_guest_phone ?? null,
     p_pickup_location: input.p_pickup_location ?? null,
     p_dropoff_location: input.p_dropoff_location ?? null,
-    p_pricing_base_amount: input.p_pricing_base_amount ?? null
+    p_pricing_base_amount: input.p_pricing_base_amount ?? null,
+    p_platform_fee: input.p_platform_fee ?? null,
+    p_commission_amount: input.p_commission_amount ?? null
   }
 }

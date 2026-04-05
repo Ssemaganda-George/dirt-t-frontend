@@ -615,6 +615,12 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
+      // Calculate total platform fee from pricing calculation
+      // pricingCalc contains platform_fee (per unit), we multiply by guests
+      const platformFeeTotal = pricingCalc && typeof pricingCalc.platform_fee === 'number'
+        ? Math.round(pricingCalc.platform_fee * bookingData.guests)
+        : 0
+      
       await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
@@ -630,7 +636,8 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
         guest_name: user ? undefined : bookingData.contactName,
         guest_email: user ? undefined : bookingData.contactEmail,
         guest_phone: user ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
-        pricing_base_amount: totalPrice
+        pricing_base_amount: totalPrice,
+        platform_fee: platformFeeTotal
       })
       setPollingMessage('')
       setCurrentStep(5)
