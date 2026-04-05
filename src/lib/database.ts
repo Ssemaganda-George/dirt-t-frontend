@@ -5343,7 +5343,7 @@ export async function updateUnifiedInquiryStatus(
       contact: 'contact_inquiries',
       service: 'service_inquiries',
       safari: 'safari_inquiries',
-      partnership: 'partnership_inquiries'
+      partnership: 'partner_requests' // Note: partner_requests is the actual table used
     }
     
     const tableName = type ? tableMap[type] : null
