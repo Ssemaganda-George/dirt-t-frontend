@@ -512,7 +512,7 @@ export function Transactions() {
             </div>
             <div className="p-5">
             <div className="overflow-x-auto">
-              {console.log('All Transactions:', allTransactions)}
+              {/* {console.log('All Transactions:', allTransactions)} */}
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>

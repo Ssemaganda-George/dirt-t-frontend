@@ -409,7 +409,7 @@ export default function VendorBookings() {
           onSubmit={async (payload) => {
             // Attach service type to payload for backend logic
             const selectedService = services.find(s => s.id === payload.service_id)
-            const created = await createDbBooking({ ...payload, vendor_id: vendorId, service_type: selectedService?.type } as any)
+            const created = await createDbBooking({ ...payload, vendor_id: vendorId, service_type: selectedService ? (selectedService as any).type : undefined } as any)
             setBookings(prev => [created, ...prev])
             setShowForm(false)
           }}
