@@ -44,6 +44,8 @@ export interface Vendor {
   updated_at: string;
   user_profile?: UserProfile;
   // Tier and commission fields
+  /** Service object attached for UI convenience */
+  service?: Service;
   current_tier_id?: string;
   current_commission_rate?: number;
   average_rating?: number;
