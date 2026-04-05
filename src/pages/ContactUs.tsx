@@ -3,7 +3,8 @@ import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Building, CheckCircle,
 import { useAuth } from '../contexts/AuthContext'
 import LoginModal from '../components/LoginModal'
 import { useNavigate } from 'react-router-dom'
-import { createContactInquiry } from '../lib/database'
+import { createUnifiedInquiry } from '../lib/database'
+import { validateContactInquiry, sanitizeString } from '../lib/validation'
 
 export default function ContactUs() {
   const { user } = useAuth()
@@ -34,12 +35,30 @@ export default function ContactUs() {
     setSubmitError('')
 
     try {
-      await createContactInquiry({
+      // Validate input
+      const validation = validateContactInquiry({
         name: formData.name,
         email: formData.email,
         subject: formData.subject,
         message: formData.message,
         category: formData.category
+      })
+
+      if (!validation.valid) {
+        setSubmitError(validation.errors.join(', '))
+        setIsSubmitting(false)
+        return
+      }
+
+      // Use unified inquiry system
+      await createUnifiedInquiry({
+        inquiry_type: 'contact',
+        name: sanitizeString(formData.name),
+        email: sanitizeString(formData.email),
+        subject: sanitizeString(formData.subject),
+        message: sanitizeString(formData.message),
+        category: formData.category,
+        source: 'website'
       })
 
       setIsSubmitting(false)
@@ -203,10 +222,20 @@ export default function ContactUs() {
               <p className="text-gray-700 leading-snug antialiased">Fill out the form below and we'll get back to you within 24 hours.</p>
             </div>
 
+            {submitError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-800 font-medium">Error sending message</p>
+                  <p className="text-red-600 text-sm">{submitError}</p>
+                </div>
+              </div>
+            )}
+
             {submitted ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Send className="h-8 w-8 text-green-600" />
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-xl font-bold text-black mb-2 tracking-tight antialiased">Message Sent!</h3>
                 <p className="text-gray-700 leading-snug antialiased">

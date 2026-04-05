@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, MessageSquare } from 'lucide-react'
-import { getServiceBySlug, createInquiry } from '../lib/database'
-import { useAuth } from '../contexts/AuthContext'
+import { ArrowLeft, Send, MessageSquare, AlertCircle } from 'lucide-react'
+import { getServiceBySlug, createUnifiedInquiry } from '../lib/database'
+import { validateServiceInquiry, sanitizeString } from '../lib/validation'
 
 interface ServiceDetail {
   id: string
@@ -38,11 +38,11 @@ interface ServiceDetail {
 export default function ServiceInquiry() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const { user, profile, loading: authLoading } = useAuth()
   const [service, setService] = useState<ServiceDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -64,12 +64,6 @@ export default function ServiceInquiry() {
     experienceLevel: '',
     specialRequirements: ''
   })
-
-  useEffect(() => {
-    if (!authLoading && (!user || profile?.role !== 'tourist')) {
-      navigate('/login')
-    }
-  }, [user, profile, authLoading, navigate])
 
   useEffect(() => {
     if (slug) {
@@ -96,11 +90,29 @@ export default function ServiceInquiry() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setValidationErrors([])
     setSubmitting(true)
 
     try {
       if (!service?.id) {
         throw new Error('Service ID is required')
+      }
+
+      // Validate input to prevent XSS/injection
+      const validation = validateServiceInquiry({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        preferredDate: formData.preferredDate,
+        numberOfGuests: Number(formData.numberOfGuests) || 1,
+        message: formData.message,
+        contactMethod: formData.contactMethod.toLowerCase()
+      })
+
+      if (!validation.valid) {
+        setValidationErrors(validation.errors)
+        setSubmitting(false)
+        return
       }
 
       // Prepare category-specific data
@@ -109,44 +121,45 @@ export default function ServiceInquiry() {
 
       // Add category-specific fields based on the service category
       if (categoryName === 'hotels') {
-        categorySpecificData.roomType = formData.roomType
-        categorySpecificData.specialRequests = formData.specialRequests
+        categorySpecificData.roomType = sanitizeString(formData.roomType)
+        categorySpecificData.specialRequests = sanitizeString(formData.specialRequests)
       } else if (categoryName === 'tours') {
-        categorySpecificData.dietaryRestrictions = formData.dietaryRestrictions
-        categorySpecificData.accommodationPreference = formData.accommodationPreference
+        categorySpecificData.dietaryRestrictions = sanitizeString(formData.dietaryRestrictions)
+        categorySpecificData.accommodationPreference = sanitizeString(formData.accommodationPreference)
       } else if (categoryName === 'transport') {
-        categorySpecificData.pickupLocation = formData.pickupLocation
-        categorySpecificData.dropoffLocation = formData.dropoffLocation
+        categorySpecificData.pickupLocation = sanitizeString(formData.pickupLocation)
+        categorySpecificData.dropoffLocation = sanitizeString(formData.dropoffLocation)
       } else if (categoryName === 'flights') {
-        categorySpecificData.seatPreference = formData.seatPreference
-        categorySpecificData.mealPreference = formData.mealPreference
+        categorySpecificData.seatPreference = sanitizeString(formData.seatPreference)
+        categorySpecificData.mealPreference = sanitizeString(formData.mealPreference)
       } else if (categoryName === 'restaurants') {
-        categorySpecificData.dietaryRestrictions = formData.dietaryRestrictions
-        categorySpecificData.specialOccasion = formData.specialOccasion
+        categorySpecificData.dietaryRestrictions = sanitizeString(formData.dietaryRestrictions)
+        categorySpecificData.specialOccasion = sanitizeString(formData.specialOccasion)
       } else if (categoryName === 'activities' || categoryName === 'events') {
         // Accept both 'activities' and the public-facing 'events' slug
-        categorySpecificData.experienceLevel = formData.experienceLevel
-        categorySpecificData.specialRequirements = formData.specialRequirements
+        categorySpecificData.experienceLevel = sanitizeString(formData.experienceLevel)
+        categorySpecificData.specialRequirements = sanitizeString(formData.specialRequirements)
       }
 
-      await createInquiry({
+      // Use unified inquiry system - sends to both admin and vendor
+      await createUnifiedInquiry({
+        inquiry_type: 'service',
+        name: sanitizeString(formData.name),
+        email: sanitizeString(formData.email),
+        phone: formData.phone ? sanitizeString(formData.phone) : undefined,
+        message: sanitizeString(formData.message),
         service_id: service.id,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone || undefined,
         preferred_date: formData.preferredDate || undefined,
         number_of_guests: formData.numberOfGuests,
-        message: formData.message || undefined,
-        contact_method: formData.contactMethod as 'email' | 'phone',
-        category_specific_data: categorySpecificData
+        contact_method: formData.contactMethod as 'email' | 'phone' | 'whatsapp',
+        service_specific_data: categorySpecificData,
+        source: 'website'
       })
 
       setSubmitted(true)
     } catch (error) {
       console.error('Error submitting inquiry:', error)
-      // For now, still show success even on error to maintain user experience
-      // In production, you might want to show an error message
-      setSubmitted(true)
+      setValidationErrors(['An error occurred while sending your inquiry. Please try again.'])
     } finally {
       setSubmitting(false)
     }
@@ -443,14 +456,6 @@ export default function ServiceInquiry() {
     )
   }
 
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  }
-
-  if (!user || profile?.role !== 'tourist') {
-    return null // useEffect will redirect
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -501,6 +506,21 @@ export default function ServiceInquiry() {
               <p className="text-gray-600 mb-6">
                 Have questions about this service? Send an inquiry and {service.vendors?.business_name || 'the provider'} will get back to you with more details.
               </p>
+
+              {/* Validation Errors */}
+              {validationErrors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="font-medium text-red-800">Please fix the following errors:</span>
+                  </div>
+                  <ul className="list-disc list-inside text-sm text-red-700">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

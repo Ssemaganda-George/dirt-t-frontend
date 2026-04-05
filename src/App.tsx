@@ -45,6 +45,7 @@ const Businesses = lazy(() => import('./pages/admin/Businesses'))
 const AdminVendors = lazy(() => import('./pages/admin/Vendors'))
 const AdminVendorDetail = lazy(() => import('./pages/admin/VendorDetail.tsx'))
 const Messages = lazy(() => import('./pages/admin/Messages'))
+const AdminInquiries = lazy(() => import('./pages/admin/Inquiries'))
 const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminServices = lazy(() => import('./pages/admin/Services').then(module => ({ default: module.Services })))
@@ -327,6 +328,7 @@ function App() {
             <Route path="bookings/transport" element={<TransportBookings />} />
             <Route path="bookings/flagged" element={<AdminFlaggedBookings />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="inquiries" element={<AdminInquiries />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="conservation/trees" element={<AdminConservationTrees />} />

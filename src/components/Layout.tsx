@@ -19,8 +19,9 @@ import {
   Globe,
   ChevronRight,
   Eye,
-  Star
-  , TreePine
+  Star,
+  TreePine,
+  Mail
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -99,6 +100,7 @@ const navigation = [
     category: 'Communication',
     items: [
       { labelKey: 'messages', href: '/admin/messages', icon: MessageSquare },
+      { labelKey: 'inquiries', href: '/admin/inquiries', icon: Mail },
       { labelKey: 'partnerships', href: '/admin/partnerships', icon: Users }
     ]
   }

@@ -43,11 +43,39 @@ export default function VendorInquiries() {
   }
 
   const handleRespond = async (inquiry: Inquiry) => {
-    if (!responseMessage.trim()) return
-
     setResponding(true)
     try {
-      await updateInquiryStatus(inquiry.id, 'responded', responseMessage)
+      // Build email subject and body with inquiry details
+      const serviceName = inquiry.services?.title || 'Service'
+      const subject = encodeURIComponent(`Re: Your inquiry about ${serviceName} - Dirt Trails`)
+      
+      // Build email body with inquiry context
+      const bodyParts = [
+        `Dear ${inquiry.name},`,
+        '',
+        `Thank you for your interest in ${serviceName}.`,
+        '',
+        responseMessage.trim() || '[Your response here]',
+        '',
+        '---',
+        'Original Inquiry Details:',
+        `Service: ${serviceName}`,
+        inquiry.preferred_date ? `Preferred Date: ${new Date(inquiry.preferred_date).toLocaleDateString()}` : '',
+        inquiry.number_of_guests ? `Number of Guests: ${inquiry.number_of_guests}` : '',
+        inquiry.message ? `Message: ${inquiry.message}` : '',
+        '',
+        'Best regards,',
+        'Dirt Trails Team'
+      ].filter(Boolean).join('\n')
+      
+      const body = encodeURIComponent(bodyParts)
+      
+      // Open email client
+      window.location.href = `mailto:${inquiry.email}?subject=${subject}&body=${body}`
+      
+      // Mark as responded with current user as responder
+      await updateInquiryStatus(inquiry.id, 'responded', responseMessage || 'Responded via email', profile?.id)
+      
       setResponseMessage('')
       setSelectedInquiry(null)
       await fetchInquiries()
@@ -227,11 +255,11 @@ export default function VendorInquiries() {
 
               {/* Response input */}
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Your Response</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Your Response (Optional)</label>
                 <textarea
                   rows={4}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 resize-none"
-                  placeholder="Type your response to the customer..."
+                  placeholder="Add a personalized message (will be included in the email)..."
                   value={responseMessage}
                   onChange={(e) => setResponseMessage(e.target.value)}
                 />
@@ -246,10 +274,10 @@ export default function VendorInquiries() {
                 </button>
                 <button
                   onClick={() => handleRespond(selectedInquiry)}
-                  disabled={responding || !responseMessage.trim()}
+                  disabled={responding}
                   className="min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {responding ? 'Sending...' : 'Send Response'}
+                  {responding ? 'Opening...' : 'Reply via Email'}
                 </button>
               </div>
             </div>

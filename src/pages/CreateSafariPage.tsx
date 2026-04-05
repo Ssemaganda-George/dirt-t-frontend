@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createUnifiedInquiry } from '../lib/database';
+import { validateSafariInquiry, sanitizeString } from '../lib/validation';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 const COUNTRIES = [
   'Tanzania', 'Kenya', 'Uganda', 'Zanzibar', 'Rwanda'
@@ -34,6 +37,9 @@ type SafariForm = {
 
 export default function CreateSafariPage() {
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [form, setForm] = useState<SafariForm>({
     countries: [],
     activities: [],
@@ -54,6 +60,115 @@ export default function CreateSafariPage() {
   const handleChange = (field: keyof SafariForm, value: string | number) => setForm(f => ({ ...f, [field]: value }));
   const handleMultiSelect = (field: 'countries' | 'activities', value: string) => setForm(f => ({ ...f, [field]: f[field].includes(value) ? f[field].filter((v: string) => v !== value) : [...f[field], value] }));
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setValidationErrors([]);
+    setSubmitting(true);
+
+    try {
+      // Validate input
+      const validation = validateSafariInquiry({
+        name: `${form.fullName} ${form.lastName}`.trim(),
+        email: form.email,
+        phone: form.phone,
+        countries: form.countries,
+        activities: form.activities
+      });
+
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setSubmitting(false);
+        return;
+      }
+
+      // Prepare safari-specific data
+      const safariData = {
+        countries: form.countries,
+        activities: form.activities,
+        travelWith: sanitizeString(form.travelWith),
+        days: parseInt(form.days) || 1,
+        budget: parseInt(form.budget) || 100,
+        startDate: form.startDate,
+        adults: form.adults,
+        children: form.children,
+        rooms: form.rooms,
+        country: sanitizeString(form.country),
+        extraInfo: sanitizeString(form.extraInfo)
+      };
+
+      // Submit to unified inquiry system
+      await createUnifiedInquiry({
+        inquiry_type: 'safari',
+        name: sanitizeString(`${form.fullName} ${form.lastName}`.trim()),
+        email: sanitizeString(form.email),
+        phone: form.phone ? sanitizeString(form.phone) : undefined,
+        message: form.extraInfo ? sanitizeString(form.extraInfo) : `Safari request: ${form.countries.join(', ')} - ${form.activities.join(', ')}`,
+        preferred_date: form.startDate || undefined,
+        number_of_guests: form.adults + form.children,
+        safari_data: safariData,
+        priority: 'normal',
+        source: 'website'
+      });
+
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Error submitting safari request:', error);
+      setValidationErrors(['An error occurred while submitting your request. Please try again.']);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Success view
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white to-emerald-50 flex flex-col items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center border border-gray-100">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-emerald-800 mb-4">Safari Request Submitted!</h1>
+          <p className="text-gray-600 mb-6">
+            Thank you for your safari request! Our team will review your preferences and get back to you within 24 hours with personalized recommendations.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/')}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg py-3 font-semibold shadow transition"
+            >
+              Return to Home
+            </button>
+            <button
+              onClick={() => {
+                setSubmitted(false);
+                setForm({
+                  countries: [],
+                  activities: [],
+                  travelWith: '',
+                  days: '',
+                  budget: '',
+                  startDate: '',
+                  adults: 1,
+                  children: 0,
+                  rooms: 1,
+                  fullName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  country: '',
+                  extraInfo: ''
+                });
+              }}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg py-3 font-semibold transition"
+            >
+              Submit Another Request
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-emerald-50 flex flex-col">
       {/* Header removed as requested */}
@@ -64,7 +179,23 @@ export default function CreateSafariPage() {
         <div className="bg-white/90 rounded-2xl shadow-lg p-8 mb-8 border border-gray-100">
           <h1 className="text-3xl font-bold mb-2 text-emerald-800">Create My Safari</h1>
           <div className="mb-8 text-gray-600">Fill out the form below and our team will help you plan your perfect safari adventure.</div>
-          <form className="space-y-7">
+          
+          {/* Validation Errors */}
+          {validationErrors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center mb-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+                <span className="font-medium text-red-800">Please fix the following errors:</span>
+              </div>
+              <ul className="list-disc list-inside text-sm text-red-700">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-7">
             <div>
               <label className="font-semibold">1. What country/countries do you want to visit?</label>
               <div className="flex flex-wrap gap-2 mt-2">
@@ -168,7 +299,20 @@ export default function CreateSafariPage() {
                 <textarea className="w-full border rounded px-3 py-2" rows={3} value={form.extraInfo} onChange={e => handleChange('extraInfo', e.target.value)} />
               </div>
             </div>
-            <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg py-3 font-semibold shadow transition">Submit Safari Request</button>
+            <button 
+              type="submit" 
+              disabled={submitting}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg py-3 font-semibold shadow transition flex items-center justify-center"
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Submitting...
+                </>
+              ) : (
+                'Submit Safari Request'
+              )}
+            </button>
           </form>
           {/* Company Info Card restored below the form */}
           <div className="bg-white/80 rounded-xl shadow p-6 border border-gray-100 mt-8">
