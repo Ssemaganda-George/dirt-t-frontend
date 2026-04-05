@@ -1673,7 +1673,7 @@ export default function ServiceDetail() {
             {/* Arrows removed for mobile-only swipe */}
             {/* Image Display */}
             <div className="w-full h-full">
-              {service.images && service.images.length > 0 ? (
+              {service.images && service.images.length > 1 ? (
                 <div className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
                   {service.images.map((image, index) => (
                     <div
@@ -1698,10 +1698,11 @@ export default function ServiceDetail() {
                   <img
                     loading="lazy"
                     decoding="async"
-                    src="https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"
+                    src={service.images && service.images.length === 1 ? service.images[0] : "https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg"}
                     alt={service.title}
                     className="w-full h-full object-cover rounded-b-2xl"
                     style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
+                    onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}
                   />
                 </div>
               )}
