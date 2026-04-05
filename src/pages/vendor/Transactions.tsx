@@ -53,7 +53,7 @@ export default function VendorTransactions() {
       totalTransactions: filteredTxs.length,
       completedTransactions: filteredTxs.filter(tx => tx.status === 'completed').length,
       failedTransactions: filteredTxs.filter(tx => tx.status === 'failed' || tx.status === 'rejected').length,
-      avgTransactionAmount: filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length : 0,
+      avgTransactionAmount: filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0) / filteredTxs.length : 0,
       successRate: filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0,
     }
     return getDailyRecommendations(vendorId, metrics)
@@ -285,7 +285,7 @@ export default function VendorTransactions() {
       formatDateTime(tx.created_at),
       tx.transaction_type,
       tx.reference,
-      tx.amount.toString(),
+      (tx.vendor_payout_amount ?? tx.amount).toString(),
       tx.currency,
       tx.status
     ])
@@ -307,7 +307,7 @@ export default function VendorTransactions() {
 
   const generateReport = () => {
     const totalTransactions = filteredTxs.length
-    const totalAmount = filteredTxs.reduce((sum, tx) => sum + tx.amount, 0)
+    const totalAmount = filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0)
     const avgTransaction = totalTransactions > 0 ? totalAmount / totalTransactions : 0
 
     const report = {
@@ -345,7 +345,7 @@ Status: ${report.filters.status}
 
 TRANSACTION BREAKDOWN
 ---------------------
-${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
+${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.vendor_payout_amount ?? tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
 
 ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transactions` : ''}
     `.trim()
@@ -492,7 +492,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <p className="text-xs font-medium text-gray-600">Average Transaction</p>
                         <p className="text-xl font-bold text-gray-900 mt-2">
                           {formatCurrencyWithConversion(
-                            filteredTxs.reduce((sum, tx) => sum + tx.amount, 0) / filteredTxs.length,
+                            filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0) / filteredTxs.length : 0,
                             currency,
                             selectedCurrency,
                             selectedLanguage
@@ -504,7 +504,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <p className="text-xs font-medium text-gray-600">Total Revenue</p>
                         <p className="text-xl font-bold text-gray-900 mt-2">
                           {formatCurrencyWithConversion(
-                            filteredTxs.reduce((sum, tx) => sum + tx.amount, 0),
+                            filteredTxs.reduce((sum, tx) => sum + (tx.vendor_payout_amount ?? tx.amount), 0),
                             currency,
                             selectedCurrency,
                             selectedLanguage

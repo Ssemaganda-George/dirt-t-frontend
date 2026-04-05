@@ -35,16 +35,23 @@ export default function VendorBookings() {
   const load = async () => {
     // Get all bookings, then filter by vendor_id
     const allBookings = await getAllBookings()
-    const filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
+    let filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
     setBookings(filteredBookings)
 
     try {
       const svc = await getServicesDb(vendorId)
       setServices(svc)
+      // Attach service object to each booking
+      const serviceMap = new Map(svc.map(s => [s.id, s]))
+      filteredBookings = filteredBookings.map(b => ({
+        ...b,
+        service: b.service || serviceMap.get(b.service_id) || undefined
+      }))
     } catch (err) {
       console.error('Error loading services for vendor:', err)
       setServices([])
     }
+    setBookings(filteredBookings)
   }
 
   useEffect(() => {
@@ -400,8 +407,9 @@ export default function VendorBookings() {
           services={services}
           onClose={() => setShowForm(false)}
           onSubmit={async (payload) => {
-            // Create booking in Supabase
-            const created = await createDbBooking({ ...payload, vendor_id: vendorId } as any)
+            // Attach service type to payload for backend logic
+            const selectedService = services.find(s => s.id === payload.service_id)
+            const created = await createDbBooking({ ...payload, vendor_id: vendorId, service_type: selectedService?.type } as any)
             setBookings(prev => [created, ...prev])
             setShowForm(false)
           }}
@@ -481,7 +489,8 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
     guests: 1,
     total_amount: services[0] ? services[0].price : 0,
     currency: services[0]?.currency || 'UGX',
-    status: 'pending'
+    status: services[0]?.type === 'ticket' ? 'confirmed' : 'pending',
+    payment_status: services[0]?.type === 'ticket' ? 'paid' : 'pending'
   })
 
   const selectedService = services.find(s => s.id === form.service_id)

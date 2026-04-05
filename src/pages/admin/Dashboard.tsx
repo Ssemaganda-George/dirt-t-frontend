@@ -15,6 +15,7 @@ import {
 interface DashboardStats {
   totalVendors: number
   pendingVendors: number
+  pendingVendorsList?: any[]
   totalTourists: number
   totalServices: number
   pendingServices: number
@@ -141,6 +142,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalVendors: 0,
     pendingVendors: 0,
+    pendingVendorsList: [],
     totalTourists: 0,
     totalServices: 0,
     pendingServices: 0,
@@ -257,16 +259,24 @@ export default function Dashboard() {
           <div className="p-4">
             {stats.recentBookings.length > 0 ? (
               <div className="space-y-2">
-                {stats.recentBookings.slice(0, 5).map((booking) => (
-                  <RecentItem
-                    key={booking.id}
-                    title={booking.services?.title || 'Unknown Service'}
-                    subtitle={`by ${booking.profiles?.full_name || 'Unknown User'}`}
-                    amount={formatCurrencyWithConversion(booking.total_amount, booking.currency || 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
-                    status={booking.status}
-                    onClick={() => navigate(`/admin/bookings`)}
-                  />
-                ))}
+                {stats.recentBookings.slice(0, 5).map((booking) => {
+                  let subtitle = 'by Unknown User';
+                  if (booking.profiles?.full_name) {
+                    subtitle = `by ${booking.profiles.full_name}`;
+                  } else if (booking.is_guest_booking && booking.guest_name) {
+                    subtitle = `by ${booking.guest_name}`;
+                  }
+                  return (
+                    <RecentItem
+                      key={booking.id}
+                      title={booking.services?.title || 'Unknown Service'}
+                      subtitle={subtitle}
+                      amount={formatCurrencyWithConversion(booking.total_amount, booking.currency || 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
+                      status={booking.status}
+                      onClick={() => navigate(`/admin/bookings`)}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">
@@ -295,15 +305,33 @@ export default function Dashboard() {
           <div className="p-4">
             {stats.recentVendors.length > 0 ? (
               <div className="space-y-2">
-                {stats.recentVendors.slice(0, 5).map((vendor) => (
-                  <RecentItem
-                    key={vendor.id}
-                    title={vendor.business_name}
-                    subtitle={`${vendor.profiles?.full_name}`}
-                    status={vendor.status}
-                    onClick={() => navigate(`/admin/vendors`)}
-                  />
-                ))}
+                {stats.recentVendors.slice(0, 5).map((vendor) => {
+                  const subtitle = vendor.profiles?.full_name || vendor.full_name || vendor.business_name || '';
+                  return (
+                    <RecentItem
+                      key={vendor.id}
+                      title={vendor.business_name}
+                      subtitle={subtitle}
+                      status={vendor.status}
+                      onClick={() => navigate(`/admin/vendors`)}
+                    />
+                  );
+                })}
+              </div>
+            ) : stats.pendingVendorsList && stats.pendingVendorsList.length > 0 ? (
+              <div className="space-y-2">
+                {stats.pendingVendorsList.slice(0, 5).map((vendor) => {
+                  const subtitle = vendor.profiles?.full_name || vendor.full_name || vendor.business_name || '';
+                  return (
+                    <RecentItem
+                      key={vendor.id}
+                      title={vendor.business_name}
+                      subtitle={subtitle}
+                      status={vendor.status}
+                      onClick={() => navigate(`/admin/vendors`)}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">

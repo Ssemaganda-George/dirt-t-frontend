@@ -482,11 +482,13 @@ export default function CheckoutPage() {
       <div className="w-full max-w-6xl bg-white rounded-none md:rounded-lg shadow-lg overflow-hidden flex flex-col">
         {/* Progress Header - Fixed at top */}
         <div className="px-4 md:px-6 py-4 border-b flex-shrink-0">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 items-start">
+            <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
             <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
-            <div>
-              <button type="button" onClick={() => navigate(-1)} className="text-sm text-gray-600 hover:text-gray-900">✕</button>
-            </div>
           </div>
           <div className="mt-3 flex items-center gap-3 md:gap-6 overflow-x-auto pb-2">
             <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
@@ -753,10 +755,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Fixed Action Buttons at Bottom - visible on all devices */}
-          <div className="sticky bottom-0 z-60 pointer-events-auto flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
-          <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors">
-            Back
-          </button>
+        <div className="sticky bottom-0 z-60 pointer-events-auto flex-shrink-0 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex gap-2">
           <button 
             type="button"
             disabled={!isNextEnabled}

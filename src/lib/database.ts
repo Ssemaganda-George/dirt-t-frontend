@@ -2877,11 +2877,12 @@ export async function createBooking(
 
   let finalBooking: any = data
 
-  // Sync status/payment_status only when explicitly requested by caller
+  // Always force all bookings to be confirmed/paid after creation
   try {
-    const requestedStatus = (bookingData as any).status
-    const requestedPaymentStatus = (bookingData as any).payment_status || (bookingData as any).paymentStatus
-    const requestedPaymentReference = (bookingData as any).payment_reference || (bookingData as any).paymentReference
+    const requestedStatus = 'confirmed';
+    const requestedPaymentStatus = 'paid';
+    const requestedPaymentReference = (bookingData as any).payment_reference || (bookingData as any).paymentReference;
+
     if (
       (requestedStatus && requestedStatus !== (data as any).status) ||
       (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) ||
@@ -2890,23 +2891,23 @@ export async function createBooking(
       const { data: updated, error: updateError } = await supabase
         .from('bookings')
         .update({
-          ...(requestedStatus ? { status: requestedStatus } : {}),
-          ...(requestedPaymentStatus ? { payment_status: requestedPaymentStatus } : {}),
+          status: requestedStatus,
+          payment_status: requestedPaymentStatus,
           ...(requestedPaymentReference ? { payment_reference: requestedPaymentReference } : {})
         })
         .eq('id', data.id)
         .select()
-        .single()
+        .single();
 
       if (updateError) {
-        console.warn('Failed to update booking status/payment_status after createBooking:', updateError)
+        console.warn('Failed to update booking status/payment_status after createBooking:', updateError);
       } else if (updated) {
         // Preserve previously loaded relations on the returned object
-        finalBooking = { ...finalBooking, ...updated }
+        finalBooking = { ...finalBooking, ...updated };
       }
     }
   } catch (err) {
-    console.warn('Error updating booking status/payment_status after createBooking:', err)
+    console.warn('Error updating booking status/payment_status after createBooking:', err);
   }
 
   // Critical payment processing must complete before returning to avoid lost updates
@@ -3608,6 +3609,29 @@ export async function updateVendorStatus(vendorId: string, status: VendorStatus)
 }
 
 export async function getDashboardStats() {
+      // Get pending vendors (with profile full_name)
+      let pendingVendorsList = [];
+      try {
+        const { data: pending, error: pendingError } = await supabase
+          .from('vendors')
+          .select(`
+            id,
+            user_id,
+            business_name,
+            business_email,
+            status,
+            created_at,
+            profiles(full_name)
+          `)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        if (!pendingError && pending) {
+          pendingVendorsList = pending;
+        }
+      } catch (e) {
+        console.error('getDashboardStats: Error fetching pending vendors:', e);
+      }
   try {
     console.log('getDashboardStats: Starting dashboard stats fetch...');
 
@@ -3735,10 +3759,18 @@ export async function getDashboardStats() {
       // Don't throw here, just log and continue
     }
 
-    // Get recent vendors
+    // Get recent vendors (with profile full_name)
     const { data: recentVendors, error: recentVendorsError } = await supabase
       .from('vendors')
-      .select('id, user_id, business_name, business_email, status, created_at')
+      .select(`
+        id,
+        user_id,
+        business_name,
+        business_email,
+        status,
+        created_at,
+        profiles(full_name)
+      `)
       .order('created_at', { ascending: false })
       .limit(5)
 
@@ -3765,6 +3797,7 @@ export async function getDashboardStats() {
     return {
       totalVendors,
       pendingVendors,
+      pendingVendorsList,
       totalTourists,
       totalServices,
       pendingServices,
