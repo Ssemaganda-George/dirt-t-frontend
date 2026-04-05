@@ -1674,18 +1674,24 @@ export default function ServiceDetail() {
             {/* Image Display */}
             <div className="w-full h-full">
               {service.images && service.images.length > 0 ? (
-                <div className="flex w-full h-full">
-                  <div className="flex-shrink-0 w-full snap-center">
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={service.images[currentImageIndex]}
-                      alt={`${service.title} ${currentImageIndex + 1}`}
-                      className="w-full h-full object-cover cursor-pointer rounded-b-2xl"
-                      style={{ minHeight: 260, maxHeight: 420, objectPosition: 'center' }}
-                      onClick={() => { setLightboxIndex(currentImageIndex); setLightboxOpen(true) }}
-                    />
-                  </div>
+                <div className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {service.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className="flex-shrink-0 w-[85vw] mr-2 snap-center"
+                      style={{ minHeight: 260, maxHeight: 420 }}
+                    >
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        src={image}
+                        alt={`${service.title} ${index + 1}`}
+                        className="w-full h-full object-cover cursor-pointer rounded-b-2xl"
+                        style={{ objectPosition: 'center' }}
+                        onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                      />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex-shrink-0 w-full snap-center">
