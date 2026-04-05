@@ -133,8 +133,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 sm:p-4">
-      <div className="max-w-md w-full max-h-[92vh] sm:max-h-[90vh] bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 relative overflow-hidden">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-2 sm:p-4">
+      <div className="max-w-md w-full max-h-[95dvh] sm:max-h-[90vh] bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-200 relative flex flex-col overflow-hidden">
         {/* Close button */}
         <button
           onClick={onClose}
@@ -143,7 +143,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         >
           <XMarkIcon className="h-5 w-5 text-gray-600" />
         </button>
-        <div className="max-h-[90vh] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="p-4 sm:p-6">
 
         {/* Header */}
@@ -437,7 +437,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         )}
           </div>
 
-          <div className="p-4 sm:p-6 border-t border-gray-100">
+          <div className="p-3 sm:p-4 border-t border-gray-100 flex-shrink-0 bg-white">
             <p className="text-[11px] leading-4 text-center text-gray-500">
               By continuing you agree to our{' '}
               <a href="/terms" className="underline hover:text-gray-600">Terms</a>{' '}
