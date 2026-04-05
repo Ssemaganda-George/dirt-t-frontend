@@ -346,7 +346,7 @@ Status: ${report.filters.status}
 ---------------------
 TRANSACTION BREAKDOWN
 ---------------------
-${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(tx.bookings?.total_amount ?? tx.amount, tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
+${filteredTxs.slice(0, 10).map(tx => `${formatDateTime(tx.created_at)} - ${tx.transaction_type} - ${formatCurrencyWithConversion(Number(tx.bookings?.total_amount ?? tx.amount), tx.currency, selectedCurrency, selectedLanguage)} - ${tx.status}`).join('\n')}
 
 ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transactions` : ''}
     `.trim()
@@ -746,7 +746,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                     transaction.transaction_type === 'payment' ? 'text-green-600' : 'text-red-600'
                                   }`}>
                                     {transaction.transaction_type === 'payment' ? '+' : '-'}
-                                    {formatCurrencyWithConversion(transaction.bookings?.total_amount ?? transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
+                                    {formatCurrencyWithConversion(Number(transaction.bookings?.total_amount ?? transaction.amount), transaction.currency, selectedCurrency, selectedLanguage)}
                                   </div>
                                 </div>
                               </div>
@@ -805,7 +805,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                   {transaction.reference}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {formatCurrencyWithConversion(transaction.bookings?.total_amount ?? transaction.amount, transaction.currency, selectedCurrency, selectedLanguage)}
+                                  {formatCurrencyWithConversion(Number(transaction.bookings?.total_amount ?? transaction.amount), transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${

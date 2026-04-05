@@ -396,8 +396,10 @@ export interface Booking {
   end_date?: string;
   // Commission fields
   commission_rate_at_booking?: number;
-  commission_amount?: number;
+  commission_amount?: number | null;
   vendor_payout_amount?: number;
+  // Platform fees (optional, set during booking creation from pricing calculation)
+  platform_fee?: number | null;
 }
 
 export interface Transaction {

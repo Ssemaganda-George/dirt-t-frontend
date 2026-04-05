@@ -328,8 +328,8 @@ export function Finance() {
   const platformFeesAndCommissions = filteredTransactions
     .filter(t => t.transaction_type === 'payment' && t.status === 'completed')
     .reduce((sum, t) => {
-      const platformFee = t.bookings?.platform_fee || 0;
-      const commission = t.bookings?.commission_amount || 0;
+      const platformFee = Number(t.bookings?.platform_fee) || 0;
+      const commission = Number(t.bookings?.commission_amount) || 0;
       return sum + platformFee + commission;
     }, 0);
 

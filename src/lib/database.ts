@@ -665,6 +665,7 @@ export interface Booking {
   rejection_reason?: string // Reason for rejecting a booking
   created_at: string
   updated_at: string
+  service?: Service // Alias for UI code
   services?: Service
   profiles?: Profile
   // Guest booking fields
