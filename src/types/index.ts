@@ -266,7 +266,7 @@ export interface Service {
   event_duration_hours?: number
   max_participants?: number
   materials_included?: string[]
-  prerequisites?: string
+  prerequisites?: string[]
   event_datetime?: string
   registration_deadline?: string
   learning_outcomes?: string[]
@@ -333,7 +333,7 @@ export interface Service {
   emergency_phone?: string
   booking_deadline_hours?: number
   payment_methods?: string[]
-  refund_policy?: boolean
+  refund_policy?: string
 
   // Shop-specific fields
   shop_type?: string

@@ -578,7 +578,7 @@ export interface Service {
   event_duration_hours?: number
   max_participants?: number
   materials_included?: string[]
-  prerequisites?: string
+  prerequisites?: string[]
 
   // Agency-specific fields
   services_offered?: string[]
