@@ -352,7 +352,7 @@ export interface Service {
     id: string;
     business_name: string;
     business_description?: string;
-    business_email: string;
+    business_email?: string;
     status: string;
   };
   service_categories?: {

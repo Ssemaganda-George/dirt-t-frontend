@@ -3599,7 +3599,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               <h5 className="font-medium text-gray-900 mb-3">Flight Features</h5>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <label className="flex items-center">
-                  <input type="checkbox" checked={form.refund_policy || false} onChange={(e) => update('refund_policy', e.target.checked)} className="mr-2" />
+                  <input type="checkbox" checked={!!form.refund_policy} onChange={(e) => update('refund_policy', e.target.checked ? 'refundable' : '')} className="mr-2" />
                   Refundable Tickets
                 </label>
                 <label className="flex items-center">
