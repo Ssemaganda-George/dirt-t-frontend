@@ -206,19 +206,29 @@ export default function VendorLayout() {
                     {category.items.map((item) => {
                       if ((item.name === 'Events' || item.name === 'Tickets') && !hasEvents) return null
                       const isActive = location.pathname === item.href
+                      const showMessageBadge = item.name === 'Messages' && unreadCount > 0
                       return (
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                             isActive
                               ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? 'text-gray-200' : 'text-gray-400'}`} />
-                          {item.name}
+                          <div className="flex items-center gap-2.5">
+                            <item.icon className={`h-4 w-4 ${isActive ? 'text-gray-200' : 'text-gray-400'}`} />
+                            {item.name}
+                          </div>
+                          {showMessageBadge && (
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              isActive ? 'bg-white text-gray-900' : 'bg-red-500 text-white'
+                            }`}>
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}
@@ -277,21 +287,31 @@ export default function VendorLayout() {
                     {category.items.map((item) => {
                       if ((item.name === 'Events' || item.name === 'Tickets') && !hasEvents) return null
                       const isActive = location.pathname === item.href
+                      const showMessageBadge = item.name === 'Messages' && unreadCount > 0
                       return (
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
                             isActive
                               ? 'bg-gray-900 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           title={sidebarCollapsed ? item.name : ''}
                         >
-                          <item.icon className={`${sidebarCollapsed ? 'mx-auto' : ''} h-4 w-4 ${
-                            isActive ? 'text-gray-200' : 'text-gray-400'
-                          }`} />
-                          {!sidebarCollapsed && item.name}
+                          <div className="flex items-center gap-2.5">
+                            <item.icon className={`${sidebarCollapsed ? 'mx-auto' : ''} h-4 w-4 ${
+                              isActive ? 'text-gray-200' : 'text-gray-400'
+                            }`} />
+                            {!sidebarCollapsed && item.name}
+                          </div>
+                          {showMessageBadge && !sidebarCollapsed && (
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              isActive ? 'bg-white text-gray-900' : 'bg-red-500 text-white'
+                            }`}>
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}

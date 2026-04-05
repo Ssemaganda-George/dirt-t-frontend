@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
-import { getTouristMessages, sendMessage, getAdminProfileId, decryptMessages } from '../lib/database'
+import { getTouristMessages, sendMessage, getAdminProfileId, decryptMessages, markConversationAsRead } from '../lib/database'
 import { MessageSquare, Send, Plus, ChevronLeft, Check, CheckCheck } from 'lucide-react'
 
 type Thread = {
@@ -47,6 +47,34 @@ export default function Messages() {
   useEffect(() => {
     scrollToBottom()
   }, [activeThreadId, messages])
+
+  // Mark messages as read when opening a conversation
+  useEffect(() => {
+    if (!activeThreadId || !user?.id) return
+    
+    // Extract partner ID from thread ID (format: "role_partnerId")
+    const parts = activeThreadId.split('_')
+    if (parts.length >= 2) {
+      const partnerId = parts.slice(1).join('_') // Handle UUIDs with underscores
+      if (partnerId && partnerId !== 'admin_system') {
+        markConversationAsRead(user.id, partnerId)
+          .then(() => {
+            // Update local state to reflect read status and clear unread count
+            setThreads(prev => prev.map(t => 
+              t.id === activeThreadId ? { ...t, unread: 0 } : t
+            ))
+            setMessages(prev => ({
+              ...prev,
+              [activeThreadId]: (prev[activeThreadId] || []).map(m => ({
+                ...m,
+                status: m.senderId !== user.id ? 'read' : m.status
+              }))
+            }))
+          })
+          .catch(e => console.error('Error marking conversation as read:', e))
+      }
+    }
+  }, [activeThreadId, user?.id])
 
   // Format message timestamp
   const formatMessageTime = (dateStr: string) => {
@@ -249,10 +277,10 @@ export default function Messages() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Threads */}
-        <aside className="md:col-span-1 bg-white rounded-lg shadow-sm p-3 overflow-y-auto" style={{ maxHeight: '80vh' }}>
+    <div className="h-[calc(100dvh-4rem)] md:h-auto md:min-h-screen bg-gray-50 overflow-hidden md:overflow-visible">
+      <div className="h-full md:h-auto max-w-6xl mx-auto px-4 py-2 md:py-8 grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+        {/* Threads - hidden on mobile when chat is open */}
+        <aside className={`${activeThreadId ? 'hidden md:block' : 'block'} md:col-span-1 bg-white rounded-lg shadow-sm p-3 overflow-y-auto`} style={{ maxHeight: 'calc(100dvh - 6rem)' }}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-900">{t('messages')}</h2>
             <button
@@ -295,7 +323,7 @@ export default function Messages() {
         </aside>
 
         {/* Messages + composer - WhatsApp Style */}
-        <main className="md:col-span-2 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden" style={{ minHeight: '70vh', maxHeight: '80vh' }}>
+        <main className={`${!activeThreadId ? 'hidden md:flex' : 'flex'} md:col-span-2 bg-white rounded-lg shadow-sm flex-col overflow-hidden h-[calc(100dvh-6rem)] md:h-auto`} style={{ minHeight: 'min(70vh, 500px)', maxHeight: 'calc(100dvh - 6rem)' }}>
           {!activeThreadId ? (
             <div className="flex-1 flex items-center justify-center text-gray-500 bg-[#f0f2f5]">
               <div className="text-center">
@@ -381,11 +409,11 @@ export default function Messages() {
                               {formatMessageTime(m.createdAt)}
                             </span>
                             {isMe && (
-                              <span className="text-gray-500">
-                                {m.status === 'read' ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
-                                ) : (
+                              <span className={`${m.status === 'read' ? 'text-blue-500' : 'text-gray-500'}`}>
+                                {m.status === 'sent' ? (
                                   <Check className="w-3.5 h-3.5" />
+                                ) : (
+                                  <CheckCheck className="w-3.5 h-3.5" />
                                 )}
                               </span>
                             )}

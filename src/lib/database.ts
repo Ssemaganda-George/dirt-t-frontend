@@ -3975,8 +3975,9 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
       .order('created_at', { ascending: false })
 
     if (filter === 'unread') {
+      // Only count messages where vendor is the RECIPIENT (inbox), not sender (outbox)
       query = query
-        .or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
+        .eq('recipient_id', vendorId)
         .eq('status', 'unread')
     } else if (filter === 'customer') {
       // Messages between vendor and tourists/guests - both directions
@@ -4012,8 +4013,9 @@ export async function getTouristMessages(touristId: string, filter?: 'unread' | 
       .order('created_at', { ascending: false })
 
     if (filter === 'unread') {
+      // Only count messages where tourist is the RECIPIENT (inbox), not sender (outbox)
       query = query
-        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
+        .eq('recipient_id', touristId)
         .eq('status', 'unread')
     } else if (filter === 'vendor') {
       // Messages between tourist and vendors only (both directions)
@@ -4206,6 +4208,63 @@ export async function markMessageAsRead(messageId: string) {
     return data
   } catch (error) {
     console.error('Error in markMessageAsRead:', error)
+    throw error
+  }
+}
+
+/**
+ * Mark all unread messages for a user as delivered (double grey ticks)
+ * Called when user signs in
+ */
+export async function markMessagesAsDelivered(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        status: 'delivered',
+        updated_at: new Date().toISOString()
+      })
+      .eq('recipient_id', userId)
+      .eq('status', 'unread')
+      .select()
+
+    if (error) {
+      console.error('Error marking messages as delivered:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in markMessagesAsDelivered:', error)
+    throw error
+  }
+}
+
+/**
+ * Mark all messages in a conversation as read (double blue ticks)
+ * Called when user opens a chat
+ */
+export async function markConversationAsRead(userId: string, partnerId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .update({
+        status: 'read',
+        updated_at: new Date().toISOString()
+      })
+      .eq('recipient_id', userId)
+      .eq('sender_id', partnerId)
+      .in('status', ['unread', 'delivered'])
+      .select()
+
+    if (error) {
+      console.error('Error marking conversation as read:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in markConversationAsRead:', error)
     throw error
   }
 }

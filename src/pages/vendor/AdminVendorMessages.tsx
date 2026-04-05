@@ -19,7 +19,7 @@ interface Message {
   recipient_role: string
   subject: string
   message: string
-  status: 'unread' | 'read' | 'replied'
+  status: 'unread' | 'delivered' | 'read' | 'replied'
   created_at: string
   updated_at: string
 }

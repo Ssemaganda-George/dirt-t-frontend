@@ -229,19 +229,29 @@ export default function Layout() {
                   <div className="space-y-0.5">
                     {category.items.map((item) => {
                       const isActive = location.pathname === item.href
+                      const showMessageBadge = item.labelKey === 'messages' && unreadCount > 0
                       return (
                         <Link
                           key={item.labelKey}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition ${
                             isActive
                               ? 'bg-blue-600 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
-                          {t(item.labelKey)}
+                          <div className="flex items-center gap-2.5">
+                            <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
+                            {t(item.labelKey)}
+                          </div>
+                          {showMessageBadge && (
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              isActive ? 'bg-white text-blue-600' : 'bg-red-500 text-white'
+                            }`}>
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}
@@ -277,18 +287,28 @@ export default function Layout() {
                   <div className="space-y-0.5">
                     {category.items.map((item) => {
                       const isActive = location.pathname === item.href
+                      const showMessageBadge = item.labelKey === 'messages' && unreadCount > 0
                       return (
                         <Link
                           key={item.labelKey}
                           to={item.href}
-                          className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg transition ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition ${
                             isActive
                               ? 'bg-blue-600 text-white'
                               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                         >
-                          <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
-                          {t(item.labelKey)}
+                          <div className="flex items-center gap-2.5">
+                            <item.icon className={`h-4 w-4 ${isActive ? 'text-blue-200' : 'text-gray-400'}`} />
+                            {t(item.labelKey)}
+                          </div>
+                          {showMessageBadge && (
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                              isActive ? 'bg-white text-blue-600' : 'bg-red-500 text-white'
+                            }`}>
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getServiceClient } from '../lib/serviceClient'
 import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
-import { updateUserPublicKey, getUserPublicKey } from '../lib/database'
+import { updateUserPublicKey, getUserPublicKey, markMessagesAsDelivered } from '../lib/database'
 
 /** -------------------- Types -------------------- */
 interface VendorSignupEmailPayload {
@@ -361,6 +361,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Setup E2E encryption keys (runs async, doesn't block login)
     setupEncryptionKeys(u.id).catch(e => console.error('E2E key setup error:', e))
+
+    // Mark pending messages as delivered (double grey ticks)
+    markMessagesAsDelivered(u.id).catch(e => console.error('Mark delivered error:', e))
 
     // Vendor post verify runs async (does not block dashboard)
     if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)

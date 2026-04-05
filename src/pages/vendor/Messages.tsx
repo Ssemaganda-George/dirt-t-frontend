@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { Send, X, ChevronLeft, MessageSquare, Users, Shield, Bell, CheckCheck, Plus } from 'lucide-react'
+import { Send, X, ChevronLeft, MessageSquare, Users, Shield, Bell, Check, CheckCheck, Plus } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getVendorMessages, sendMessage, getAdminProfileId, decryptMessages } from '../../lib/database'
+import { getVendorMessages, sendMessage, getAdminProfileId, decryptMessages, markConversationAsRead } from '../../lib/database'
 import { format, isToday, isYesterday } from 'date-fns'
 
 interface Message {
@@ -19,7 +19,7 @@ interface Message {
   recipient_role: string
   subject: string
   message: string
-  status: 'unread' | 'read' | 'replied'
+  status: 'unread' | 'delivered' | 'read' | 'replied'
   created_at: string
   updated_at: string
 }
@@ -45,6 +45,30 @@ export default function VendorMessages() {
       scrollToBottom()
     }
   }, [selectedConversation, messages])
+
+  // Mark messages as read when opening a conversation
+  const handleSelectConversation = async (conversationId: string) => {
+    setSelectedConversation(conversationId)
+    const vendorId = profile?.id || vendor?.user_id
+    if (!vendorId) return
+
+    // Mark unread/delivered messages from this conversation partner as read
+    if (conversationId !== 'admin') {
+      try {
+        await markConversationAsRead(vendorId, conversationId)
+        // Update local state to reflect read status
+        setMessages(prev => prev.map(msg => {
+          if (msg.sender_id === conversationId && msg.recipient_id === vendorId && 
+              (msg.status === 'unread' || msg.status === 'delivered')) {
+            return { ...msg, status: 'read' }
+          }
+          return msg
+        }))
+      } catch (error) {
+        console.error('Error marking conversation as read:', error)
+      }
+    }
+  }
 
   // Format message timestamp
   const formatMessageTime = (dateStr: string) => {
@@ -333,16 +357,16 @@ export default function VendorMessages() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {/* Header */}
-      <div className="flex items-start justify-between">
+    <div className="h-[calc(100dvh-4rem)] lg:h-auto max-w-6xl mx-auto px-4 py-4 lg:py-8 flex flex-col lg:block overflow-hidden lg:overflow-visible" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      {/* Header - hidden on mobile when chat is selected */}
+      <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} items-start justify-between mb-4 lg:mb-6 flex-shrink-0`}>
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
           <p className="text-sm text-gray-500 mt-1">Manage communications with customers and administrators</p>
         </div>
         {!selectedConversation && (
           <button
-            onClick={() => setSelectedConversation('admin')}
+            onClick={() => handleSelectConversation('admin')}
             className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
           >
             <Shield className="w-4 h-4" />
@@ -352,9 +376,9 @@ export default function VendorMessages() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0">
         {/* Main area */}
-        <div className="lg:col-span-2">
+        <div className={`lg:col-span-2 ${selectedConversation ? 'flex' : 'hidden lg:block'} flex-col min-h-0 h-full lg:h-auto`}>
           {selectedConversation ? (
             /* Chat Interface */
             (() => {
@@ -364,7 +388,7 @@ export default function VendorMessages() {
               const isAdmin = selectedConversation === 'admin'
               
               return (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 8rem)' }}>
               {/* Chat Header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                 <button
@@ -460,8 +484,12 @@ export default function VendorMessages() {
                                 </p>
                               )}
                               {isVendor && (
-                                <span className="text-[10px] text-gray-400 mt-0.5">
-                                  {message.status === 'read' ? '✓✓' : '✓'}
+                                <span className={`text-[10px] mt-0.5 flex items-center gap-0.5 ${message.status === 'read' ? 'text-blue-500' : 'text-gray-400'}`}>
+                                  {message.status === 'unread' ? (
+                                    <Check className="w-3 h-3" />
+                                  ) : (
+                                    <CheckCheck className="w-3.5 h-3.5" />
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -523,8 +551,8 @@ export default function VendorMessages() {
               )
             })()
           ) : (
-            /* Conversations List */
-            <div className="space-y-4">
+            /* Conversations List - visible when no conversation selected */
+            <div className="space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 12rem)' }}>
               {/* Filter Tabs — Icon Pills */}
               <div className="flex flex-wrap gap-2">
                 {[
@@ -573,7 +601,7 @@ export default function VendorMessages() {
                     </p>
                     {(filter === 'admin' || filter === 'all') && (
                       <button
-                        onClick={() => setSelectedConversation('admin')}
+                        onClick={() => handleSelectConversation('admin')}
                         className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       >
                         <Plus className="w-4 h-4" />
@@ -585,7 +613,7 @@ export default function VendorMessages() {
                   filteredConversations.map((conversation: any) => (
                     <div
                       key={conversation.id}
-                      onClick={() => setSelectedConversation(conversation.id)}
+                      onClick={() => handleSelectConversation(conversation.id)}
                       className={`bg-white rounded-xl border p-4 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-gray-900/20 ${
                         conversation.unreadCount > 0 
                           ? 'border-gray-300 hover:border-gray-400 shadow-sm' 
@@ -637,7 +665,7 @@ export default function VendorMessages() {
                               {conversation.totalMessages} message{conversation.totalMessages !== 1 ? 's' : ''}
                             </span>
                             {conversation.unreadCount === 0 && (
-                              <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                              <span className="flex items-center gap-0.5 text-xs text-blue-500">
                                 <CheckCheck className="w-3.5 h-3.5" />
                                 Read
                               </span>

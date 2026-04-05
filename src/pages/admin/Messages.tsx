@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { MessageSquare, User, Store, Send, X, ChevronLeft, Search, Users, Bell, ChevronRight } from 'lucide-react'
+import { MessageSquare, User, Store, Send, X, ChevronLeft, Search, Users, Bell, ChevronRight, Check, CheckCheck } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAdminMessages, getAllVendors, Vendor, sendMessage, getAdminConversationMessages, decryptMessages } from '../../lib/database'
+import { getAdminMessages, getAllVendors, Vendor, sendMessage, getAdminConversationMessages, decryptMessages, markConversationAsRead } from '../../lib/database'
 import { getStatusColor } from '../../lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, isToday, isYesterday } from 'date-fns'
@@ -21,7 +21,7 @@ interface Message {
   recipient_role: string
   subject: string
   message: string
-  status: 'unread' | 'read' | 'replied'
+  status: 'unread' | 'delivered' | 'read' | 'replied'
   created_at: string
   updated_at: string
 }
@@ -57,23 +57,38 @@ export default function Messages() {
     return format(date, 'dd/MM/yyyy')
   }
 
-  // Group messages by sender
+  // Group messages by conversation partner (the non-admin user)
   const senderGroups = useMemo(() => {
     const groups: Record<string, any> = {}
+    const adminId = profile?.id
+    
     messages.forEach(message => {
-      const senderId = message.sender_id
-      if (!groups[senderId]) {
-        const vendorInfo = message.sender_role === 'vendor' 
-          ? vendors.find(v => v.user_id === senderId) 
+      // Find the "other party" in the conversation (the non-admin user)
+      // If admin sent the message, the other party is the recipient
+      // If admin received the message, the other party is the sender
+      const isAdminSender = message.sender_role === 'admin' || message.sender_id === adminId
+      const partnerId = isAdminSender ? message.recipient_id : message.sender_id
+      const partnerRole = isAdminSender ? message.recipient_role : message.sender_role
+      
+      if (!groups[partnerId]) {
+        const vendorInfo = partnerRole === 'vendor' 
+          ? vendors.find(v => v.user_id === partnerId) 
           : null
         
-        groups[senderId] = {
-          senderId,
-          senderName: message.sender_role === 'vendor' && vendorInfo 
-            ? vendorInfo.business_name 
-            : (message.sender?.full_name || message.sender_name || 'Unknown'),
-          senderRole: message.sender_role,
-          senderEmail: message.sender_role === 'vendor' && vendorInfo 
+        // Get partner name from the appropriate side of the message
+        const partnerName = isAdminSender 
+          ? (message.recipient_role === 'vendor' && vendorInfo 
+              ? vendorInfo.business_name 
+              : 'Unknown')
+          : (message.sender_role === 'vendor' && vendorInfo 
+              ? vendorInfo.business_name 
+              : (message.sender?.full_name || message.sender_name || 'Unknown'))
+        
+        groups[partnerId] = {
+          senderId: partnerId,
+          senderName: partnerName,
+          senderRole: partnerRole,
+          senderEmail: partnerRole === 'vendor' && vendorInfo 
             ? vendorInfo.business_email 
             : message.sender?.email,
           latestMessage: message,
@@ -82,17 +97,18 @@ export default function Messages() {
           lastMessageTime: message.created_at
         }
       }
-      groups[senderId].totalMessages++
-      if (message.status === 'unread') {
-        groups[senderId].unreadCount++
+      groups[partnerId].totalMessages++
+      // Only count unread messages where admin is the recipient
+      if (message.status === 'unread' && !isAdminSender) {
+        groups[partnerId].unreadCount++
       }
-      if (new Date(message.created_at) > new Date(groups[senderId].lastMessageTime)) {
-        groups[senderId].latestMessage = message
-        groups[senderId].lastMessageTime = message.created_at
+      if (new Date(message.created_at) > new Date(groups[partnerId].lastMessageTime)) {
+        groups[partnerId].latestMessage = message
+        groups[partnerId].lastMessageTime = message.created_at
       }
     })
     return groups
-  }, [messages, vendors])
+  }, [messages, vendors, profile?.id])
 
   // Compute counts
   const counts = useMemo(() => {
@@ -182,6 +198,17 @@ export default function Messages() {
       const partnerRole = vendorId ? 'vendor' : 'tourist'
       const data = await getAdminConversationMessages(chatPartnerId, partnerRole)
       setChatMessages(data)
+      
+      // Mark messages from this partner as read (blue ticks)
+      if (profile?.id) {
+        try {
+          await markConversationAsRead(profile.id, chatPartnerId)
+          // Refresh main messages to update unread counts in conversation list
+          fetchMessages()
+        } catch (e) {
+          console.error('Error marking conversation as read:', e)
+        }
+      }
     } catch (error) {
       console.error('Error fetching chat messages:', error)
     } finally {
@@ -326,8 +353,23 @@ export default function Messages() {
                                 : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                             }`}>
                               <p className="whitespace-pre-wrap">{message.message}</p>
+                              {/* Time and status ticks for admin messages */}
+                              {isAdmin && (
+                                <div className="flex items-center gap-1 mt-1 justify-end">
+                                  <span className="text-[10px] text-white/70">
+                                    {formatMessageTime(message.created_at)}
+                                  </span>
+                                  <span className={`${message.status === 'read' ? 'text-blue-400' : 'text-white/60'}`}>
+                                    {message.status === 'unread' ? (
+                                      <Check className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <CheckCheck className="w-3.5 h-3.5" />
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                            {showTimestamp && (
+                            {showTimestamp && !isAdmin && (
                               <p className="text-[10px] text-gray-400 mt-1">
                                 {formatMessageTime(message.created_at)}
                               </p>
@@ -491,11 +533,25 @@ export default function Messages() {
                                 </span>
                               </div>
                             </div>
-                            <p className={`text-sm mt-0.5 line-clamp-1 ${
+                            <div className={`flex items-center gap-1 mt-0.5 ${
                               sender.unreadCount > 0 ? 'text-gray-700' : 'text-gray-500'
                             }`}>
-                              {sender.latestMessage.message}
-                            </p>
+                              {/* Show tick if admin sent the latest message */}
+                              {(sender.latestMessage.sender_role === 'admin' || sender.latestMessage.sender_id === profile?.id) && (
+                                <span className={`flex-shrink-0 ${
+                                  sender.latestMessage.status === 'read' ? 'text-blue-500' : 'text-gray-400'
+                                }`}>
+                                  {sender.latestMessage.status === 'unread' ? (
+                                    <Check className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <CheckCheck className="w-3.5 h-3.5" />
+                                  )}
+                                </span>
+                              )}
+                              <p className="text-sm line-clamp-1">
+                                {sender.latestMessage.message}
+                              </p>
+                            </div>
                             <p className="text-xs text-gray-400 mt-1">
                               {sender.totalMessages} message{sender.totalMessages !== 1 ? 's' : ''}
                             </p>
