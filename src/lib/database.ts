@@ -761,6 +761,22 @@ export interface Inquiry {
   vendors?: Vendor
 }
 
+// Contact form inquiry (general support inquiries from contact page)
+export interface ContactInquiry {
+  id: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  category: 'general' | 'booking' | 'technical' | 'partnership' | 'complaint' | 'other'
+  status: 'unread' | 'read' | 'responded' | 'archived'
+  response_message?: string
+  responded_at?: string
+  responded_by?: string
+  created_at: string
+  updated_at: string
+}
+
 // Service CRUD operations
 export async function getServices(vendorId?: string) {
   let query = supabase
@@ -4888,6 +4904,123 @@ export async function getInquiryCount(vendorId: string): Promise<number> {
   } catch (error) {
     console.error('Error in getInquiryCount:', error)
     throw error
+  }
+}
+
+// ============================================
+// Contact Inquiries (General Support from Contact Page)
+// ============================================
+
+export async function createContactInquiry(inquiryData: {
+  name: string
+  email: string
+  subject: string
+  message: string
+  category: 'general' | 'booking' | 'technical' | 'partnership' | 'complaint' | 'other'
+}): Promise<ContactInquiry> {
+  try {
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .insert([{
+        name: inquiryData.name,
+        email: inquiryData.email,
+        subject: inquiryData.subject,
+        message: inquiryData.message,
+        category: inquiryData.category,
+        status: 'unread'
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating contact inquiry:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in createContactInquiry:', error)
+    throw error
+  }
+}
+
+export async function getContactInquiries(): Promise<ContactInquiry[]> {
+  try {
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching contact inquiries:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getContactInquiries:', error)
+    throw error
+  }
+}
+
+export async function updateContactInquiryStatus(
+  inquiryId: string, 
+  status: 'unread' | 'read' | 'responded' | 'archived',
+  responseMessage?: string,
+  respondedBy?: string
+): Promise<ContactInquiry> {
+  try {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    }
+
+    if (status === 'responded' && responseMessage) {
+      updateData.responded_at = new Date().toISOString()
+      updateData.response_message = responseMessage
+      if (respondedBy) {
+        updateData.responded_by = respondedBy
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .update(updateData)
+      .eq('id', inquiryId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating contact inquiry status:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error in updateContactInquiryStatus:', error)
+    throw error
+  }
+}
+
+export async function getContactInquiryCount(): Promise<{ total: number; unread: number }> {
+  try {
+    const { count: total, error: totalError } = await supabase
+      .from('contact_inquiries')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: unread, error: unreadError } = await supabase
+      .from('contact_inquiries')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'unread')
+
+    if (totalError || unreadError) {
+      throw totalError || unreadError
+    }
+
+    return { total: total || 0, unread: unread || 0 }
+  } catch (error) {
+    console.error('Error in getContactInquiryCount:', error)
+    return { total: 0, unread: 0 }
   }
 }
 

@@ -1,16 +1,24 @@
 import { useState } from 'react'
-import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Building } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Building, CheckCircle, AlertCircle } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import LoginModal from '../components/LoginModal'
+import { useNavigate } from 'react-router-dom'
+import { createContactInquiry } from '../lib/database'
 
 export default function ContactUs() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: '',
-    category: 'general'
+    category: 'general' as 'general' | 'booking' | 'technical' | 'partnership' | 'complaint' | 'other'
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -23,24 +31,68 @@ export default function ContactUs() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmitError('')
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    setIsSubmitting(false)
-    setSubmitted(true)
-
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-        category: 'general'
+    try {
+      await createContactInquiry({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+        category: formData.category
       })
-    }, 3000)
+
+      setIsSubmitting(false)
+      setSubmitted(true)
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setSubmitted(false)
+        setFormData({
+          name: '',
+          email: '',
+          subject: '',
+          message: '',
+          category: 'general'
+        })
+      }, 3000)
+    } catch (error) {
+      console.error('Error submitting contact inquiry:', error)
+      setIsSubmitting(false)
+      setSubmitError('Failed to send your message. Please try again or contact us directly via email.')
+    }
+  }
+
+  // Handle chat button click
+  const handleStartChat = () => {
+    if (user) {
+      // User is logged in - navigate to messages/support chat
+      navigate('/messages?support=true')
+    } else {
+      // User not logged in - show login modal
+      setShowLoginModal(true)
+    }
+  }
+
+  // Handle email button click
+  const handleSendEmail = () => {
+    const email = 'safaris.dirtrails@gmail.com'
+    const subject = encodeURIComponent('Support Request from Dirt Trails')
+    const body = encodeURIComponent('Hello Dirt Trails Support Team,\n\nI would like to inquire about:\n\n')
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
+  }
+
+  // Handle call button click
+  const handleCallNow = () => {
+    const phoneNumber = '+256759918649'
+    window.location.href = `tel:${phoneNumber}`
+  }
+
+  // Handle login success
+  const handleLoginSuccess = () => {
+    setShowLoginModal(false)
+    // After login, redirect to chat
+    navigate('/messages?support=true')
   }
 
   const contactMethods = [
@@ -124,11 +176,18 @@ export default function ContactUs() {
                     <li key={idx}>{detail}</li>
                   ))}
                 </ul>
-                <button className={`w-full py-3 px-6 font-semibold transition-colors ${
-                  method.primary
-                    ? 'bg-gray-900 text-white hover:bg-gray-800 border border-gray-300'
-                    : 'bg-white text-black hover:bg-gray-50 border border-gray-300'
-                }`}>
+                <button 
+                  onClick={() => {
+                    if (method.title === 'Live Chat') handleStartChat()
+                    else if (method.title === 'Email Support') handleSendEmail()
+                    else if (method.title === 'Phone Support') handleCallNow()
+                  }}
+                  className={`w-full py-3 px-6 font-semibold transition-colors ${
+                    method.primary
+                      ? 'bg-gray-900 text-white hover:bg-gray-800 border border-gray-300'
+                      : 'bg-white text-black hover:bg-gray-50 border border-gray-300'
+                  }`}
+                >
                   {method.action}
                 </button>
               </div>
@@ -298,6 +357,13 @@ export default function ContactUs() {
           </div>
         </div>
       </div>
+
+      {/* Login Modal for Chat */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={handleLoginSuccess}
+      />
     </div>
   )
 }

@@ -50,7 +50,7 @@ serve(async (req) => {
       )
     }
 
-    let body: { amount: number; phone_number: string; order_id?: string; booking_id?: string; description?: string; user_id?: string }
+    let body: { amount: number; phone_number: string; order_id?: string; booking_id?: string; description?: string; user_id?: string; metadata?: { type?: string; reference?: string } }
     try {
       body = await req.json()
     } catch {
@@ -60,7 +60,7 @@ serve(async (req) => {
       )
     }
 
-    const { amount, phone_number, order_id, booking_id, description, user_id } = body
+    const { amount, phone_number, order_id, booking_id, description, user_id, metadata } = body
     if (!amount || !phone_number) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: amount, phone_number" }),
@@ -68,7 +68,9 @@ serve(async (req) => {
       )
     }
     // Either order_id (events/tickets) or booking_id (hotel/activity/tour/restaurant) must be provided
-    if (!order_id && !booking_id) {
+    // UNLESS it's a wallet top-up (metadata.type === 'wallet_topup')
+    const isWalletTopup = metadata?.type === 'wallet_topup'
+    if (!order_id && !booking_id && !isWalletTopup) {
       return new Response(
         JSON.stringify({ error: "Missing required field: order_id or booking_id" }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
@@ -99,12 +101,25 @@ serve(async (req) => {
     const reference = generateReference()
     const supabaseUrl = SUPABASE_URL.replace(/\/rest\/v1\/?$/, "")
     const webhookUrl = `${supabaseUrl}/functions/v1/marzpay-webhook`
+    
+    // Generate description based on payment type
+    let paymentDescription = description
+    if (!paymentDescription) {
+      if (isWalletTopup) {
+        paymentDescription = `Wallet top-up${metadata?.reference ? ` - ${metadata.reference}` : ''}`
+      } else if (order_id) {
+        paymentDescription = `Order #${order_id} payment`
+      } else {
+        paymentDescription = `Booking #${booking_id} payment`
+      }
+    }
+    
     const marzpayRequest = {
       amount: parseInt(String(amount), 10),
       phone_number: formattedPhone,
       country: "UG",
       reference,
-      description: description || (order_id ? `Order #${order_id} payment` : `Booking #${booking_id} payment`),
+      description: paymentDescription,
       callback_url: webhookUrl,
     }
 
