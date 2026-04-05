@@ -7,6 +7,7 @@ import {
   Clock, 
   Calendar,
   ArrowLeft,
+  ArrowRight,
   Heart,
   Share2,
   ShoppingCart,
@@ -26,7 +27,7 @@ import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
 import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
-import PricingBreakdown from '../components/PricingBreakdown'
+// import PricingBreakdown from '../components/PricingBreakdown'
 
 interface ServiceDetail {
   id: string
@@ -1669,30 +1670,7 @@ export default function ServiceDetail() {
         <div className="relative h-[95vw] min-h-[400px] max-h-[650px] rounded-b-2xl shadow-lg overflow-hidden">
           {/* Mobile Image Carousel with Arrows */}
           <div className="relative w-full h-full">
-            {/* Left Arrow */}
-            {service.images && service.images.length > 1 && (
-              <button
-                className="absolute left-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
-                onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? service.images.length - 1 : prev - 1))}
-                aria-label="Previous image"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-700" />
-              </button>
-            )}
-            {/* Right Arrow */}
-            {service.images && service.images.length > 1 && (
-              <button
-                className="absolute right-2 top-1/2 z-20 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md"
-                onClick={() => setCurrentImageIndex((prev) => (prev === service.images.length - 1 ? 0 : prev + 1))}
-                aria-label="Next image"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 text-gray-700">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
+            {/* Arrows removed for mobile-only swipe */}
             {/* Image Display */}
             <div className="w-full h-full">
               {service.images && service.images.length > 0 ? (
@@ -1812,37 +1790,68 @@ export default function ServiceDetail() {
             <div className="mb-8 hidden md:block">
               {/* Main Image Display (desktop) - horizontally scrollable so users can browse without opening preview */}
               <div className="relative mb-4">
-                <div
-                  ref={scrollContainerRef}
-                  className="w-full h-[520px] overflow-x-auto snap-x snap-mandatory scroll-smooth hidden md:block"
-                  style={{ scrollBehavior: 'smooth' }}
-                >
-                  <div className="flex w-full h-full">
-                    {service.images && service.images.length > 0 ? (
-                      service.images.map((image, index) => (
-                        <div key={index} className="flex-shrink-0 w-full snap-center">
+                <div className="relative">
+                  {/* Desktop image gallery with left/right arrows */}
+                  <button
+                    type="button"
+                    aria-label="Previous image"
+                    className="hidden md:flex absolute left-2 top-1/2 z-20 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg border border-gray-200 transition-all"
+                    onClick={() => {
+                      if (!scrollContainerRef.current) return;
+                      scrollContainerRef.current.scrollBy({ left: -scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-900">
+                      <line x1="16" y1="6" x2="8" y2="12" />
+                      <line x1="16" y1="18" x2="8" y2="12" />
+                    </svg>
+                  </button>
+                  <div
+                    ref={scrollContainerRef}
+                    className="w-full h-[520px] overflow-x-auto snap-x snap-mandatory scroll-smooth hidden md:block"
+                    style={{ scrollBehavior: 'smooth' }}
+                  >
+                    <div className="flex w-full h-full">
+                      {service.images && service.images.length > 0 ? (
+                        service.images.map((image, index) => (
+                          <div key={index} className="flex-shrink-0 w-full snap-center">
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              src={image}
+                              alt={`${service.title} ${index + 1}`}
+                              className="w-full h-full object-cover cursor-pointer rounded-lg shadow-lg"
+                              onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex-shrink-0 w-full snap-center">
                           <img
                             loading="lazy"
                             decoding="async"
-                            src={image}
-                            alt={`${service.title} ${index + 1}`}
-                            className="w-full h-full object-cover cursor-pointer rounded-lg shadow-lg"
-                            onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
+                            src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                            alt={service.title}
+                            className="w-full h-full object-cover rounded-lg shadow-lg"
                           />
                         </div>
-                      ))
-                    ) : (
-                      <div className="flex-shrink-0 w-full snap-center">
-                        <img
-                          loading="lazy"
-                          decoding="async"
-                          src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                          alt={service.title}
-                          className="w-full h-full object-cover rounded-lg shadow-lg"
-                        />
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    aria-label="Next image"
+                    className="hidden md:flex absolute right-2 top-1/2 z-20 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg border border-gray-200 transition-all"
+                    onClick={() => {
+                      if (!scrollContainerRef.current) return;
+                      scrollContainerRef.current.scrollBy({ left: scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
+                    }}
+                  >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-900">
+                      <line x1="8" y1="6" x2="16" y2="12" />
+                      <line x1="8" y1="18" x2="16" y2="12" />
+                    </svg>
+                  </button>
                 </div>
 
                 {/* Desktop Header Overlay – inside image */}
@@ -2116,21 +2125,7 @@ export default function ServiceDetail() {
                     </div>
                   </div>
 
-                  {/* Pricing Breakdown */}
-                  <PricingBreakdown
-                    serviceId={service.id}
-                    basePricePerUnit={
-                      service.service_categories?.name?.toLowerCase() === 'transport'
-                        ? getTransportUnitPrice()
-                        : undefined
-                    }
-                    quantity={service.service_categories?.name?.toLowerCase() === 'transport'
-                      ? calculateDays(startDate, startTime, endDate, endTime)
-                      : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                      ? calculateNights(checkInDate, checkOutDate)
-                      : guests}
-                    className="mb-6"
-                  />
+                  {/* Pricing Breakdown removed as requested */}
 
                   {/* Action Buttons */}
                     <div className="flex gap-2 mb-3">
@@ -2155,20 +2150,21 @@ export default function ServiceDetail() {
             </div>
 
             {/* Mobile-only round icon buttons placed below the checkout/summary */}
+            {/* Mobile utility buttons: cleaner, more minimal */}
             <div className="md:hidden mt-4 px-3 flex justify-center gap-3">
               <button
                 onClick={() => navigate(-1)}
                 aria-label="Go back"
-                className="w-11 h-11 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors"
+                className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-700" />
+                <ArrowLeft className="h-6 w-6 text-gray-700" />
               </button>
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 aria-label="Back to top"
-                className="w-11 h-11 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors"
+                className="w-12 h-12 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow hover:bg-gray-50 transition-colors"
               >
-                <ChevronUp className="h-5 w-5 text-gray-700" />
+                <ChevronUp className="h-6 w-6 text-gray-700" />
               </button>
             </div>
           </div>
@@ -2177,53 +2173,41 @@ export default function ServiceDetail() {
 
       {/* Mobile Book button (replaces global bottom nav on service pages) */}
       <div
-        className={`md:hidden fixed left-0 z-50 pointer-events-auto transition-transform duration-500 ease-out ${showMobileBookButton ? 'translate-x-0' : '-translate-x-[110%]'}`}
+        className={`md:hidden fixed left-0 z-50 pointer-events-auto transition-transform duration-500 ease-out w-full ${showMobileBookButton ? 'translate-x-0' : '-translate-x-[110%]'}`}
         style={{ bottom: 'calc(16px + env(safe-area-inset-bottom))' }}
       >
         <div className="relative">
-          {/* Elegant shadow and glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-700/20 blur-xl rounded-2xl transform scale-105"></div>
-
-          {/* Main button container with premium styling */}
-          <div className="relative flex w-[calc(100%-8px)] shadow-2xl overflow-hidden rounded-2xl backdrop-blur-sm">
-            {/* Left: price + unit - opens/scrolls to booking summary */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-blue-600/20 to-blue-700/20 blur-xl rounded-2xl scale-105"></div>
+          <div className="relative flex w-full shadow-2xl overflow-hidden rounded-none backdrop-blur-sm">
             <button
               onClick={openMobileBooking}
-              className="flex-1 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white py-4 px-4 text-left hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 transition-all duration-300 rounded-l-2xl relative overflow-hidden group"
+              className="flex-1 min-w-[140px] max-w-[180px] bg-emerald-600 text-white py-2 px-2 text-left hover:bg-emerald-700 transition-all duration-300 rounded-none relative overflow-hidden group"
               aria-hidden={!showMobileBookButton}
+              style={{ fontSize: '13px' }}
             >
-              {/* Subtle animated background pattern */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-
               <div className="relative z-10">
-                <div className="text-xs text-blue-100 font-medium uppercase tracking-wider mb-1">From</div>
-                <div className="text-xl font-bold leading-none mb-1 text-white drop-shadow-sm">
+                <div className="text-[10px] text-blue-100 font-medium uppercase tracking-wider mb-0.5">From</div>
+                <div className="text-base font-bold leading-none mb-0.5 text-white drop-shadow-sm">
                   {service ? formatCurrencyWithConversion(displayUnit, service.currency) : '—'}
                 </div>
-                <div className="text-xs text-emerald-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
+                <div className="text-[10px] text-emerald-200 font-medium">{service ? getUnitLabel(service.service_categories?.name || '') : ''}</div>
               </div>
             </button>
-
-            {/* Right: action - performs booking/navigation */}
             <button
               onClick={() => {
-                // If booking summary is already visible, proceed with booking
                 if (!showMobileBookButton) {
                   handleBooking()
                 } else {
-                  // Otherwise, scroll to the booking summary first
                   openMobileBooking()
                 }
               }}
-              className="w-20 bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 text-white flex items-center justify-center font-bold py-4 px-3 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 rounded-r-2xl relative overflow-hidden group shadow-lg"
+              className="w-16 bg-emerald-700 text-white flex items-center justify-center font-bold py-2 px-2 hover:bg-emerald-800 transition-all duration-300 rounded-none relative overflow-hidden group shadow-lg"
               aria-hidden={!showMobileBookButton}
+              style={{ fontSize: '13px' }}
             >
-              {/* Animated shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-
               <div className="relative z-10 flex flex-col items-center">
-                <span className="text-sm leading-tight">Book</span>
-                <span className="text-xs opacity-80">Now</span>
+                <span className="text-xs leading-tight">Book</span>
+                <span className="text-[10px] opacity-80">Now</span>
               </div>
             </button>
           </div>
@@ -2248,15 +2232,7 @@ export default function ServiceDetail() {
             {lightboxIndex + 1} / {service.images.length}
           </div>
 
-          {/* Prev */}
-          {service.images.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex - 1 + service.images.length) % service.images.length) }}
-              className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-          )}
+          {/* Prev arrow removed for mobile-only swipe */}
 
           {/* Image */}
           <img
@@ -2268,15 +2244,7 @@ export default function ServiceDetail() {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* Next */}
-          {service.images.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((lightboxIndex + 1) % service.images.length) }}
-              className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          )}
+          {/* Next arrow removed for mobile-only swipe */}
         </div>
       )}
 
