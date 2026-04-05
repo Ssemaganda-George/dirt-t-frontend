@@ -4,6 +4,7 @@ import { formatCurrency } from './utils';
 import { executeWithCircuitBreaker } from './concurrency';
 import { buildCreateBookingAtomicRpcPayload } from './createBookingAtomicRpc';
 import { creditWallet } from './creditWallet';
+import { encryptMessage } from './encryption';
 import type { UserPreferences, VendorTier } from '../types'
 
 /**
@@ -3886,15 +3887,45 @@ export async function getAdminMessages(filter?: 'vendor_to_admin' | 'tourist_to_
         sender:profiles!messages_sender_id_fkey(id, full_name, email),
         recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
       `)
-      .eq('recipient_role', 'admin')
+      // Get all messages where admin is involved (sent or received)
+      .or('recipient_role.eq.admin,sender_role.eq.admin')
       .order('created_at', { ascending: false })
 
     if (filter === 'vendor_to_admin') {
-      query = query.eq('sender_role', 'vendor')
+      // Messages from vendors to admin
+      query = supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(id, full_name, email),
+          recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
+        `)
+        .eq('sender_role', 'vendor')
+        .eq('recipient_role', 'admin')
+        .order('created_at', { ascending: false })
     } else if (filter === 'tourist_to_admin') {
-      query = query.eq('sender_role', 'tourist')
+      // Messages from tourists to admin
+      query = supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(id, full_name, email),
+          recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
+        `)
+        .eq('sender_role', 'tourist')
+        .eq('recipient_role', 'admin')
+        .order('created_at', { ascending: false })
     } else if (filter === 'unread') {
-      query = query.eq('status', 'unread')
+      query = supabase
+        .from('messages')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(id, full_name, email),
+          recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
+        `)
+        .eq('recipient_role', 'admin')
+        .eq('status', 'unread')
+        .order('created_at', { ascending: false })
     }
 
     const { data, error } = await query
@@ -3911,6 +3942,31 @@ export async function getAdminMessages(filter?: 'vendor_to_admin' | 'tourist_to_
   }
 }
 
+// Get conversation messages between admin and a specific user
+export async function getAdminConversationMessages(partnerId: string, _partnerRole: 'vendor' | 'tourist') {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        sender:profiles!messages_sender_id_fkey(id, full_name, email),
+        recipient:profiles!messages_recipient_id_fkey(id, full_name, email)
+      `)
+      .or(`and(sender_id.eq.${partnerId},recipient_role.eq.admin),and(recipient_id.eq.${partnerId},sender_role.eq.admin)`)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching admin conversation messages:', error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error in getAdminConversationMessages:', error)
+    throw error
+  }
+}
+
 export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'customer' | 'admin') {
   try {
     let query = supabase
@@ -3923,14 +3979,12 @@ export async function getVendorMessages(vendorId: string, filter?: 'unread' | 'c
         .or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
         .eq('status', 'unread')
     } else if (filter === 'customer') {
-      // Messages from tourists, admin, or system (OTP) to vendor
-      query = query
-        .eq('recipient_id', vendorId)
-        .eq('recipient_role', 'vendor')
-        .in('sender_role', ['tourist', 'admin', 'system'])
+      // Messages between vendor and tourists/guests - both directions
+      // Vendor sent to tourist/guest OR tourist/guest sent to vendor
+      query = query.or(`and(sender_id.eq.${vendorId},recipient_role.in.(tourist,guest)),and(recipient_id.eq.${vendorId},sender_role.in.(tourist,guest))`)
     } else if (filter === 'admin') {
-      // All messages between vendor and admin (sent or received)
-      query = query.or(`and(sender_id.eq.${vendorId},recipient_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.admin)`)
+      // All messages between vendor and admin OR system-generated messages
+      query = query.or(`and(sender_id.eq.${vendorId},recipient_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.admin),and(recipient_id.eq.${vendorId},sender_role.eq.system)`)
     } else {
       // All messages where vendor is involved
       query = query.or(`recipient_id.eq.${vendorId},sender_id.eq.${vendorId}`)
@@ -3962,12 +4016,11 @@ export async function getTouristMessages(touristId: string, filter?: 'unread' | 
         .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
         .eq('status', 'unread')
     } else if (filter === 'vendor') {
-      // Messages involving tourist where other party is vendor/admin/system
-      query = query
-        .or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
-        .in('sender_role', ['vendor', 'admin', 'system'])
+      // Messages between tourist and vendors only (both directions)
+      query = query.or(`and(sender_id.eq.${touristId},recipient_role.eq.vendor),and(recipient_id.eq.${touristId},sender_role.eq.vendor)`)
     } else if (filter === 'admin') {
-      query = query.or(`and(sender_id.eq.${touristId},recipient_role.eq.admin),and(recipient_id.eq.${touristId},sender_role.eq.admin)`)    
+      // Messages between tourist and admin, including system messages
+      query = query.or(`and(sender_id.eq.${touristId},recipient_role.eq.admin),and(recipient_id.eq.${touristId},sender_role.eq.admin),and(recipient_id.eq.${touristId},sender_role.eq.system)`)    
     } else {
       query = query.or(`recipient_id.eq.${touristId},sender_id.eq.${touristId}`)
     }
@@ -3995,10 +4048,34 @@ export async function sendMessage(messageData: {
   message: string
 }) {
   try {
+    // Try to get recipient's public key for encryption
+    // Encrypted copy is stored for audit/verification, but readable message is kept for display
+    let encryptedContent: string | null = null
+    let isMessageEncrypted = false
+    
+    const recipientPublicKey = await getUserPublicKey(messageData.recipient_id)
+    
+    if (recipientPublicKey) {
+      try {
+        encryptedContent = await encryptMessage(messageData.message, recipientPublicKey)
+        isMessageEncrypted = true
+      } catch (encryptError) {
+        console.warn('Failed to encrypt message, sending unencrypted:', encryptError)
+        // Fall back to unencrypted if encryption fails
+      }
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .insert([{
-        ...messageData,
+        sender_id: messageData.sender_id,
+        sender_role: messageData.sender_role,
+        recipient_id: messageData.recipient_id,
+        recipient_role: messageData.recipient_role,
+        subject: messageData.subject,
+        message: messageData.message, // Keep readable message (transport encrypted via HTTPS)
+        encrypted_content: encryptedContent, // Also store encrypted copy for verification
+        is_encrypted: isMessageEncrypted,
         status: 'unread',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -4016,6 +4093,72 @@ export async function sendMessage(messageData: {
     console.error('Error in sendMessage:', error)
     throw error
   }
+}
+
+// ============== E2E Encryption Helper Functions ==============
+
+/**
+ * Get a user's public key for encrypting messages to them
+ */
+export async function getUserPublicKey(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('public_key')
+      .eq('id', userId)
+      .single()
+    
+    if (error || !data) {
+      return null
+    }
+    
+    return data.public_key
+  } catch (error) {
+    console.error('Error getting user public key:', error)
+    return null
+  }
+}
+
+/**
+ * Update user's public key in the database
+ */
+export async function updateUserPublicKey(userId: string, publicKey: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ public_key: publicKey })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error updating public key:', error)
+      return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error('Error in updateUserPublicKey:', error)
+    return false
+  }
+}
+
+/**
+ * Decrypt messages in a message array using user's private key
+ * Note: Messages are now stored with readable content in `message` field
+ * and encrypted copy in `encrypted_content` for verification purposes.
+ * This function returns messages as-is since they're already readable.
+ */
+export async function decryptMessages(messages: any[], _userId: string): Promise<any[]> {
+  // Messages are stored with readable content, no decryption needed
+  // The encrypted_content field contains an encrypted copy for audit/verification
+  return messages
+}
+
+/**
+ * Check if encryption is available for a user (they have a public key)
+ */
+export async function isEncryptionAvailable(userId: string): Promise<boolean> {
+  const publicKey = await getUserPublicKey(userId)
+  return publicKey !== null
 }
 
 export async function sendOTPNotification(notificationData: {

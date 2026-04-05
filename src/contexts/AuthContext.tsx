@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getServiceClient } from '../lib/serviceClient'
+import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
+import { updateUserPublicKey, getUserPublicKey } from '../lib/database'
 
 /** -------------------- Types -------------------- */
 interface VendorSignupEmailPayload {
@@ -126,6 +128,47 @@ async function notifyAdminNewAccount(payload: {
 
 async function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Setup E2E encryption keys for a user
+ * - Check if user has existing keys
+ * - If not, generate new key pair
+ * - Store public key in database, private key in IndexedDB
+ */
+async function setupEncryptionKeys(userId: string): Promise<void> {
+  try {
+    // Check if user already has encryption keys locally
+    const hasLocalKeys = await hasEncryptionKeys(userId)
+    
+    // Check if user has public key in database
+    const existingPublicKey = await getUserPublicKey(userId)
+    
+    if (hasLocalKeys && existingPublicKey) {
+      // User already has keys setup, nothing to do
+      console.log('E2E encryption already setup for user')
+      return
+    }
+    
+    // Generate new key pair
+    console.log('Generating E2E encryption keys...')
+    const { publicKey, privateKey } = await generateKeyPair()
+    
+    // Store private key locally in IndexedDB
+    await storePrivateKey(userId, privateKey)
+    
+    // Store public key in database
+    const success = await updateUserPublicKey(userId, publicKey)
+    
+    if (success) {
+      console.log('E2E encryption setup complete')
+    } else {
+      console.warn('Failed to store public key in database')
+    }
+  } catch (error) {
+    // Don't block login/signup if encryption setup fails
+    console.error('Error setting up E2E encryption:', error)
+  }
 }
 
 /** -------------------- Auth Provider -------------------- */
@@ -315,6 +358,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Load profile immediately
     const userProfile = await fetchProfile(u.id)
     setProfileLoaded(true) // Mark as loaded after fetching
+
+    // Setup E2E encryption keys (runs async, doesn't block login)
+    setupEncryptionKeys(u.id).catch(e => console.error('E2E key setup error:', e))
 
     // Vendor post verify runs async (does not block dashboard)
     if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)

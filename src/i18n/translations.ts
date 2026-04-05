@@ -26,6 +26,7 @@ export const translations: Record<SupportedLang, Record<string, string>> = {
     transport_bookings: 'Transport Bookings',
     tickets: 'Tickets',
     messages: 'Messages',
+    inquiries: 'Inquiries',
     partnerships: 'Partnerships',
     wallets: 'Wallets',
     business_wallets: 'Business Wallets',

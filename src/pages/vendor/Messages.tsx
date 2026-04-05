@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react'
-import { Send, X, ChevronLeft } from 'lucide-react'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { Send, X, ChevronLeft, MessageSquare, Users, Shield, Bell, CheckCheck, Plus } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getVendorMessages, sendMessage, getAdminProfileId } from '../../lib/database'
+import { getVendorMessages, sendMessage, getAdminProfileId, decryptMessages } from '../../lib/database'
+import { format, isToday, isYesterday } from 'date-fns'
 
 interface Message {
   id: string
   sender_id: string
-  sender_name: string
-  sender_email: string
+  sender_name?: string
+  sender_email?: string
   sender_role: string
+  sender?: {
+    id: string
+    full_name: string
+    email: string
+  }
   recipient_id: string
   recipient_role: string
   subject: string
@@ -23,15 +29,127 @@ export default function VendorMessages() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'unread' | 'customer' | 'admin'>('customer')
+  const [filter, setFilter] = useState<'all' | 'unread' | 'customer' | 'admin'>('all')
   const [newMessageContent, setNewMessageContent] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
-  const [messageCounts, setMessageCounts] = useState({
-    customer: 0,
-    admin: 0,
-    unread: 0
-  })
   const [sendMessageError, setSendMessageError] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    if (selectedConversation) {
+      scrollToBottom()
+    }
+  }, [selectedConversation, messages])
+
+  // Format message timestamp
+  const formatMessageTime = (dateStr: string) => {
+    const date = new Date(dateStr)
+    if (isToday(date)) {
+      return format(date, 'HH:mm')
+    } else if (isYesterday(date)) {
+      return 'Yesterday ' + format(date, 'HH:mm')
+    }
+    return format(date, 'dd/MM/yyyy HH:mm')
+  }
+
+  // Compute conversations from messages
+  const conversations = useMemo(() => {
+    const currentUserId = profile?.id || vendor?.user_id
+    const groups: Record<string, any> = {}
+    
+    messages.forEach(message => {
+      let conversationId: string
+      let conversationName: string
+      let conversationType: 'customer' | 'admin'
+
+      // Admin/System messages go to admin conversation thread
+      if (message.sender_role === 'admin' || message.sender_role === 'system' || message.recipient_role === 'admin') {
+        conversationId = 'admin'
+        conversationName = 'Support Team'
+        conversationType = 'admin'
+      } else {
+        conversationId = message.sender_id === currentUserId ? message.recipient_id : message.sender_id
+        // Get customer name from messages they sent (not from vendor's sent messages)
+        // Use sender.full_name from the joined profiles table
+        const customerName = message.sender_id !== currentUserId 
+          ? (message.sender?.full_name || message.sender_name) 
+          : null
+        conversationType = 'customer'
+        
+        // Only set conversationName if we have a real name from the customer
+        if (customerName) {
+          conversationName = customerName
+        } else {
+          conversationName = 'Customer'
+        }
+      }
+
+      if (!groups[conversationId]) {
+        groups[conversationId] = {
+          id: conversationId,
+          name: conversationName,
+          type: conversationType,
+          latestMessage: message,
+          unreadCount: 0,
+          totalMessages: 0,
+          lastMessageTime: message.created_at
+        }
+      } else if (conversationType === 'customer') {
+        // Update name if we found a better one (actual customer name vs "Customer")
+        const existingName = groups[conversationId].name
+        if (existingName === 'Customer' && conversationName !== 'Customer') {
+          groups[conversationId].name = conversationName
+        }
+      }
+
+      groups[conversationId].totalMessages++
+      if (message.status === 'unread' && message.recipient_id === currentUserId) {
+        groups[conversationId].unreadCount++
+      }
+
+      if (new Date(message.created_at) > new Date(groups[conversationId].lastMessageTime)) {
+        groups[conversationId].latestMessage = message
+        groups[conversationId].lastMessageTime = message.created_at
+      }
+    })
+
+    return Object.values(groups).sort((a: any, b: any) =>
+      new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+    )
+  }, [messages, profile?.id, vendor?.user_id])
+
+  // Compute counts based on unique conversations
+  const conversationCounts = useMemo(() => {
+    const customerConvos = conversations.filter((c: any) => c.type === 'customer')
+    const adminConvos = conversations.filter((c: any) => c.type === 'admin')
+    const unreadConvos = conversations.filter((c: any) => c.unreadCount > 0)
+    const totalUnreadMessages = conversations.reduce((sum: number, c: any) => sum + c.unreadCount, 0)
+
+    return {
+      all: conversations.length,
+      customer: customerConvos.length,
+      admin: adminConvos.length,
+      unread: unreadConvos.length,
+      totalUnreadMessages
+    }
+  }, [conversations])
+
+  // Get filtered conversations
+  const filteredConversations = useMemo(() => {
+    if (filter === 'unread') {
+      return conversations.filter((c: any) => c.unreadCount > 0)
+    } else if (filter === 'customer') {
+      return conversations.filter((c: any) => c.type === 'customer')
+    } else if (filter === 'admin') {
+      return conversations.filter((c: any) => c.type === 'admin')
+    }
+    return conversations
+  }, [conversations, filter])
 
   // Local storage cache functions
   const getCacheKey = (vendorId: string, filter: string) => `vendor_messages_${vendorId}_${filter}`
@@ -70,34 +188,12 @@ export default function VendorMessages() {
   }
 
   useEffect(() => {
-    console.debug('VendorMessages page: SUPABASE_URL=', import.meta.env.VITE_SUPABASE_URL, 'profileId=', profile?.id, 'vendorId=', vendor?.id)
+    console.debug('VendorMessages page: SUPABASE_URL=', import.meta.env.VITE_SUPABASE_URL, 'profileId=', profile?.id, 'vendorUserId=', vendor?.user_id)
     fetchMessages()
-    fetchMessageCounts()
   }, [filter])
 
-  const fetchMessageCounts = async () => {
-    try {
-      console.debug('VendorMessages: fetching message counts for', profile?.id || vendor?.id)
-      const [customerData, adminData, unreadData] = await Promise.all([
-        getVendorMessages(profile?.id || '', 'customer'),
-        getVendorMessages(profile?.id || '', 'admin'),
-        getVendorMessages(profile?.id || '', 'unread')
-      ])
-
-      console.debug('VendorMessages: message counts fetched', { customer: customerData.length, admin: adminData.length, unread: unreadData.length })
-      setMessageCounts({
-        customer: customerData.length,
-        admin: adminData.length,
-        unread: unreadData.length
-      })
-    } catch (error) {
-      console.error('Error fetching message counts:', error)
-      try { console.debug('Error fetching message counts detail:', JSON.stringify(error)) } catch (e) {}
-    }
-  }
-
   const fetchMessages = async () => {
-    const vendorId = vendor?.id || profile?.id || ''
+    const vendorId = profile?.id || vendor?.user_id || ''
     if (!vendorId) return
 
     try {
@@ -122,8 +218,11 @@ export default function VendorMessages() {
       }
 
       console.debug('VendorMessages: calling getVendorMessages', { vendorId, filterParam })
-      const data = await getVendorMessages(vendorId, filterParam)
-      console.debug('VendorMessages: getVendorMessages returned', data?.length)
+      const rawData = await getVendorMessages(vendorId, filterParam)
+      console.debug('VendorMessages: getVendorMessages returned', rawData?.length)
+      
+      // Decrypt any encrypted messages
+      const data = await decryptMessages(rawData, vendorId)
       
       // Update state and cache
       setMessages(data)
@@ -144,55 +243,66 @@ export default function VendorMessages() {
   const handleNewMessage = async () => {
     setSendMessageError(null)
     if (!newMessageContent.trim()) return
+    if (!selectedConversation) {
+      setSendMessageError('No conversation selected.')
+      return
+    }
 
     setSendingMessage(true)
     try {
-      // Dynamically fetch the admin's profile ID
-      const adminRecipientId = await getAdminProfileId();
-      if (!adminRecipientId) {
-        setSendMessageError('No admin profile found. Cannot send message.');
-        return;
+      const userId = profile?.id || vendor?.user_id || ''
+      let recipientId: string
+      let recipientRole: string
+
+      if (selectedConversation === 'admin') {
+        // Sending to admin
+        const adminRecipientId = await getAdminProfileId()
+        if (!adminRecipientId) {
+          setSendMessageError('No admin profile found. Cannot send message.')
+          return
+        }
+        recipientId = adminRecipientId
+        recipientRole = 'admin'
+      } else {
+        // Sending to a customer (tourist)
+        recipientId = selectedConversation
+        recipientRole = 'tourist'
       }
 
       const payload = {
-        sender_id: profile?.id || '',
+        sender_id: userId,
         sender_role: 'vendor',
-        recipient_id: adminRecipientId,
-        recipient_role: 'admin',
-        subject: '', // No subject for vendor to admin
+        recipient_id: recipientId,
+        recipient_role: recipientRole,
+        subject: '',
         message: newMessageContent
       }
       console.debug('VendorMessages: sending message payload', payload)
       const newMsg = await sendMessage(payload)
       console.debug('VendorMessages: sendMessage returned', newMsg)
 
-      // Optimistically add the new message to the chat trail only if filter is 'admin'
-      setMessages((prev) => {
-        if (filter === 'admin') {
-          return [
-            {
-              id: newMsg?.id || Math.random().toString(),
-              sender_id: profile?.id || '',
-              sender_name: profile?.full_name || 'You',
-              sender_email: profile?.email || '',
-              sender_role: 'vendor',
-              recipient_id: adminRecipientId,
-              recipient_role: 'admin',
-              subject: '',
-              message: newMessageContent,
-              status: 'unread',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            ...prev,
-          ]
-        }
-        return prev
-      })
+      // Optimistically add the new message to the current conversation
+      setMessages((prev) => [
+        {
+          id: newMsg?.id || Math.random().toString(),
+          sender_id: userId,
+          sender_name: profile?.full_name || 'You',
+          sender_email: profile?.email || '',
+          sender_role: 'vendor',
+          recipient_id: recipientId,
+          recipient_role: recipientRole,
+          subject: '',
+          message: newMessageContent,
+          status: 'unread',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        ...prev,
+      ])
 
       setNewMessageContent('')
       setSendMessageError(null)
-      // Optionally, you can still refetch messages in the background
+      // Refresh messages in the background
       fetchMessages()
     } catch (error) {
       setSendMessageError('Failed to send message. Please try again.')
@@ -225,9 +335,21 @@ export default function VendorMessages() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage communications with customers and administrators</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage communications with customers and administrators</p>
+        </div>
+        {!selectedConversation && (
+          <button
+            onClick={() => setSelectedConversation('admin')}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+          >
+            <Shield className="w-4 h-4" />
+            <span className="hidden sm:inline">Contact Support</span>
+            <span className="sm:hidden">Support</span>
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -235,6 +357,13 @@ export default function VendorMessages() {
         <div className="lg:col-span-2">
           {selectedConversation ? (
             /* Chat Interface */
+            (() => {
+              // Get selected conversation details
+              const currentConvo = conversations.find((c: any) => c.id === selectedConversation)
+              const convoName = currentConvo?.name || (selectedConversation === 'admin' ? 'Support Team' : 'Customer')
+              const isAdmin = selectedConversation === 'admin'
+              
+              return (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
               {/* Chat Header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
@@ -244,15 +373,17 @@ export default function VendorMessages() {
                 >
                   <ChevronLeft className="w-4 h-4 text-gray-500" />
                 </button>
-                <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-semibold">
-                  {selectedConversation === 'admin' ? 'A' : 'C'}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
+                  isAdmin ? 'bg-blue-600' : 'bg-gray-900'
+                }`}>
+                  {isAdmin ? <Shield className="w-4 h-4" /> : (convoName?.[0]?.toUpperCase() || 'C')}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    {selectedConversation === 'admin' ? 'Admin' : 'Customer'}
+                    {convoName}{!isAdmin && <span className="text-gray-500 font-normal ml-1">(Tourist)</span>}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {selectedConversation === 'admin' ? 'Administrator' : 'Customer Conversation'}
+                    {isAdmin ? 'Admin & System Notifications' : 'Customer Account'}
                   </p>
                 </div>
               </div>
@@ -262,7 +393,8 @@ export default function VendorMessages() {
                 {(() => {
                   const conversationMessages = messages.filter(msg => {
                     if (selectedConversation === 'admin') {
-                      return msg.sender_role === 'admin' || msg.recipient_role === 'admin'
+                      // Include admin and system messages in admin thread
+                      return msg.sender_role === 'admin' || msg.sender_role === 'system' || msg.recipient_role === 'admin'
                     } else {
                       return msg.sender_id === selectedConversation || msg.recipient_id === selectedConversation
                     }
@@ -277,10 +409,29 @@ export default function VendorMessages() {
                     </div>
                   ) : (
                     conversationMessages.map((message, index) => {
-                      const isVendor = message.sender_id === profile?.id
-                      const showAvatar = index === 0 || conversationMessages[index - 1]?.sender_id !== message.sender_id
+                      const currentUserId = profile?.id || vendor?.user_id
+                      const isVendor = message.sender_id === currentUserId
+                      const isSystem = message.sender_role === 'system'
+                      const showAvatar = !isSystem && (index === 0 || conversationMessages[index - 1]?.sender_id !== message.sender_id)
                       const showTimestamp = index === conversationMessages.length - 1 ||
                         new Date(conversationMessages[index + 1]?.created_at).getTime() - new Date(message.created_at).getTime() > 300000
+
+                      // System messages are centered notifications
+                      if (isSystem) {
+                        return (
+                          <div key={message.id} className="flex justify-center my-2">
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 max-w-md">
+                              <div className="flex items-center gap-2 text-amber-700">
+                                <Bell className="w-4 h-4 flex-shrink-0" />
+                                <p className="text-sm">{message.message}</p>
+                              </div>
+                              <p className="text-[10px] text-amber-500 mt-1 text-center">
+                                {formatMessageTime(message.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      }
 
                       return (
                         <div key={message.id} className={`flex ${isVendor ? 'justify-end' : 'justify-start'}`}>
@@ -288,9 +439,9 @@ export default function VendorMessages() {
                             {showAvatar && (
                               <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                  isVendor ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600'
+                                  isVendor ? 'bg-gray-900 text-white' : 'bg-blue-600 text-white'
                                 }`}>
-                                  {isVendor ? 'Y' : (message.sender_name?.[0] || 'U')}
+                                  {isVendor ? 'Y' : (message.sender_role === 'admin' ? 'A' : ((message.sender?.full_name || message.sender_name)?.[0]?.toUpperCase() || 'C'))}
                                 </div>
                               </div>
                             )}
@@ -305,7 +456,7 @@ export default function VendorMessages() {
                               </div>
                               {showTimestamp && (
                                 <p className="text-[10px] text-gray-400 mt-1">
-                                  {new Date(message.created_at).toLocaleString()}
+                                  {formatMessageTime(message.created_at)}
                                 </p>
                               )}
                               {isVendor && (
@@ -320,6 +471,7 @@ export default function VendorMessages() {
                     })
                   )
                 })()}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Message Input */}
@@ -368,129 +520,134 @@ export default function VendorMessages() {
                 </div>
               </div>
             </div>
+              )
+            })()
           ) : (
             /* Conversations List */
             <div className="space-y-4">
-              {/* Filter Tabs — Pill Style */}
-              <div className="flex flex-wrap gap-1.5">
+              {/* Filter Tabs — Icon Pills */}
+              <div className="flex flex-wrap gap-2">
                 {[
-                  { key: 'customer', label: 'Customers', count: messageCounts.customer },
-                  { key: 'admin', label: 'Admin', count: messageCounts.admin },
-                  { key: 'unread', label: 'Unread', count: messageCounts.unread }
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setFilter(tab.key as any)}
-                    className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
-                      filter === tab.key
-                        ? 'bg-gray-900 text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {tab.label} ({tab.count})
-                  </button>
-                ))}
+                  { key: 'all', label: 'All', count: conversationCounts.all, icon: MessageSquare },
+                  { key: 'customer', label: 'Customers', count: conversationCounts.customer, icon: Users },
+                  { key: 'admin', label: 'Admin', count: conversationCounts.admin, icon: Shield },
+                  { key: 'unread', label: 'Unread', count: conversationCounts.unread, icon: Bell }
+                ].map((tab) => {
+                  const Icon = tab.icon
+                  const isActive = filter === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setFilter(tab.key as any)}
+                      className={`min-h-[40px] px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+                        isActive
+                          ? 'bg-gray-900 text-white shadow-sm'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                      <span className={`ml-0.5 text-xs px-1.5 py-0.5 rounded-md ${
+                        isActive ? 'bg-white/20' : 'bg-gray-100'
+                      }`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Conversation Cards */}
               <div className="space-y-2">
-                {(() => {
-                  const conversations = messages.reduce((groups, message) => {
-                    let conversationId: string
-                    let conversationName: string
-                    let conversationType: 'customer' | 'admin'
-
-                    if (message.sender_role === 'admin' || message.recipient_role === 'admin') {
-                      conversationId = 'admin'
-                      conversationName = 'Admin'
-                      conversationType = 'admin'
-                    } else {
-                      conversationId = message.sender_id === profile?.id ? message.recipient_id : message.sender_id
-                      conversationName = message.sender_id === profile?.id ? 'Customer' : message.sender_name
-                      conversationType = 'customer'
-                    }
-
-                    if (!groups[conversationId]) {
-                      groups[conversationId] = {
-                        id: conversationId,
-                        name: conversationName,
-                        type: conversationType,
-                        latestMessage: message,
-                        unreadCount: 0,
-                        totalMessages: 0,
-                        lastMessageTime: message.created_at
-                      }
-                    }
-
-                    groups[conversationId].totalMessages++
-                    if (message.status === 'unread' && message.recipient_id === profile?.id) {
-                      groups[conversationId].unreadCount++
-                    }
-
-                    if (new Date(message.created_at) > new Date(groups[conversationId].lastMessageTime)) {
-                      groups[conversationId].latestMessage = message
-                      groups[conversationId].lastMessageTime = message.created_at
-                    }
-
-                    return groups
-                  }, {} as Record<string, any>)
-
-                  let conversationList = Object.values(conversations)
-
-                  if (filter === 'unread') {
-                    conversationList = conversationList.filter((c: any) => c.unreadCount > 0)
-                  } else if (filter === 'customer') {
-                    conversationList = conversationList.filter((c: any) => c.type === 'customer')
-                  } else if (filter === 'admin') {
-                    conversationList = conversationList.filter((c: any) => c.type === 'admin')
-                  }
-
-                  conversationList = conversationList.sort((a: any, b: any) =>
-                    new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
-                  )
-
-                  return conversationList.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                      <p className="text-sm text-gray-500">No conversations</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {filter === 'unread' ? 'No unread messages.' :
-                         filter === 'customer' ? 'No customer conversations.' :
-                         'No admin conversations.'}
-                      </p>
+                {filteredConversations.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <MessageSquare className="w-6 h-6 text-gray-400" />
                     </div>
-                  ) : (
-                    conversationList.map((conversation: any) => (
-                      <div
-                        key={conversation.id}
-                        onClick={() => setSelectedConversation(conversation.id)}
-                        className="bg-white rounded-xl border border-gray-200 p-4 hover:bg-gray-50/50 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-gray-900/20"
+                    <p className="text-sm font-medium text-gray-900">No conversations</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {filter === 'unread' ? 'All caught up! No unread messages.' :
+                       filter === 'customer' ? 'No customer conversations yet.' :
+                       filter === 'admin' ? 'No admin conversations yet.' :
+                       'Start a conversation to see messages here.'}
+                    </p>
+                    {(filter === 'admin' || filter === 'all') && (
+                      <button
+                        onClick={() => setSelectedConversation('admin')}
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                            {conversation.type === 'admin' ? 'A' : conversation.name[0]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm font-medium text-gray-900 truncate">{conversation.name}</p>
-                              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                                {conversation.unreadCount > 0 && (
-                                  <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-700">
-                                    {conversation.unreadCount}
-                                  </span>
-                                )}
-                                <span className="text-xs text-gray-400">
-                                  {new Date(conversation.lastMessageTime).toLocaleDateString()}
-                                </span>
-                              </div>
+                        <Plus className="w-4 h-4" />
+                        Contact Support Team
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredConversations.map((conversation: any) => (
+                    <div
+                      key={conversation.id}
+                      onClick={() => setSelectedConversation(conversation.id)}
+                      className={`bg-white rounded-xl border p-4 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-gray-900/20 ${
+                        conversation.unreadCount > 0 
+                          ? 'border-gray-300 hover:border-gray-400 shadow-sm' 
+                          : 'border-gray-200 hover:bg-gray-50/50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
+                          conversation.type === 'admin' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-900 text-white'
+                        }`}>
+                          {conversation.type === 'admin' ? (
+                            <Shield className="w-5 h-5" />
+                          ) : (
+                            conversation.name?.[0]?.toUpperCase() || 'C'
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <p className={`text-sm truncate ${
+                                conversation.unreadCount > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'
+                              }`}>
+                                {conversation.name}
+                              </p>
+                              {conversation.type === 'admin' && (
+                                <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">Admin</span>
+                              )}
                             </div>
-                            <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{conversation.latestMessage.message}</p>
-                            <p className="text-xs text-gray-400 mt-1">{conversation.totalMessages} message{conversation.totalMessages !== 1 ? 's' : ''}</p>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              {conversation.unreadCount > 0 && (
+                                <span className="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full text-xs font-semibold bg-red-500 text-white">
+                                  {conversation.unreadCount}
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-400">
+                                {formatMessageTime(conversation.lastMessageTime)}
+                              </span>
+                            </div>
+                          </div>
+                          <p className={`text-sm mt-0.5 line-clamp-1 ${
+                            conversation.unreadCount > 0 ? 'text-gray-700' : 'text-gray-500'
+                          }`}>
+                            {conversation.latestMessage.message}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-xs text-gray-400">
+                              {conversation.totalMessages} message{conversation.totalMessages !== 1 ? 's' : ''}
+                            </span>
+                            {conversation.unreadCount === 0 && (
+                              <span className="flex items-center gap-0.5 text-xs text-gray-400">
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                Read
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
-                    ))
-                  )
-                })()}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
