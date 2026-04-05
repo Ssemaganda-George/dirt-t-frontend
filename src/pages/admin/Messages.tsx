@@ -5,6 +5,7 @@ import { getAdminMessages, getAllVendors, Vendor, sendMessage, getAdminConversat
 import { getStatusColor } from '../../lib/utils'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, isToday, isYesterday } from 'date-fns'
+import useUnreadMessages from '../../hooks/useUnreadMessages'
 
 interface Message {
   id: string
@@ -28,6 +29,7 @@ interface Message {
 
 export default function Messages() {
   const { profile } = useAuth()
+  const { refresh: refreshUnreadCount } = useUnreadMessages()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const vendorId = searchParams.get('vendorId')
@@ -205,6 +207,8 @@ export default function Messages() {
           await markConversationAsRead(profile.id, chatPartnerId)
           // Refresh main messages to update unread counts in conversation list
           fetchMessages()
+          // Refresh global unread count for nav badge
+          refreshUnreadCount()
         } catch (e) {
           console.error('Error marking conversation as read:', e)
         }
@@ -271,9 +275,9 @@ export default function Messages() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Header */}
-      <div>
+    <div className={`${vendorId || touristId ? 'h-[calc(100dvh-4rem)]' : ''} max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 flex flex-col overflow-hidden lg:overflow-visible`}>
+      {/* Header - hidden on mobile when in chat view */}
+      <div className={`${vendorId || touristId ? 'hidden lg:block' : ''} flex-shrink-0 mb-4 lg:mb-6`}>
         <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
         <p className="text-sm text-gray-500 mt-1">
           {vendorId || touristId 
@@ -283,10 +287,10 @@ export default function Messages() {
         </p>
       </div>
 
-      <div className={`grid grid-cols-1 ${vendorId || touristId ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
+      <div className={`flex-1 min-h-0 grid grid-cols-1 ${vendorId || touristId ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-4 lg:gap-6`}>
         {vendorId || touristId ? (
             /* Chat Interface */
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 600px)' }}>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 6rem)' }}>
               {/* Chat Header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                 <button

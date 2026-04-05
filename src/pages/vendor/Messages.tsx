@@ -3,6 +3,7 @@ import { Send, X, ChevronLeft, MessageSquare, Users, Shield, Bell, Check, CheckC
 import { useAuth } from '../../contexts/AuthContext'
 import { getVendorMessages, sendMessage, getAdminProfileId, decryptMessages, markConversationAsRead } from '../../lib/database'
 import { format, isToday, isYesterday } from 'date-fns'
+import useUnreadMessages from '../../hooks/useUnreadMessages'
 
 interface Message {
   id: string
@@ -26,6 +27,7 @@ interface Message {
 
 export default function VendorMessages() {
   const { profile, vendor } = useAuth()
+  const { refresh: refreshUnreadCount } = useUnreadMessages()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
@@ -64,6 +66,8 @@ export default function VendorMessages() {
           }
           return msg
         }))
+        // Refresh global unread count for nav badge
+        refreshUnreadCount()
       } catch (error) {
         console.error('Error marking conversation as read:', error)
       }

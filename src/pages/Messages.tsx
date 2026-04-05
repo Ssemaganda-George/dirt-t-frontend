@@ -5,6 +5,7 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
 import { getTouristMessages, sendMessage, getAdminProfileId, decryptMessages, markConversationAsRead } from '../lib/database'
 import { MessageSquare, Send, Plus, ChevronLeft, Check, CheckCheck } from 'lucide-react'
+import useUnreadMessages from '../hooks/useUnreadMessages'
 
 type Thread = {
   id: string
@@ -27,6 +28,7 @@ type Message = {
 export default function Messages() {
   const { user } = useAuth()
   const { t } = usePreferences()
+  const { refresh: refreshUnreadCount } = useUnreadMessages()
   const [threads, setThreads] = useState<Thread[]>([])
   const [messages, setMessages] = useState<Record<string, Message[]>>({})
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
@@ -70,6 +72,8 @@ export default function Messages() {
                 status: m.senderId !== user.id ? 'read' : m.status
               }))
             }))
+            // Refresh global unread count for nav badge
+            refreshUnreadCount()
           })
           .catch(e => console.error('Error marking conversation as read:', e))
       }
