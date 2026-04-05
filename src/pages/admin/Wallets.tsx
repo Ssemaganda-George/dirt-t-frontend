@@ -23,9 +23,14 @@ function walletsPlatformFeeCell(
 ): ReactNode {
   if (tx.transaction_type !== 'payment') return '—';
   const bookings = tx.bookings as { id?: string } | null | undefined;
+  // Debug log
+  // eslint-disable-next-line no-console
+  console.debug('walletsPlatformFeeCell: tx.bookings =', bookings);
   if (bookings?.id) {
+    const fee = platformTakeFromTransaction(tx as never);
+    // Show 0 if booking exists but fee is zero
     return formatCurrencyWithConversion(
-      platformTakeFromTransaction(tx as never),
+      fee,
       serviceCurrency,
       targetCurrency,
       locale
@@ -104,6 +109,9 @@ export function Transactions() {
       setVendorWallets(walletsData);
       setAllVendors(vendorsData || []);
       setAllTransactions(transactionsData);
+      // Debug: log loaded transactions
+      // eslint-disable-next-line no-console
+      console.log('Loaded transactionsData:', transactionsData);
       setAllBookings(bookingsData);
     } catch (err) {
       console.error('Error loading wallet data:', err);
@@ -504,6 +512,7 @@ export function Transactions() {
             </div>
             <div className="p-5">
             <div className="overflow-x-auto">
+              {console.log('All Transactions:', allTransactions)}
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>

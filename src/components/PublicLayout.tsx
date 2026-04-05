@@ -414,12 +414,14 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      {/* Mobile Bottom Navigation - Hidden on scan pages and service detail pages (we render a Book button in the service page) */}
-      {!location.pathname.includes('/scan/') && !location.pathname.startsWith('/service/') && (
-        <MobileBottomNav
-          onSupportClick={() => setShowSupportModal(true)}
-          onSearchClick={() => setShowGlobalSearch(true)}
-        />
+      {/* Mobile Bottom Navigation - Hidden on scan pages, service detail pages, and checkout/payment pages */}
+      {!location.pathname.includes('/scan/') &&
+        !location.pathname.startsWith('/service/') &&
+        !location.pathname.match(/^\/checkout\/[^/]+(\/payment)?$/) && (
+          <MobileBottomNav
+            onSupportClick={() => setShowSupportModal(true)}
+            onSearchClick={() => setShowGlobalSearch(true)}
+          />
       )}
 
       {/* Footer */}

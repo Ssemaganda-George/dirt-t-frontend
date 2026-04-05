@@ -502,7 +502,6 @@ export default function PaymentPage() {
 
             {!paymentSuccess && (
               <div className="mt-4 flex items-center justify-center gap-3">
-                <button onClick={() => navigate(-1)} className="px-4 py-2 bg-white text-gray-900 border rounded-md">Back</button>
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-md" disabled>
                   Processing…
                 </button>
@@ -517,6 +516,14 @@ export default function PaymentPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-2xl">
+        {/* Back arrow at the top */}
+        <div className="w-full flex items-start mb-2">
+          <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white hover:bg-gray-50 text-gray-900 rounded border border-gray-300 font-light text-sm transition-colors flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+        </div>
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">Complete Payment</h1>
@@ -796,13 +803,6 @@ export default function PaymentPage() {
           <div className="px-6 py-4 border-t bg-gray-50 flex gap-2">
             <button
               type="button"
-              onClick={() => navigate(`/checkout/${orderId}`)}
-              className="px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 font-light text-sm rounded-lg transition-colors border border-gray-300"
-            >
-              Back
-            </button>
-            <button
-              type="button"
               onClick={handlePayment}
               disabled={
                 processing ||
@@ -838,10 +838,7 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* Security Info */}
-        <div className="text-center text-sm text-gray-600">
-          <p className="font-light">Your payment information is secure and encrypted</p>
-        </div>
+        {/* Security Info removed as requested */}
       </div>
     </div>
   )
