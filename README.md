@@ -17,7 +17,7 @@ A comprehensive multi-vendor tourism marketplace for Uganda, connecting tourists
 - **Booking System** - Complete booking workflow with status tracking
 - **Wallet System** - Vendor payment management
 - **Role-based Access** - Tourist, Vendor, Admin user types
-- **Vendor Onboarding Emails** - Automated email flow for vendor signup, verification, and approval
+- **Vendor Onboarding Emails** - Automated email flow for vendor signup, verification, and approval.
 
 ## 📧 Vendor Email Onboarding
 
