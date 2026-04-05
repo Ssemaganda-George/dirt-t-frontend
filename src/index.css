@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Serif+Pro:wght@400;600;700&display=swap');
+
 /* Hide main nav bar when lightbox is open */
 .hide-main-navbar header {
   display: none !important;
 }
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Source+Serif+Pro:wght@400;600;700&display=swap');
 
 /* Tailwind CSS directives - these are valid and expected in a Tailwind project */
 @tailwind base;
