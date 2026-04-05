@@ -416,6 +416,8 @@ export interface Transaction {
     business_name: string;
     user_id: string;
   };
+  /** Vendor payout amount for this transaction (optional, for reporting/calculation) */
+  vendor_payout_amount?: number;
   /** Joined in getAllTransactionsForAdmin for platform fee display */
   bookings?: {
     id: string;
