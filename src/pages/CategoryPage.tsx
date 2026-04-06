@@ -17,7 +17,7 @@ export default function CategoryPage() {
   const [filteredServices, setFilteredServices] = useState<Service[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('recommended')
-  const [priceRange, setPriceRange] = useState([0, 1000000])
+  const [priceRange, setPriceRange] = useState([0, 100000000])
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
 
@@ -110,6 +110,14 @@ export default function CategoryPage() {
             { key: 'water', label: 'Water Sports' },
             { key: 'cultural', label: 'Cultural' }
           ]
+        case 'cat_shops':
+          return [
+            { key: 'all', label: 'All Shops' },
+            { key: 'crafts', label: 'Crafts & Art' },
+            { key: 'souvenirs', label: 'Souvenirs' },
+            { key: 'clothing', label: 'Clothing' },
+            { key: 'food', label: 'Food & Produce' }
+          ]
         default:
           return [{ key: 'all', label: 'All' }]
       }
@@ -125,16 +133,22 @@ export default function CategoryPage() {
   useEffect(() => {
     if (allServices) {
       let filtered = allServices
+      
+      // Filter by category
       if (category && category !== 'all' && category !== 'services') {
         const targetCategoryId = categoryMapping[category]
         if (targetCategoryId) {
           filtered = allServices.filter(service => service.category_id === targetCategoryId)
         }
       }
+      
+      // Filter approved services (matching Home.tsx logic)
       filtered = filtered.filter(service => {
-        if (!service.vendors) return service.status !== 'inactive'
-        return service.status === 'approved' && service.vendors.status !== 'suspended'
+        const isApproved = service.status === 'approved' && 
+                          (!service.vendors || service.vendors.status !== 'suspended')
+        return isApproved
       })
+      
       setFilteredServices(filtered)
     }
   }, [allServices, category])
@@ -145,18 +159,156 @@ export default function CategoryPage() {
 
   const { t, selectedCurrency } = usePreferences()
 
+  // Helper function to check if text contains any of the keywords
+  const containsKeyword = (text: string | undefined, keywords: string[]): boolean => {
+    if (!text) return false
+    const lowerText = text.toLowerCase()
+    return keywords.some(keyword => lowerText.includes(keyword.toLowerCase()))
+  }
+
+  // Sub-filter matching logic for each category
+  const matchesSubFilter = (service: Service, filterKey: string, categoryId: string): boolean => {
+    if (filterKey === 'all') return true
+
+    const title = service.title?.toLowerCase() || ''
+    const description = service.description?.toLowerCase() || ''
+    const combined = `${title} ${description}`
+
+    switch (categoryId) {
+      case 'cat_tour_packages':
+        switch (filterKey) {
+          case 'daytrip':
+            // Day trip: duration_days is 1 or less, or duration_hours <= 24
+            return (service.duration_days !== undefined && service.duration_days <= 1) ||
+                   (service.duration_hours !== undefined && service.duration_hours <= 24 && !service.duration_days)
+          case 'multiday':
+            return (service.duration_days !== undefined && service.duration_days > 1)
+          case 'adventure':
+            return service.difficulty_level === 'challenging' || service.difficulty_level === 'difficult' ||
+                   containsKeyword(combined, ['adventure', 'hiking', 'trekking', 'climbing', 'safari', 'gorilla', 'wildlife', 'rafting', 'bungee', 'extreme'])
+          case 'cultural':
+            return containsKeyword(combined, ['cultural', 'heritage', 'history', 'traditional', 'village', 'community', 'tribal', 'museum', 'craft', 'dance', 'ceremony'])
+          default:
+            return true
+        }
+
+      case 'cat_hotels':
+        switch (filterKey) {
+          case 'budget':
+            return (service.star_rating !== undefined && service.star_rating <= 2) ||
+                   containsKeyword(service.property_type, ['budget', 'hostel', 'guesthouse', 'backpacker'])
+          case 'midrange':
+            return (service.star_rating !== undefined && service.star_rating >= 3 && service.star_rating <= 4)
+          case 'luxury':
+            return (service.star_rating !== undefined && service.star_rating >= 5) ||
+                   containsKeyword(service.property_type, ['luxury', 'boutique', '5-star', 'five star'])
+          case 'resort':
+            return containsKeyword(service.property_type, ['resort', 'lodge', 'safari lodge', 'beach resort'])
+          default:
+            return true
+        }
+
+      case 'cat_transport':
+        const vehicleType = service.vehicle_type?.toLowerCase() || ''
+        switch (filterKey) {
+          case 'taxi':
+            return containsKeyword(vehicleType, ['taxi', 'cab'])
+          case 'bus':
+            return containsKeyword(vehicleType, ['bus', 'coach', 'coaster'])
+          case 'private':
+            return containsKeyword(vehicleType, ['private', 'car', 'suv', 'sedan', 'land cruiser', '4x4', 'jeep'])
+          case 'shuttle':
+            return containsKeyword(vehicleType, ['shuttle', 'van', 'minibus', 'transfer'])
+          default:
+            return true
+        }
+
+      case 'cat_restaurants':
+        const cuisineType = service.cuisine_type?.toLowerCase() || ''
+        const atmosphere = service.restaurant_atmosphere?.toLowerCase() || ''
+        switch (filterKey) {
+          case 'local':
+            return containsKeyword(cuisineType, ['local', 'ugandan', 'african', 'east african', 'traditional', 'native'])
+          case 'international':
+            return containsKeyword(cuisineType, ['international', 'western', 'italian', 'indian', 'chinese', 'continental', 'fusion', 'american', 'european'])
+          case 'fine':
+            return containsKeyword(atmosphere, ['fine', 'upscale', 'elegant', 'formal']) ||
+                   containsKeyword(service.price_range, ['high', 'expensive', 'fine'])
+          case 'casual':
+            return containsKeyword(atmosphere, ['casual', 'relaxed', 'informal', 'family']) ||
+                   containsKeyword(service.price_range, ['low', 'moderate', 'casual', 'budget'])
+          default:
+            return true
+        }
+
+      case 'cat_activities':
+        const eventType = service.event_type?.toLowerCase() || ''
+        switch (filterKey) {
+          case 'outdoor':
+            return containsKeyword(eventType, ['outdoor']) ||
+                   containsKeyword(combined, ['outdoor', 'hiking', 'camping', 'nature', 'park', 'garden', 'forest', 'mountain', 'lake', 'river'])
+          case 'indoor':
+            return containsKeyword(eventType, ['indoor']) ||
+                   containsKeyword(combined, ['indoor', 'museum', 'gallery', 'theater', 'cinema', 'spa', 'gym', 'workshop', 'class'])
+          case 'water':
+            return containsKeyword(combined, ['water', 'swimming', 'diving', 'snorkeling', 'kayak', 'boat', 'cruise', 'rafting', 'fishing', 'beach', 'lake', 'river', 'pool'])
+          case 'cultural':
+            return containsKeyword(eventType, ['cultural']) ||
+                   containsKeyword(combined, ['cultural', 'music', 'dance', 'art', 'traditional', 'heritage', 'festival', 'performance', 'exhibit'])
+          default:
+            return true
+        }
+
+      case 'cat_shops':
+        switch (filterKey) {
+          case 'crafts':
+            return containsKeyword(combined, ['craft', 'art', 'handmade', 'artisan', 'pottery', 'painting', 'sculpture', 'woodwork', 'basket', 'weaving'])
+          case 'souvenirs':
+            return containsKeyword(combined, ['souvenir', 'gift', 'memento', 'keepsake', 'trinket', 'curio', 'collectible'])
+          case 'clothing':
+            return containsKeyword(combined, ['clothing', 'fashion', 'apparel', 'wear', 'fabric', 'textile', 'kitenge', 'gomesi', 'traditional dress'])
+          case 'food':
+            return containsKeyword(combined, ['food', 'grocery', 'produce', 'market', 'spice', 'coffee', 'tea', 'organic', 'fresh', 'farm'])
+          default:
+            return true
+        }
+
+      case 'cat_flights':
+        switch (filterKey) {
+          case 'domestic':
+            return containsKeyword(combined, ['domestic', 'local', 'internal', 'uganda'])
+          case 'international':
+            return containsKeyword(combined, ['international', 'abroad', 'overseas'])
+          case 'business':
+            return containsKeyword(combined, ['business class', 'business', 'premium'])
+          case 'economy':
+            return containsKeyword(combined, ['economy', 'standard', 'basic'])
+          default:
+            return true
+        }
+
+      default:
+        return true
+    }
+  }
+
   const searchFilteredServices = filteredServices.filter(service => {
     const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (service.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
                          (service.vendors?.business_name.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
     const matchesPrice = service.price >= priceRange[0] && service.price <= priceRange[1]
+    
     let matchesCategoryFilter = true
     if (category === 'services') {
+      // On the "All Services" page, filter by main category
       matchesCategoryFilter = selectedCategoryFilter === 'all' ||
                              service.category_id === categoryMapping[selectedCategoryFilter]
-    } else {
-      matchesCategoryFilter = selectedCategoryFilter === 'all'
+    } else if (category && categoryMapping[category]) {
+      // On specific category pages, apply sub-filters
+      const categoryId = categoryMapping[category]
+      matchesCategoryFilter = matchesSubFilter(service, selectedCategoryFilter, categoryId)
     }
+    
     return matchesSearch && matchesPrice && matchesCategoryFilter
   })
 

@@ -20,6 +20,11 @@ interface Message {
   recipient_id: string
   recipient_name: string
   recipient_role: string
+  recipient?: {
+    id: string
+    full_name: string
+    email: string
+  }
   subject: string
   message: string
   status: 'unread' | 'delivered' | 'read' | 'replied'
@@ -78,13 +83,26 @@ export default function Messages() {
           : null
         
         // Get partner name from the appropriate side of the message
-        const partnerName = isAdminSender 
-          ? (message.recipient_role === 'vendor' && vendorInfo 
-              ? vendorInfo.business_name 
-              : 'Unknown')
-          : (message.sender_role === 'vendor' && vendorInfo 
-              ? vendorInfo.business_name 
-              : (message.sender?.full_name || message.sender_name || 'Unknown'))
+        let partnerName = 'Unknown'
+        if (isAdminSender) {
+          // Admin sent this message, partner is the recipient
+          if (message.recipient_role === 'vendor' && vendorInfo) {
+            partnerName = vendorInfo.business_name
+          } else if (message.recipient?.full_name) {
+            partnerName = message.recipient.full_name
+          } else if (message.recipient_name) {
+            partnerName = message.recipient_name
+          }
+        } else {
+          // Admin received this message, partner is the sender
+          if (message.sender_role === 'vendor' && vendorInfo) {
+            partnerName = vendorInfo.business_name
+          } else if (message.sender?.full_name) {
+            partnerName = message.sender.full_name
+          } else if (message.sender_name) {
+            partnerName = message.sender_name
+          }
+        }
         
         groups[partnerId] = {
           senderId: partnerId,
@@ -92,7 +110,7 @@ export default function Messages() {
           senderRole: partnerRole,
           senderEmail: partnerRole === 'vendor' && vendorInfo 
             ? vendorInfo.business_email 
-            : message.sender?.email,
+            : (isAdminSender ? message.recipient?.email : message.sender?.email),
           latestMessage: message,
           unreadCount: 0,
           totalMessages: 0,
