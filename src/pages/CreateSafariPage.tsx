@@ -68,14 +68,24 @@ export default function CreateSafariPage() {
     try {
       // Validate input
       const validation = validateSafariInquiry({
-        name: `${form.fullName} ${form.lastName}`.trim(),
+        fullName: form.fullName,
+        lastName: form.lastName,
         email: form.email,
         phone: form.phone,
         countries: form.countries,
-        activities: form.activities
+        activities: form.activities,
+        travelWith: form.travelWith,
+        days: form.days,
+        budget: form.budget,
+        startDate: form.startDate,
+        adults: form.adults,
+        children: form.children,
+        rooms: form.rooms,
+        country: form.country,
+        extraInfo: form.extraInfo
       });
 
-      if (!validation.isValid) {
+      if (!validation.valid) {
         setValidationErrors(validation.errors);
         setSubmitting(false);
         return;

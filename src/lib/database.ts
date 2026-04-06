@@ -798,6 +798,9 @@ export interface UnifiedInquiry {
   contact_method?: 'email' | 'phone' | 'whatsapp'
   service_specific_data?: Record<string, any>
   safari_data?: Record<string, any>
+  // Partnership fields
+  company_name?: string
+  website?: string
   status: InquiryStatus
   priority: InquiryPriority
   response_message?: string
@@ -812,6 +815,7 @@ export interface UnifiedInquiry {
   updated_at: string
   // View fields
   service_title?: string
+  service_name?: string
   vendor_name?: string
   vendor_email?: string
   // Relations (populated via joins)

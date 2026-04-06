@@ -472,7 +472,7 @@ export default function AdminInquiries() {
                       </div>
                     )}
                   </div>
-                  {(selectedInquiry.preferred_date || selectedInquiry.number_of_guests) && (
+                  {(selectedInquiry.preferred_date || selectedInquiry.number_of_guests || selectedInquiry.contact_method) && (
                     <div className="grid grid-cols-2 gap-4 mt-3">
                       {selectedInquiry.preferred_date && (
                         <div>
@@ -492,8 +492,114 @@ export default function AdminInquiries() {
                           </p>
                         </div>
                       )}
+                      {selectedInquiry.contact_method && (
+                        <div>
+                          <p className="text-xs text-gray-500">Preferred Contact</p>
+                          <p className="text-sm text-gray-700 capitalize">{selectedInquiry.contact_method}</p>
+                        </div>
+                      )}
                     </div>
                   )}
+                  {/* Service-specific details */}
+                  {selectedInquiry.service_specific_data && Object.keys(selectedInquiry.service_specific_data).length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-purple-100">
+                      <p className="text-xs text-purple-600 mb-2">Additional Details</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {selectedInquiry.service_specific_data.roomType && (
+                          <div>
+                            <p className="text-xs text-gray-500">Room Type</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.roomType}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.specialRequests && (
+                          <div>
+                            <p className="text-xs text-gray-500">Special Requests</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.specialRequests}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.dietaryRestrictions && (
+                          <div>
+                            <p className="text-xs text-gray-500">Dietary Restrictions</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.dietaryRestrictions}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.accommodationPreference && (
+                          <div>
+                            <p className="text-xs text-gray-500">Accommodation Preference</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.accommodationPreference}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.pickupLocation && (
+                          <div>
+                            <p className="text-xs text-gray-500">Pickup Location</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.pickupLocation}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.dropoffLocation && (
+                          <div>
+                            <p className="text-xs text-gray-500">Drop-off Location</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.dropoffLocation}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.seatPreference && (
+                          <div>
+                            <p className="text-xs text-gray-500">Seat Preference</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.seatPreference}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.mealPreference && (
+                          <div>
+                            <p className="text-xs text-gray-500">Meal Preference</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.mealPreference}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.specialOccasion && (
+                          <div>
+                            <p className="text-xs text-gray-500">Special Occasion</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.specialOccasion}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.experienceLevel && (
+                          <div>
+                            <p className="text-xs text-gray-500">Experience Level</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.experienceLevel}</p>
+                          </div>
+                        )}
+                        {selectedInquiry.service_specific_data.specialRequirements && (
+                          <div>
+                            <p className="text-xs text-gray-500">Special Requirements</p>
+                            <p className="text-gray-700">{selectedInquiry.service_specific_data.specialRequirements}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Partnership Info (for partnership inquiries) */}
+              {selectedInquiry.inquiry_type === 'partnership' && (selectedInquiry.company_name || selectedInquiry.website) && (
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-xs text-blue-600 uppercase tracking-wider mb-2">Partnership Details</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {selectedInquiry.company_name && (
+                      <div>
+                        <p className="text-xs text-gray-500">Company Name</p>
+                        <p className="text-gray-700 font-medium">{selectedInquiry.company_name}</p>
+                      </div>
+                    )}
+                    {selectedInquiry.website && (
+                      <div>
+                        <p className="text-xs text-gray-500">Website</p>
+                        <a href={selectedInquiry.website.startsWith('http') ? selectedInquiry.website : `https://${selectedInquiry.website}`} 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="text-blue-600 hover:underline">
+                          {selectedInquiry.website}
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -550,6 +656,12 @@ export default function AdminInquiries() {
                       <div>
                         <p className="text-xs text-gray-500">Rooms</p>
                         <p className="text-gray-700">{selectedInquiry.safari_data.rooms}</p>
+                      </div>
+                    )}
+                    {selectedInquiry.safari_data.country && (
+                      <div>
+                        <p className="text-xs text-gray-500">Sender's Country</p>
+                        <p className="text-gray-700">{selectedInquiry.safari_data.country}</p>
                       </div>
                     )}
                   </div>

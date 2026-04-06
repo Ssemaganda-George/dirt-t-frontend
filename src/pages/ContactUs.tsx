@@ -13,6 +13,7 @@ export default function ContactUs() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     subject: '',
     message: '',
     category: 'general' as 'general' | 'booking' | 'technical' | 'partnership' | 'complaint' | 'other'
@@ -55,6 +56,7 @@ export default function ContactUs() {
         inquiry_type: 'contact',
         name: sanitizeString(formData.name),
         email: sanitizeString(formData.email),
+        phone: formData.phone ? sanitizeString(formData.phone) : undefined,
         subject: sanitizeString(formData.subject),
         message: sanitizeString(formData.message),
         category: formData.category,
@@ -70,6 +72,7 @@ export default function ContactUs() {
         setFormData({
           name: '',
           email: '',
+          phone: '',
           subject: '',
           message: '',
           category: 'general'
@@ -276,6 +279,21 @@ export default function ContactUs() {
                       placeholder="your@email.com"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2 tracking-tight antialiased">
+                    Phone Number (optional)
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 bg-white text-black placeholder-gray-500 focus:ring-2 focus:ring-black focus:border-black transition-colors"
+                    placeholder="+256 xxx xxx xxx"
+                  />
                 </div>
 
                 <div>
