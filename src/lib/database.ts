@@ -5815,31 +5815,32 @@ export async function getWalletStats(vendorId: string) {
       }
     }
 
-    // Payments for bookings that are paid but not yet completed
-    const pendingPayments = transactions.filter((t: Transaction) => t.transaction_type === 'payment' && t.status === 'completed' && t.booking_id)
-    // To distinguish, we need to check booking status for each payment
-    // We'll fetch all related bookings and map their status
+    // Use all payment transactions with a booking_id
+    const bookingPayments = transactions.filter((t: Transaction) => t.transaction_type === 'payment' && t.booking_id)
+
     let completedBookingIds: string[] = [];
     let pendingBookingIds: string[] = [];
-    if (pendingPayments.length > 0) {
-      const bookingIds = pendingPayments.map((t: Transaction) => t.booking_id).filter(Boolean) as string[];
+    if (bookingPayments.length > 0) {
+      const bookingIds = bookingPayments.map((t: Transaction) => t.booking_id).filter(Boolean) as string[];
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
         .select('id, status')
         .in('id', bookingIds);
       if (!bookingsError && bookings) {
+        // Completed = completed only
         completedBookingIds = bookings.filter((b: any) => b.status === 'completed').map((b: any) => b.id);
-        pendingBookingIds = bookings.filter((b: any) => b.status !== 'completed').map((b: any) => b.id);
+        // Pending = confirmed or accepted but not completed
+        pendingBookingIds = bookings.filter((b: any) => ['confirmed', 'accepted'].includes(b.status)).map((b: any) => b.id);
       }
     }
 
-    // Payments for completed bookings
-    const completedPayments = pendingPayments.filter((t: Transaction) => completedBookingIds.includes(t.booking_id!));
-    // Payments for bookings not yet completed
-    const notCompletedPayments = pendingPayments.filter((t: Transaction) => pendingBookingIds.includes(t.booking_id!));
+    // Payments for completed bookings (status = completed)
+    const completedPayments = bookingPayments.filter((t: Transaction) => completedBookingIds.includes(t.booking_id!));
+    // Payments for pending bookings (status = confirmed or accepted)
+    const notCompletedPayments = bookingPayments.filter((t: Transaction) => pendingBookingIds.includes(t.booking_id!));
 
     const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal');
-    const totalEarned = pendingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
+    const totalEarned = bookingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
     const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0);
     const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0);
     const completedBalance = completedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) - totalWithdrawn - pendingWithdrawals;

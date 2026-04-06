@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Transaction } from '../../types'
-import { getTransactions, requestWithdrawal, getWalletStats } from '../../lib/database'
+import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { supabase } from '../../lib/supabaseClient'
@@ -21,6 +21,7 @@ export default function VendorTransactions() {
   const [amount, setAmount] = useState<number>(0)
   const [currency, setCurrency] = useState('UGX')
   const [walletStats, setWalletStats] = useState<any>(null)
+  const [wallet, setWallet] = useState<any>(null)
   // Payout account selection
   const [payoutOptions, setPayoutOptions] = useState<any[]>([])
   const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null)
@@ -72,14 +73,16 @@ export default function VendorTransactions() {
         return
       }
 
-      const [transactions, stats] = await Promise.all([
+      const [transactions, stats, walletObj] = await Promise.all([
         getTransactions(vendorId),
-        getWalletStats(vendorId)
+        getWalletStats(vendorId),
+        getVendorWallet(vendorId)
       ])
 
       setTxs(transactions)
       setWalletStats(stats)
-      setCurrency(stats.currency)
+      setWallet(walletObj)
+      setCurrency(walletObj?.currency || stats.currency)
 
       // Apply initial filters
       applyFilters(transactions)
@@ -416,13 +419,13 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
             {activeTab === 'overview' && (
               <>
                 {/* Wallet Statistics Cards */}
-                {walletStats && (
+                {wallet && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     <div className="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.currentBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(wallet.balance, wallet.currency, selectedCurrency, selectedLanguage)}</p>
                           <p className="text-xs text-gray-600 mt-2">Available for withdrawal</p>
                         </div>
                       </div>
@@ -432,7 +435,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Completed Earnings</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.completedBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.completedBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
                           <p className="text-xs text-gray-600 mt-2">From completed bookings</p>
                         </div>
                       </div>
@@ -442,7 +445,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Pending Earnings</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.pendingBalance, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.pendingBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
                           <p className="text-xs text-gray-600 mt-2">Awaiting completion</p>
                         </div>
                       </div>
