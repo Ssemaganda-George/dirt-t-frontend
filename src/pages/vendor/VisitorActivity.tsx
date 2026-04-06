@@ -126,25 +126,33 @@ export default function VendorVisitorActivity() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-5 flex flex-col justify-between min-h-[110px]">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Visitors</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalVisitors}</p>
-          <p className="mt-1 text-xs text-gray-500">{stats.uniqueVisitors} unique</p>
+          <div>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalVisitors}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.uniqueVisitors} unique</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-5 flex flex-col justify-between min-h-[110px]">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bookings</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalBookings}</p>
-          <p className="mt-1 text-xs text-gray-500">{stats.conversionRate.toFixed(1)}% conversion</p>
+          <div>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalBookings}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.conversionRate.toFixed(1)}% conversion</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-5 flex flex-col justify-between min-h-[110px]">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Services</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalServices}</p>
-          <p className="mt-1 text-xs text-gray-500">Active listings</p>
+          <div>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalServices}</p>
+            <p className="mt-1 text-xs text-gray-500">Active listings</p>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-5 flex flex-col justify-between min-h-[110px]">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Rating</p>
-          <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.avgRating.toFixed(1)}</p>
-          <p className="mt-1 text-xs text-gray-500">{stats.reviewsThisMonth} reviews this month</p>
+          <div>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.avgRating.toFixed(1)}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.reviewsThisMonth} reviews this month</p>
+          </div>
         </div>
       </div>
 
@@ -156,41 +164,49 @@ export default function VendorVisitorActivity() {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-5">Performance Insights</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-gray-50">
+              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
                 <p className="text-xs font-medium text-gray-500">Booking Rate</p>
-                <p className="text-xl font-semibold text-gray-900 mt-1">
-                  {stats.conversionRate.toFixed(1)}%
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {stats.totalBookings} of {stats.totalVisitors} visitors
-                </p>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900 mt-1">
+                    {stats.conversionRate.toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.totalBookings} of {stats.totalVisitors} visitors
+                  </p>
+                </div>
               </div>
-              <div className="p-4 rounded-lg bg-gray-50">
+              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
                 <p className="text-xs font-medium text-gray-500">Unique Visitors</p>
-                <p className="text-xl font-semibold text-gray-900 mt-1">
-                  {stats.uniqueVisitors}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {((stats.uniqueVisitors / Math.max(stats.totalVisitors, 1)) * 100).toFixed(0)}% of total
-                </p>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900 mt-1">
+                    {stats.uniqueVisitors}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {((stats.uniqueVisitors / Math.max(stats.totalVisitors, 1)) * 100).toFixed(0)}% of total
+                  </p>
+                </div>
               </div>
-              <div className="p-4 rounded-lg bg-gray-50">
+              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
                 <p className="text-xs font-medium text-gray-500">Avg Rating</p>
-                <p className="text-xl font-semibold text-gray-900 mt-1">
-                  {stats.avgRating.toFixed(1)} / 5
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {stats.reviewsThisMonth} reviews this month
-                </p>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900 mt-1">
+                    {stats.avgRating.toFixed(1)} / 5
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.reviewsThisMonth} reviews this month
+                  </p>
+                </div>
               </div>
-              <div className="p-4 rounded-lg bg-gray-50">
+              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
                 <p className="text-xs font-medium text-gray-500">Active Services</p>
-                <p className="text-xl font-semibold text-gray-900 mt-1">
-                  {stats.totalServices}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  All services published
-                </p>
+                <div>
+                  <p className="text-xl font-semibold text-gray-900 mt-1">
+                    {stats.totalServices}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    All services published
+                  </p>
+                </div>
               </div>
             </div>
           </div>

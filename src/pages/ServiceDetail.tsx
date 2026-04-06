@@ -403,9 +403,12 @@ export default function ServiceDetail() {
     // Use profile data for logged-in users, form data for guests
     const isLoggedIn = !!(user && profile)
     const reviewerName = isLoggedIn ? profile.full_name : reviewForm.name.trim()
-    const reviewerEmail = isLoggedIn ? (user.email || profile.email) : (reviewForm.email.trim() || undefined)
+    const reviewerEmail = isLoggedIn ? (user.email || profile.email) : reviewForm.email.trim()
 
     if (!reviewerName) { setReviewError('Please enter your name'); return }
+    if (!isLoggedIn && !reviewerEmail) { setReviewError('Please enter your email'); return }
+    if (!reviewForm.city.trim()) { setReviewError('Please enter your city'); return }
+    if (!reviewForm.country.trim()) { setReviewError('Please enter your country'); return }
     if (!reviewForm.comment.trim()) { setReviewError('Please share your experience'); return }
 
     setReviewSubmitting(true)
@@ -420,8 +423,8 @@ export default function ServiceDetail() {
         kpiRatings: hasKpis ? kpiRatings : undefined,
         comment: reviewForm.comment.trim(),
         isVerifiedBooking: false,
-        reviewerCity: reviewForm.city.trim() || undefined,
-        reviewerCountry: reviewForm.country.trim() || undefined,
+        reviewerCity: reviewForm.city.trim(),
+        reviewerCountry: reviewForm.country.trim(),
       })
       setReviewSuccess(true)
       setShowReviewForm(false)
@@ -1483,7 +1486,8 @@ export default function ServiceDetail() {
   }
 
   // Shared info sections used by both mobile and desktop to keep flow uniform
-  const InfoSections = ({ isMobile = false }: { isMobile?: boolean }) => (
+  // Using a render function instead of component to prevent remounting on state changes
+  const renderInfoSections = (isMobile = false) => (
     <>
       {/* Centered Info Block Near Image */}
       <div className={isMobile ? 'bg-white border-b px-3 py-3' : 'bg-white border-b mb-8 px-4 py-6'}>
@@ -1635,7 +1639,225 @@ export default function ServiceDetail() {
             )}
           </div>
 
-          {/* Reviews list handled below in same order for mobile/desktop */}
+          {/* Success Message - shown after form submission */}
+          {reviewSuccess && !showReviewForm && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-green-800">Thank you for your review!</p>
+                  <p className="text-xs text-green-600">It will be visible after admin approval.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Review Form */}
+          {showReviewForm && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Share Your Experience</h4>
+              
+              {reviewError && (
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
+                  {reviewError}
+                </div>
+              )}
+
+              <form onSubmit={handleReviewSubmit} className="space-y-3">
+                {/* KPI Ratings for category */}
+                {getKpisForCategory(service.service_categories?.name || '').length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-700">Rate each category:</p>
+                    {getKpisForCategory(service.service_categories?.name || '').map((kpi) => {
+                      const KpiIcon = getKpiIcon(kpi.key);
+                      return (
+                      <div key={kpi.key} className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600 flex items-center gap-1">
+                          <KpiIcon className="h-3 w-3" />
+                          {kpi.label}
+                        </span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((rating) => (
+                            <button
+                              key={rating}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setKpiRatings(prev => ({ ...prev, [kpi.key]: rating }));
+                              }}
+                              onMouseEnter={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: rating }))}
+                              onMouseLeave={() => setKpiHoverRatings(prev => ({ ...prev, [kpi.key]: 0 }))}
+                              className="p-0.5 focus:outline-none"
+                            >
+                              <Star
+                                className={`h-4 w-4 ${
+                                  (kpiHoverRatings[kpi.key] || kpiRatings[kpi.key] || 0) >= rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )})}
+                  </div>
+                )}
+
+                {/* Simple rating if no KPIs */}
+                {getKpisForCategory(service.service_categories?.name || '').length === 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-1">Your Rating</p>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setReviewForm(prev => ({ ...prev, rating }));
+                          }}
+                          onMouseEnter={() => setHoverRating(rating)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className="p-1 focus:outline-none"
+                        >
+                          <Star
+                            className={`h-5 w-5 ${
+                              (hoverRating || reviewForm.rating) >= rating
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Guest name (if not logged in) */}
+                {!user && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Your Name *</label>
+                      <input
+                        type="text"
+                        value={reviewForm.name}
+                        onChange={(e) => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                        placeholder="Enter your full name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+                      <input
+                        type="email"
+                        value={reviewForm.email}
+                        onChange={(e) => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                        placeholder="your@email.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Location */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">City *</label>
+                    <CitySearchInput
+                      city={reviewForm.city}
+                      onSelect={(city, country) => setReviewForm(prev => ({ ...prev, city, country }))}
+                      placeholder="Your city"
+                      compact
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Country *</label>
+                    <input
+                      type="text"
+                      value={reviewForm.country}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, country: e.target.value }))}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                      placeholder="Your country"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Comment */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Your Review *</label>
+                  <textarea
+                    value={reviewForm.comment}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                    rows={3}
+                    placeholder="Share your experience with this service..."
+                    required
+                  />
+                </div>
+
+                {/* Submit */}
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white text-xs font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewForm(false)}
+                    className="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Reviews List */}
+          {reviews && reviews.length > 0 && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-700">Recent Reviews</p>
+              {reviews.slice(0, 5).map((review: any) => (
+                <div key={review.id} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-medium text-gray-900">{review.visitor_name || 'Anonymous'}</p>
+                      {(review.reviewer_city || review.reviewer_country) && (
+                        <p className="text-[10px] text-gray-500">
+                          {[review.reviewer_city, review.reviewer_country].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-3 w-3 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {review.comment && (
+                    <p className="text-xs text-gray-600">{review.comment}</p>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-2">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -1785,7 +2007,7 @@ export default function ServiceDetail() {
       </div>
 
       <div className="md:hidden">
-        <InfoSections isMobile />
+        {renderInfoSections(true)}
       </div>
 
       {/* Desktop layout */}
@@ -1952,7 +2174,7 @@ export default function ServiceDetail() {
               )}
 
               <div className="hidden md:block">
-                <InfoSections />
+                {renderInfoSections(false)}
               </div>
             </div>
 
