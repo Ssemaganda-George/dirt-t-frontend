@@ -70,10 +70,72 @@ const treeDataList = [
   }
 ];
 
+const fallbackGalleryItems = [
+  {
+    id: 'fallback-1',
+    images: ['/images/Sharon1.png'],
+    caption: 'Sharon planting Markhamia lutea',
+  },
+  {
+    id: 'fallback-2',
+    images: ['/images/angel.png'],
+    caption: 'George & Angel with Ashoka',
+  },
+  {
+    id: 'fallback-3',
+    images: ['/images/Sharon.png'],
+    caption: 'MIICHub team with Ficus natalensis',
+  },
+  {
+    id: 'fallback-4',
+    images: ['/images/uwa.png'],
+    caption: 'Uganda Wildlife Authority - Prunus africana',
+  },
+];
+
+const getTreeTeamImage = (tree: any) => {
+  if (Array.isArray(tree.images) && tree.images.length > 0) {
+    return tree.images[0];
+  }
+  return null;
+};
+
+const getTeamAvatarInitials = (plantedBy: string | undefined) => {
+  if (!plantedBy) return 'T';
+  const words = plantedBy.split(/[,\s]+/).filter(Boolean);
+  if (words.length === 0) return 'T';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
+
+const createTreeMarkerIcon = (tree: any) => {
+  const teamImg = getTreeTeamImage(tree);
+  const markerUrl = treeIcon.options.iconUrl;
+
+    const initials = getTeamAvatarInitials(tree.planted_by);
+    return L.divIcon({
+      html: `
+        <div style="position: relative; width: 52px; height: 58px; display: flex; align-items: center; justify-content: center;">
+          <img src="${markerUrl}" style="width: 42px; height: 42px; position: absolute; bottom: 0;" />
+          <div style="position: relative; width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.95); border-radius: 50%; overflow: hidden; background: white; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); z-index: 10; display: flex; align-items: center; justify-content: center;">
+            ${teamImg ? `<img src="${teamImg}" alt="Team" style="width: 100%; height: 100%; object-fit: cover;" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#dcfce7;color:#166534;font-weight:700;font-size:11px;">${initials}</div>`}
+          </div>
+        </div>
+      `,
+      className: '',
+      iconSize: [52, 58],
+      iconAnchor: [26, 58],
+      popupAnchor: [0, -56],
+    });
+  };
 const GeotaggingPage = () => {
   const [trackingId, setTrackingId] = useState('');
   const [allTrees, setAllTrees] = useState(treeDataList as any[]);
   const [selectedTree, setSelectedTree] = useState<any | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState<string[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerCaption, setViewerCaption] = useState('');
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([0.32032, 32.47574]);
   const [mapZoom, setMapZoom] = useState(10);
@@ -88,6 +150,7 @@ const GeotaggingPage = () => {
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [now, setNow] = useState(Date.now());
   const mapRef = useRef<L.Map | null>(null);
   const autoCenteredRef = useRef(false);
   const approvedTrees = React.useMemo(() => {
@@ -96,16 +159,39 @@ const GeotaggingPage = () => {
   }, [allTrees]);
 
   const totals = React.useMemo(() => {
-    const totalTrees = approvedTrees.reduce((sum: number, t: any) => sum + (Number(t.count) || 1), 0);
     const avgKgPerTreePerYear = 21.77;
-    const totalKg = totalTrees * avgKgPerTreePerYear;
-    const totalTonnes = totalKg / 1000;
-    return { totalTrees, totalKg, totalTonnes };
-  }, [approvedTrees]);
+    const totalTrees = approvedTrees.reduce((sum: number, t: any) => sum + (Number(t.count) || 1), 0);
+    const totalCarbonKg = approvedTrees.reduce((sum: number, t: any) => {
+      const planted = new Date(t.planted_on);
+      if (Number.isNaN(planted.getTime())) return sum;
+      const ageYears = Math.max(0, (now - planted.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      return sum + ageYears * avgKgPerTreePerYear * (Number(t.count) || 1);
+    }, 0);
+    const totalTonnes = totalCarbonKg / 1000;
+    return { totalTrees, totalCarbonKg, totalTonnes };
+  }, [approvedTrees, now]);
   const navigate = useNavigate();
 
+  const openImageViewer = (images: string[], startIndex: number, caption: string) => {
+    if (!images || images.length === 0) return;
+    setViewerImages(images);
+    setViewerIndex(Math.min(Math.max(0, startIndex), images.length - 1));
+    setViewerCaption(caption);
+    setViewerOpen(true);
+  };
 
-  
+  const closeImageViewer = () => {
+    setViewerOpen(false);
+  };
+
+  const nextViewerImage = () => {
+    setViewerIndex((current) => viewerImages.length ? (current + 1) % viewerImages.length : 0);
+  };
+
+  const prevViewerImage = () => {
+    setViewerIndex((current) => viewerImages.length ? (current - 1 + viewerImages.length) % viewerImages.length : 0);
+  };
+
 
   useEffect(() => {
     const fetchTrees = async () => {
@@ -137,6 +223,23 @@ const GeotaggingPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!viewerOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeImageViewer();
+      }
+      if (event.key === 'ArrowRight') {
+        nextViewerImage();
+      }
+      if (event.key === 'ArrowLeft') {
+        prevViewerImage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewerOpen, viewerImages.length]);
+
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -150,22 +253,57 @@ const GeotaggingPage = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatAgeText = (plantedOn: string | Date) => {
+    const planted = new Date(plantedOn);
+    if (Number.isNaN(planted.getTime())) return 'Unknown';
+    const diff = now - planted.getTime();
+    const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const years = Math.floor(totalDays / 365.25);
+    const months = Math.floor((totalDays - years * 365.25) / 30.44);
+    const days = totalDays - Math.floor(years * 365.25) - Math.floor(months * 30.44);
+    if (years > 1) return `${years} yrs ${months} mos`;
+    if (years === 1) return `${years} yr ${months} mos`;
+    if (months > 0) return `${months} mos ${days} days`;
+    return `${days} days`;
+  };
+
+  const getTreeCarbonKg = (tree: any) => {
+    const planted = new Date(tree.planted_on);
+    if (Number.isNaN(planted.getTime())) return 0;
+    const ageYears = Math.max(0, (now - planted.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+    return ageYears * 21.77 * (Number(tree.count) || 1);
+  };
+
+  const formatKg = (kg: number) => {
+    if (kg < 1) return `${kg.toFixed(2)} kg`;
+    return `${kg.toFixed(1).replace(/\.0$/, '')} kg`;
+  };
+
+  const focusTree = (tree: any) => {
+    if (!tree) return;
+    setSelectedTree(tree);
+    setMapCenter([tree.latitude, tree.longitude]);
+    setMapZoom(15);
+    try {
+      if (mapRef.current) {
+        mapRef.current.flyTo([tree.latitude, tree.longitude], 15, { animate: true });
+      }
+    } catch (e) {
+      // ignore if mapRef is not a map instance yet
+    }
+  };
+
   const handleTreeIdSearch = (id?: string) => {
     const searchId = id || trackingId.trim();
     if (!searchId) return;
     const foundTree = approvedTrees.find(tree => ((tree.external_id || tree.id) || '').toLowerCase() === searchId.toLowerCase() || (tree.id || '').toLowerCase() === searchId.toLowerCase());
     if (foundTree && mapRef.current) {
-      setSelectedTree(foundTree);
-      setMapCenter([foundTree.latitude, foundTree.longitude]);
-      setMapZoom(15);
-      // prefer flyTo on the actual Leaflet map instance for smooth, consistent panning
-      try {
-        if (mapRef.current) {
-          mapRef.current.flyTo([foundTree.latitude, foundTree.longitude], 15, { animate: true });
-        }
-      } catch (e) {
-        // ignore if mapRef is not a map instance yet
-      }
+      focusTree(foundTree);
     } else {
       setSelectedTree(null);
     }
@@ -190,7 +328,7 @@ const GeotaggingPage = () => {
           </div>
           <h1 className="text-xl md:text-3xl font-bold mb-1">Geotagging & Tree Tracking</h1>
           <div className="text-xs md:text-base text-gray-600 mb-1 text-center md:text-left">
-            <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalKg).toLocaleString()}</span> kg CO₂/year.
+            <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalCarbonKg).toLocaleString()}</span> kg CO₂ since planting.
           </div>
           <p className="text-gray-600 max-w-xs md:max-w-lg mx-auto md:mx-0 mb-1 text-xs md:text-base">
             Track, search, and celebrate your tree planting.
@@ -257,56 +395,137 @@ const GeotaggingPage = () => {
       )}
       <div className="w-full py-4 relative overflow-hidden">
         <h2 className="text-lg font-semibold mb-2 px-2">Tourists Planting Trees</h2>
-        <div className="relative" style={{ width: "100%", overflow: "hidden", height: "180px" }}>
-          <div
-              className="gallery-marquee flex space-x-6 absolute left-0 top-0"
-            style={{
-              width: "max-content",
-              animation: "gallery-marquee 30s linear infinite"
-            }}
-          >
+        <div className="relative w-full overflow-x-auto py-2">
+          <div className="flex gap-2 px-2">
             {approvedTrees.length > 0 ? (
-              // show approved trees only
-              approvedTrees.concat(approvedTrees).slice(0, Math.max(8, approvedTrees.length * 2)).map((tree: any, idx: number) => {
-                const img = Array.isArray(tree.images) && tree.images.length > 0 ? tree.images[0] : null;
+              approvedTrees.map((tree: any, idx: number) => {
+                const images = Array.isArray(tree.images) && tree.images.length > 0 ? tree.images : [];
+                const img = images[0] || null;
+                const caption = `${(tree.planted_by || '').slice(0, 32)}${tree.species ? ` — ${tree.species}` : ''}`;
                 return (
-                  <div className="flex-shrink-0 w-40" key={`tree-marquee-${tree.id || idx}-${idx}`}>
-                    {img ? (
-                      <img src={img} alt={tree.species || 'Tree image'} className="rounded-lg w-full h-28 object-cover shadow" />
+                  <div
+                    key={`tree-gallery-${tree.id || idx}-${idx}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => img && openImageViewer(images.length ? images : [img], 0, caption)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        img && openImageViewer(images.length ? images : [img], 0, caption);
+                      }
+                    }}
+                    className="group relative flex-shrink-0 w-36 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer"
+                  >
+                    {images.length > 0 ? (
+                      <div className="relative w-full h-28 overflow-hidden">
+                        <div className="absolute top-2 right-2 z-20 rounded-full bg-black/70 text-white text-[10px] font-semibold px-2 py-1">
+                          {images.length} photo{images.length > 1 ? 's' : ''}
+                        </div>
+                        <div className="flex h-full overflow-x-auto scroll-smooth snap-x snap-mandatory">
+                          {images.map((src: string, index: number) => (
+                            <img
+                              key={`tree-card-image-${tree.id || idx}-${index}`}
+                              src={src}
+                              alt={`${tree.species || 'Tree'} image ${index + 1}`}
+                              className="snap-center w-full min-w-full h-full object-cover"
+                            />
+                          ))}
+                        </div>
+                      </div>
                     ) : (
-                      <div className="rounded-lg w-full h-28 bg-gray-100 flex items-center justify-center text-xs text-gray-500">No image</div>
+                      <div className="w-full h-28 bg-gray-100 flex items-center justify-center text-xs text-gray-500">No image</div>
                     )}
-                    <div className="mt-1 text-center text-xs font-medium">{(tree.planted_by || '').slice(0,32)} {tree.species ? `— ${tree.species}` : ''}</div>
+                    <div className="p-2 pt-10 text-left leading-5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusTree(tree);
+                        }}
+                        className="block w-full text-left text-sm font-semibold text-slate-900 hover:underline"
+                      >
+                        {tree.species || 'Tree'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusTree(tree);
+                        }}
+                        className="mt-1 block w-full text-left text-[11px] text-gray-600 hover:underline"
+                      >
+                        {tree.planted_by || 'Unknown'}
+                      </button>
+                    </div>
                   </div>
                 );
               })
             ) : (
-              // fallback to static images if no approved trees available
-              [...Array(2)].flatMap((_, i) => [
-                <div className="flex-shrink-0 w-64" key={`img1-${i}`}>
-                  <img src="/images/Sharon1.png" alt="Tourist 1 planting" className="rounded-lg w-full h-48 object-cover shadow" />
-                  <div className="mt-2 text-center text-sm font-medium">Sharon planting Markhamia lutea</div>
-                </div>,
-                <div className="flex-shrink-0 w-64" key={`img2-${i}`}>
-                  <img src="/images/angel.png" alt="Tourist 2 planting" className="rounded-lg w-full h-48 object-cover shadow" />
-                  <div className="mt-2 text-center text-sm font-medium">George & Angel with Ashoka</div>
-                </div>,
-                <div className="flex-shrink-0 w-64" key={`img3-${i}`}>
-                  <img src="/images/Sharon.png" alt="Tourist 3 planting" className="rounded-lg w-full h-48 object-cover shadow" />
-                  <div className="mt-2 text-center text-sm font-medium">MIICHub team with Ficus natalensis</div>
-                </div>,
-                <div className="flex-shrink-0 w-64" key={`img4-${i}`}>
-                  <img src="/images/uwa.png" alt="Tourist 4 planting" className="rounded-lg w-full h-48 object-cover shadow" />
-                  <div className="mt-2 text-center text-sm font-medium">Uganda Wildlife Authority - Prunus africana</div>
-                </div>
-              ])
+              fallbackGalleryItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openImageViewer(item.images, 0, item.caption)}
+                  className="group flex-shrink-0 w-36 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                >
+                  <img src={item.images[0]} alt={item.caption} className="w-full h-28 object-cover" />
+                  <div className="p-2 text-[11px] md:text-xs text-gray-700 text-left leading-5">{item.caption}</div>
+                </button>
+              ))
             )}
           </div>
         </div>
-        <style>{`\n          @keyframes gallery-marquee {\n            0% { transform: translateX(0); }\n            100% { transform: translateX(-50%); }\n          }\n          .gallery-marquee:hover {\n            animation-play-state: paused;\n          }\n        `}</style>
       </div>
+      <style>{`
+        @keyframes tree-card-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(var(--tree-card-delta, -100%)); }
+        }
+      `}</style>
 
       <HeaderAndSearch />
+
+      {viewerOpen && (
+        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[calc(100vh-7rem)]">
+            <button
+              type="button"
+              className="absolute top-4 right-4 z-20 rounded-full bg-white/90 p-2 text-gray-800 hover:bg-white"
+              onClick={closeImageViewer}
+            >
+              ✕
+            </button>
+            <div className="relative bg-black flex items-center justify-center">
+              <img
+                src={viewerImages[viewerIndex]}
+                alt={viewerCaption}
+                className="max-h-[75vh] w-full object-contain bg-black"
+              />
+              {viewerImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={prevViewerImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 hover:bg-white"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextViewerImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-800 hover:bg-white"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="p-4 bg-white">
+              <p className="text-sm text-gray-600 mb-1">{viewerCaption}</p>
+              <p className="text-xs text-gray-500">{`${viewerIndex + 1} of ${viewerImages.length}`}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="w-full mb-8" style={{ height: "45vh", minHeight: 220, maxHeight: "60vh" }}>
         <MapContainer
@@ -327,13 +546,15 @@ const GeotaggingPage = () => {
             </Marker>
           )}
           {approvedTrees.map((tree) => (
-            <Marker key={tree.id} position={[tree.latitude, tree.longitude]} icon={treeIcon}>
+            <Marker key={tree.id} position={[tree.latitude, tree.longitude]} icon={createTreeMarkerIcon(tree)}>
               <Popup>
                 <div className="space-y-1">
                   <p className="font-semibold text-green-700">{tree.species}</p>
                   <p><strong>ID:</strong> {tree.external_id || tree.id}</p>
                   <p><strong>Planted By:</strong> {tree.planted_by}</p>
                   <p><strong>Planted On:</strong> {new Date(tree.planted_on).toLocaleDateString()}</p>
+                  <p><strong>Age:</strong> {formatAgeText(tree.planted_on)}</p>
+                  <p><strong>Carbon Reduced:</strong> {formatKg(getTreeCarbonKg(tree))}</p>
                   <p><strong>Location:</strong> {tree.latitude.toFixed(5)}, {tree.longitude.toFixed(5)}</p>
                 </div>
               </Popup>
@@ -343,26 +564,87 @@ const GeotaggingPage = () => {
       </div>
 
       {selectedTree && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-2xl w-11/12 md:w-2/3 lg:w-1/2 p-6 relative">
+        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 relative max-h-[calc(100vh-7rem)] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
               onClick={() => setSelectedTree(null)}
             >
               ✕
             </button>
-            <h2 className="text-2xl font-bold mb-4">{selectedTree.species}</h2>
-            <p><strong>ID:</strong> {selectedTree.external_id || selectedTree.id}</p>
-            <p><strong>Planted By:</strong> {selectedTree.planted_by}</p>
-            <p><strong>Planted On:</strong> {new Date(selectedTree.planted_on).toLocaleDateString()}</p>
-            <p><strong>Location:</strong> {selectedTree.latitude}, {selectedTree.longitude}</p>
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+              <div className="flex items-center justify-center w-20 h-20 rounded-3xl bg-green-100 text-green-700 shadow-inner">
+                <TreePine className="w-10 h-10" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">{selectedTree.species}</h2>
+                {Array.isArray(selectedTree.images) && selectedTree.images.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openImageViewer(selectedTree.images, 0, `${selectedTree.species} album`)}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-600 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
+                  >
+                    View image album
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-4 text-sm text-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 shadow-sm bg-gray-100 flex items-center justify-center">
+                  {getTreeTeamImage(selectedTree) ? (
+                    <img
+                      src={getTreeTeamImage(selectedTree) || ''}
+                      alt={`${selectedTree.planted_by} team`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-emerald-100 text-emerald-700 font-semibold flex items-center justify-center text-base">
+                      {getTeamAvatarInitials(selectedTree.planted_by)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Planting team</p>
+                  <p className="font-semibold">{selectedTree.planted_by}</p>
+                </div>
+              </div>
+              {Array.isArray(selectedTree.images) && selectedTree.images.length > 0 ? (
+                <div className="flex gap-3 overflow-x-auto pb-2 touch-pan-x">
+                  {selectedTree.images.map((src: string, idx: number) => (
+                    <button
+                      key={`selected-tree-image-${idx}`}
+                      type="button"
+                      onClick={() => openImageViewer(selectedTree.images, idx, `${selectedTree.species} album`)}
+                      className="flex-none min-w-[220px] overflow-hidden rounded-xl shadow-sm"
+                    >
+                      <img
+                        src={src}
+                        alt={`${selectedTree.species} image ${idx + 1}`}
+                        className="w-full h-40 sm:h-48 object-cover transition hover:scale-105"
+                      />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-gray-100 h-40 flex items-center justify-center text-gray-500">
+                  No photos available for this tree yet.
+                </div>
+              )}
+              <p><strong>ID:</strong> {selectedTree.external_id || selectedTree.id}</p>
+              <p><strong>Planted By:</strong> {selectedTree.planted_by}</p>
+              <p><strong>Planted On:</strong> {new Date(selectedTree.planted_on).toLocaleDateString()}</p>
+              <p><strong>Age:</strong> {formatAgeText(selectedTree.planted_on)}</p>
+              <p><strong>Carbon Reduced:</strong> {formatKg(getTreeCarbonKg(selectedTree))}</p>
+              <p><strong>Location:</strong> {selectedTree.latitude}, {selectedTree.longitude}</p>
+            </div>
           </div>
         </div>
       )}
 
       {showAddTree && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-2xl w-11/12 md:w-2/3 lg:w-1/2 p-6 relative max-h-[90vh] overflow-auto">
+        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 relative max-h-[calc(100vh-7rem)] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
               onClick={() => setShowAddTree(false)}
