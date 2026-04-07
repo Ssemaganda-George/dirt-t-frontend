@@ -6643,12 +6643,14 @@ export async function getAllVendorsWithActivity() {
         try {
           const stats = await getVendorActivityStats(vendor.id)
           console.log(`Stats for vendor ${vendor.business_name || vendor.profile_full_name}:`, stats)
+          const cleanedStats: any = stats ? { ...stats } : {}
+          delete cleanedStats.vendorId
           return {
             vendorId: vendor.id,
             vendorName: vendor.business_name || vendor.profile_full_name || 'Unknown Vendor',
             vendorEmail: vendor.business_email || vendor.profile_email || 'Unknown',
             vendorAvatar: vendor.avatar_url || null,
-            ...stats
+            ...cleanedStats
           }
         } catch (error) {
           console.error(`Error getting stats for vendor ${vendor.id}:`, error)
