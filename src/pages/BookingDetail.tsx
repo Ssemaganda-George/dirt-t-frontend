@@ -16,6 +16,7 @@ export default function BookingDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [isImageViewOpen, setIsImageViewOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [chatMessage, setChatMessage] = useState('')
   const [sendingChat, setSendingChat] = useState(false)
@@ -269,9 +270,35 @@ export default function BookingDetail() {
                 <div className="flex-1">
                   <div className="p-4 lg:p-6">
                     <div className="relative">
-                      <img loading="lazy" src={booking.services?.images?.[selectedImageIndex]} alt={booking.services?.title} className="w-full h-96 object-cover rounded-md" />
+                      {booking.services?.images?.length > 1 ? (
+                        <div className="lg:hidden overflow-x-auto snap-x snap-mandatory -mx-3 px-3 py-2">
+                          <div className="flex gap-2">
+                            {booking.services.images.map((src: string, idx: number) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedImageIndex(idx)
+                                  setIsImageViewOpen(true)
+                                }}
+                                className={`min-w-[82%] sm:min-w-[80%] snap-center rounded-2xl overflow-hidden border ${idx === selectedImageIndex ? 'border-blue-500 shadow-sm' : 'border-gray-200'} focus:outline-none`}
+                              >
+                                <img loading="lazy" src={src} alt={`${booking.services?.title} image ${idx + 1}`} className="w-full h-[320px] sm:h-96 object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => setIsImageViewOpen(true)} className="w-full rounded-md overflow-hidden">
+                          <img loading="lazy" src={booking.services?.images?.[selectedImageIndex]} alt={booking.services?.title} className="w-full h-96 object-cover" />
+                        </button>
+                      )}
+
                       {booking.services?.images?.length > 1 && (
                         <>
+                          <button type="button" onClick={() => setIsImageViewOpen(true)} className="hidden lg:block w-full rounded-md overflow-hidden">
+                            <img loading="lazy" src={booking.services.images[selectedImageIndex]} alt={booking.services?.title} className="w-full h-96 object-cover" />
+                          </button>
                           <button aria-label="Prev" onClick={() => setSelectedImageIndex(i => (i - 1 + booking.services.images.length) % booking.services.images.length)} className="hidden lg:flex items-center justify-center absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 text-white p-2 rounded-full">
                             <ChevronLeft className="h-5 w-5" />
                           </button>
@@ -284,7 +311,7 @@ export default function BookingDetail() {
 
                     {/* Mobile thumbnails */}
                     {booking.services?.images && booking.services.images.length > 1 && (
-                      <div className="mt-3 lg:hidden">
+                      <div className="mt-3 hidden lg:block">
                         <div className="flex space-x-2 overflow-x-auto py-1">
                           {booking.services.images.map((src: string, idx: number) => (
                             <button key={idx} onClick={() => setSelectedImageIndex(idx)} className={`flex-shrink-0 w-28 h-16 rounded overflow-hidden border ${idx === selectedImageIndex ? 'border-blue-500' : 'border-gray-200'}`}>
@@ -408,6 +435,31 @@ export default function BookingDetail() {
       <BookingDetailChat booking={booking} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} chatMessage={chatMessage} setChatMessage={setChatMessage} sendingChat={sendingChat} onSend={handleSendChat} chatError={chatError} />
       <BookingEditModal booking={booking} isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} guests={editGuests} setGuests={setEditGuests} special={editSpecial} setSpecial={setEditSpecial} onSave={submitEdit} saving={actionLoading} />
       <BookingReviewModal booking={booking} isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} reviewRatings={reviewRatings} setReviewRatings={setReviewRatings} reviewText={reviewText} setReviewText={setReviewText} onSubmit={submitReview} submitting={actionLoading} />
+      <ImageLightbox isOpen={isImageViewOpen} onClose={() => setIsImageViewOpen(false)} image={booking.services?.images?.[selectedImageIndex]} prev={() => setSelectedImageIndex(i => (i - 1 + booking.services.images.length) % booking.services.images.length)} next={() => setSelectedImageIndex(i => (i + 1) % booking.services.images.length)} hasMultiple={booking.services?.images?.length > 1} />
+    </div>
+  )
+}
+
+export function ImageLightbox({ isOpen, onClose, image, prev, next, hasMultiple }: any) {
+  if (!isOpen || !image) return null
+  return (
+    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
+      <div className="relative w-full max-w-4xl rounded-2xl overflow-hidden bg-black shadow-xl">
+        <button type="button" onClick={onClose} className="absolute right-4 top-4 z-20 rounded-full bg-black/50 p-2 text-white hover:bg-black/70">
+          Close
+        </button>
+        {hasMultiple && (
+          <>
+            <button type="button" onClick={prev} className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={next} className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+        <img src={image} alt="Full view" className="h-[80vh] w-full object-contain bg-black" />
+      </div>
     </div>
   )
 }
