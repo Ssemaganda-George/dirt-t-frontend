@@ -28,7 +28,13 @@ export default function BookingDetail() {
   const [editSpecial, setEditSpecial] = useState<string | undefined>(undefined)
 
   // Review state
-  const [rating, setRating] = useState<number>(5)
+  const [reviewRatings, setReviewRatings] = useState<Record<string, number>>({
+    vehicleCondition: 5,
+    punctuality: 5,
+    driverService: 5,
+    comfort: 5,
+    value: 5,
+  })
   const [reviewText, setReviewText] = useState<string>('')
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -114,6 +120,9 @@ export default function BookingDetail() {
 
 
   const openEdit = () => {
+    if (booking?.status === 'completed') {
+      return alert('Completed bookings cannot be edited.')
+    }
     setEditGuests(booking?.guests)
     setEditSpecial(booking?.special_requests || '')
     setIsEditOpen(true)
@@ -142,13 +151,18 @@ export default function BookingDetail() {
     if (!booking || !user) return alert('You must be logged in to submit a review')
     try {
       setActionLoading(true)
+      const averageRating = Math.round(
+        Object.values(reviewRatings).reduce((sum, value) => sum + value, 0) /
+        Object.values(reviewRatings).length
+      )
+
       // try to insert into reviews table if it exists; otherwise fallback to alert
       const payload = {
         booking_id: booking.id,
         service_id: booking.service_id,
         vendor_id: booking.vendor_id,
         tourist_id: user.id,
-        rating,
+        rating: averageRating,
         comment: reviewText,
         created_at: new Date().toISOString()
       }
@@ -305,7 +319,11 @@ export default function BookingDetail() {
               {/* Quick actions: edit and (if completed) review */}
               <div className="mt-4">
                 <div className="flex gap-2">
-                  <button onClick={openEdit} className="flex-1 inline-flex items-center gap-2 justify-center px-3 py-2 rounded-md border bg-white border-gray-200">
+                  <button
+                    onClick={openEdit}
+                    disabled={booking.status === 'completed'}
+                    className={`flex-1 inline-flex items-center gap-2 justify-center px-3 py-2 rounded-md border ${booking.status === 'completed' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200'}`}
+                  >
                     <Edit3 className="h-4 w-4" />
                     <span className="text-sm">Edit</span>
                   </button>
@@ -389,7 +407,7 @@ export default function BookingDetail() {
       </div>
       <BookingDetailChat booking={booking} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} chatMessage={chatMessage} setChatMessage={setChatMessage} sendingChat={sendingChat} onSend={handleSendChat} chatError={chatError} />
       <BookingEditModal booking={booking} isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} guests={editGuests} setGuests={setEditGuests} special={editSpecial} setSpecial={setEditSpecial} onSave={submitEdit} saving={actionLoading} />
-      <BookingReviewModal booking={booking} isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} rating={rating} setRating={setRating} reviewText={reviewText} setReviewText={setReviewText} onSubmit={submitReview} submitting={actionLoading} />
+      <BookingReviewModal booking={booking} isOpen={isReviewOpen} onClose={() => setIsReviewOpen(false)} reviewRatings={reviewRatings} setReviewRatings={setReviewRatings} reviewText={reviewText} setReviewText={setReviewText} onSubmit={submitReview} submitting={actionLoading} />
     </div>
   )
 }
@@ -460,29 +478,98 @@ export function BookingEditModal({ isOpen, onClose, guests, setGuests, special, 
   )
 }
 
-export function BookingReviewModal({ isOpen, onClose, rating, setRating, reviewText, setReviewText, onSubmit, submitting }: any) {
+export function BookingReviewModal({ isOpen, onClose, reviewRatings, setReviewRatings, reviewText, setReviewText, onSubmit, submitting }: any) {
   if (!isOpen) return null
+
+  const categories: Record<string, string> = {
+    vehicleCondition: 'Vehicle Condition',
+    punctuality: 'Punctuality',
+    driverService: 'Driver / Service',
+    comfort: 'Comfort',
+    value: 'Value',
+  }
+
+  const overallRating = Math.round(
+    Object.values(reviewRatings).reduce((sum: number, value: number) => sum + value, 0) /
+    Object.values(reviewRatings).length
+  )
+
+  const ratingLabel = (value: number) => {
+    switch (value) {
+      case 5:
+        return 'Excellent'
+      case 4:
+        return 'Very good'
+      case 3:
+        return 'Good'
+      case 2:
+        return 'Fair'
+      default:
+        return 'Poor'
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md p-6 shadow-lg">
-        <div className="flex items-start justify-between">
-          <h3 className="text-lg font-semibold">Rate & Review</h3>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-24">
+      <div className="bg-white rounded-xl w-full max-w-xl shadow-lg overflow-hidden h-[calc(100vh-6rem)] flex flex-col">
+        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h3 className="text-lg font-semibold">Share your experience</h3>
+            <p className="text-sm text-gray-600 mt-1">Rate the service in a few easy categories.</p>
+          </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">Close</button>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <label className="block text-sm text-gray-700">Rating</label>
-          <select value={rating} onChange={(e) => setRating(Number(e.target.value))} className="w-full border rounded px-3 py-2">
-            {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} star{n>1 ? 's' : ''}</option>)}
-          </select>
+        <div className="overflow-y-auto px-6 py-5 space-y-5 flex-1">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between text-sm font-medium text-gray-700">
+              <span>Overall rating</span>
+              <span>{overallRating} / 5</span>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">Average of category ratings.</p>
+          </div>
 
-          <label className="block text-sm text-gray-700">Your review</label>
-          <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} className="w-full border rounded px-3 py-2 min-h-[120px]" />
+          <div className="grid grid-cols-1 gap-4">
+            {Object.entries(categories).map(([key, label]) => (
+              <div key={key} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-center justify-between text-sm font-medium text-gray-700">
+                  <span>{label}</span>
+                  <span className="text-right text-xs text-gray-500">
+                    {reviewRatings[key]} / 5
+                    <span className="block text-[10px] uppercase tracking-[0.18em] text-gray-400">{ratingLabel(reviewRatings[key])}</span>
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <select
+                    value={reviewRatings[key]}
+                    onChange={(e) => setReviewRatings((prev: Record<string, number>) => ({ ...prev, [key]: Number(e.target.value) }))}
+                    className="w-full border rounded px-3 py-2"
+                  >
+                    {[5, 4, 3, 2, 1].map((n) => (
+                      <option key={n} value={n}>{n} star{n > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-gray-200 p-4">
+            <label className="block text-sm font-medium text-gray-700">Your review</label>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              className="w-full mt-3 border rounded px-3 py-2 min-h-[140px]"
+              placeholder="Tell us what went well and what could be improved..."
+            />
+          </div>
         </div>
 
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
           <button onClick={onClose} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
-          <button onClick={onSubmit} disabled={submitting} className={`px-4 py-2 rounded ${submitting ? 'bg-gray-300 text-gray-700' : 'bg-yellow-500 text-white'}`}>Submit Review</button>
+          <button onClick={onSubmit} disabled={submitting} className={`px-4 py-2 rounded ${submitting ? 'bg-gray-300 text-gray-700' : 'bg-yellow-500 text-white'}`}>
+            Submit Review
+          </button>
         </div>
       </div>
     </div>

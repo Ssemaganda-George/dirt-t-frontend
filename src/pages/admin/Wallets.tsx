@@ -131,10 +131,11 @@ export function Transactions() {
   const calculateStats = (): WalletStats => {
     const registeredVendorsCount = allVendors.length;
     const approvedVendorsCount = allVendors.filter(v => v.status === 'approved').length;
-    const vendorWalletRowsCount = vendorWallets.length;
-    const walletsLinkedCount = vendorWallets.filter(w => w.vendors != null).length;
-    const orphanWalletsCount = vendorWallets.filter(w => w.vendors == null).length;
-    const totalBalance = vendorWallets.reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
+    const linkedVendorWallets = vendorWallets.filter(w => w.vendors != null);
+    const vendorWalletRowsCount = linkedVendorWallets.length;
+    const walletsLinkedCount = linkedVendorWallets.length;
+    const orphanWalletsCount = 0;
+    const totalBalance = linkedVendorWallets.reduce((sum, w) => sum + (Number(w.balance) || 0), 0);
     const bookingCountsAsPaid = (b: (typeof allBookings)[0]) => {
       const st = (b as { status?: string }).status;
       const paid = (b as { payment_status?: string }).payment_status;
@@ -169,6 +170,7 @@ export function Transactions() {
     };
   };
 
+  const linkedVendorWallets = vendorWallets.filter(w => w.vendors != null);
   const stats = calculateStats();
 
   // Filter to show only pending withdrawals that need admin approval
@@ -269,12 +271,7 @@ export function Transactions() {
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-indigo-500 p-4 hover:shadow-sm transition-all">
               <p className="text-xs font-medium text-gray-500">Vendor wallets</p>
               <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.vendorWalletRowsCount}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                {stats.walletsLinkedCount} linked ·{' '}
-                <span className={stats.orphanWalletsCount > 0 ? 'text-amber-700 font-medium' : ''}>
-                  {stats.orphanWalletsCount} orphan{stats.orphanWalletsCount === 1 ? '' : 's'}
-                </span>
-              </p>
+              <p className="text-xs text-gray-400 mt-1">{stats.walletsLinkedCount} linked</p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
@@ -323,9 +320,7 @@ export function Transactions() {
             <div className="border-b border-gray-100 px-5 py-3">
               <h3 className="text-sm font-semibold text-gray-900">Wallets by balance</h3>
               <p className="text-xs text-gray-500 mt-1">
-                Vendor directory: {stats.registeredVendorsCount} registered ({stats.approvedVendorsCount} approved).
-                Ledger: {stats.vendorWalletRowsCount} wallet row{stats.vendorWalletRowsCount === 1 ? '' : 's'} — {stats.orphanWalletsCount} missing vendor row
-                {stats.orphanWalletsCount === 1 ? '' : 's'} in DB.
+                Vendor directory: {stats.registeredVendorsCount} registered ({stats.approvedVendorsCount} approved). Ledger: {stats.vendorWalletRowsCount} wallet row{stats.vendorWalletRowsCount === 1 ? '' : 's'}.
               </p>
             </div>
             <div className="p-5">
@@ -341,20 +336,14 @@ export function Transactions() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {vendorWallets
+                    {linkedVendorWallets
                       .slice()
-                      .sort((a, b) => {
-                        const aOk = a.vendors != null ? 1 : 0;
-                        const bOk = b.vendors != null ? 1 : 0;
-                        if (bOk !== aOk) return bOk - aOk;
-                        return Number(b.balance) - Number(a.balance);
-                      })
+                      .sort((a, b) => Number(b.balance) - Number(a.balance))
                       .slice(0, 10)
                       .map((wallet) => {
                         const name = wallet.vendors?.business_name || wallet.vendors?.profiles?.full_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown');
                         const email = wallet.vendors?.business_email || wallet.vendors?.profiles?.email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—');
-                        // If vendor metadata is missing (join returned null), mark as 'missing'
-                        const status = wallet.vendors?.status ?? (wallet.vendors === null ? 'missing' : 'unknown');
+                        const status = wallet.vendors?.status || 'unknown';
                         const joinedAt = wallet.vendors?.created_at || wallet.created_at || null;
                         const balance = formatCurrencyWithConversion(wallet.balance, wallet.currency || 'UGX', selectedCurrency || wallet.currency || 'UGX', selectedLanguage || 'en-US');
 
@@ -436,14 +425,9 @@ export function Transactions() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {vendorWallets
+                  {linkedVendorWallets
                     .slice()
-                    .sort((a, b) => {
-                      const aOk = a.vendors != null ? 1 : 0;
-                      const bOk = b.vendors != null ? 1 : 0;
-                      if (bOk !== aOk) return bOk - aOk;
-                      return Number(b.balance) - Number(a.balance);
-                    })
+                    .sort((a, b) => Number(b.balance) - Number(a.balance))
                     .map((wallet) => {
                                     const vendorTransactions = allTransactions.filter(t => t.vendor_id === wallet.vendor_id);
                     return (

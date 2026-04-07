@@ -2059,41 +2059,47 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
         p_reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}`
       });
 
-      if (paymentError) {
-        console.error('Error processing ticket payment with commission:', paymentError);
-        // Fallback to simple transaction
-        try {
-          await addTransaction({ 
-            booking_id: undefined as any, 
-            vendor_id: payment.vendor_id, 
-            tourist_id: payment.tourist_id, 
-            amount: payment.amount, 
-            currency: payment.currency, 
-            transaction_type: 'payment', 
-            status: 'completed', 
-            payment_method: payment.payment_method as any, 
-            reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
-          })
-        } catch (txErr) {
-          console.warn('Failed to add fallback transaction for ticket order:', txErr)
-        }
-      } else if (!paymentResult?.success) {
-        console.error('Failed to process ticket payment with commission:', paymentResult?.error);
-        // Fallback to simple transaction
-        try {
-          await addTransaction({ 
-            booking_id: undefined as any, 
-            vendor_id: payment.vendor_id, 
-            tourist_id: payment.tourist_id, 
-            amount: payment.amount, 
-            currency: payment.currency, 
-            transaction_type: 'payment', 
-            status: 'completed', 
-            payment_method: payment.payment_method as any, 
-            reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
-          })
-        } catch (txErr) {
-          console.warn('Failed to add fallback transaction for ticket order:', txErr)
+      if (paymentError || !paymentResult?.success) {
+        console.error('Error processing ticket payment with commission:', paymentError || paymentResult?.error);
+
+        if (adminId && commissionAmount > 0) {
+          // Preserve commission semantics even when RPC fails by creating the transaction and crediting the two wallets manually.
+          try {
+            const transactionId = await addTransaction({ 
+              booking_id: undefined as any, 
+              vendor_id: payment.vendor_id, 
+              tourist_id: payment.tourist_id, 
+              amount: payment.amount, 
+              currency: payment.currency, 
+              transaction_type: 'payment', 
+              status: 'completed', 
+              payment_method: payment.payment_method as any, 
+              reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+            })
+
+            const vendorAmount = payment.amount - commissionAmount
+            await creditWallet(payment.vendor_id, vendorAmount, payment.currency)
+            await creditWallet(adminId, commissionAmount, payment.currency)
+            console.log('Fallback ticket payment processed with commission split:', { transactionId, vendorAmount, commissionAmount })
+          } catch (txErr) {
+            console.warn('Failed to add fallback commission-aware ticket transaction:', txErr)
+          }
+        } else {
+          try {
+            await addTransaction({ 
+              booking_id: undefined as any, 
+              vendor_id: payment.vendor_id, 
+              tourist_id: payment.tourist_id, 
+              amount: payment.amount, 
+              currency: payment.currency, 
+              transaction_type: 'payment', 
+              status: 'completed', 
+              payment_method: payment.payment_method as any, 
+              reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+            })
+          } catch (txErr) {
+            console.warn('Failed to add fallback transaction for ticket order:', txErr)
+          }
         }
       } else {
         console.log('Successfully processed ticket payment with commission:', {
@@ -3013,22 +3019,49 @@ export async function createBooking(
       if (txCheckError && txCheckError.code !== 'PGRST116') {
         console.warn('Error checking existing payment transaction after createBooking:', txCheckError)
       } else if (!existingTx) {
-        const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
-          p_vendor_id: finalBooking.vendor_id,
-          p_amount: finalBooking.total_amount,
-          p_booking_id: finalBooking.id || null,
-          p_tourist_id: finalBooking.tourist_id || null,
-          p_currency: finalBooking.currency || 'UGX',
-          p_payment_method: 'card',
-          p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
-        }) as any
-
-        if (paymentError) throw paymentError
-        if (!paymentResult?.success) throw new Error(paymentResult?.error || 'Failed to process payment')
-
         const adminId = await getAdminProfileId()
+        let commissionAmount = 0
+        try {
+          commissionAmount = Number(finalBooking.commission_amount) || 0
+          if (!commissionAmount && finalBooking.commission_rate_at_booking) {
+            commissionAmount = Math.round(Number(finalBooking.total_amount || 0) * Number(finalBooking.commission_rate_at_booking) * 100) / 100
+          }
+        } catch (err) {
+          commissionAmount = 0
+        }
+
         if (adminId) {
-          await creditWallet(adminId, finalBooking.total_amount, finalBooking.currency)
+          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
+            p_vendor_id: finalBooking.vendor_id,
+            p_total_amount: finalBooking.total_amount,
+            p_commission_amount: commissionAmount,
+            p_admin_id: adminId,
+            p_booking_id: finalBooking.id || null,
+            p_tourist_id: finalBooking.tourist_id || null,
+            p_currency: finalBooking.currency || 'UGX',
+            p_payment_method: 'card',
+            p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
+          }) as any
+
+          if (paymentError) {
+            throw paymentError
+          }
+          if (!paymentResult?.success) {
+            throw new Error(paymentResult?.error || 'Failed to process payment with commission')
+          }
+        } else {
+          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+            p_vendor_id: finalBooking.vendor_id,
+            p_amount: finalBooking.total_amount,
+            p_booking_id: finalBooking.id || null,
+            p_tourist_id: finalBooking.tourist_id || null,
+            p_currency: finalBooking.currency || 'UGX',
+            p_payment_method: 'card',
+            p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
+          }) as any
+
+          if (paymentError) throw paymentError
+          if (!paymentResult?.success) throw new Error(paymentResult?.error || 'Failed to process payment')
         }
       }
     }
@@ -4424,6 +4457,10 @@ export async function getVendorTransactions(vendorId: string): Promise<Transacti
       *,
       bookings (
         id,
+        status,
+        payment_status,
+        commission_amount,
+        commission_rate_at_booking,
         services (
           title
         )
@@ -5811,10 +5848,12 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
             paymentError = err
           }
 
+          let rpcFailed = false
           if (paymentError) {
             const errMsg = String(paymentError?.message || paymentError)
             if (errMsg.includes('process_payment_with_commission') || errMsg.includes('Could not find the function public.process_payment_with_commission')) {
-              console.warn('process_payment_with_commission missing, falling back to process_payment_atomic:', errMsg)
+              console.warn('process_payment_with_commission missing, falling back to fallback flow:', errMsg)
+              rpcFailed = true
             } else {
               throw paymentError
             }
@@ -5823,21 +5862,45 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
           if (paymentResult?.success) {
             // succeeded with commission-aware RPC
           } else {
-            const { data: fallbackResult, error: fallbackError } = await supabase.rpc('process_payment_atomic', {
-              p_vendor_id: b.vendor_id,
-              p_amount: b.total_amount,
-              p_booking_id: b.id,
-              p_tourist_id: b.tourist_id || null,
-              p_currency: b.currency || 'UGX',
-              p_payment_method: 'card',
-              p_reference: reference
-            }) as any
+            if (rpcFailed) {
+              try {
+                const transactionId = await addTransaction({
+                  booking_id: b.id,
+                  vendor_id: b.vendor_id,
+                  tourist_id: b.tourist_id || null,
+                  amount: b.total_amount,
+                  currency: b.currency || 'UGX',
+                  transaction_type: 'payment',
+                  status: 'completed',
+                  payment_method: 'card',
+                  reference
+                })
 
-            if (fallbackError) {
-              throw fallbackError
-            }
-            if (!fallbackResult?.success) {
-              throw new Error(fallbackResult?.error || 'Failed to process payment during reconciliation fallback')
+                const vendorAmount = b.total_amount - commissionAmount
+                await creditWallet(b.vendor_id, vendorAmount, b.currency || 'UGX')
+                await creditWallet(adminId, commissionAmount, b.currency || 'UGX')
+                console.log('Reconciliation fallback processed with commission split for booking', b.id)
+              } catch (fallbackErr) {
+                console.error('Reconciliation fallback failed for booking', b.id, fallbackErr)
+                throw fallbackErr
+              }
+            } else {
+              const { data: fallbackResult, error: fallbackError } = await supabase.rpc('process_payment_atomic', {
+                p_vendor_id: b.vendor_id,
+                p_amount: b.total_amount,
+                p_booking_id: b.id,
+                p_tourist_id: b.tourist_id || null,
+                p_currency: b.currency || 'UGX',
+                p_payment_method: 'card',
+                p_reference: reference
+              }) as any
+
+              if (fallbackError) {
+                throw fallbackError
+              }
+              if (!fallbackResult?.success) {
+                throw new Error(fallbackResult?.error || 'Failed to process payment during reconciliation fallback')
+              }
             }
           }
         } else {
@@ -5901,6 +5964,7 @@ export async function getWalletStats(vendorId: string) {
     await reconcileMissingPaymentTransactions(vendorId)
 
     const transactions = await getTransactions(vendorId)
+    const wallet = await getVendorWallet(vendorId)
 
     // If no transactions (table doesn't exist or no data), return default stats
     if (!transactions || transactions.length === 0) {
@@ -5908,8 +5972,8 @@ export async function getWalletStats(vendorId: string) {
         totalEarned: 0,
         totalWithdrawn: 0,
         pendingWithdrawals: 0,
-        currentBalance: 0,
-        currency: 'UGX',
+        currentBalance: wallet?.balance ?? 0,
+        currency: wallet?.currency || 'UGX',
         totalTransactions: 0,
         completedPayments: 0,
         completedWithdrawals: 0,
@@ -5967,13 +6031,13 @@ export async function getWalletStats(vendorId: string) {
     }
 
     const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal')
-    const totalEarned = bookingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + otherPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
     const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0)
     const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0)
-    const completedBalance = completedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + otherPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
-    const pendingBalance = pendingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + unknownStatusPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
-    const currentBalance = totalEarned - totalWithdrawn - pendingWithdrawals
-    const currency = transactions[0]?.currency || 'UGX'
+    const currentBalance = (wallet?.balance ?? 0) - pendingWithdrawals
+    const currency = wallet?.currency || transactions[0]?.currency || 'UGX'
+    const totalEarned = currentBalance + totalWithdrawn + pendingWithdrawals
+    const completedBalance = currentBalance + pendingWithdrawals
+    const pendingBalance = pendingWithdrawals
 
     return {
       totalEarned,
