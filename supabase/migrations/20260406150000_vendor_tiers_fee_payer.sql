@@ -130,11 +130,12 @@ BEGIN
   END IF;
 
   IF p_total_amount > 0 THEN
-    v_commission_rate := COALESCE(v_commission_amount, 0) / p_total_amount;
+    v_commission_rate := ROUND(COALESCE(v_commission_amount, 0) / p_total_amount, 2);
   ELSE
     v_commission_rate := 0;
   END IF;
 
+  v_commission_amount := ROUND(p_total_amount * v_commission_rate, 2);
   v_vendor_payout_amount := p_total_amount - v_commission_amount;
 
   INSERT INTO public.bookings (
