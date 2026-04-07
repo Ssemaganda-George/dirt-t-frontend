@@ -288,17 +288,6 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const slideInterval = useRef<NodeJS.Timeout | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(() => {
-    try {
-      if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
-      const mobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches
-      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      return !(mobileUA || coarsePointer || prefersReducedMotion)
-    } catch (e) {
-      return false
-    }
-  })
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
@@ -369,7 +358,6 @@ export default function Home() {
       try {
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         if (prefersReducedMotion) return
-        setAutoPlayEnabled(true)
         // Try to play any current video after a short delay to ensure DOM is ready
         setTimeout(() => {
           if (videoRef.current) {
@@ -485,8 +473,6 @@ export default function Home() {
 
   // Periodic retry for autoplay if it failed initially
   useEffect(() => {
-    if (!autoPlayEnabled) return
-    
     const retryInterval = setInterval(() => {
       const currentMedia = heroMediaList[currentSlide]
       if (currentMedia?.type === 'video' && videoRef.current && videoRef.current.paused) {
@@ -500,7 +486,7 @@ export default function Home() {
     }, 2000) // Retry every 2 seconds
     
     return () => clearInterval(retryInterval)
-  }, [currentSlide, heroMediaList, autoPlayEnabled])
+  }, [currentSlide, heroMediaList])
 
   // Ensure video plays when slide changes to video
   useEffect(() => {
