@@ -19,16 +19,13 @@ type WalletStats = {
   registeredVendorsCount: number;
   approvedVendorsCount: number;
   walletsLinkedCount: number;
+  vendorWalletRowsCount: number;
   orphanWalletsCount: number;
   totalBalance: number;
-  vendorWalletRowsCount: number;
-  totalBookingSales: number;
-  totalPendingBookings: number;
-  totalCompletedBookings: number;
-  totalCancelledBookings: number;
-  totalFailedBookings: number;
-  failedTransactionsAmount: number;
-  refundedTransactionsAmount: number;
+  totalPlatformFeesFromBookings: number;
+  totalWithdrawn: number;
+  pendingWithdrawals: number;
+  recentTransactions: number;
 };
 
 function walletsPlatformFeeCell(

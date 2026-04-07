@@ -5864,7 +5864,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
           } else {
             if (rpcFailed) {
               try {
-                const transactionId = await addTransaction({
+                await addTransaction({
                   booking_id: b.id,
                   vendor_id: b.vendor_id,
                   tourist_id: b.tourist_id || null,
@@ -5987,12 +5987,6 @@ export async function getWalletStats(vendorId: string) {
       t.transaction_type === 'payment' &&
       t.booking_id &&
       t.status === 'completed'
-    )
-
-    const otherPayments = transactions.filter((t: Transaction) =>
-      t.transaction_type === 'payment' &&
-      t.status === 'completed' &&
-      !t.booking_id
     )
 
     const bookingIds = Array.from(new Set(bookingPayments.map((t: Transaction) => t.booking_id as string)))
