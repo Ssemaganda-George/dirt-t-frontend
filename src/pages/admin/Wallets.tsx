@@ -15,6 +15,22 @@ import {
 } from '../../lib/database';
 import type { Transaction, Vendor } from '../../lib/database';
 
+type WalletStats = {
+  registeredVendorsCount: number;
+  approvedVendorsCount: number;
+  walletsLinkedCount: number;
+  orphanWalletsCount: number;
+  totalBalance: number;
+  vendorWalletRowsCount: number;
+  totalBookingSales: number;
+  totalPendingBookings: number;
+  totalCompletedBookings: number;
+  totalCancelledBookings: number;
+  totalFailedBookings: number;
+  failedTransactionsAmount: number;
+  refundedTransactionsAmount: number;
+};
+
 function walletsPlatformFeeCell(
   tx: { transaction_type: string; booking_id?: string | null; bookings?: unknown },
   serviceCurrency: string,

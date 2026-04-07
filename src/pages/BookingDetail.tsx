@@ -541,9 +541,10 @@ export function BookingReviewModal({ isOpen, onClose, reviewRatings, setReviewRa
     value: 'Value',
   }
 
+  const ratingValues = Object.values(reviewRatings) as number[]
   const overallRating = Math.round(
-    Object.values(reviewRatings).reduce((sum: number, value: number) => sum + value, 0) /
-    Object.values(reviewRatings).length
+    ratingValues.reduce((sum, value) => sum + value, 0) /
+    ratingValues.length
   )
 
   const ratingLabel = (value: number) => {
