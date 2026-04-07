@@ -51,6 +51,42 @@ export default function BookingDetail() {
     return () => window.removeEventListener('keydown', onKey)
   }, [booking])
 
+  const getChatDraftMessage = () => {
+    if (!booking) return ''
+    const serviceTitle = booking.services?.title || 'your booking'
+    const startDate = booking.booking_date ? new Date(booking.booking_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+    const endDate = booking.end_date ? new Date(booking.end_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''
+    const dateText = startDate && endDate ? `${startDate} - ${endDate}` : startDate || endDate || ''
+
+    return `Hi, I have a question about my booking ${booking.id} for ${serviceTitle}${dateText ? ` (${dateText})` : ''}. Please confirm the details and next steps.`
+  }
+
+  const handleContactProvider = () => {
+    if (!booking?.vendors?.user_id) return
+    const draft = getChatDraftMessage()
+    if (!user) {
+      navigate('/login', {
+        state: {
+          from: {
+            pathname: '/messages',
+            state: {
+              vendorId: booking.vendors.user_id,
+              draft,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    navigate('/messages', {
+      state: {
+        vendorId: booking.vendors.user_id,
+        draft,
+      },
+    })
+  }
+
   const handleSendChat = async () => {
     setChatError(null)
     if (!chatMessage.trim() || !booking?.vendors?.user_id || !user?.id) return
@@ -337,7 +373,7 @@ export default function BookingDetail() {
 
               <div className="mt-6">
                 {booking.payment_status === 'paid' && booking.vendors?.user_id ? (
-                  <button onClick={() => setIsChatOpen(true)} className="w-full inline-flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-md font-semibold">Contact Provider</button>
+                  <button onClick={handleContactProvider} className="w-full inline-flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-md font-semibold">Contact Provider</button>
                 ) : (
                   <button disabled className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-semibold opacity-60 cursor-not-allowed">Contact Provider</button>
                 )}
