@@ -11,10 +11,44 @@ import type { UserPreferences, VendorTier } from '../types'
  * Lookup country name for an IP address using ipapi.co with a short timeout.
  * Caches results in-memory. Returns null if lookup fails or no country found.
  */
+const ipCountryCache = new Map<string, string | null>()
+
 async function lookupCountryByIp(_ip: string): Promise<string | null> {
-  // Temporarily disable IP geolocation to avoid CORS issues
-  // TODO: Implement a server-side solution for IP geolocation
-  return null
+  const ip = String(_ip || '').trim()
+  if (!ip) return null
+
+  if (ipCountryCache.has(ip)) {
+    return ipCountryCache.get(ip) || null
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 3000)
+
+  try {
+    const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const data = await response.json()
+    const country = (data?.country_name || data?.country || data?.region_name || data?.region || null)
+      ? String(data?.country_name || data?.country || data?.region_name || data?.region).trim()
+      : null
+
+    ipCountryCache.set(ip, country)
+    return country
+  } catch (error) {
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 // Visitor Activity Types
@@ -6285,7 +6319,7 @@ export async function getVendorActivityStats(vendorId: string) {
     try {
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('visitor_sessions')
-        .select('id, ip_address, country, city, device_type, user_id, first_visit_at, visit_count')
+        .select('id, ip_address, country, city, device_type, user_id, first_visit_at, last_visit_at, created_at, visit_count')
         .order('first_visit_at', { ascending: false })
         .limit(100)
       
@@ -6347,29 +6381,36 @@ export async function getVendorActivityStats(vendorId: string) {
       vendorReviews = reviewsData
     }
 
-    // Get unique visitors for this vendor
-    const uniqueVisitors = new Set<string>()
-
-    vendorBookings?.forEach((booking: any) => {
-      uniqueVisitors.add(booking.user_id)
-    })
-
-    // Track visitor countries using service view logs mapped to visitor sessions.
-    // Prefer countries from sessions that actually viewed vendor services so the counts reflect relevant visitors.
+    // Track visitor sessions and unique guest IPs for this vendor
     const sessionById: Record<string, any> = {}
     visitorSessions.forEach((s: any) => {
       if (s && s.id) sessionById[s.id] = s
     })
 
+    const viewedSessionIds = new Set(
+      serviceViewLogs
+        .map((log: any) => log.visitor_session_id)
+        .filter((id: any) => id)
+    )
+
+    const relevantSessions = [...viewedSessionIds]
+      .map((id: any) => sessionById[id])
+      .filter(Boolean)
+
+    const sessionsToCount = relevantSessions.length > 0 ? relevantSessions : visitorSessions
+
+    const uniqueVisitorIps = new Set(
+      sessionsToCount
+        .map((session: any) => (session.ip_address || '').trim())
+        .filter((ip: string) => ip)
+    )
+
     const countryCounts: Record<string, number> = {}
 
-    // Count countries for sessions that viewed this vendor's services
-    serviceViewLogs.forEach((log: any) => {
-      const sess = sessionById[log.visitor_session_id]
-      const country = sess?.country || null
-      if (country) {
-        countryCounts[country] = (countryCounts[country] || 0) + 1
-      }
+    // Count countries for relevant visitor sessions
+    sessionsToCount.forEach((session: any) => {
+      const country = (session.country || 'Unknown').trim() || 'Unknown'
+      countryCounts[country] = (countryCounts[country] || 0) + 1
     })
 
     // Fallback: if no view-log-derived countries, fall back to counting all recent sessions
@@ -6457,8 +6498,8 @@ export async function getVendorActivityStats(vendorId: string) {
 
     return {
       vendorId,
-      totalVisitors: vendorBookings?.length || 0,
-      uniqueVisitors: uniqueVisitors.size,
+      totalVisitors: sessionsToCount.length,
+      uniqueVisitors: uniqueVisitorIps.size,
       totalServices: vendorServices?.length || 0,
       totalBookings: confirmedBookings,
       conversionRate: parseFloat(conversionRate as string),
@@ -6515,6 +6556,11 @@ async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise
       const now = new Date()
       const daysSinceFirstVisit = Math.floor((now.getTime() - firstVisit.getTime()) / 1000 / 60 / 60 / 24)
 
+      const locationParts = []
+      if (session.city && session.city !== '') locationParts.push(session.city)
+      if (session.country && session.country !== '') locationParts.push(session.country)
+      const location = locationParts.length > 0 ? locationParts.join(', ') : (session.ip_address || 'Unknown')
+
       return {
         ...session,
         sessionDuration,
@@ -6522,7 +6568,7 @@ async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise
         viewCount: sessionViews.length,
         daysSinceFirstVisit,
         ipAddress: session.ip_address || 'Unknown',
-        location: `${(session.city && session.city !== '') ? session.city : 'Unknown'}, ${(session.country && session.country !== '') ? session.country : 'Unknown'}`,
+        location,
         visitedAt: (session.last_visit_at || session.first_visit_at || session.created_at) ? new Date(session.last_visit_at || session.first_visit_at || session.created_at).toISOString() : null
       }
     })
@@ -6536,37 +6582,51 @@ async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise
 
 export async function getAllVendorsWithActivity() {
   try {
-    // First, try to get all vendors from profiles with role = 'vendor'
-    const { data: vendors, error: vendorsError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, avatar_url, role')
-      .eq('role', 'vendor')
-    
-    if (vendorsError) throw vendorsError
+    // Prefer vendors from the vendors table, joined to profiles when available.
+    const { data: vendorRows, error: vendorRowsError } = await supabase
+      .from('vendors')
+      .select('id, business_name, business_email, avatar_url, user_id, profiles(id, full_name, email, avatar_url)')
+      .order('created_at', { ascending: false })
 
-    console.log('Vendors from profiles:', vendors?.length, vendors)
+    if (vendorRowsError) {
+      console.error('Error fetching vendors from vendors table:', vendorRowsError)
+      throw vendorRowsError
+    }
 
-    // If no vendors found, get unique vendor_ids from services table as fallback
-    let finalVendors = vendors || []
-    
+    let finalVendors: any[] = (vendorRows || []).map((vendor: any) => ({
+      id: vendor.id,
+      business_name: vendor.business_name,
+      business_email: vendor.business_email,
+      avatar_url: vendor.avatar_url || vendor.profiles?.avatar_url || null,
+      profile_full_name: vendor.profiles?.full_name,
+      profile_email: vendor.profiles?.email,
+      profile_id: vendor.profiles?.id
+    }))
+
+    // Fallback: if vendor table is empty, try to derive vendors from service vendor_ids
     if (!finalVendors || finalVendors.length === 0) {
-      console.log('No vendors found in profiles, checking services table...')
+      console.log('No vendors found in vendors table, checking services fallback...')
       const { data: serviceVendors, error: serviceVendorsError } = await supabase
         .from('services')
         .select('vendor_id')
-      
+
       if (!serviceVendorsError && serviceVendors) {
         const uniqueVendorIds = [...new Set(serviceVendors.map((s: any) => s.vendor_id))]
         console.log('Unique vendor IDs from services:', uniqueVendorIds)
-        
+
         if (uniqueVendorIds.length > 0) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('id, full_name, email, avatar_url, role')
             .in('id', uniqueVendorIds)
-          
+
           if (!profileError && profileData) {
-            finalVendors = profileData
+            finalVendors = profileData.map((vendor: any) => ({
+              id: vendor.id,
+              business_name: vendor.full_name,
+              business_email: vendor.email,
+              avatar_url: vendor.avatar_url
+            }))
             console.log('Vendors from services vendor_ids:', finalVendors)
           }
         }
@@ -6578,25 +6638,25 @@ export async function getAllVendorsWithActivity() {
       return []
     }
 
-    // Get activity stats for each vendor
     const vendorStats = await Promise.all(
       finalVendors.map(async (vendor: any) => {
         try {
           const stats = await getVendorActivityStats(vendor.id)
-          console.log(`Stats for vendor ${vendor.full_name}:`, stats)
+          console.log(`Stats for vendor ${vendor.business_name || vendor.profile_full_name}:`, stats)
           return {
-            vendorName: vendor.full_name,
-            vendorEmail: vendor.email,
-            vendorAvatar: vendor.avatar_url,
+            vendorId: vendor.id,
+            vendorName: vendor.business_name || vendor.profile_full_name || 'Unknown Vendor',
+            vendorEmail: vendor.business_email || vendor.profile_email || 'Unknown',
+            vendorAvatar: vendor.avatar_url || null,
             ...stats
           }
         } catch (error) {
           console.error(`Error getting stats for vendor ${vendor.id}:`, error)
           return {
             vendorId: vendor.id,
-            vendorName: vendor.full_name,
-            vendorEmail: vendor.email,
-            vendorAvatar: vendor.avatar_url,
+            vendorName: vendor.business_name || vendor.profile_full_name || 'Unknown Vendor',
+            vendorEmail: vendor.business_email || vendor.profile_email || 'Unknown',
+            vendorAvatar: vendor.avatar_url || null,
             totalVisitors: 0,
             uniqueVisitors: 0,
             totalServices: 0,

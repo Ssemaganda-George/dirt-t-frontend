@@ -114,6 +114,7 @@ export const VisitorActivity = () => {
     avgRating: 0
   })
   const [vendorStats, setVendorStats] = useState<any[]>([])
+  const genderTotal = stats.genderDistribution.male + stats.genderDistribution.female + stats.genderDistribution.other
   const [loading, setLoading] = useState(true)
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null)
 
@@ -245,7 +246,7 @@ export const VisitorActivity = () => {
               <p className="text-sm font-semibold mb-2">{gender.label}</p>
               <p className="text-3xl font-bold">{gender.count.toLocaleString()}</p>
               <p className="text-xs mt-2">
-                {((gender.count / (stats.genderDistribution.male + stats.genderDistribution.female + stats.genderDistribution.other)) * 100).toFixed(1)}%
+                {genderTotal > 0 ? ((gender.count / genderTotal) * 100).toFixed(1) : '0'}%
               </p>
             </div>
           ))}

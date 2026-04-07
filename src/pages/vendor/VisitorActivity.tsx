@@ -118,8 +118,8 @@ export default function VendorVisitorActivity() {
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Visitor Activity</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900">Visitor Activity</h1>
+        <p className="text-base text-gray-500 mt-2 max-w-2xl">
           Monitor your business performance and visitor engagement
         </p>
       </div>
@@ -157,7 +157,7 @@ export default function VendorVisitorActivity() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Performance Insights */}
