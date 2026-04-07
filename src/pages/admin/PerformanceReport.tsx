@@ -7,6 +7,11 @@ function formatCurrency(v: number | null | undefined) {
   return `UGX ${Number(v).toLocaleString()}`
 }
 
+function formatPaymentMethod(value: unknown) {
+  if (!value) return '—'
+  return String(value).replace(/_/g, ' ').trim()
+}
+
 function lastNMonths(n = 6) {
   const result: string[] = []
   const now = new Date()
@@ -36,19 +41,24 @@ export default function AdminPerformanceReport() {
         const uniqueVisitors = new Set(bookings.map((b: any) => b.tourist_id)).size
         const totalBookings = bookings.length
         const totalTransactions = transactions.length
-        const totalRevenue = transactions.reduce((s: number, t: any) => s + (t.amount || 0), 0)
+        const totalRevenue = transactions.reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0)
         const totalVendors = vendors.length
         const totalServices = services.length
         const totalReviews = reviews.length
 
         // Top vendors by revenue
-        const revenueByVendor: Record<string, number> = {}
+        const revenueByVendor: Record<string, { revenue: number; name: string }> = {}
         for (const t of transactions) {
           if (!t.vendor_id) continue
-          revenueByVendor[t.vendor_id] = (revenueByVendor[t.vendor_id] || 0) + (t.amount || 0)
+          const vendorName = t.vendors?.business_name || t.vendors?.full_name || String(t.vendor_id)
+          const vendorId = String(t.vendor_id)
+          if (!revenueByVendor[vendorId]) {
+            revenueByVendor[vendorId] = { revenue: 0, name: vendorName }
+          }
+          revenueByVendor[vendorId].revenue += (Number(t.amount) || 0)
         }
         const topVendors = Object.entries(revenueByVendor)
-          .map(([id, rev]) => ({ id, revenue: rev }))
+          .map(([id, info]) => ({ id, revenue: info.revenue, name: info.name }))
           .sort((a, b) => b.revenue - a.revenue)
 
         // Revenue by month
@@ -56,10 +66,12 @@ export default function AdminPerformanceReport() {
         const revenueByMonth: Record<string, number> = {}
         months.forEach(m => (revenueByMonth[m] = 0))
         for (const t of transactions) {
-          const date = t.created_at
+          const date = t.created_at || t.inserted_at || t.updated_at
           if (!date) continue
-          const month = new Date(date).toISOString().slice(0, 7)
-          if (revenueByMonth[month] !== undefined) revenueByMonth[month] += (t.amount || 0)
+          const parsed = new Date(date)
+          if (Number.isNaN(parsed.getTime())) continue
+          const month = parsed.toISOString().slice(0, 7)
+          if (revenueByMonth[month] !== undefined) revenueByMonth[month] += (Number(t.amount) || 0)
         }
 
         const avgBookingValue = totalBookings ? Math.round(totalRevenue / totalBookings) : 0
@@ -148,7 +160,7 @@ export default function AdminPerformanceReport() {
           <div className="space-y-2">
             {stats?.topVendors?.length ? stats.topVendors.slice(0,8).map((v: any, i: number) => (
               <div key={v.id} className="flex justify-between text-sm">
-                <div>#{i+1} {v.id}</div>
+                <div>#{i+1} {v.name || v.id}</div>
                 <div className="text-gray-500">{formatCurrency(v.revenue)}</div>
               </div>
             )) : <div className="text-sm text-gray-500">No data</div>}
@@ -165,20 +177,24 @@ export default function AdminPerformanceReport() {
                 <th className="py-2">Tx ID</th>
                 <th className="py-2">Vendor</th>
                 <th className="py-2">Amount</th>
-                <th className="py-2">Type</th>
+                <th className="py-2">Payment method</th>
                 <th className="py-2">Created</th>
               </tr>
             </thead>
             <tbody>
-              {stats.recentTransactions.length ? stats.recentTransactions.map((t: any) => (
+              {stats.recentTransactions.length ? stats.recentTransactions.map((t: any) => {
+              const vendorLabel = t.vendors?.business_name || t.vendors?.full_name || t.vendor_id || '—'
+              const createdAt = t.created_at || t.inserted_at || t.updated_at
+              return (
                 <tr key={t.id} className="border-t">
                   <td className="py-2">{t.id?.slice ? t.id.slice(0,8) : t.id}</td>
-                  <td className="py-2">{t.vendor_id || '—'}</td>
+                  <td className="py-2">{vendorLabel}</td>
                   <td className="py-2">{formatCurrency(t.amount)}</td>
-                  <td className="py-2">{t.type || t.tx_type || '—'}</td>
-                  <td className="py-2">{new Date(t.created_at || t.inserted_at || 0).toLocaleDateString()}</td>
+                  <td className="py-2">{formatPaymentMethod(t.payment_method)}</td>
+                  <td className="py-2">{createdAt ? new Date(createdAt).toLocaleDateString() : '—'}</td>
                 </tr>
-              )) : <tr><td colSpan={5} className="py-4 text-gray-500">No transactions</td></tr>}
+              )
+            }) : <tr><td colSpan={5} className="py-4 text-gray-500">No transactions</td></tr>}
             </tbody>
           </table>
         </div>
@@ -189,7 +205,7 @@ export default function AdminPerformanceReport() {
         <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
           <li>Average booking value: <strong>{formatCurrency(stats.avgBookingValue)}</strong></li>
           {stats.totalRevenue === 0 && <li>No revenue recorded — check onboarding and payment integrations.</li>}
-          {stats.topVendors && stats.topVendors.length > 0 && <li>Top vendor by revenue: <strong>{stats.topVendors[0].id}</strong> — consider highlighting or supporting growth.</li>}
+          {stats.topVendors && stats.topVendors.length > 0 && <li>Top vendor by revenue: <strong>{stats.topVendors[0].name || stats.topVendors[0].id}</strong> — consider highlighting or supporting growth.</li>}
           <li>Export data to CSV for deeper analysis.</li>
         </ul>
       </div>

@@ -13,10 +13,12 @@ import { createServicePricingOverride } from '../../lib/pricingService';
 import type { Service } from '../../types';
 
 function formatServicePrice(service: Service, selectedCurrency: string, selectedLanguage: string) {
+  const currency = service.currency || 'UGX';
+
   // For events/activities with ticket types, show ticket prices
   if (service.ticket_types && service.ticket_types.length > 0) {
     const ticketPrices = service.ticket_types
-      .map((ticket: any) => ticket.price)
+      .map((ticket: any) => Number(ticket?.price) || 0)
       .filter((price: number) => price > 0);
     
     if (ticketPrices.length > 0) {
@@ -24,15 +26,35 @@ function formatServicePrice(service: Service, selectedCurrency: string, selected
       const maxPrice = Math.max(...ticketPrices);
       
       if (minPrice === maxPrice) {
-        return formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage);
+        return formatCurrencyWithConversion(minPrice, currency, selectedCurrency, selectedLanguage);
       } else {
-        return `${formatCurrencyWithConversion(minPrice, service.currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(maxPrice, service.currency, selectedCurrency, selectedLanguage)}`;
+        return `${formatCurrencyWithConversion(minPrice, currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(maxPrice, currency, selectedCurrency, selectedLanguage)}`;
       }
     }
   }
-  
-  // Fallback to service price
-  return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage);
+
+  // Transport-specific rates
+  const transportPrices = [service.price_within_town, service.price_upcountry]
+    .map((price) => Number(price) || 0)
+    .filter((price) => price > 0);
+
+  if (transportPrices.length > 0) {
+    const minPrice = Math.min(...transportPrices);
+    const maxPrice = Math.max(...transportPrices);
+    if (minPrice === maxPrice) {
+      return formatCurrencyWithConversion(minPrice, currency, selectedCurrency, selectedLanguage);
+    }
+    return `${formatCurrencyWithConversion(minPrice, currency, selectedCurrency, selectedLanguage)} - ${formatCurrencyWithConversion(maxPrice, currency, selectedCurrency, selectedLanguage)}`;
+  }
+
+  // Restaurant or hotel price range text
+  if (service.price_range) {
+    return service.price_range;
+  }
+
+  // Fallback to the mainstream service price
+  const price = Number(service.price) || 0;
+  return formatCurrencyWithConversion(price, currency, selectedCurrency, selectedLanguage);
 }
 
 export function Services() {
