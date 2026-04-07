@@ -674,7 +674,7 @@ export default function Home() {
           heroMediaList.map((media, idx) => (
             <div
               key={media.url}
-              className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${currentSlide === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+              className={`absolute inset-0 w-full h-full bg-black transition-opacity duration-1000 ${currentSlide === idx ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
             >
               {media.type === 'video' ? (
                 <video
@@ -686,8 +686,7 @@ export default function Home() {
                   playsInline
                   preload="auto"
                   poster="/public/hero-video-poster.jpg"
-                  className="w-full h-full object-cover"
-                  key={media.url + '-' + currentSlide}
+                  className="w-full h-full object-cover bg-black"
                   onLoadedData={e => {
                     // Force play on load for mobile browsers
                     const vid = e.currentTarget;
