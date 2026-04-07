@@ -282,6 +282,34 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   
   const { user, profile } = useAuth()
 
+  const getBookingDraftMessage = () => `Hi, I just completed a booking for ${service.title}${bookingData.startDate ? ` starting ${bookingData.startDate}` : ''}${bookingData.endDate ? ` ending ${bookingData.endDate}` : ''}${bookingData.passengers ? ` for ${bookingData.passengers} passenger${bookingData.passengers === 1 ? '' : 's'}` : ''}${bookingData.pickupLocation ? ` from ${bookingData.pickupLocation}` : ''}${bookingData.dropoffLocation ? ` to ${bookingData.dropoffLocation}` : ''}. My booking reference is ${bookingResult?.id || 'N/A'}. Please confirm the details and next steps.`
+
+  const handleMessageProvider = () => {
+    const draft = getBookingDraftMessage()
+    if (!user) {
+      navigate('/login', {
+        state: {
+          from: {
+            pathname: '/messages',
+            state: {
+              draft,
+              vendorId: service.vendor_id,
+            },
+          },
+        },
+      })
+    } else {
+      navigate('/messages', {
+        state: {
+          draft,
+          vendorId: service.vendor_id,
+        },
+      })
+    }
+  }
+
+  const messageProviderLabel = user ? 'Message Provider' : 'Chat with provider'
+
   // Currency conversion rates (simplified)
   const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
     const rates: { [key: string]: { [key: string]: number } } = {
@@ -2340,10 +2368,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       Download receipt (PDF)
                     </button>
                     <button
-                      onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+                      onClick={handleMessageProvider}
                       className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm"
                     >
-                      Message provider
+                      {messageProviderLabel}
                     </button>
                   </div>
                 </div>
@@ -2479,10 +2507,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             {/* Action Buttons */}
             <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
               <button
-                onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+                onClick={handleMessageProvider}
                 className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
-                Message Provider
+                {messageProviderLabel}
               </button>
               <button
                 onClick={() => navigate('/')}
@@ -2727,10 +2755,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         {/* ── ACTION BUTTONS ── */}
         <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
           <button
-            onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
+            onClick={handleMessageProvider}
             style={{ flex: 1, background: T.green, color: T.ivory, border: 'none', padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
           >
-            Message Provider
+            {messageProviderLabel}
           </button>
           <button
             onClick={() => downloadReceiptPDF(bookingResult || {})}

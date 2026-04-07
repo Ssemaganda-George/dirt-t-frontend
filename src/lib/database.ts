@@ -3667,7 +3667,7 @@ export async function getAllVendorWallets(): Promise<any[]> {
     // Fetch vendor information separately
     const { data: vendors, error: vendorsError } = await supabase
       .from('vendors')
-      .select('id, business_name, business_email, status, created_at')
+      .select('id, business_name, business_email, status, created_at, profiles(id, full_name, email)')
       .in('id', vendorIds)
 
     if (vendorsError) {

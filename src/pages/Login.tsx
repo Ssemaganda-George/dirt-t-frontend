@@ -34,7 +34,8 @@ export default function Login() {
     }
   }
 
-  const from = location.state?.from?.pathname || '/'
+  const from = location.state?.from || '/'
+  const fromLocation = typeof from === 'object' && from !== null ? from : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +44,16 @@ export default function Login() {
 
     try {
       await signIn(email, password)
-      navigate(from, { replace: true })
+      if (typeof from === 'string') {
+        navigate(from, { replace: true })
+      } else if (fromLocation) {
+        navigate(fromLocation.pathname || '/', {
+          replace: true,
+          state: fromLocation.state,
+        })
+      } else {
+        navigate('/', { replace: true })
+      }
     } catch (error: any) {
       setError(error.message || 'Failed to sign in')
     } finally {

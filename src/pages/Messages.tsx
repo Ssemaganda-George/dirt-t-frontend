@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns'
@@ -29,12 +29,22 @@ export default function Messages() {
   const { user } = useAuth()
   const { t } = usePreferences()
   const { refresh: refreshUnreadCount } = useUnreadMessages()
+  const location = useLocation()
+  const incomingDraft = (location.state as any)?.draft || ((location.state as any)?.from as any)?.state?.draft || ''
+  const incomingDraftVendorId = (location.state as any)?.vendorId || ((location.state as any)?.from as any)?.state?.vendorId || null
   const [threads, setThreads] = useState<Thread[]>([])
   const [messages, setMessages] = useState<Record<string, Message[]>>({})
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
-  const [compose, setCompose] = useState('')
+  const [compose, setCompose] = useState(incomingDraft)
   const [sendMessageError, setSendMessageError] = useState<string | null>(null)
   const [showNewMessageModal, setShowNewMessageModal] = useState(false)
+
+  const threadTypeLabel = (type: Thread['type']) => {
+    if (type === 'vendor') return 'business'
+    if (type === 'inquiry') return 'inquiry'
+    if (type === 'admin') return 'admin'
+    return 'system'
+  }
   const [newMessageToAdmin, setNewMessageToAdmin] = useState('')
   const [sendingNewMessage, setSendingNewMessage] = useState(false)
   const [isSending, setIsSending] = useState(false)
@@ -131,7 +141,7 @@ export default function Messages() {
 
           return {
             id: key,
-            title: other?.full_name || other?.business_name || type,
+            title: other?.full_name || other?.business_name || (type === 'vendor' ? 'Business' : type),
             type,
             lastMessageAt: last.created_at,
             unread: msgs.filter((m: any) => m.status === 'unread' && m.recipient_id === user.id).length
@@ -153,9 +163,22 @@ export default function Messages() {
           }))
         })
 
+        let defaultThreadId = newThreads[0]?.id ?? null
+        if (incomingDraftVendorId) {
+          const vendorThread = newThreads.find((t) => t.id === `vendor_${incomingDraftVendorId}`)
+          if (vendorThread) {
+            defaultThreadId = vendorThread.id
+          }
+        } else if (incomingDraft) {
+          const vendorThread = newThreads.find((t) => t.type === 'vendor')
+          if (vendorThread) {
+            defaultThreadId = vendorThread.id
+          }
+        }
+
         setThreads(newThreads)
         setMessages(newMessages)
-        setActiveThreadId((prev) => prev || (newThreads[0]?.id ?? null))
+        setActiveThreadId((prev) => prev || defaultThreadId)
       } catch (err) {
         console.error('Failed to load tourist messages', err)
       }
@@ -350,7 +373,7 @@ export default function Messages() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-sm font-semibold text-gray-900">{threads.find((t) => t.id === activeThreadId)?.title}</h3>
-                  <div className="text-xs text-gray-500">{threads.find((t) => t.id === activeThreadId)?.type}</div>
+                  <div className="text-xs text-gray-500">{threadTypeLabel(threads.find((t) => t.id === activeThreadId)?.type || 'inquiry')}</div>
                 </div>
               </div>
 
@@ -436,7 +459,7 @@ export default function Messages() {
                   <p className="text-xs text-red-600 mb-2 px-2">{sendMessageError}</p>
                 )}
                 <div className="flex items-end gap-2">
-                  <div className="flex-1 bg-white rounded-3xl px-4 py-2 flex items-center">
+                  <div className="flex-1 bg-white rounded-3xl px-4 py-2 flex items-end">
                     <textarea 
                       value={compose} 
                       onChange={(e) => setCompose(e.target.value)}
@@ -447,13 +470,13 @@ export default function Messages() {
                         }
                       }}
                       placeholder="Type a message" 
-                      className="flex-1 resize-none text-sm outline-none max-h-24 bg-transparent"
-                      rows={1}
-                      style={{ minHeight: '24px' }}
+                      className="flex-1 resize-none text-sm outline-none bg-transparent"
+                      rows={3}
+                      style={{ minHeight: '72px', maxHeight: '160px', overflowY: 'auto' }}
                       onInput={(e) => {
                         const target = e.target as HTMLTextAreaElement
                         target.style.height = 'auto'
-                        target.style.height = Math.min(target.scrollHeight, 96) + 'px'
+                        target.style.height = Math.min(target.scrollHeight, 160) + 'px'
                       }}
                     />
                   </div>

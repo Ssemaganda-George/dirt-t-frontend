@@ -54,19 +54,11 @@ interface VendorWallet {
     business_email: string;
     status: string;
     created_at: string;
-  };
-}
-
-interface WalletStats {
-  /** Rows in `vendors` (directory) */
-  registeredVendorsCount: number;
-  /** `vendors.status = approved` */
-  approvedVendorsCount: number;
-  /** Rows in `wallets` */
-  vendorWalletRowsCount: number;
-  /** Wallets whose vendor_id exists in `vendors` */
-  walletsLinkedCount: number;
-  /** Wallets with no matching vendor row (data cleanup needed) */
+      profiles?: {
+        full_name?: string | null;
+        email?: string | null;
+      };
+    } | null;
   orphanWalletsCount: number;
   totalBalance: number;
   /** Platform take: sum of platform_fee + commission_amount on qualifying bookings */
@@ -359,8 +351,8 @@ export function Transactions() {
                       })
                       .slice(0, 10)
                       .map((wallet) => {
-                        const name = wallet.vendors?.business_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown');
-                        const email = wallet.vendors?.business_email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—');
+                        const name = wallet.vendors?.business_name || wallet.vendors?.profiles?.full_name || (wallet.vendor_id ? `Vendor ${wallet.vendor_id.slice(0,8)}` : 'Unknown');
+                        const email = wallet.vendors?.business_email || wallet.vendors?.profiles?.email || (wallet.vendor_id ? wallet.vendor_id.slice(0,8) : '—');
                         // If vendor metadata is missing (join returned null), mark as 'missing'
                         const status = wallet.vendors?.status ?? (wallet.vendors === null ? 'missing' : 'unknown');
                         const joinedAt = wallet.vendors?.created_at || wallet.created_at || null;
@@ -549,7 +541,7 @@ export function Transactions() {
                           #{transaction.id.slice(0, 8)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {transaction.vendors?.business_name || 'Unknown'}
+                          {transaction.vendors?.business_name || transaction.vendors?.profiles?.full_name || 'Unknown'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                           {transaction.transaction_type}
