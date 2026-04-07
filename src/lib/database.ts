@@ -2998,7 +2998,8 @@ export async function createBooking(
   // Critical payment processing must complete before returning to avoid lost updates
   try {
     const shouldCreateTransaction =
-      finalBooking.status === 'confirmed' && (finalBooking as any).payment_status === 'paid'
+      ['confirmed', 'completed'].includes(finalBooking.status) &&
+      (finalBooking as any).payment_status === 'paid'
 
     if (shouldCreateTransaction) {
       const { data: existingTx, error: txCheckError } = await supabase
@@ -3060,12 +3061,13 @@ export async function getFlaggedBookings(): Promise<Booking[]> {
 
 export async function approveFlaggedBooking(bookingId: string): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ payment_status: 'paid', rejection_reason: null, status: 'confirmed', updated_at: new Date().toISOString() })
-      .eq('id', bookingId)
-
-    if (error) throw error
+    // Use updateBooking so the payment side effects (transaction creation and wallet credit)
+    // are executed when a flagged booking is approved.
+    await updateBooking(bookingId, {
+      payment_status: 'paid',
+      rejection_reason: null,
+      status: 'confirmed'
+    })
 
     // Best-effort: notify backend/edge function for audit
     try {
@@ -3226,7 +3228,7 @@ async function sendBookingEmails(bookingId: string): Promise<void> {
   }
 }
 
-export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status' | 'rejection_reason'>>): Promise<Booking> {
+export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>> & { rejection_reason?: string | null }): Promise<Booking> {
   try {
     console.log('DB: updateBooking called with id:', id, 'updates:', updates)
 
@@ -3266,7 +3268,7 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
     // Create transaction and credit wallets when booking is "confirmed AND paid" (after update)
     const finalStatus = data.status;
     const finalPaymentStatus = data.payment_status;
-    const shouldCreateTransaction = finalStatus === 'confirmed' && finalPaymentStatus === 'paid';
+    const shouldCreateTransaction = ['confirmed', 'completed'].includes(finalStatus) && finalPaymentStatus === 'paid';
 
     console.log('DB: Transaction check - finalStatus:', finalStatus, 'finalPaymentStatus:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction);
 
@@ -3288,7 +3290,7 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
         .eq('booking_id', id)
         .eq('transaction_type', 'payment')
         .eq('status', 'completed')
-        .single();
+        .limit(1);
 
       if (transactionCheckError && transactionCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
         // If table doesn't exist, skip transaction creation
@@ -5511,10 +5513,121 @@ export async function sendInquiryNotificationEmails(
 export async function getTransactions(vendorId: string) {
   try {
     console.log('getTransactions: Querying transactions for vendorId:', vendorId)
-    
-    // Try RPC function first (if it exists). Some deployments use different parameter names
-    // in the SQL function (vendor_id_param, vendor_id, p_vendor_id, etc). Try a few common
-    // variants and log the returned error details so we can diagnose 400 responses.
+
+    // Primary path: direct transaction query. This is the most reliable source for
+    // vendor-specific transaction rows, and it avoids RPC behavior discrepancies.
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false })
+
+      console.log('getTransactions: Direct query result - data length:', data?.length, 'error:', error)
+
+      if (!error && data) {
+        const bookingIds = Array.from(new Set(data.filter(tx => tx.booking_id).map(tx => tx.booking_id)))
+        let bookingMap: Record<string, any> = {}
+
+        if (bookingIds.length > 0) {
+          const { data: bookingsData, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('id, status, payment_status, commission_amount, total_amount')
+            .in('id', bookingIds)
+
+          if (!bookingsError && bookingsData) {
+            bookingMap = bookingsData.reduce((acc: Record<string, any>, booking: any) => {
+              acc[booking.id] = booking
+              return acc
+            }, {})
+          } else if (bookingsError) {
+            console.log('getTransactions: Could not fetch related booking metadata:', bookingsError)
+          }
+        }
+
+        const processedData = data.map((transaction: any) => {
+          const enriched = {
+            ...transaction,
+            bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
+          }
+
+          if (enriched.transaction_type === 'payment' && enriched.bookings?.commission_amount) {
+            return {
+              ...enriched,
+              amount: enriched.amount - enriched.bookings.commission_amount,
+              original_amount: enriched.amount,
+              commission_deducted: enriched.bookings.commission_amount
+            }
+          }
+          return enriched
+        })
+        return processedData
+      }
+
+      if (error && !(error.message?.includes('permission denied') || error.message?.includes('insufficient_privilege'))) {
+        throw error
+      }
+    } catch (directError) {
+      console.log('getTransactions: Direct query failed or blocked, falling back:', directError)
+    }
+
+    // Secondary path: vendor relationship query. Useful when direct transaction access is restricted.
+    try {
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendors')
+        .select(`
+          id,
+          transactions (*)
+        `)
+        .eq('id', vendorId)
+        .single()
+
+      console.log('getTransactions: Vendor query result:', vendorData, 'error:', vendorError)
+
+      if (!vendorError && vendorData?.transactions) {
+        const data = vendorData.transactions
+        const bookingIds = Array.from(new Set(data.filter((tx: any) => tx.booking_id).map((tx: any) => tx.booking_id)))
+        let bookingMap: Record<string, any> = {}
+
+        if (bookingIds.length > 0) {
+          const { data: bookingsData, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('id, status, payment_status, commission_amount, total_amount')
+            .in('id', bookingIds)
+
+          if (!bookingsError && bookingsData) {
+            bookingMap = bookingsData.reduce((acc: Record<string, any>, booking: any) => {
+              acc[booking.id] = booking
+              return acc
+            }, {})
+          } else if (bookingsError) {
+            console.log('getTransactions: Could not fetch related booking metadata (vendor fallback):', bookingsError)
+          }
+        }
+
+        const processedTransactions = data.map((transaction: any) => {
+          const enriched = {
+            ...transaction,
+            bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
+          }
+
+          if (enriched.transaction_type === 'payment' && enriched.bookings?.commission_amount) {
+            return {
+              ...enriched,
+              amount: enriched.amount - enriched.bookings.commission_amount,
+              original_amount: enriched.amount,
+              commission_deducted: enriched.bookings.commission_amount
+            }
+          }
+          return enriched
+        })
+        return processedTransactions
+      }
+    } catch (vendorQueryError) {
+      console.log('getTransactions: Vendor relationship query failed, falling back:', vendorQueryError)
+    }
+
+    // Final fallback: RPC function if it exists.
     try {
       const paramCandidates = ['vendor_id_param', 'vendor_id', 'p_vendor_id', 'p_vendor']
       for (const paramName of paramCandidates) {
@@ -5528,95 +5641,19 @@ export async function getTransactions(vendorId: string) {
             return rpcData
           }
 
-          // If we got an rpcError object, log details for debugging
           if (rpcError) {
             console.log(`getTransactions: RPC attempt param=${paramName} returned error:`, rpcError)
           }
         } catch (innerErr) {
-          // Network-level or unexpected errors from the RPC call
           console.log(`getTransactions: RPC attempt param=${paramName} threw:`, innerErr)
         }
       }
-      console.log('getTransactions: RPC attempts exhausted or RPC not available, falling back')
+      console.log('getTransactions: RPC attempts exhausted or RPC not available, returning empty list')
     } catch (rpcErr) {
-      console.log('getTransactions: RPC wrapper failed, using fallback', rpcErr)
-    }
-    
-    // Try querying through vendors relationship
-    const { data: vendorData, error: vendorError } = await supabase
-      .from('vendors')
-      .select(`
-        id,
-        transactions (
-          *,
-          bookings (
-            id,
-            commission_amount,
-            total_amount
-          )
-        )
-      `)
-      .eq('id', vendorId)
-      .single()
-
-    console.log('getTransactions: Vendor query result:', vendorData, 'error:', vendorError)
-
-    if (!vendorError && vendorData?.transactions) {
-      console.log('getTransactions: Got transactions through vendor relationship:', vendorData.transactions.length)
-      // Process transactions to show net amounts
-      const processedTransactions = vendorData.transactions.map((transaction: any) => {
-        if (transaction.transaction_type === 'payment' && transaction.bookings?.commission_amount) {
-          return {
-            ...transaction,
-            amount: transaction.amount - transaction.bookings.commission_amount, // Net amount vendor receives
-            original_amount: transaction.amount, // Keep original for reference
-            commission_deducted: transaction.bookings.commission_amount
-          }
-        }
-        return transaction
-      })
-      return processedTransactions
+      console.log('getTransactions: RPC wrapper failed, returning empty list', rpcErr)
     }
 
-    // Fallback: direct query (might be blocked by RLS)
-    console.log('getTransactions: Using direct query...')
-    const { data, error } = await supabase
-      .from('transactions')
-      .select(`
-        *,
-        bookings (
-          id,
-          commission_amount,
-          total_amount
-        )
-      `)
-      .eq('vendor_id', vendorId)
-      .order('created_at', { ascending: false })
-
-    console.log('getTransactions: Direct query result - data length:', data?.length, 'error:', error)
-
-    if (error) {
-      if (error.message?.includes('permission denied') || error.message?.includes('insufficient_privilege')) {
-        console.warn('RLS blocking transactions query, returning empty array')
-        return []
-      }
-      throw error
-    }
-
-    // For vendor transactions, calculate net amount (total - commission)
-    const processedData = (data || []).map(transaction => {
-      if (transaction.transaction_type === 'payment' && transaction.bookings?.commission_amount) {
-        return {
-          ...transaction,
-          amount: transaction.amount - transaction.bookings.commission_amount, // Net amount vendor receives
-          original_amount: transaction.amount, // Keep original for reference
-          commission_deducted: transaction.bookings.commission_amount
-        }
-      }
-      return transaction
-    })
-
-    return processedData
+    return []
   } catch (error) {
     console.error('Error in getTransactions:', error)
     return []
@@ -5706,11 +5743,11 @@ export async function addTransaction(transaction: {
  */
 export async function reconcileMissingPaymentTransactions(vendorId?: string): Promise<number> {
   try {
-    // Build base query
+    // Build base query for confirmed or completed paid bookings
     let query = supabase
       .from('bookings')
-      .select('id, vendor_id, tourist_id, total_amount, currency')
-      .eq('status', 'confirmed')
+      .select('id, vendor_id, tourist_id, total_amount, currency, commission_amount, commission_rate_at_booking')
+      .in('status', ['confirmed', 'completed'])
       .eq('payment_status', 'paid')
 
     if (vendorId) {
@@ -5726,6 +5763,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
     if (!bookings || bookings.length === 0) return 0
 
     let created = 0
+    const adminId = await getAdminProfileId()
 
     for (const b of bookings) {
       try {
@@ -5736,33 +5774,93 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
           .eq('booking_id', b.id)
           .eq('transaction_type', 'payment')
           .eq('status', 'completed')
-          .single()
+          .limit(1)
 
         if (txCheckError && txCheckError.code !== 'PGRST116') {
           console.warn('Error checking transactions for booking', b.id, txCheckError)
           continue
         }
 
-        if (existingTx) {
+        if (existingTx && existingTx.length > 0) {
           // already has payment
           continue
         }
 
-        // create transaction
         const reference = `PMT_${b.id.slice(0, 8)}_${Date.now()}`
-        await addTransaction({
-          booking_id: b.id,
-          vendor_id: b.vendor_id,
-          tourist_id: b.tourist_id,
-          amount: b.total_amount,
-          currency: b.currency || 'UGX',
-          transaction_type: 'payment',
-          status: 'completed',
-          payment_method: 'card',
-          reference
-        })
+        const commissionAmount = Number(b.commission_amount) || (b.commission_rate_at_booking ? Math.round(Number(b.total_amount || 0) * Number(b.commission_rate_at_booking) * 100) / 100 : 0)
+
+        if (commissionAmount > 0 && adminId) {
+          let paymentResult: any = null
+          let paymentError: any = null
+
+          try {
+            const rpcRes = await supabase.rpc('process_payment_with_commission', {
+              p_vendor_id: b.vendor_id,
+              p_total_amount: b.total_amount,
+              p_commission_amount: commissionAmount,
+              p_admin_id: adminId,
+              p_booking_id: b.id,
+              p_tourist_id: b.tourist_id || null,
+              p_currency: b.currency || 'UGX',
+              p_payment_method: 'card',
+              p_reference: reference
+            }) as any
+            paymentResult = rpcRes.data
+            paymentError = rpcRes.error
+          } catch (err) {
+            paymentError = err
+          }
+
+          if (paymentError) {
+            const errMsg = String(paymentError?.message || paymentError)
+            if (errMsg.includes('process_payment_with_commission') || errMsg.includes('Could not find the function public.process_payment_with_commission')) {
+              console.warn('process_payment_with_commission missing, falling back to process_payment_atomic:', errMsg)
+            } else {
+              throw paymentError
+            }
+          }
+
+          if (paymentResult?.success) {
+            // succeeded with commission-aware RPC
+          } else {
+            const { data: fallbackResult, error: fallbackError } = await supabase.rpc('process_payment_atomic', {
+              p_vendor_id: b.vendor_id,
+              p_amount: b.total_amount,
+              p_booking_id: b.id,
+              p_tourist_id: b.tourist_id || null,
+              p_currency: b.currency || 'UGX',
+              p_payment_method: 'card',
+              p_reference: reference
+            }) as any
+
+            if (fallbackError) {
+              throw fallbackError
+            }
+            if (!fallbackResult?.success) {
+              throw new Error(fallbackResult?.error || 'Failed to process payment during reconciliation fallback')
+            }
+          }
+        } else {
+          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+            p_vendor_id: b.vendor_id,
+            p_amount: b.total_amount,
+            p_booking_id: b.id,
+            p_tourist_id: b.tourist_id || null,
+            p_currency: b.currency || 'UGX',
+            p_payment_method: 'card',
+            p_reference: reference
+          }) as any
+
+          if (paymentError) {
+            throw paymentError
+          }
+          if (!paymentResult?.success) {
+            throw new Error(paymentResult?.error || 'Failed to process payment during reconciliation')
+          }
+        }
+
         created += 1
-        console.log('Reconciliation: created payment transaction for booking', b.id)
+        console.log('Reconciliation: created payment transaction and updated wallet for booking', b.id)
       } catch (err) {
         console.error('Reconciliation: failed for booking', b.id, err)
       }
@@ -5798,6 +5896,10 @@ export async function updateTransactionStatus(transactionId: string, status: 'pe
 
 export async function getWalletStats(vendorId: string) {
   try {
+    // Ensure any confirmed+paid bookings are reconciled before computing wallet stats.
+    // This guarantees that missing payment transactions get created even if they were missed earlier.
+    await reconcileMissingPaymentTransactions(vendorId)
+
     const transactions = await getTransactions(vendorId)
 
     // If no transactions (table doesn't exist or no data), return default stats
@@ -5815,50 +5917,75 @@ export async function getWalletStats(vendorId: string) {
       }
     }
 
-    // Use all payment transactions with a booking_id
-    const bookingPayments = transactions.filter((t: Transaction) => t.transaction_type === 'payment' && t.booking_id)
+    // Use all completed payment transactions that are linked to bookings.
+    // Each completed payment row represents funds that should count toward wallet balance.
+    const bookingPayments = transactions.filter((t: Transaction) =>
+      t.transaction_type === 'payment' &&
+      t.booking_id &&
+      t.status === 'completed'
+    )
 
-    let completedBookingIds: string[] = [];
-    let pendingBookingIds: string[] = [];
-    if (bookingPayments.length > 0) {
-      const bookingIds = bookingPayments.map((t: Transaction) => t.booking_id).filter(Boolean) as string[];
+    const otherPayments = transactions.filter((t: Transaction) =>
+      t.transaction_type === 'payment' &&
+      t.status === 'completed' &&
+      !t.booking_id
+    )
+
+    const bookingIds = Array.from(new Set(bookingPayments.map((t: Transaction) => t.booking_id as string)))
+    let bookingMap: Record<string, any> = {}
+
+    if (bookingIds.length > 0) {
       const { data: bookings, error: bookingsError } = await supabase
         .from('bookings')
-        .select('id, status')
-        .in('id', bookingIds);
+        .select('id, status, payment_status')
+        .in('id', bookingIds)
+
+      console.log('getWalletStats: fetched booking status data', {
+        totalBookingPayments: bookingPayments.length,
+        bookingIds: bookingIds.length,
+        bookingsFetched: bookings?.length ?? 0,
+        bookingsError: bookingsError ? bookingsError.message : null
+      })
+
       if (!bookingsError && bookings) {
-        // Completed = completed only
-        completedBookingIds = bookings.filter((b: any) => b.status === 'completed').map((b: any) => b.id);
-        // Pending = confirmed or accepted but not completed
-        pendingBookingIds = bookings.filter((b: any) => ['confirmed', 'accepted'].includes(b.status)).map((b: any) => b.id);
+        bookingMap = bookings.reduce((acc: Record<string, any>, booking: any) => {
+          acc[booking.id] = booking
+          return acc
+        }, {})
       }
     }
 
-    // Payments for completed bookings (status = completed)
-    const completedPayments = bookingPayments.filter((t: Transaction) => completedBookingIds.includes(t.booking_id!));
-    // Payments for pending bookings (status = confirmed or accepted)
-    const notCompletedPayments = bookingPayments.filter((t: Transaction) => pendingBookingIds.includes(t.booking_id!));
+    const completedPayments = bookingPayments.filter((t: any) => bookingMap[t.booking_id!]?.status === 'completed')
+    const pendingPayments = bookingPayments.filter((t: any) => bookingMap[t.booking_id!]?.status === 'confirmed')
+    const unknownStatusPayments = bookingPayments.filter((t: any) => !bookingMap[t.booking_id!])
 
-    const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal');
-    const totalEarned = bookingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
-    const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0);
-    const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0);
-    const completedBalance = completedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) - totalWithdrawn - pendingWithdrawals;
-    const pendingBalance = notCompletedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0);
-    const currentBalance = completedBalance + pendingBalance;
-    const currency = transactions[0]?.currency || 'UGX';
+    if (unknownStatusPayments.length > 0) {
+      console.log('getWalletStats: found completed payment transactions with missing booking metadata, treating as pending until booking is confirmed/completed', {
+        count: unknownStatusPayments.length,
+        bookingIds: unknownStatusPayments.map((t: any) => t.booking_id)
+      })
+    }
+
+    const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal')
+    const totalEarned = bookingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + otherPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
+    const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0)
+    const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0)
+    const completedBalance = completedPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + otherPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
+    const pendingBalance = pendingPayments.reduce((s: number, t: Transaction) => s + t.amount, 0) + unknownStatusPayments.reduce((s: number, t: Transaction) => s + t.amount, 0)
+    const currentBalance = totalEarned - totalWithdrawn - pendingWithdrawals
+    const currency = transactions[0]?.currency || 'UGX'
 
     return {
       totalEarned,
       totalWithdrawn,
       pendingWithdrawals,
       currentBalance,
-      completedBalance, // money for completed bookings
-      pendingBalance,   // money for paid but not yet completed bookings
+      completedBalance,
+      pendingBalance,
       currency,
       totalTransactions: transactions.length,
       completedPayments: completedPayments.length,
-      pendingPayments: notCompletedPayments.length,
+      pendingPayments: pendingPayments.length + unknownStatusPayments.length,
       completedWithdrawals: withdrawals.filter((t: Transaction) => t.status === 'completed').length,
       pendingWithdrawalsCount: withdrawals.filter((t: Transaction) => t.status === 'pending').length
     }

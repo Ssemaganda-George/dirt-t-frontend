@@ -203,9 +203,9 @@ class OperationQueue {
               .eq('booking_id', bookingId)
               .eq('transaction_type', 'payment')
               .eq('status', 'completed')
-              .single()
+              .limit(1)
 
-            if (txErr || !completedTx) {
+            if (txErr || !completedTx || completedTx.length === 0) {
               // Report and mark booking for review (best-effort)
               try {
                 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL

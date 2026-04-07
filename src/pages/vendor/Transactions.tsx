@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Transaction } from '../../types'
-import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet } from '../../lib/database'
+import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet, reconcileMissingPaymentTransactions } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { supabase } from '../../lib/supabaseClient'
@@ -72,6 +72,10 @@ export default function VendorTransactions() {
         setError('You must be logged in as a vendor to view wallet data.')
         return
       }
+
+      // Reconcile missing payment transactions for confirmed/completed paid bookings.
+      // This ensures completed earnings reflect bookings that were paid but never got a transaction row.
+      await reconcileMissingPaymentTransactions(vendorId)
 
       const [transactions, stats, walletObj] = await Promise.all([
         getTransactions(vendorId),
@@ -157,10 +161,20 @@ export default function VendorTransactions() {
 
     // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(tx => tx.status === statusFilter)
+      if (statusFilter === 'failed_rejected') {
+        filtered = filtered.filter(tx => tx.status === 'failed' || tx.status === 'rejected')
+      } else {
+        filtered = filtered.filter(tx => tx.status === statusFilter)
+      }
     }
 
     setFilteredTxs(filtered)
+  }
+
+  const handleQuickStatusClick = (status: string) => {
+    setActiveTab('transactions')
+    setShowFilters(true)
+    setStatusFilter(status)
   }
 
   // Build payout options when vendor record changes
@@ -425,7 +439,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(wallet.balance, wallet.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats?.currentBalance ?? wallet.balance, walletStats?.currency || wallet.currency, selectedCurrency, selectedLanguage)}</p>
                           <p className="text-xs text-gray-600 mt-2">Available for withdrawal</p>
                         </div>
                       </div>
@@ -526,30 +540,49 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                     {/* Quick Stats */}
                     <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 pt-5 border-t border-gray-100">
-                      <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStatusClick('completed')}
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
                         <p className="text-lg font-bold text-green-600">
                           {filteredTxs.filter(tx => tx.status === 'completed').length}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">Completed</p>
-                      </div>
-                      <div className="text-center">
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStatusClick('pending')}
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
                         <p className="text-lg font-bold text-yellow-600">
                           {filteredTxs.filter(tx => tx.status === 'pending').length}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">Pending</p>
-                      </div>
-                      <div className="text-center">
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStatusClick('approved')}
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
                         <div className="text-xl md:text-2xl font-bold text-blue-600">
                           {filteredTxs.filter(tx => tx.status === 'approved').length}
                         </div>
                         <div className="text-xs md:text-sm text-gray-500">Approved</div>
-                      </div>
-                      <div className="text-center">
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStatusClick('failed_rejected')}
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
                         <div className="text-xl md:text-2xl font-bold text-red-600">
                           {filteredTxs.filter(tx => tx.status === 'failed').length + filteredTxs.filter(tx => tx.status === 'rejected').length}
                         </div>
                         <div className="text-xs md:text-sm text-gray-500">Failed/Rejected</div>
-                      </div>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -630,6 +663,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <option value="completed">Completed</option>
                           <option value="failed">Failed</option>
                           <option value="rejected">Rejected</option>
+                          <option value="failed_rejected">Failed / Rejected</option>
                         </select>
                       </div>
                     </div>

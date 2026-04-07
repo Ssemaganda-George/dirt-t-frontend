@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start": "vite preview",
     "migration": "node run_migration.cjs",
-    "migrate": "bash ./scripts/apply_migrations.sh"
+    "migrate": "bash ./scripts/apply_migrations.sh",
+    "backfill:booking-transactions": "node scripts/backfill-missing-booking-payment-transactions.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
