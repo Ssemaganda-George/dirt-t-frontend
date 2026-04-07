@@ -441,28 +441,28 @@ export default function Home() {
   useEffect(() => {
     if (heroMediaList.length < 2) return
 
-    // Clear any existing interval
+    // Clear any existing timer
     if (slideInterval.current) {
-      clearInterval(slideInterval.current)
+      clearTimeout(slideInterval.current)
       slideInterval.current = null
     }
 
     const currentMedia = heroMediaList[currentSlide]
     if (currentMedia?.type === 'video') {
-      // For videos, don't set interval - wait for video to end
-      // The video end handler will advance to next slide
-      return
+      // For videos, keep playing and advance after a short delay
+      slideInterval.current = setTimeout(() => {
+        setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
+      }, 8000)
     } else {
       // For images, use timer that creates continuous video-like flow
-      slideInterval.current = setInterval(() => {
+      slideInterval.current = setTimeout(() => {
         setCurrentSlide(prev => (prev + 1) % heroMediaList.length)
-      }, 1500) // Faster transitions for more continuous feel
+      }, 1500)
     }
 
-    // Cleanup function
     return () => {
       if (slideInterval.current) {
-        clearInterval(slideInterval.current)
+        clearTimeout(slideInterval.current)
         slideInterval.current = null
       }
     }
@@ -696,6 +696,7 @@ export default function Home() {
                   src={media.url}
                   autoPlay
                   muted
+                  loop
                   playsInline
                   preload="auto"
                   poster="/public/hero-video-poster.jpg"
