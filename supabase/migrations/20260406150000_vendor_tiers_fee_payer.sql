@@ -129,8 +129,8 @@ BEGIN
     v_commission_rate := 0;
   END IF;
 
-  IF v_base_amount > 0 THEN
-    v_commission_rate := COALESCE(v_commission_amount, 0) / v_base_amount;
+  IF p_total_amount > 0 THEN
+    v_commission_rate := COALESCE(v_commission_amount, 0) / p_total_amount;
   ELSE
     v_commission_rate := 0;
   END IF;
