@@ -6643,8 +6643,7 @@ export async function getAllVendorsWithActivity() {
         try {
           const stats = await getVendorActivityStats(vendor.id)
           console.log(`Stats for vendor ${vendor.business_name || vendor.profile_full_name}:`, stats)
-          const cleanedStats: any = stats ? { ...stats } : {}
-          delete cleanedStats.vendorId
+          const { vendorId: _unusedVendorId, ...cleanedStats } = stats || {}
           return {
             vendorId: vendor.id,
             vendorName: vendor.business_name || vendor.profile_full_name || 'Unknown Vendor',

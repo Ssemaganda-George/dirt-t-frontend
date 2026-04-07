@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 type Mode = 'flight' | 'car' | 'bus' | 'train' | 'ferry'
 
 export default function CarbonCalculator() {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('flight')
   const [flightType, setFlightType] = useState<'short' | 'medium' | 'long'>('long')
   const [distance, setDistance] = useState<number | ''>('')
@@ -78,8 +79,19 @@ export default function CarbonCalculator() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-semibold mb-4">Enhanced Carbon Footprint Calculator</h1>
-      <p className="text-gray-600 mb-6">Calculate your travel emissions using scientifically-backed emission factors and offset your impact.</p>
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg text-emerald-600 hover:bg-gray-100"
+        >
+          ←
+        </button>
+        <div>
+          <h1 className="text-2xl font-semibold">Enhanced Carbon Footprint Calculator</h1>
+          <p className="text-gray-600">Calculate your travel emissions using scientifically-backed emission factors and offset your impact.</p>
+        </div>
+      </div>
 
       <section className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <h2 className="text-lg font-bold mb-3">Calculate My Travel Emissions</h2>
@@ -197,8 +209,21 @@ export default function CarbonCalculator() {
         </div>
       </section>
 
-      <div className="mt-6">
-        <Link to="/" className="text-emerald-600 hover:underline">Back to home</Link>
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg text-emerald-600 hover:bg-gray-100"
+        >
+          ←
+        </button>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="inline-flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg text-emerald-600 hover:bg-gray-100"
+        >
+          ↑
+        </button>
       </div>
     </div>
   )

@@ -41,11 +41,20 @@ const DonatePage = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl font-bold mb-4">Offset Your Carbon Footprint</h1>
-          <p className="text-muted-foreground">
-            Donate to conservation projects that directly reduce carbon emissions and protect wildlife.
-          </p>
+        <div className="mb-10">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center justify-center w-10 h-10 border border-gray-200 rounded-lg text-emerald-600 hover:bg-gray-100"
+          >
+            ←
+          </button>
+          <div className="mt-4">
+            <h1 className="text-4xl font-bold mb-4">Offset Your Carbon Footprint</h1>
+            <p className="text-muted-foreground">
+              Donate to conservation projects that directly reduce carbon emissions and protect wildlife.
+            </p>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">

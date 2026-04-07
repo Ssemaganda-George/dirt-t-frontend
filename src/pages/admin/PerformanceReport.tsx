@@ -65,8 +65,9 @@ export default function AdminPerformanceReport() {
         const months = lastNMonths(6)
         const revenueByMonth: Record<string, number> = {}
         months.forEach(m => (revenueByMonth[m] = 0))
+        const getTransactionDate = (transaction: any) => transaction.created_at || transaction.inserted_at || transaction.updated_at
         for (const t of transactions) {
-          const date = t.created_at || (t as any).inserted_at || (t as any).updated_at
+          const date = getTransactionDate(t)
           if (!date) continue
           const parsed = new Date(date)
           if (Number.isNaN(parsed.getTime())) continue

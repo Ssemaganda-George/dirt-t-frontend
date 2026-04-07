@@ -298,10 +298,39 @@ const GeotaggingPage = () => {
     }
   };
 
+  const normalizeSearchValue = (value: any) => String(value || '').trim().toLowerCase();
+
+  const doesTreeMatchSearch = (tree: any, searchQuery: string) => {
+    if (!searchQuery) return true;
+
+    const idValues = [tree.external_id, tree.id, tree.booking_id]
+      .filter(Boolean)
+      .map(normalizeSearchValue);
+
+    const textValues = [tree.species, tree.planted_by]
+      .filter(Boolean)
+      .map(normalizeSearchValue);
+
+    return idValues.some(value => value === searchQuery || value.includes(searchQuery))
+      || textValues.some(value => value.includes(searchQuery));
+  };
+
+  const searchQuery = trackingId.trim();
+  const filteredTrees = React.useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    if (!query) return approvedTrees;
+    return approvedTrees.filter(tree => doesTreeMatchSearch(tree, query));
+  }, [approvedTrees, searchQuery]);
+
   const handleTreeIdSearch = (id?: string) => {
-    const searchId = id || trackingId.trim();
-    if (!searchId) return;
-    const foundTree = approvedTrees.find(tree => ((tree.external_id || tree.id) || '').toLowerCase() === searchId.toLowerCase() || (tree.id || '').toLowerCase() === searchId.toLowerCase());
+    const searchId = (id || trackingId).trim().toLowerCase();
+    if (!searchId) {
+      setSelectedTree(null);
+      return;
+    }
+
+    const foundTree = approvedTrees.find(tree => doesTreeMatchSearch(tree, searchId));
+
     if (foundTree && mapRef.current) {
       focusTree(foundTree);
     } else {
@@ -319,68 +348,6 @@ const GeotaggingPage = () => {
 
   
 
-  const HeaderAndSearch = () => (
-    <div className="mb-4 bg-white border-b border-gray-100 sticky top-0 z-30">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-2 md:px-8 pt-3 pb-2 max-w-5xl mx-auto">
-        <div className="flex flex-col items-center md:items-start md:w-2/3">
-          <div className="inline-flex items-center justify-center p-2 bg-green-500/10 rounded-full mb-1">
-            <TreePine className="h-8 w-8 md:h-10 md:w-10 text-green-600" />
-          </div>
-          <h1 className="text-xl md:text-3xl font-bold mb-1">Geotagging & Tree Tracking</h1>
-          <div className="text-xs md:text-base text-gray-600 mb-1 text-center md:text-left">
-            <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalCarbonKg).toLocaleString()}</span> kg CO₂ since planting.
-          </div>
-          <p className="text-gray-600 max-w-xs md:max-w-lg mx-auto md:mx-0 mb-1 text-xs md:text-base">
-            Track, search, and celebrate your tree planting.
-          </p>
-          <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 justify-center md:justify-start mt-1">
-            <button
-              className="px-3 py-1 md:px-5 md:py-2 bg-green-700 hover:bg-green-800 text-white text-xs md:text-base font-medium rounded-md"
-              onClick={() => navigate('/')}
-            >
-              Book Service
-            </button>
-            <button
-              className="px-3 py-1 md:px-5 md:py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-base font-medium rounded-md"
-              onClick={() => setShowAddTree(true)}
-            >
-              Plant Tree
-            </button>
-            <button
-              className="px-3 py-1 md:px-5 md:py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs md:text-base font-medium rounded-md"
-              onClick={() => navigate('/contact')}
-            >
-              Contact
-            </button>
-            <button
-              className="px-3 py-1 md:px-5 md:py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs md:text-base font-medium rounded-md"
-              onClick={() => navigate('/environment/donate')}
-            >
-              Donate
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-col items-center md:items-end md:w-1/3 mt-2 md:mt-0">
-          <div className="w-full max-w-xs md:max-w-sm">
-            <label htmlFor="tracking-id" className="block text-xs md:text-base font-semibold mb-1 text-gray-700">Find My Tree</label>
-            <div className="flex gap-1 md:gap-2">
-              <input
-                id="tracking-id"
-                placeholder="Tree ID (e.g., TREE-001)"
-                value={trackingId}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTrackingId(e.target.value)}
-                onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleTreeIdSearch()}
-                className="border px-2 py-1 md:px-4 md:py-2 rounded w-full text-xs md:text-base"
-              />
-              <button onClick={() => handleTreeIdSearch()} className="px-2 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 text-white rounded text-xs md:text-base">Find</button>
-            </div>
-            <p className="text-[10px] md:text-xs text-gray-500 mt-1">Ex: TREE-001, TREE-002</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="container mx-auto px-0 py-0 max-w-full">
       {successMsg && (
@@ -393,12 +360,70 @@ const GeotaggingPage = () => {
           <div className="bg-red-600 text-white px-4 py-2 rounded shadow">{errorMsg}</div>
         </div>
       )}
+      <div className="mb-4 bg-white border-b border-gray-100 sticky top-0 z-30">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-2 md:px-8 pt-3 pb-2 max-w-5xl mx-auto">
+          <div className="flex flex-col items-center md:items-start md:w-2/3">
+            <div className="inline-flex items-center justify-center p-2 bg-green-500/10 rounded-full mb-1">
+              <TreePine className="h-8 w-8 md:h-10 md:w-10 text-green-600" />
+            </div>
+            <h1 className="text-xl md:text-3xl font-bold mb-1">Geotagging & Tree Tracking</h1>
+            <div className="text-xs md:text-base text-gray-600 mb-1 text-center md:text-left">
+              <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalCarbonKg).toLocaleString()}</span> kg CO₂ since planting.
+            </div>
+            <p className="text-gray-600 max-w-xs md:max-w-lg mx-auto md:mx-0 mb-1 text-xs md:text-base">
+              Track, search, and celebrate your tree planting.
+            </p>
+            <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 justify-center md:justify-start mt-1">
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-green-700 hover:bg-green-800 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => navigate('/')}
+              >
+                Book Service
+              </button>
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => setShowAddTree(true)}
+              >
+                Plant Tree
+              </button>
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => { window.location.href = 'http://localhost:5174/conservation/carbon'; }}
+              >
+                Calculate My Carbon
+              </button>
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => navigate('/environment/donate')}
+              >
+                Donate
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col items-center md:items-end md:w-1/3 mt-2 md:mt-0">
+            <div className="w-full max-w-xs md:max-w-sm">
+              <label htmlFor="tracking-id" className="block text-xs md:text-base font-semibold mb-1 text-gray-700">Find My Tree</label>
+              <div className="flex gap-1 md:gap-2">
+                <input
+                  id="tracking-id"
+                  placeholder="Tree ID, team, tree name, or booking ID"
+                  value={trackingId}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTrackingId(e.target.value)}
+                  onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleTreeIdSearch()}
+                  className="border px-2 py-1 md:px-4 md:py-2 rounded w-full text-xs md:text-base"
+                />
+                <button onClick={() => handleTreeIdSearch()} className="px-2 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 text-white rounded text-xs md:text-base">Find</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="w-full py-4 relative overflow-hidden">
         <h2 className="text-lg font-semibold mb-2 px-2">Tourists Planting Trees</h2>
         <div className="relative w-full overflow-x-auto py-2">
           <div className="flex gap-2 px-2">
-            {approvedTrees.length > 0 ? (
-              approvedTrees.map((tree: any, idx: number) => {
+            {filteredTrees.length > 0 ? (
+              filteredTrees.map((tree: any, idx: number) => {
                 const images = Array.isArray(tree.images) && tree.images.length > 0 ? tree.images : [];
                 const img = images[0] || null;
                 const caption = `${(tree.planted_by || '').slice(0, 32)}${tree.species ? ` — ${tree.species}` : ''}`;
@@ -459,6 +484,10 @@ const GeotaggingPage = () => {
                   </div>
                 );
               })
+            ) : searchQuery ? (
+              <div className="flex items-center justify-center w-full h-28 bg-gray-100 text-sm text-gray-500 rounded-xl">
+                No trees match your search.
+              </div>
             ) : (
               fallbackGalleryItems.map((item) => (
                 <button
@@ -481,8 +510,6 @@ const GeotaggingPage = () => {
           100% { transform: translateX(var(--tree-card-delta, -100%)); }
         }
       `}</style>
-
-      <HeaderAndSearch />
 
       {viewerOpen && (
         <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
