@@ -368,8 +368,7 @@ export default function Home() {
     const ensureAutoPlay = () => {
       try {
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
-        if (prefersReducedMotion || isMobile) return
+        if (prefersReducedMotion) return
         setAutoPlayEnabled(true)
         // Try to play any current video after a short delay to ensure DOM is ready
         setTimeout(() => {
@@ -697,7 +696,6 @@ export default function Home() {
                   src={media.url}
                   autoPlay
                   muted
-                  loop
                   playsInline
                   preload="auto"
                   poster="/public/hero-video-poster.jpg"
