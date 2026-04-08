@@ -10,6 +10,7 @@ import LoginModal from './LoginModal'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
+import { getActivePartners, Partner } from '../lib/database'
 
 const getRegionName = (code: string) => {
   const regionMap: { [key: string]: string } = {
@@ -46,6 +47,11 @@ export default function PublicLayout() {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showGuestDropdown, setShowGuestDropdown] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [partners, setPartners] = useState<Partner[]>([])
+  const [partnersLoading, setPartnersLoading] = useState(false)
+  const [partnersError, setPartnersError] = useState<string | null>(null)
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(false)
+  const partnersRowRef = useRef<HTMLDivElement>(null)
   // Removed unused scrolled state
   const location = useLocation()
 
@@ -73,6 +79,7 @@ export default function PublicLayout() {
   }
 
   const navigation = getNavigationItems()
+  const marqueePartners = shouldAutoScroll && partners.length > 1 ? [...partners, ...partners] : partners
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -91,6 +98,45 @@ export default function PublicLayout() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadPartners = async () => {
+      setPartnersLoading(true)
+      setPartnersError(null)
+
+      try {
+        const data = await getActivePartners()
+        if (!mounted) return
+        setPartners(data)
+      } catch (error) {
+        if (!mounted) return
+        setPartnersError(error instanceof Error ? error.message : 'Failed to load partners')
+      } finally {
+        if (mounted) setPartnersLoading(false)
+      }
+    }
+
+    loadPartners()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const updateScroll = () => {
+      const el = partnersRowRef.current
+      if (!el) return
+      setShouldAutoScroll(el.scrollWidth > el.clientWidth + 1)
+    }
+
+    updateScroll()
+    window.addEventListener('resize', updateScroll)
+    return () => {
+      window.removeEventListener('resize', updateScroll)
+    }
+  }, [partners])
 
   const handleSignOut = async () => {
     setShowLogoutConfirm(true)
@@ -500,6 +546,63 @@ export default function PublicLayout() {
               </ul>
             </div>
           </div>
+
+          {partnersLoading && !partners.length && (
+            <div className="mt-14 rounded-3xl border border-white/10 bg-white/5 py-8 text-center text-sm text-gray-400">
+              Loading partner highlights...
+            </div>
+          )}
+
+          {partnersError && !partners.length && (
+            <div className="mt-14 rounded-3xl border border-white/10 bg-white/5 py-8 text-center text-sm text-red-300">
+              {partnersError}
+            </div>
+          )}
+
+          {partners.length > 0 && (
+            <div className="mt-10 mx-auto max-w-5xl rounded-3xl bg-white/5 p-4">
+              <div className="mb-4 flex flex-col items-center gap-1 text-center">
+                <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-500">Our Partners</h4>
+              </div>
+
+              <div
+                ref={partnersRowRef}
+                className={`relative w-full py-1 ${shouldAutoScroll ? 'overflow-x-hidden' : 'flex justify-center'}`}
+              >
+                <div className={`${shouldAutoScroll ? 'marquee' : 'inline-flex'} min-w-max items-center gap-4 px-1`}>
+                  {marqueePartners.map((partner, index) => {
+                    const partnerUrl = partner.website ? (partner.website.startsWith('http') ? partner.website : `https://${partner.website}`) : undefined;
+                    const cardContent = (
+                      <>
+                        {partner.logo_url ? (
+                          <img
+                            src={partner.logo_url}
+                            alt={`${partner.name} logo`}
+                            className="h-12 w-12 rounded-full object-cover bg-gray-800"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-[10px] text-white uppercase font-semibold">
+                            {partner.name.slice(0, 2)}
+                          </div>
+                        )}
+                        <span className="text-xs font-medium text-gray-100">{partner.name}</span>
+                      </>
+                    );
+
+                    return (
+                      <div key={`${partner.id}-${index}`} className="shrink-0 flex flex-col items-center gap-2 px-2 py-2 text-center">
+                        {partnerUrl ? (
+                          <a href={partnerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex flex-col items-center gap-2">
+                            {cardContent}
+                          </a>
+                        ) : cardContent}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bottom bar */}
           <div className="border-t border-white/10 mt-14 pt-8 flex flex-col md:flex-row items-center justify-between gap-3">

@@ -152,11 +152,12 @@ export interface PartnerRequest {
 export interface Partner {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   phone?: string;
   company?: string;
   website?: string;
   description?: string;
+  logo_url?: string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -326,6 +327,16 @@ export async function getPartners(): Promise<Partner[]> {
   const { data, error } = await supabase
     .from('partners')
     .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data as Partner[];
+}
+
+export async function getActivePartners(): Promise<Partner[]> {
+  const { data, error } = await supabase
+    .from('partners')
+    .select('*')
+    .eq('status', 'active')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data as Partner[];

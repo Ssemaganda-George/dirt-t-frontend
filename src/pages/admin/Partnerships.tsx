@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import {
   getPartnerRequests,
   getPartners,
@@ -17,6 +18,7 @@ const emptyPartner = {
   website: '',
   description: '',
   status: 'active',
+  logo_url: '',
 };
 
 const Partnerships: React.FC = () => {
@@ -33,6 +35,8 @@ const Partnerships: React.FC = () => {
   const [form, setForm] = useState<any>(emptyPartner);
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
 
   // Helper function to check if a request is a referral
   const isReferral = (request: PartnerRequest): boolean => {
@@ -61,6 +65,8 @@ const Partnerships: React.FC = () => {
   const openAddModal = () => {
     setEditPartner(null);
     setForm(emptyPartner);
+    setLogoFile(null);
+    setLogoPreview('');
     setShowModal(true);
     setFormError(null);
   };
@@ -68,6 +74,8 @@ const Partnerships: React.FC = () => {
   const openEditModal = (partner: Partner) => {
     setEditPartner(partner);
     setForm(partner);
+    setLogoFile(null);
+    setLogoPreview(partner.logo_url || '');
     setShowModal(true);
     setFormError(null);
   };
@@ -86,19 +94,74 @@ const Partnerships: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setLogoFile(null);
+      setLogoPreview(form.logo_url || '');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setFormError('Logo must be an image file.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('Logo file must be less than 5MB.');
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setFormError(null);
+  };
+
+  const uploadPartnerLogo = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop() || 'png';
+    const filePath = `partner-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const { error } = await supabase.storage
+      .from('partner-logos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('partner-logos')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
     setFormError(null);
+
     try {
-      if (editPartner) {
-        await updatePartner(editPartner.id, form);
-      } else {
-        await addPartner(form);
+      let partnerData = { ...form };
+      if (logoFile) {
+        const logoUrl = await uploadPartnerLogo(logoFile);
+        partnerData = { ...partnerData, logo_url: logoUrl };
       }
+
+      if (editPartner) {
+        await updatePartner(editPartner.id, partnerData);
+      } else {
+        await addPartner(partnerData);
+      }
+
       setShowModal(false);
+      setLogoFile(null);
+      setLogoPreview('');
       fetchData();
     } catch (err) {
+      console.error('Partner save failed', err);
       setFormError('Failed to save partner.');
     }
     setFormLoading(false);
@@ -479,14 +542,19 @@ const Partnerships: React.FC = () => {
           {loading ? <div>Loading...</div> : (
             <ul>
               {partners.map((partner) => (
-                <li key={partner.id} className="border p-2 mb-2 rounded flex flex-col md:flex-row md:justify-between md:items-center">
-                  <div>
-                    <div className="font-semibold">{partner.name} {partner.company && <span className="text-xs text-gray-500">({partner.company})</span>}</div>
-                    <div className="text-sm text-gray-600">{partner.email} {partner.phone && <>| {partner.phone}</>}</div>
-                    {partner.website && <div className="text-xs text-blue-600"><a href={partner.website} target="_blank" rel="noopener noreferrer">{partner.website}</a></div>}
-                    {partner.description && <div className="text-sm mt-1">{partner.description}</div>}
+                <li key={partner.id} className="border p-2 mb-2 rounded flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div className="flex gap-4 items-start">
+                    {partner.logo_url && (
+                      <img src={partner.logo_url} alt={`${partner.name} logo`} className="h-16 w-16 rounded object-contain border" />
+                    )}
+                    <div>
+                      <div className="font-semibold">{partner.name} {partner.company && <span className="text-xs text-gray-500">({partner.company})</span>}</div>
+                      <div className="text-sm text-gray-600">{partner.email} {partner.phone && <>| {partner.phone}</>}</div>
+                      {partner.website && <div className="text-xs text-blue-600"><a href={partner.website} target="_blank" rel="noopener noreferrer">{partner.website}</a></div>}
+                      {partner.description && <div className="text-sm mt-1">{partner.description}</div>}
+                    </div>
                   </div>
-                  <div className="flex gap-2 mt-2 md:mt-0">
+                  <div className="flex gap-2 mt-2 md:mt-0 items-center">
                     <span className={partner.status === 'active' ? 'text-green-600' : 'text-gray-500'}>{partner.status}</span>
                     <button className="text-blue-600 hover:underline" onClick={() => openEditModal(partner)}>Edit</button>
                   </div>
@@ -497,23 +565,36 @@ const Partnerships: React.FC = () => {
 
           {/* Modal for add/edit partner */}
           {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-              <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
-                <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowModal(false)}>&times;</button>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
+            <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/40">
+              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 w-full max-w-md relative mx-4 max-h-[90vh] overflow-y-auto">
+                <button className="absolute top-3 right-3 text-gray-500 text-xl leading-none" onClick={() => setShowModal(false)}>&times;</button>
+                <h3 className="text-base font-semibold text-gray-900 mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
                 <form onSubmit={handleFormSubmit} className="space-y-3">
-                  <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border p-2 rounded" required />
-                  <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email*" className="w-full border p-2 rounded" required type="email" />
-                  <input name="phone" value={form.phone} onChange={handleFormChange} placeholder="Phone" className="w-full border p-2 rounded" />
-                  <input name="company" value={form.company} onChange={handleFormChange} placeholder="Company" className="w-full border p-2 rounded" />
-                  <input name="website" value={form.website} onChange={handleFormChange} placeholder="Company Website" className="w-full border p-2 rounded" />
-                  <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" className="w-full border p-2 rounded" rows={3} />
-                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border p-2 rounded">
+                  <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border border-gray-300 p-2 rounded-md" required />
+                  <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email (optional)" className="w-full border border-gray-300 p-2 rounded-md" type="email" />
+                  <input name="phone" value={form.phone} onChange={handleFormChange} placeholder="Phone" className="w-full border border-gray-300 p-2 rounded-md" />
+                  <input name="company" value={form.company} onChange={handleFormChange} placeholder="Company" className="w-full border border-gray-300 p-2 rounded-md" />
+                  <input name="website" value={form.website} onChange={handleFormChange} placeholder="https://miichub.com/" className="w-full border border-gray-300 p-2 rounded-md" />
+                  <label className="block text-sm font-medium text-gray-700">Partner Logo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:px-3 file:py-2 file:rounded file:bg-white file:text-gray-700"
+                  />
+                  {logoPreview && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Logo preview</p>
+                      <img src={logoPreview} alt="Partner logo preview" className="h-24 w-auto rounded border object-contain" />
+                    </div>
+                  )}
+                  <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" className="w-full border border-gray-300 p-2 rounded-md" rows={3} />
+                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border border-gray-300 p-2 rounded-md">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                   {formError && <div className="text-red-600 text-sm">{formError}</div>}
-                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save'}</button>
+                  <button type="submit" className="w-full bg-blue-600 text-white px-4 py-2 rounded-md" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save'}</button>
                 </form>
               </div>
             </div>

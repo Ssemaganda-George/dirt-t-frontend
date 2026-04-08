@@ -144,6 +144,15 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  .marquee {
+    animation: marqueeScroll 32s linear infinite;
+    will-change: transform;
+  }
+
+  .marquee:hover {
+    animation-play-state: paused;
+  }
+
   .smooth-hover:hover {
     transform: scale(1.02);
   }
@@ -187,6 +196,15 @@
     }
     100% {
       background-position: 200% 0;
+    }
+  }
+
+  @keyframes marqueeScroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
     }
   }
 
