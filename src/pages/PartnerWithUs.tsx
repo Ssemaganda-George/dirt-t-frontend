@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { getActivePartners, Partner } from '../lib/database';
-import { Handshake, Users, TrendingUp, CheckCircle } from 'lucide-react';
+import { Handshake } from 'lucide-react';
 
 const PartnerWithUs: React.FC = () => {
   const [form, setForm] = useState({
