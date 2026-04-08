@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Twitter, Instagram, Facebook, Linkedin } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
@@ -471,13 +471,13 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block bg-gray-950 text-white">
+      <footer className="hidden md:block bg-white text-slate-900">
         {/* Top CTA strip */}
-        <div className="border-b border-white/10">
+        <div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400 mb-1">For Businesses</p>
-              <p className="text-lg font-bold text-white">Reach thousands of travellers around the world.</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">For Businesses</p>
+              <p className="text-lg font-bold text-slate-900">Reach thousands of travellers around the world.</p>
             </div>
             <Link
               to="/vendor-login"
@@ -494,7 +494,7 @@ export default function PublicLayout() {
             {/* Brand column */}
             <div className="md:col-span-4">
               <p className="text-2xl font-bold tracking-tight mb-1">DirtTrails<span className="text-emerald-500">.</span></p>
-              <p className="text-gray-400 text-sm leading-relaxed mt-3 max-w-xs">
+              <p className="text-slate-500 text-sm leading-relaxed mt-3 max-w-xs">
                 Discover hidden gems worldwide and create unforgettable experiences with trusted local hosts.
               </p>
               
@@ -502,23 +502,23 @@ export default function PublicLayout() {
 
             {/* Links */}
             <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Explore</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-5">Explore</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/" className="text-gray-400 hover:text-white transition-colors">Home</Link></li>
-                <li><Link to="/category/hotels" className="text-gray-400 hover:text-white transition-colors">Stays</Link></li>
-                <li><Link to="/category/tours" className="text-gray-400 hover:text-white transition-colors">Tours</Link></li>
-                <li><Link to="/category/events" className="text-gray-400 hover:text-white transition-colors">Events</Link></li>
-                <li><Link to="/category/restaurants" className="text-gray-400 hover:text-white transition-colors">Restaurants</Link></li>
-                <li><Link to="/category/transport" className="text-gray-400 hover:text-white transition-colors">Transport</Link></li>
-                <li><Link to="/category/shops" className="text-gray-400 hover:text-white transition-colors">Shops</Link></li>
+                <li><Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors">Home</Link></li>
+                <li><Link to="/category/hotels" className="text-slate-600 hover:text-slate-900 transition-colors">Stays</Link></li>
+                <li><Link to="/category/tours" className="text-slate-600 hover:text-slate-900 transition-colors">Tours</Link></li>
+                <li><Link to="/category/events" className="text-slate-600 hover:text-slate-900 transition-colors">Events</Link></li>
+                <li><Link to="/category/restaurants" className="text-slate-600 hover:text-slate-900 transition-colors">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="text-slate-600 hover:text-slate-900 transition-colors">Transport</Link></li>
+                <li><Link to="/category/shops" className="text-slate-600 hover:text-slate-900 transition-colors">Shops</Link></li>
               </ul>
             </div>
 
             {/* Conservation column */}
             <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Conservation</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-5">Conservation</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/conservation/geotagging" className="text-gray-400 hover:text-white transition-colors">Geotagging &amp; Monitoring</Link></li>
+                <li><Link to="/conservation/geotagging" className="text-slate-600 hover:text-slate-900 transition-colors">Geotagging &amp; Monitoring</Link></li>
                 <li><Link to="/conservation/tree-planting" className="text-gray-400 hover:text-white transition-colors">Tree Planting Initiatives</Link></li>
                 <li><Link to="/conservation/carbon" className="text-gray-400 hover:text-white transition-colors">Calculate My Carbon</Link></li>
               </ul>
@@ -527,40 +527,40 @@ export default function PublicLayout() {
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Support</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/safety" className="text-gray-400 hover:text-white transition-colors">Safety</Link></li>
-                <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
-                <li><Link to="/travel-insurance" className="text-gray-400 hover:text-white transition-colors">Travel Insurance</Link></li>
-                <li><Link to="/visa-processing" className="text-gray-400 hover:text-white transition-colors">Visa Processing</Link></li>
+                <li><Link to="/help" className="text-slate-600 hover:text-slate-900 transition-colors">Help Center</Link></li>
+                <li><Link to="/contact" className="text-slate-600 hover:text-slate-900 transition-colors">Contact Us</Link></li>
+                <li><Link to="/safety" className="text-slate-600 hover:text-slate-900 transition-colors">Safety</Link></li>
+                <li><Link to="/terms" className="text-slate-600 hover:text-slate-900 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="text-slate-600 hover:text-slate-900 transition-colors">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="text-slate-600 hover:text-slate-900 transition-colors">Visa Processing</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Business</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/vendor-login" className="text-gray-400 hover:text-white transition-colors">List My Business</Link></li>
-                <li><Link to="/refer-business" className="text-gray-400 hover:text-white transition-colors">Refer a Business</Link></li>
-                <li><Link to="/hospitality-class" className="text-gray-400 hover:text-white transition-colors">Hospitality Class</Link></li>
-                <li><Link to="/partner" className="text-gray-400 hover:text-white transition-colors">Our Partners</Link></li>
+                <li><Link to="/vendor-login" className="text-slate-600 hover:text-slate-900 transition-colors">List My Business</Link></li>
+                <li><Link to="/refer-business" className="text-slate-600 hover:text-slate-900 transition-colors">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="text-slate-600 hover:text-slate-900 transition-colors">Hospitality Class</Link></li>
+                <li><Link to="/partner" className="text-slate-600 hover:text-slate-900 transition-colors">Our Partners</Link></li>
               </ul>
             </div>
           </div>
 
           {partnersLoading && !partners.length && (
-            <div className="mt-14 rounded-3xl border border-white/10 bg-white/5 py-8 text-center text-sm text-gray-400">
+            <div className="mt-14 rounded-3xl border border-gray-200 bg-slate-50 py-8 text-center text-sm text-slate-600">
               Loading partner highlights...
             </div>
           )}
 
           {partnersError && !partners.length && (
-            <div className="mt-14 rounded-3xl border border-white/10 bg-white/5 py-8 text-center text-sm text-red-300">
+            <div className="mt-14 rounded-3xl border border-gray-200 bg-slate-50 py-8 text-center text-sm text-red-600">
               {partnersError}
             </div>
           )}
 
           {partners.length > 0 && (
-            <div className="mt-10 mx-auto max-w-5xl rounded-3xl bg-white/5 p-4">
+            <div className="mt-10 mx-auto max-w-5xl p-4">
               <div className="mb-4 flex flex-col items-center gap-1 text-center">
                 <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-500">Our Partners</h4>
               </div>
@@ -578,14 +578,14 @@ export default function PublicLayout() {
                           <img
                             src={partner.logo_url}
                             alt={`${partner.name} logo`}
-                            className="h-12 w-12 rounded-full object-cover bg-gray-800"
+                            className="h-12 w-12 rounded-full object-cover bg-gray-800 shadow-sm"
                           />
                         ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-[10px] text-white uppercase font-semibold">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 text-[10px] text-white uppercase font-semibold shadow-sm">
                             {partner.name.slice(0, 2)}
                           </div>
                         )}
-                        <span className="text-xs font-medium text-gray-100">{partner.name}</span>
+                        <span className="text-xs font-medium text-slate-900">{partner.name}</span>
                       </>
                     );
 
@@ -605,12 +605,28 @@ export default function PublicLayout() {
           )}
 
           {/* Bottom bar */}
-          <div className="border-t border-white/10 mt-14 pt-8 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-sm text-gray-600">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <Link to="/privacy" className="hover:text-gray-400 transition-colors">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
-              <Link to="/cookies" className="hover:text-gray-400 transition-colors">Cookies</Link>
+          <div className="mt-14 pt-8 flex flex-col gap-4">
+            <div className="flex items-center gap-3 justify-center sm:justify-start">
+              <a href="https://x.com/DirtTrails_Ug" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Twitter">
+                <Twitter className="h-4 w-4" />
+              </a>
+              <a href="https://www.instagram.com/dirttrailssafaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Instagram">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href="https://www.facebook.com/people/DirtTrails-Safaris/100081666093047/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Facebook">
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a href="https://www.linkedin.com/company/dirt-trails-safaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="LinkedIn">
+                <Linkedin className="h-4 w-4" />
+              </a>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-slate-500">
+              <p className="text-center sm:text-left">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
+              <div className="flex items-center gap-6 justify-center sm:justify-start">
+                <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
+                <Link to="/cookies" className="hover:text-slate-900 transition-colors">Cookies</Link>
+              </div>
             </div>
           </div>
         </div>

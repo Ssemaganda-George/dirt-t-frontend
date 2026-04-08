@@ -11,10 +11,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        'sans': ['Poppins', 'system-ui', 'sans-serif'],
+        'sans': ['Montserrat', 'system-ui', 'sans-serif'],
         'serif': ['Source Serif Pro', 'Georgia', 'serif'],
-        'heading': ['Poppins', 'system-ui', 'sans-serif'],
-        'body': ['Source Serif Pro', 'system-ui', 'sans-serif'],
+        'heading': ['Montserrat', 'system-ui', 'sans-serif'],
+        'body': ['Montserrat', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {
