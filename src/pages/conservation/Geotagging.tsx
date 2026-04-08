@@ -349,7 +349,7 @@ const GeotaggingPage = () => {
   
 
   return (
-    <div className="container mx-auto px-0 py-0 max-w-full">
+    <div className="min-h-screen w-full overflow-x-hidden bg-white">
       {successMsg && (
         <div className="fixed top-6 right-6 z-50">
           <div className="bg-emerald-600 text-white px-4 py-2 rounded shadow">{successMsg}</div>
@@ -361,13 +361,13 @@ const GeotaggingPage = () => {
         </div>
       )}
       <div className="mb-4 bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-2 md:px-8 pt-3 pb-2 max-w-5xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-4 sm:px-6 md:px-8 pt-3 pb-2 max-w-5xl mx-auto">
           <div className="flex flex-col items-center md:items-start md:w-2/3">
             <div className="inline-flex items-center justify-center p-2 bg-green-500/10 rounded-full mb-1">
               <TreePine className="h-8 w-8 md:h-10 md:w-10 text-green-600" />
             </div>
-            <h1 className="text-xl md:text-3xl font-bold mb-1">Geotagging & Tree Tracking</h1>
-            <div className="text-xs md:text-base text-gray-600 mb-1 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">Geotagging & Tree Tracking</h1>
+            <div className="text-xs sm:text-sm md:text-base text-gray-600 mb-1 text-center md:text-left">
               <span className="font-semibold text-gray-900">{totals.totalTrees}</span> trees planted, removing <span className="font-semibold text-gray-900">{Math.round(totals.totalCarbonKg).toLocaleString()}</span> kg CO₂ since planting.
             </div>
             <p className="text-gray-600 max-w-xs md:max-w-lg mx-auto md:mx-0 mb-1 text-xs md:text-base">
@@ -438,7 +438,7 @@ const GeotaggingPage = () => {
                         img && openImageViewer(images.length ? images : [img], 0, caption);
                       }
                     }}
-                    className="group relative flex-shrink-0 w-36 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer"
+                    className="group relative flex-shrink-0 w-32 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer"
                   >
                     {images.length > 0 ? (
                       <div className="relative w-full h-28 overflow-hidden">
@@ -494,7 +494,7 @@ const GeotaggingPage = () => {
                   key={item.id}
                   type="button"
                   onClick={() => openImageViewer(item.images, 0, item.caption)}
-                  className="group flex-shrink-0 w-36 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                  className="group flex-shrink-0 w-32 md:w-40 rounded-none overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
                 >
                   <img src={item.images[0]} alt={item.caption} className="w-full h-28 object-cover" />
                   <div className="p-2 text-[11px] md:text-xs text-gray-700 text-left leading-5">{item.caption}</div>
@@ -512,8 +512,8 @@ const GeotaggingPage = () => {
       `}</style>
 
       {viewerOpen && (
-        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[calc(100vh-7rem)]">
+        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)]">
             <button
               type="button"
               className="absolute top-4 right-4 z-20 rounded-full bg-white/90 p-2 text-gray-800 hover:bg-white"
@@ -591,8 +591,8 @@ const GeotaggingPage = () => {
       </div>
 
       {selectedTree && (
-        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 relative max-h-[calc(100vh-7rem)] overflow-y-auto">
+        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-4 sm:p-6 relative max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
               onClick={() => setSelectedTree(null)}
@@ -670,8 +670,8 @@ const GeotaggingPage = () => {
       )}
 
       {showAddTree && (
-        <div className="fixed inset-x-0 top-[3rem] bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-6 relative max-h-[calc(100vh-7rem)] overflow-y-auto">
+        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-4 sm:p-6 relative max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
               onClick={() => setShowAddTree(false)}
