@@ -457,7 +457,9 @@ export default function PublicLayout() {
       {/* Main Content */}
       {/* Add top padding equal to header height so fixed header doesn't overlap content */}
       <main className={`${location.pathname === '/' ? 'pt-0 pb-16' : location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
-        <Outlet />
+        <div key={location.pathname} className="smooth-fade-in smooth-transition">
+          <Outlet />
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation - Hidden on scan pages, service detail pages, and checkout/payment pages */}
@@ -471,10 +473,10 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block bg-white text-slate-900">
+      <footer className="hidden md:block text-slate-900">
         {/* Top CTA strip */}
         <div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 rounded-[28px] border border-slate-200/70 bg-white/80 backdrop-blur-sm shadow-sm">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">For Businesses</p>
               <p className="text-lg font-bold text-slate-900">Reach thousands of travellers around the world.</p>

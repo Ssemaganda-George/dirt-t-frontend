@@ -11,10 +11,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        'sans': ['Montserrat', 'system-ui', 'sans-serif'],
-        'serif': ['Source Serif Pro', 'Georgia', 'serif'],
-        'heading': ['Montserrat', 'system-ui', 'sans-serif'],
-        'body': ['Montserrat', 'system-ui', 'sans-serif'],
+        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'serif': ['Georgia', 'Times New Roman', 'Times', 'serif'],
+        'heading': ['Inter', 'system-ui', 'sans-serif'],
+        'body': ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: {

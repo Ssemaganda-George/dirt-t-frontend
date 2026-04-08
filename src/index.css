@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* Hide main nav bar when lightbox is open */
 .hide-main-navbar header {
@@ -12,7 +12,9 @@
 
 @layer base {
   html {
-    font-family: 'Montserrat', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Smooth scrolling for anchor/navigation movement */
+    scroll-behavior: smooth;
     /* Prevent horizontal overflow on mobile */
     overflow-x: hidden;
     /* Ensure proper mobile scaling */
@@ -21,7 +23,10 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-slate-900;
+    background-color: #f8fafc;
+    background-image: radial-gradient(circle at 15% 10%, rgba(16,185,129,0.12), transparent 16%), radial-gradient(circle at 85% 20%, rgba(59,130,246,0.10), transparent 14%), radial-gradient(circle at 50% 120%, rgba(15,23,42,0.03), transparent 35%);
+    background-attachment: fixed;
     /* Prevent horizontal overflow */
     overflow-x: hidden;
     /* Ensure body takes full width without margins */
@@ -29,11 +34,25 @@
     min-height: 100vh;
     /* Prevent iOS Safari bounce scrolling */
     -webkit-overflow-scrolling: touch;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  a, button, input, textarea, select {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  ::selection {
+    background: rgba(16, 185, 129, 0.24);
+    color: #0f172a;
   }
 
   /* Ensure all elements respect the viewport */
   * {
     box-sizing: border-box;
+    scroll-behavior: smooth;
   }
 
   /* Prevent horizontal scrolling on mobile */
@@ -57,13 +76,14 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Montserrat', system-ui, sans-serif;
-    font-weight: 600;
-    letter-spacing: -0.025em;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
 
   .font-serif {
-    font-family: 'Source Serif Pro', Georgia, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
   }
 }
 
@@ -77,15 +97,15 @@
   }
 
   .text-elegant {
-    font-family: 'Source Serif Pro', Georgia, serif;
+    font-family: Georgia, 'Times New Roman', Times, serif;
     font-weight: 400;
     line-height: 1.6;
   }
 
   .text-heading {
-    font-family: 'Montserrat', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 600;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
   }
 
   /* Enhanced smooth transitions */
