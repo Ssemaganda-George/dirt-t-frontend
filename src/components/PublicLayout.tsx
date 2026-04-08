@@ -542,7 +542,7 @@ export default function PublicLayout() {
                 <li><Link to="/vendor-login" className="text-gray-400 hover:text-white transition-colors">List My Business</Link></li>
                 <li><Link to="/refer-business" className="text-gray-400 hover:text-white transition-colors">Refer a Business</Link></li>
                 <li><Link to="/hospitality-class" className="text-gray-400 hover:text-white transition-colors">Hospitality Class</Link></li>
-                <li><Link to="/partner" className="text-gray-400 hover:text-white transition-colors">Partner with Us</Link></li>
+                <li><Link to="/partner" className="text-gray-400 hover:text-white transition-colors">Our Partners</Link></li>
               </ul>
             </div>
           </div>

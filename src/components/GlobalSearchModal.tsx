@@ -52,7 +52,7 @@ const faqCategories = [
       },
       {
         question: "How do I become a service provider?",
-        answer: "Visit our 'Partner With Us' page to learn about becoming a service provider. Complete the registration process and submit required documentation for approval."
+        answer: "Visit our 'Our Partners' page to learn about becoming a service provider. Complete the registration process and submit required documentation for approval."
       }
     ]
   }

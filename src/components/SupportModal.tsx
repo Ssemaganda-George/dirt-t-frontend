@@ -43,7 +43,7 @@ const businessServices = [
     href: '/vendor-login'
   },
   {
-    name: 'Partner with Us',
+    name: 'Our Partners',
     href: '/partner'
   },
   {
