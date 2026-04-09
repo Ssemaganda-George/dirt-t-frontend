@@ -497,7 +497,7 @@ export default function PublicLayout() {
             <div className="md:col-span-4">
               <p className="text-2xl font-bold tracking-tight mb-1">DirtTrails<span className="text-emerald-500">.</span></p>
               <p className="text-slate-500 text-sm leading-relaxed mt-3 max-w-xs">
-                Discover hidden gems worldwide and create unforgettable experiences with trusted local hosts.
+                Intelligent bookings, trusted hosts, and journeys built for sustainability.
               </p>
               
             </div>
