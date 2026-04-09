@@ -164,10 +164,11 @@ export default function PublicLayout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
           <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
             {/* Logo */}
-            <Link to="/" className="flex items-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-3 py-1 shadow">
-              <span className="text-2xl font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
+            <Link to="/" className="flex flex-col items-end justify-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-2 py-1 shadow-sm">
+              <span className="text-lg font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
+              <span className="self-end text-[7px] font-semibold uppercase tracking-[0.16em] text-slate-500 mt-0.5">Safari intel</span>
               {location.pathname.includes('/scan/') && (
-                <span className="ml-2 text-base font-semibold text-white/90 drop-shadow-lg">
+                <span className="mt-2 text-sm font-semibold text-white/90 drop-shadow-lg">
                   Event Verification
                 </span>
               )}
