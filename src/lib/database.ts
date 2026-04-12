@@ -4733,31 +4733,26 @@ export async function getVendorStats(vendorId: string) {
             }
           }
         }
-        // For no-booking payment transactions, look up vendor_payout via payments → orders
+        // For no-booking payment transactions, look up vendor_payout directly from orders
+        // orders.reference = transaction.reference; orders has no RLS
         const noBookingRefsRecent = recentTx
           .filter((tx: any) => tx.transaction_type === 'payment' && !tx.booking_id && tx.reference)
           .map((tx: any) => tx.reference as string)
         if (noBookingRefsRecent.length > 0) {
           try {
-            const { data: payRowsR } = await supabase
-              .from('payments').select('reference, order_id').in('reference', noBookingRefsRecent).not('order_id', 'is', null)
-            if (payRowsR && payRowsR.length > 0) {
-              const { data: orderRowsR } = await supabase
-                .from('orders').select('id, vendor_payout').in('id', payRowsR.map((p: any) => p.order_id))
-              if (orderRowsR) {
-                const omR = new Map((orderRowsR).map((o: any) => [String(o.id), o]))
-                const refPayoutR: Record<string, number> = {}
-                for (const p of payRowsR) {
-                  const ord = omR.get(String(p.order_id))
-                  if (ord && ord.vendor_payout != null) refPayoutR[p.reference] = Number(ord.vendor_payout)
-                }
-                recentTx = recentTx.map((tx: any) => {
-                  if (tx.transaction_type === 'payment' && !tx.booking_id && tx.reference && refPayoutR[tx.reference] != null) {
-                    return { ...tx, amount: refPayoutR[tx.reference], original_amount: tx.amount }
-                  }
-                  return tx
-                })
+            const { data: orderRowsR } = await supabase
+              .from('orders').select('reference, vendor_payout').in('reference', noBookingRefsRecent).not('vendor_payout', 'is', null)
+            if (orderRowsR) {
+              const refPayoutR: Record<string, number> = {}
+              for (const o of orderRowsR) {
+                if (o.reference && o.vendor_payout != null) refPayoutR[o.reference] = Number(o.vendor_payout)
               }
+              recentTx = recentTx.map((tx: any) => {
+                if (tx.transaction_type === 'payment' && !tx.booking_id && tx.reference && refPayoutR[tx.reference] != null) {
+                  return { ...tx, amount: refPayoutR[tx.reference], original_amount: tx.amount }
+                }
+                return tx
+              })
             }
           } catch (_) { /* non-fatal */ }
         }
@@ -5653,31 +5648,24 @@ export async function getTransactions(vendorId: string) {
           }
         }
 
-        // For payment transactions with no booking_id, look up vendor_payout via payments → orders
+        // For payment transactions with no booking_id, look up vendor_payout directly from orders
+        // orders.reference = transaction.reference (set when order is marked paid)
+        // orders table has no RLS so vendors can read their own orders
         const noBookingRefs = data
           .filter((tx: any) => tx.transaction_type === 'payment' && !tx.booking_id && tx.reference)
           .map((tx: any) => tx.reference as string)
         let orderPayoutMap: Record<string, number> = {}
         if (noBookingRefs.length > 0) {
           try {
-            const { data: payRows } = await supabase
-              .from('payments')
-              .select('reference, order_id')
+            const { data: orderRows } = await supabase
+              .from('orders')
+              .select('reference, vendor_payout')
               .in('reference', noBookingRefs)
-              .not('order_id', 'is', null)
-            if (payRows && payRows.length > 0) {
-              const orderIds = payRows.map((p: any) => p.order_id as string)
-              const { data: orderRows } = await supabase
-                .from('orders')
-                .select('id, vendor_payout, platform_fee')
-                .in('id', orderIds)
-              if (orderRows) {
-                const orderById = new Map((orderRows).map((o: any) => [String(o.id), o]))
-                for (const p of payRows) {
-                  const ord = orderById.get(String(p.order_id))
-                  if (ord && ord.vendor_payout != null) {
-                    orderPayoutMap[p.reference] = Number(ord.vendor_payout)
-                  }
+              .not('vendor_payout', 'is', null)
+            if (orderRows) {
+              for (const o of orderRows) {
+                if (o.reference && o.vendor_payout != null) {
+                  orderPayoutMap[o.reference] = Number(o.vendor_payout)
                 }
               }
             }
@@ -5768,17 +5756,14 @@ export async function getTransactions(vendorId: string) {
         let orderPayoutMap2: Record<string, number> = {}
         if (noBookingRefs2.length > 0) {
           try {
-            const { data: payRows2 } = await supabase
-              .from('payments').select('reference, order_id').in('reference', noBookingRefs2).not('order_id', 'is', null)
-            if (payRows2 && payRows2.length > 0) {
-              const { data: orderRows2 } = await supabase
-                .from('orders').select('id, vendor_payout').in('id', payRows2.map((p: any) => p.order_id))
-              if (orderRows2) {
-                const om = new Map((orderRows2).map((o: any) => [String(o.id), o]))
-                for (const p of payRows2) {
-                  const ord = om.get(String(p.order_id))
-                  if (ord && ord.vendor_payout != null) orderPayoutMap2[p.reference] = Number(ord.vendor_payout)
-                }
+            const { data: orderRows2 } = await supabase
+              .from('orders')
+              .select('reference, vendor_payout')
+              .in('reference', noBookingRefs2)
+              .not('vendor_payout', 'is', null)
+            if (orderRows2) {
+              for (const o of orderRows2) {
+                if (o.reference && o.vendor_payout != null) orderPayoutMap2[o.reference] = Number(o.vendor_payout)
               }
             }
           } catch (_) { /* non-fatal */ }
