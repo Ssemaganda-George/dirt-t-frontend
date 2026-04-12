@@ -2064,29 +2064,30 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
     const { data: order, error: orderError } = await supabase.from('orders').update({ status: 'paid', reference: payment.reference, updated_at: new Date().toISOString() }).eq('id', orderId).select().single()
     if (orderError) throw orderError
 
-    // Calculate commission for ticket purchases (similar to bookings)
+    // Use vendor_payout and platform_fee from the order (authoritative source)
+    const vendorPayoutAmount = Number(order.vendor_payout || 0) || payment.amount
+    const platformFeeAmount = Number(order.platform_fee || 0)
     const adminId = await getAdminProfileId();
-    let commissionAmount = 0;
-    
-    // For ticket orders, use a default commission rate of 15% (can be made configurable later)
-    const defaultCommissionRate = 0.15;
-    commissionAmount = Math.round((payment.amount * defaultCommissionRate) * 100) / 100;
+    // commission = platform fee from order only (no synthetic % if missing)
+    const commissionAmount = Math.max(0, platformFeeAmount)
+
+    const txRef = payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}`
 
     if (!adminId) {
       console.warn('Admin profile not found - processing ticket payment without commission');
-      // Fallback to simple transaction creation if admin not found
       try {
-        await addTransaction({ 
-          booking_id: undefined as any, 
-          vendor_id: payment.vendor_id, 
-          tourist_id: payment.tourist_id, 
-          amount: payment.amount, 
-          currency: payment.currency, 
-          transaction_type: 'payment', 
-          status: 'completed', 
-          payment_method: payment.payment_method as any, 
-          reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
+        await addTransaction({
+          booking_id: undefined as any,
+          vendor_id: payment.vendor_id,
+          tourist_id: payment.tourist_id,
+          amount: vendorPayoutAmount,
+          currency: payment.currency,
+          transaction_type: 'payment',
+          status: 'completed',
+          payment_method: payment.payment_method as any,
+          reference: txRef
         })
+        await creditWallet(payment.vendor_id, vendorPayoutAmount, payment.currency)
       } catch (txErr) {
         console.warn('Failed to add transaction for ticket order:', txErr)
       }
@@ -2097,60 +2098,41 @@ export async function confirmOrderAndIssueTickets(orderId: string, payment: { ve
         p_total_amount: payment.amount,
         p_commission_amount: commissionAmount,
         p_admin_id: adminId,
-        p_booking_id: null, // No specific booking for ticket orders
+        p_booking_id: null,
         p_tourist_id: payment.tourist_id || null,
         p_currency: payment.currency || 'UGX',
         p_payment_method: payment.payment_method,
-        p_reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}`
+        p_reference: txRef
       });
 
       if (paymentError || !paymentResult?.success) {
         console.error('Error processing ticket payment with commission:', paymentError || paymentResult?.error);
-
-        if (adminId && commissionAmount > 0) {
-          // Preserve commission semantics even when RPC fails by creating the transaction and crediting the two wallets manually.
-          try {
-            const transactionId = await addTransaction({ 
-              booking_id: undefined as any, 
-              vendor_id: payment.vendor_id, 
-              tourist_id: payment.tourist_id, 
-              amount: payment.amount, 
-              currency: payment.currency, 
-              transaction_type: 'payment', 
-              status: 'completed', 
-              payment_method: payment.payment_method as any, 
-              reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
-            })
-
-            const vendorAmount = payment.amount - commissionAmount
-            await creditWallet(payment.vendor_id, vendorAmount, payment.currency)
+        // Fallback: create transaction with vendor net amount, credit wallets correctly
+        try {
+          const transactionId = await addTransaction({
+            booking_id: undefined as any,
+            vendor_id: payment.vendor_id,
+            tourist_id: payment.tourist_id,
+            amount: vendorPayoutAmount,
+            currency: payment.currency,
+            transaction_type: 'payment',
+            status: 'completed',
+            payment_method: payment.payment_method as any,
+            reference: txRef
+          })
+          await creditWallet(payment.vendor_id, vendorPayoutAmount, payment.currency)
+          if (adminId && commissionAmount > 0) {
             await creditWallet(adminId, commissionAmount, payment.currency)
-            console.log('Fallback ticket payment processed with commission split:', { transactionId, vendorAmount, commissionAmount })
-          } catch (txErr) {
-            console.warn('Failed to add fallback commission-aware ticket transaction:', txErr)
           }
-        } else {
-          try {
-            await addTransaction({ 
-              booking_id: undefined as any, 
-              vendor_id: payment.vendor_id, 
-              tourist_id: payment.tourist_id, 
-              amount: payment.amount, 
-              currency: payment.currency, 
-              transaction_type: 'payment', 
-              status: 'completed', 
-              payment_method: payment.payment_method as any, 
-              reference: payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}` 
-            })
-          } catch (txErr) {
-            console.warn('Failed to add fallback transaction for ticket order:', txErr)
-          }
+          console.log('Fallback ticket payment processed:', { transactionId, vendorPayoutAmount, commissionAmount })
+        } catch (txErr) {
+          console.warn('Failed to add fallback ticket transaction:', txErr)
         }
       } else {
         console.log('Successfully processed ticket payment with commission:', {
           total_amount: payment.amount,
-          vendor_amount: paymentResult.vendor_amount,
-          commission_amount: paymentResult.commission_amount
+          vendor_payout: vendorPayoutAmount,
+          commission_amount: commissionAmount
         });
       }
     }
@@ -3389,17 +3371,8 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
               if (!commissionAmount && data.commission_rate_at_booking) {
                 commissionAmount = Math.round((Number(data.total_amount || 0) * Number(data.commission_rate_at_booking)) * 100) / 100;
               }
-              // If still no commission amount, use default 15% commission rate
-              if (!commissionAmount) {
-                const defaultCommissionRate = 0.15; // 15% default commission
-                commissionAmount = Math.round((Number(data.total_amount || 0) * defaultCommissionRate) * 100) / 100;
-                console.log('Using default commission rate for booking:', id, 'commission:', commissionAmount);
-              }
             } catch (e) {
-              // Fallback to default commission if calculation fails
-              const defaultCommissionRate = 0.15;
-              commissionAmount = Math.round((Number(data.total_amount || 0) * defaultCommissionRate) * 100) / 100;
-              console.log('Commission calculation failed, using default for booking:', id, 'commission:', commissionAmount);
+              commissionAmount = 0;
             }
 
             if (!adminId) {
@@ -4760,6 +4733,34 @@ export async function getVendorStats(vendorId: string) {
             }
           }
         }
+        // For no-booking payment transactions, look up vendor_payout via payments → orders
+        const noBookingRefsRecent = recentTx
+          .filter((tx: any) => tx.transaction_type === 'payment' && !tx.booking_id && tx.reference)
+          .map((tx: any) => tx.reference as string)
+        if (noBookingRefsRecent.length > 0) {
+          try {
+            const { data: payRowsR } = await supabase
+              .from('payments').select('reference, order_id').in('reference', noBookingRefsRecent).not('order_id', 'is', null)
+            if (payRowsR && payRowsR.length > 0) {
+              const { data: orderRowsR } = await supabase
+                .from('orders').select('id, vendor_payout').in('id', payRowsR.map((p: any) => p.order_id))
+              if (orderRowsR) {
+                const omR = new Map((orderRowsR).map((o: any) => [String(o.id), o]))
+                const refPayoutR: Record<string, number> = {}
+                for (const p of payRowsR) {
+                  const ord = omR.get(String(p.order_id))
+                  if (ord && ord.vendor_payout != null) refPayoutR[p.reference] = Number(ord.vendor_payout)
+                }
+                recentTx = recentTx.map((tx: any) => {
+                  if (tx.transaction_type === 'payment' && !tx.booking_id && tx.reference && refPayoutR[tx.reference] != null) {
+                    return { ...tx, amount: refPayoutR[tx.reference], original_amount: tx.amount }
+                  }
+                  return tx
+                })
+              }
+            }
+          } catch (_) { /* non-fatal */ }
+        }
       }
     } catch (error) {
       console.warn('Exception fetching recent transactions (table may not exist):', error)
@@ -5652,23 +5653,66 @@ export async function getTransactions(vendorId: string) {
           }
         }
 
+        // For payment transactions with no booking_id, look up vendor_payout via payments → orders
+        const noBookingRefs = data
+          .filter((tx: any) => tx.transaction_type === 'payment' && !tx.booking_id && tx.reference)
+          .map((tx: any) => tx.reference as string)
+        let orderPayoutMap: Record<string, number> = {}
+        if (noBookingRefs.length > 0) {
+          try {
+            const { data: payRows } = await supabase
+              .from('payments')
+              .select('reference, order_id')
+              .in('reference', noBookingRefs)
+              .not('order_id', 'is', null)
+            if (payRows && payRows.length > 0) {
+              const orderIds = payRows.map((p: any) => p.order_id as string)
+              const { data: orderRows } = await supabase
+                .from('orders')
+                .select('id, vendor_payout, platform_fee')
+                .in('id', orderIds)
+              if (orderRows) {
+                const orderById = new Map((orderRows).map((o: any) => [String(o.id), o]))
+                for (const p of payRows) {
+                  const ord = orderById.get(String(p.order_id))
+                  if (ord && ord.vendor_payout != null) {
+                    orderPayoutMap[p.reference] = Number(ord.vendor_payout)
+                  }
+                }
+              }
+            }
+          } catch (orderLookupErr) {
+            console.log('getTransactions: Order payout lookup failed (non-fatal):', orderLookupErr)
+          }
+        }
+
         const processedData = data.map((transaction: any) => {
           const enriched = {
             ...transaction,
             bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
           }
 
-          if (enriched.transaction_type === 'payment' && enriched.bookings) {
-            const vendorAmount = enriched.bookings.vendor_payout_amount != null
-              ? Number(enriched.bookings.vendor_payout_amount)
-              : enriched.bookings.commission_amount != null
-                ? enriched.amount - Number(enriched.bookings.commission_amount)
-                : enriched.amount
-            return {
-              ...enriched,
-              amount: vendorAmount,
-              original_amount: enriched.amount,
-              commission_deducted: enriched.bookings.commission_amount ?? 0
+          if (enriched.transaction_type === 'payment') {
+            if (enriched.bookings) {
+              const vendorAmount = enriched.bookings.vendor_payout_amount != null
+                ? Number(enriched.bookings.vendor_payout_amount)
+                : enriched.bookings.commission_amount != null
+                  ? enriched.amount - Number(enriched.bookings.commission_amount)
+                  : enriched.amount
+              return {
+                ...enriched,
+                amount: vendorAmount,
+                original_amount: enriched.amount,
+                commission_deducted: enriched.bookings.commission_amount ?? 0
+              }
+            }
+            // No booking — try order payout lookup
+            if (enriched.reference && orderPayoutMap[enriched.reference] != null) {
+              return {
+                ...enriched,
+                amount: orderPayoutMap[enriched.reference],
+                original_amount: enriched.amount
+              }
             }
           }
           return enriched
@@ -5717,23 +5761,51 @@ export async function getTransactions(vendorId: string) {
           }
         }
 
+        // Order payout lookup for no-booking payment transactions
+        const noBookingRefs2 = data
+          .filter((tx: any) => tx.transaction_type === 'payment' && !tx.booking_id && tx.reference)
+          .map((tx: any) => tx.reference as string)
+        let orderPayoutMap2: Record<string, number> = {}
+        if (noBookingRefs2.length > 0) {
+          try {
+            const { data: payRows2 } = await supabase
+              .from('payments').select('reference, order_id').in('reference', noBookingRefs2).not('order_id', 'is', null)
+            if (payRows2 && payRows2.length > 0) {
+              const { data: orderRows2 } = await supabase
+                .from('orders').select('id, vendor_payout').in('id', payRows2.map((p: any) => p.order_id))
+              if (orderRows2) {
+                const om = new Map((orderRows2).map((o: any) => [String(o.id), o]))
+                for (const p of payRows2) {
+                  const ord = om.get(String(p.order_id))
+                  if (ord && ord.vendor_payout != null) orderPayoutMap2[p.reference] = Number(ord.vendor_payout)
+                }
+              }
+            }
+          } catch (_) { /* non-fatal */ }
+        }
+
         const processedTransactions = data.map((transaction: any) => {
           const enriched = {
             ...transaction,
             bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
           }
 
-          if (enriched.transaction_type === 'payment' && enriched.bookings) {
-            const vendorAmount = enriched.bookings.vendor_payout_amount != null
-              ? Number(enriched.bookings.vendor_payout_amount)
-              : enriched.bookings.commission_amount != null
-                ? enriched.amount - Number(enriched.bookings.commission_amount)
-                : enriched.amount
-            return {
-              ...enriched,
-              amount: vendorAmount,
-              original_amount: enriched.amount,
-              commission_deducted: enriched.bookings.commission_amount ?? 0
+          if (enriched.transaction_type === 'payment') {
+            if (enriched.bookings) {
+              const vendorAmount = enriched.bookings.vendor_payout_amount != null
+                ? Number(enriched.bookings.vendor_payout_amount)
+                : enriched.bookings.commission_amount != null
+                  ? enriched.amount - Number(enriched.bookings.commission_amount)
+                  : enriched.amount
+              return {
+                ...enriched,
+                amount: vendorAmount,
+                original_amount: enriched.amount,
+                commission_deducted: enriched.bookings.commission_amount ?? 0
+              }
+            }
+            if (enriched.reference && orderPayoutMap2[enriched.reference] != null) {
+              return { ...enriched, amount: orderPayoutMap2[enriched.reference], original_amount: enriched.amount }
             }
           }
           return enriched

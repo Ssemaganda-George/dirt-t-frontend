@@ -269,9 +269,6 @@ export async function resolveTierCommission(
     const val = vt.commission_value != null ? Number(vt.commission_value) : null;
     if (val != null && !Number.isNaN(val)) {
       platformFee = basePrice * commissionPercentValueToRate(val);
-    } else {
-      const r = Number(vt.commission_rate ?? 0);
-      platformFee = basePrice * Math.min(1, Math.max(0, r));
     }
   }
 

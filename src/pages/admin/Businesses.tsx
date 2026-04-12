@@ -649,7 +649,7 @@ export default function Businesses() {
           ? 0
           : (automaticTier?.commission_rate ?? (automaticTier?.commission_value != null
               ? (Number(automaticTier.commission_value) > 1 ? Number(automaticTier.commission_value) / 100 : Number(automaticTier.commission_value))
-              : 0.15))
+              : 0))
         })
         .eq('id', user.vendor.id)
 

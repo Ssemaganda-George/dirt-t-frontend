@@ -29,7 +29,7 @@ export async function calculateCommission(
     throw new Error(`Failed to get vendor: ${error?.message}`);
   }
 
-  let commissionRate = 0.15; // Default to 15%
+  let commissionRate = 0;
   let commissionAmount = 0;
 
   const tierRowId = effectiveVendorTierId(vendor);
