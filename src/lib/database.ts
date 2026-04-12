@@ -4725,7 +4725,7 @@ export async function getVendorStats(vendorId: string) {
 
       if (recentTxError) {
         // Check if it's a permission or table not found error
-        if (recentTxError.message?.includes('permission denied') || 
+        if (recentTxError.message?.includes('permission denied') ||
             recentTxError.message?.includes('does not exist') ||
             recentTxError.code === 'PGRST116') {
           console.warn('Transactions table not accessible or does not exist:', recentTxError.message)
@@ -4735,6 +4735,31 @@ export async function getVendorStats(vendorId: string) {
         }
       } else {
         recentTx = data || []
+        // Enrich with booking data to show vendor payout amounts
+        if (recentTx.length > 0) {
+          const txBookingIds = recentTx.filter((tx: any) => tx.booking_id).map((tx: any) => tx.booking_id)
+          if (txBookingIds.length > 0) {
+            const { data: txBookingsData } = await supabase
+              .from('bookings')
+              .select('id, commission_amount, total_amount, vendor_payout_amount')
+              .in('id', txBookingIds)
+            if (txBookingsData) {
+              const txBookingMap: Record<string, any> = txBookingsData.reduce((acc: Record<string, any>, b: any) => { acc[b.id] = b; return acc }, {})
+              recentTx = recentTx.map((tx: any) => {
+                const booking = txBookingMap[tx.booking_id]
+                if (tx.transaction_type === 'payment' && booking) {
+                  const vendorAmount = booking.vendor_payout_amount != null
+                    ? Number(booking.vendor_payout_amount)
+                    : booking.commission_amount != null
+                      ? tx.amount - Number(booking.commission_amount)
+                      : tx.amount
+                  return { ...tx, amount: vendorAmount, bookings: booking }
+                }
+                return { ...tx, bookings: booking || null }
+              })
+            }
+          }
+        }
       }
     } catch (error) {
       console.warn('Exception fetching recent transactions (table may not exist):', error)
@@ -5614,7 +5639,7 @@ export async function getTransactions(vendorId: string) {
         if (bookingIds.length > 0) {
           const { data: bookingsData, error: bookingsError } = await supabase
             .from('bookings')
-            .select('id, status, payment_status, commission_amount, total_amount')
+            .select('id, status, payment_status, commission_amount, total_amount, vendor_payout_amount')
             .in('id', bookingIds)
 
           if (!bookingsError && bookingsData) {
@@ -5633,12 +5658,17 @@ export async function getTransactions(vendorId: string) {
             bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
           }
 
-          if (enriched.transaction_type === 'payment' && enriched.bookings?.commission_amount) {
+          if (enriched.transaction_type === 'payment' && enriched.bookings) {
+            const vendorAmount = enriched.bookings.vendor_payout_amount != null
+              ? Number(enriched.bookings.vendor_payout_amount)
+              : enriched.bookings.commission_amount != null
+                ? enriched.amount - Number(enriched.bookings.commission_amount)
+                : enriched.amount
             return {
               ...enriched,
-              amount: enriched.amount - enriched.bookings.commission_amount,
+              amount: vendorAmount,
               original_amount: enriched.amount,
-              commission_deducted: enriched.bookings.commission_amount
+              commission_deducted: enriched.bookings.commission_amount ?? 0
             }
           }
           return enriched
@@ -5674,7 +5704,7 @@ export async function getTransactions(vendorId: string) {
         if (bookingIds.length > 0) {
           const { data: bookingsData, error: bookingsError } = await supabase
             .from('bookings')
-            .select('id, status, payment_status, commission_amount, total_amount')
+            .select('id, status, payment_status, commission_amount, total_amount, vendor_payout_amount')
             .in('id', bookingIds)
 
           if (!bookingsError && bookingsData) {
@@ -5693,12 +5723,17 @@ export async function getTransactions(vendorId: string) {
             bookings: bookingMap[transaction.booking_id] || transaction.bookings || null
           }
 
-          if (enriched.transaction_type === 'payment' && enriched.bookings?.commission_amount) {
+          if (enriched.transaction_type === 'payment' && enriched.bookings) {
+            const vendorAmount = enriched.bookings.vendor_payout_amount != null
+              ? Number(enriched.bookings.vendor_payout_amount)
+              : enriched.bookings.commission_amount != null
+                ? enriched.amount - Number(enriched.bookings.commission_amount)
+                : enriched.amount
             return {
               ...enriched,
-              amount: enriched.amount - enriched.bookings.commission_amount,
+              amount: vendorAmount,
               original_amount: enriched.amount,
-              commission_deducted: enriched.bookings.commission_amount
+              commission_deducted: enriched.bookings.commission_amount ?? 0
             }
           }
           return enriched
@@ -5828,7 +5863,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
     // Build base query for confirmed or completed paid bookings
     let query = supabase
       .from('bookings')
-      .select('id, vendor_id, tourist_id, total_amount, currency, commission_amount, commission_rate_at_booking')
+      .select('id, vendor_id, tourist_id, total_amount, vendor_payout_amount, currency, commission_amount, commission_rate_at_booking')
       .in('status', ['confirmed', 'completed'])
       .eq('payment_status', 'paid')
 
@@ -5921,7 +5956,9 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
                   reference
                 })
 
-                const vendorAmount = b.total_amount - commissionAmount
+                const vendorAmount = b.vendor_payout_amount != null
+                  ? Number(b.vendor_payout_amount)
+                  : Number(b.total_amount) - commissionAmount
                 await creditWallet(b.vendor_id, vendorAmount, b.currency || 'UGX')
                 await creditWallet(adminId, commissionAmount, b.currency || 'UGX')
                 console.log('Reconciliation fallback processed with commission split for booking', b.id)

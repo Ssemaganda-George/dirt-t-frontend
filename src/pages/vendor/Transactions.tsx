@@ -43,12 +43,19 @@ export default function VendorTransactions() {
 
   // Daily recommendations — changes every day, unique per vendor, adapts to data
   const getTransactionVendorAmount = (tx: Transaction) => {
-    const grossAmount = Number(tx.bookings?.total_amount ?? tx.amount)
-    const commission = Number(tx.bookings?.commission_amount ?? 0)
-    if (tx.transaction_type === 'payment' && grossAmount && commission) {
-      return grossAmount - commission
+    // tx.amount has already been set to vendor_payout_amount by getTransactions()
+    // Use it directly — fall back to manual calculation only if booking metadata is present
+    if (tx.transaction_type === 'payment') {
+      if (tx.bookings?.vendor_payout_amount != null) {
+        return Number(tx.bookings.vendor_payout_amount)
+      }
+      const grossAmount = Number(tx.bookings?.total_amount ?? tx.amount)
+      const commission = Number(tx.bookings?.commission_amount ?? 0)
+      if (grossAmount && commission) {
+        return grossAmount - commission
+      }
     }
-    return Number(tx.amount || grossAmount)
+    return Number(tx.amount)
   }
 
   const dailyRecs = useMemo(() => {

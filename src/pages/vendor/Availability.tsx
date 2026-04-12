@@ -366,7 +366,7 @@ export default function VendorAvailability() {
                   </div>
                   <div>
                     <span className="text-gray-500">Amount</span>
-                    <p className="font-medium text-gray-900">{formatCurrencyWithConversion(selectedBookingObj.total_amount || 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</p>
+                    <p className="font-medium text-gray-900">{formatCurrencyWithConversion(selectedBookingObj.vendor_payout_amount ?? selectedBookingObj.total_amount ?? 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</p>
                   </div>
                   <div>
                     <span className="text-gray-500">Status</span>

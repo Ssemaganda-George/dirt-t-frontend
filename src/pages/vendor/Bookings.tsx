@@ -250,7 +250,7 @@ export default function VendorBookings() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-semibold text-gray-900">
-                      {formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
+                      {formatCurrencyWithConversion(b.vendor_payout_amount ?? b.total_amount, b.currency, selectedCurrency, selectedLanguage)}
                     </p>
                     <span className={`inline-flex mt-1 px-2 py-0.5 rounded-md text-xs font-medium ${
                       getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
@@ -315,7 +315,7 @@ export default function VendorBookings() {
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500">{formatDateTime(b.booking_date)}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500">{b.guests}</td>
-                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(b.vendor_payout_amount ?? b.total_amount, b.currency, selectedCurrency, selectedLanguage)}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                       getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'

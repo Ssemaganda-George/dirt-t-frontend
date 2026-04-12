@@ -195,7 +195,7 @@ export default function VendorPerformanceReport() {
                   <td className="py-2"><a className="text-sky-600" href={`/booking/${b.id}`}>#{b.id?.slice ? b.id.slice(0,8) : b.id}</a></td>
                   <td className="py-2">{b.service_title || b.service_title || '—'}</td>
                   <td className="py-2">{b.tourist_name || b.tourist_email || '—'}</td>
-                  <td className="py-2">{formatCurrency(b.amount || b.total_amount || b.price)}</td>
+                  <td className="py-2">{formatCurrency(b.vendor_payout_amount ?? b.amount ?? b.total_amount ?? b.price)}</td>
                   <td className="py-2">{b.status || b.booking_status || '—'}</td>
                   <td className="py-2">{new Date(b.created_at || b.createdAt || 0).toLocaleDateString()}</td>
                 </tr>

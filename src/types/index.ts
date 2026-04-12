@@ -431,6 +431,7 @@ export interface Transaction {
     total_amount?: number | string | null;
     platform_fee?: number | string | null;
     commission_amount?: number | string | null;
+    vendor_payout_amount?: number | string | null;
     fee_payer?: string | null;
   } | null;
 }

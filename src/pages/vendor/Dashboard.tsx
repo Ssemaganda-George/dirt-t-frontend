@@ -349,7 +349,7 @@ export default function VendorDashboard() {
                     <p className="text-xs text-gray-500 mt-0.5">{formatDateTime(b.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-sm font-semibold text-gray-900">{formatCurrencyWithConversion(b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatCurrencyWithConversion(b.vendor_payout_amount ?? b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                       getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
                         ? 'bg-emerald-50 text-emerald-700'
