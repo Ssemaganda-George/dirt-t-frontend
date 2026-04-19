@@ -160,7 +160,7 @@ export default function Wallet() {
     // Progressive status messages
     const messages: [number, string][] = [
       [8000, 'Enter your PIN on the USSD prompt to confirm payment.'],
-      [20000, 'Still waiting… Airtel payments can take up to 60 seconds.'],
+      [20000, 'Still waiting… Mobile Money payments can take up to 60 seconds.'],
       [40000, 'Almost there — waiting for network confirmation.'],
       [65000, 'Taking longer than usual. If no prompt appeared, you can try again.'],
     ]
