@@ -530,6 +530,16 @@ export default function PublicLayout() {
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Support</h4>
               <ul className="space-y-3 text-sm">
+                <li>
+                  <a
+                    href="https://www.dirt-trails.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Visit Our Website
+                  </a>
+                </li>
                 <li><Link to="/help" className="text-slate-600 hover:text-slate-900 transition-colors">Help Center</Link></li>
                 <li><Link to="/contact" className="text-slate-600 hover:text-slate-900 transition-colors">Contact Us</Link></li>
                 <li><Link to="/safety" className="text-slate-600 hover:text-slate-900 transition-colors">Safety</Link></li>
