@@ -11,6 +11,8 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getActivePartners, Partner } from '../lib/database'
+import '../i18n';
+import { useTranslation } from 'react-i18next';
 
 const getRegionName = (code: string) => {
   const regionMap: { [key: string]: string } = {
@@ -532,7 +534,7 @@ export default function PublicLayout() {
               <ul className="space-y-3 text-sm">
                 <li>
                   <a
-                    href="https://www.dirt-trails.com"
+                    href="https://2www.dirt-trails.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-slate-600 hover:text-slate-900 transition-colors"
