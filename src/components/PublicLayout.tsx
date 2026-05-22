@@ -11,8 +11,8 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getActivePartners, Partner } from '../lib/database'
-import '../i18n';
-import { useTranslation } from 'react-i18next';
+// import '../i18n';
+// import { useTranslation } from 'react-i18next';
 
 const getRegionName = (code: string) => {
   const regionMap: { [key: string]: string } = {
