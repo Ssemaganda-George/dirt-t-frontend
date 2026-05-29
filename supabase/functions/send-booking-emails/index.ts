@@ -472,6 +472,10 @@ serve(async (req) => {
     const { data: booking, error } = await supabase.from('bookings').select('*').eq('id', booking_id).single()
     if (error || !booking) return jsonError('BOOKING_ERROR', 'Booking not found', 500)
 
+    // PostgREST may return numeric columns as strings; normalize for templates/PDF
+    ;(booking as any).total_amount = Number((booking as any).total_amount)
+    ;(booking as any).guests = Number((booking as any).guests)
+
     // Fetch service name + location
     const { data: svc } = await supabase.from('services').select('title, location').eq('id', booking.service_id).maybeSingle()
     const serviceName = svc?.title || 'Service'

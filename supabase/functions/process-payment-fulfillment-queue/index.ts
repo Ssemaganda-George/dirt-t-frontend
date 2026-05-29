@@ -88,14 +88,27 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   }
 
   const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
-  fetch(`${baseUrl}/functions/v1/send-booking-emails`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-    body: JSON.stringify({ booking_id: bookingId }),
-  }).catch((e) => console.warn("Worker: send-booking-emails error", e?.message || e))
+  try {
+    const res = await fetch(`${baseUrl}/functions/v1/send-booking-emails`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+      },
+      body: JSON.stringify({ booking_id: bookingId }),
+    })
+    const bodyText = await res.text()
+    if (!res.ok) {
+      console.warn(
+        "Worker: send-booking-emails failed",
+        res.status,
+        bodyText.slice(0, 500),
+      )
+    }
+  } catch (e: any) {
+    console.warn("Worker: send-booking-emails error", e?.message || e)
+  }
 }
 
 async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<void> {
