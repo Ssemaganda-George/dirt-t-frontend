@@ -607,7 +607,7 @@ export default function VendorLogin() {
                       </div>
 
                       <div>
-                        <label className={getLabelClass(emailInvalid)}>Your Personal Email</label>
+                        <label className={getLabelClass(emailInvalid)}>Personal/Business Email (Used for verification)</label>
                         <input
                           type="email"
                           value={email}
@@ -705,13 +705,12 @@ export default function VendorLogin() {
                             <div>
                               <label className={getLabelClass(businessAddressInvalid)}>Business address *</label>
                               <input
-                                type="text"
-                                value={businessAddress}
-                                onChange={(e) => setBusinessAddress(e.target.value)}
-                                className={getFieldClass(businessAddressInvalid)}
-                                placeholder="Street address"
-                                required
-                              />
+                              type="text"
+                              value={businessAddress}
+                              onChange={(e) => setBusinessAddress(e.target.value)}
+                              className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                              placeholder="Street address (optional)"
+                            />
                             </div>
 
                             <div>
