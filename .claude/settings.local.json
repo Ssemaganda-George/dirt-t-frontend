@@ -30,7 +30,10 @@
       "Bash(supabase status *)",
       "Bash(supabase db *)",
       "Bash(python3 *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(dir \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\" /a /b)",
+      "Bash(Get-ChildItem -Path \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\\\\src\\\\pages\" -File)",
+      "Bash(Select-Object Name)"
     ]
   },
   "enableAllProjectMcpServers": true,

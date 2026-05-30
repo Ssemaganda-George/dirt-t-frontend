@@ -164,13 +164,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Pre-fill dates from navigation state if available
   useEffect(() => {
     if (location.state) {
-      const { startDate, endDate, selectedDate } = location.state as any
-      const { transportZone: incomingZone } = location.state as any
+      const { startDate, endDate, selectedDate, startTime, endTime, transportZone: incomingZone } =
+        location.state as any
       if (startDate && endDate) {
         setBookingData(prev => ({
           ...prev,
           startDate,
-          endDate
+          endDate,
+          ...(startTime ? { startTime } : {}),
+          ...(endTime ? { endTime } : {}),
         }))
         if (incomingZone) setTransportZone(incomingZone)
       } else if (selectedDate) {
@@ -366,9 +368,43 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           setIsReceiptFinalizing(false)
           setPollingMessage('Initiating payment…')
 
+          // SO4: Create booking in pending state BEFORE charging the user.
+          let pendingTransportBooking: any = null
+          try {
+            pendingTransportBooking = await createDatabaseBooking({
+              service_id: service.id,
+              tourist_id: user?.id,
+              vendor_id: service.vendor_id || 'vendor_demo',
+              booking_date: new Date().toISOString(),
+              service_date: bookingData.startDate,
+              guests: bookingData.passengers,
+              total_amount: transportCustomerPaysTotal,
+              pricing_base_amount: totalPrice,
+              currency: service.currency,
+              status: 'pending',
+              payment_status: 'pending',
+              special_requests: bookingData.specialRequests || undefined,
+              guest_name: user ? undefined : bookingData.contactName,
+              guest_email: user ? undefined : bookingData.contactEmail,
+              guest_phone: user ? undefined : (bookingData.contactPhone ? `${bookingData.countryCode}${bookingData.contactPhone}` : undefined),
+              pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+              dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+              driver_option: bookingData.driverOption,
+              return_trip: bookingData.returnTrip,
+              start_time: bookingData.startTime,
+              end_time: bookingData.endTime,
+              end_date: bookingData.endDate,
+            } as any)
+          } catch (bookingErr) {
+            console.error('Failed to pre-create transport booking:', bookingErr)
+            setStepError('Failed to create booking. Please try again.')
+            setPollingMessage('')
+            setIsPaymentProcessing(false)
+            return
+          }
+
           try {
             const { data: session } = await supabase.auth.getSession()
-            const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
             const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
               method: 'POST',
@@ -379,7 +415,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               body: JSON.stringify({
                 amount: Math.round(transportCustomerPaysTotal),
                 phone_number: phone,
-                booking_id: tempRef,
+                booking_id: pendingTransportBooking.id,
                 description: `${service.title} transport booking`,
                 user_id: session?.session?.user?.id || undefined,
               }),
@@ -427,11 +463,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             }
 
             const finalise = () => {
-              // Match tickets/payment UX parity: move forward immediately on payment completion,
-              // and finalize booking/receipt in background.
+              // SO4: booking already pre-created; webhook confirms it. Show receipt immediately.
               setIsReceiptFinalizing(true)
-              setPollingMessage('Payment confirmed! Finalizing your receipt in background…')
-              void createTransportBooking('paid', ref).catch((e) => {
+              setPollingMessage('Payment confirmed! Loading your receipt…')
+              void createTransportBooking('paid', ref, pendingTransportBooking).catch((e) => {
                 console.warn('Background booking finalization failed:', e)
               })
             }
@@ -508,6 +543,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
           } catch (err: any) {
             console.error('Payment error:', err)
+            if (pendingTransportBooking?.id) {
+              supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingTransportBooking.id).then(() => {})
+            }
             setPollingMessage('')
             setIsPaymentProcessing(false)
             setIsReceiptFinalizing(false)
@@ -517,18 +555,24 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         }
 
         // Non-mobile-money: create booking directly
-        await createTransportBooking('pending')
+        await createTransportBooking('pending', undefined, undefined)
         return
       }
       setCurrentStep(currentStep + 1)
     }
   }
 
-  const createTransportBooking = async (paymentStatus: 'paid' | 'pending', paymentReference?: string) => {
+  // SO4: existingBooking is pre-created before payment; skip DB insert for mobile-money path.
+  // The manual webhook self-call is removed — the real webhook (with secret) handles confirmation.
+  const createTransportBooking = async (
+    paymentStatus: 'paid' | 'pending',
+    paymentReference?: string,
+    existingBooking?: any
+  ) => {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
-      // Save to vendor localStorage for demo panel
+      // Vendor localStorage for demo panel
       createVendorBooking(service.vendor_id || 'vendor_demo', {
         service_id: service.id,
         vendor_id: service.vendor_id || 'vendor_demo',
@@ -548,53 +592,39 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         end_date: bookingData.endDate,
       } as any)
 
-      const result = await createDatabaseBooking({
-        service_id: service.id,
-        tourist_id: user?.id,
-        vendor_id: service.vendor_id || 'vendor_demo',
-        booking_date: new Date().toISOString(),
-        service_date: bookingData.startDate,
-        guests: bookingData.passengers,
-        total_amount: transportCustomerPaysTotal,
-        pricing_base_amount: totalPrice,
-        currency: service.currency,
-        status: 'confirmed' as const,
-        payment_status: paymentStatus as any,
-        payment_reference: paymentReference || undefined,
-        special_requests: bookingData.specialRequests || undefined,
-        guest_name: user ? undefined : bookingData.contactName,
-        guest_email: user ? undefined : bookingData.contactEmail,
-        guest_phone: user ? undefined : (bookingData.contactPhone ? `${bookingData.countryCode}${bookingData.contactPhone}` : undefined),
-        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-        driver_option: bookingData.driverOption,
-        return_trip: bookingData.returnTrip,
-        start_time: bookingData.startTime,
-        end_time: bookingData.endTime,
-        end_date: bookingData.endDate
-      } as any)
+      // Use the pre-created pending booking if provided; otherwise create now (non-mobile path).
+      let result = existingBooking
+      if (!result) {
+        result = await createDatabaseBooking({
+          service_id: service.id,
+          tourist_id: user?.id,
+          vendor_id: service.vendor_id || 'vendor_demo',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.startDate,
+          guests: bookingData.passengers,
+          total_amount: transportCustomerPaysTotal,
+          pricing_base_amount: totalPrice,
+          currency: service.currency,
+          status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
+          payment_status: paymentStatus as any,
+          payment_reference: paymentReference || undefined,
+          special_requests: bookingData.specialRequests || undefined,
+          guest_name: user ? undefined : bookingData.contactName,
+          guest_email: user ? undefined : bookingData.contactEmail,
+          guest_phone: user ? undefined : (bookingData.contactPhone ? `${bookingData.countryCode}${bookingData.contactPhone}` : undefined),
+          pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
+          dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
+          driver_option: bookingData.driverOption,
+          return_trip: bookingData.returnTrip,
+          start_time: bookingData.startTime,
+          end_time: bookingData.endTime,
+          end_date: bookingData.endDate,
+        } as any)
+      }
 
       if (result && result.id) {
-        // Trigger a lightweight webhook reconciliation for transport bookings created after
-        // payment completion so payment->booking linkage and queue jobs are guaranteed.
-        if (paymentStatus === 'paid' && paymentReference) {
-          try {
-            await fetch(`${supabaseUrl}/functions/v1/marzpay-webhook`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                transaction: {
-                  reference: paymentReference,
-                  status: 'completed',
-                },
-              }),
-            })
-          } catch (e) {
-            console.warn('Transport payment reconciliation trigger failed:', e)
-          }
-        }
-
-        setBookingResult(result)
+        // Show receipt optimistically as confirmed — webhook updates DB status asynchronously.
+        setBookingResult({ ...result, status: 'confirmed', payment_status: 'paid' })
         setBookingConfirmed(true)
         setPollingMessage('')
         setIsPaymentProcessing(false)

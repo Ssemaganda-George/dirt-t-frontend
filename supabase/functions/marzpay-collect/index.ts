@@ -21,24 +21,34 @@ function generateReference(): string {
   })
 }
 
-serve(async (req) => {
-  const requestOrigin = req.headers.get('origin') || '*'
-  const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': requestOrigin,
-    'Access-Control-Allow-Methods': 'POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Max-Age': '86400',
+// CRITICAL-3: Build CORS headers from an explicit allowlist — never reflect the request Origin.
+// APP_URL may be a comma-separated list for multi-domain setups.
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = APP_URL.split(",").map((s) => s.trim()).filter(Boolean)
+  const requestOrigin = req.headers.get("origin") || ""
+  const allowedOrigin = allowed.includes(requestOrigin) ? requestOrigin : allowed[0]
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
   }
+}
+
+serve(async (req) => {
+  // CRITICAL-3 + CRITICAL-4: CORS headers built once, used consistently throughout.
+  const CORS_HEADERS = buildCorsHeaders(req)
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS })
   }
 
+  // CRITICAL-4: was referencing undefined `corsHeaders` (camelCase) — now consistently `CORS_HEADERS`.
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     })
   }
 
@@ -50,7 +60,15 @@ serve(async (req) => {
       )
     }
 
-    let body: { amount: number; phone_number: string; order_id?: string; booking_id?: string; description?: string; user_id?: string; metadata?: { type?: string; reference?: string } }
+    let body: {
+      amount: number
+      phone_number: string
+      order_id?: string
+      booking_id?: string
+      description?: string
+      user_id?: string
+      metadata?: { type?: string; reference?: string }
+    }
     try {
       body = await req.json()
     } catch {
@@ -67,9 +85,8 @@ serve(async (req) => {
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
-    // Either order_id (events/tickets) or booking_id (hotel/activity/tour/restaurant) must be provided
-    // UNLESS it's a wallet top-up (metadata.type === 'wallet_topup')
-    const isWalletTopup = metadata?.type === 'wallet_topup'
+
+    const isWalletTopup = metadata?.type === "wallet_topup"
     if (!order_id && !booking_id && !isWalletTopup) {
       return new Response(
         JSON.stringify({ error: "Missing required field: order_id or booking_id" }),
@@ -84,9 +101,7 @@ serve(async (req) => {
     }
     if (!/^\+256[0-9]{9}$/.test(formattedPhone)) {
       return new Response(
-        JSON.stringify({
-          error: "Invalid phone number. Use 10 digits e.g. 0712345678 or +256712345678",
-        }),
+        JSON.stringify({ error: "Invalid phone number. Use 10 digits e.g. 0712345678 or +256712345678" }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
@@ -98,22 +113,146 @@ serve(async (req) => {
       )
     }
 
+    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
+    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
+    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+
+    // Supabase client created once and reused for all pre-payment checks + insert.
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // ── Order-scoped pre-payment guards ─────────────────────────────────────
+    if (paymentOrderId) {
+      // HIGH-5: Deduplication — return existing in-flight payment for this order.
+      // Prevents duplicate charges when user double-clicks or browser retries.
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id, reference, status, amount")
+        .eq("order_id", paymentOrderId)
+        .in("status", ["pending", "processing"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (existingPayment) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Payment already in progress",
+            data: {
+              payment_id: existingPayment.id,
+              reference: existingPayment.reference,
+              status: existingPayment.status,
+              amount: existingPayment.amount,
+              provider: "existing",
+            },
+          }),
+          { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+
+      // HIGH-2: Rate limiting — cap total payment attempts per order at 5.
+      const { count: attemptCount } = await supabase
+        .from("payments")
+        .select("id", { count: "exact", head: true })
+        .eq("order_id", paymentOrderId)
+
+      if ((attemptCount ?? 0) >= 5) {
+        return new Response(
+          JSON.stringify({ error: "Too many payment attempts for this order. Please contact support." }),
+          { status: 429, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+
+      // HIGH-1: Server-side order validation — verify order exists and is payable.
+      const { data: order } = await supabase
+        .from("orders")
+        .select("id, total_amount, status")
+        .eq("id", paymentOrderId)
+        .single()
+
+      if (!order) {
+        return new Response(
+          JSON.stringify({ error: "Order not found" }),
+          { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+
+      if (!["pending", "processing"].includes(order.status ?? "")) {
+        return new Response(
+          JSON.stringify({ error: "Order is no longer payable" }),
+          { status: 409, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+
+      // HIGH-1: Amount validation — reject if client amount differs from stored total by >1 UGX.
+      if (order.total_amount != null) {
+        const serverAmount = Math.round(Number(order.total_amount))
+        const clientAmount = Math.round(Number(amount))
+        if (Math.abs(serverAmount - clientAmount) > 1) {
+          console.warn("marzpay-collect: amount mismatch", {
+            serverAmount,
+            clientAmount,
+            orderId: paymentOrderId,
+          })
+          return new Response(
+            JSON.stringify({ error: "Payment amount does not match order total" }),
+            { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+          )
+        }
+      }
+
+      // CRITICAL-5: Inventory check — verify ticket availability before charging the user.
+      // This is the reservation gate: if tickets are sold out the payment is aborted here,
+      // not discovered after the user has already paid.
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select("ticket_type_id, quantity")
+        .eq("order_id", paymentOrderId)
+
+      if (orderItems && orderItems.length > 0) {
+        for (const item of orderItems) {
+          if (!item.ticket_type_id || !item.quantity) continue
+          const { data: tt } = await supabase
+            .from("ticket_types")
+            .select("id, available_quantity, capacity")
+            .eq("id", item.ticket_type_id)
+            .single()
+
+          if (!tt) continue
+
+          const available = tt.available_quantity ?? tt.capacity ?? null
+          if (available !== null && available < item.quantity) {
+            return new Response(
+              JSON.stringify({
+                error: "Not enough tickets available. Please reduce your quantity and try again.",
+              }),
+              { status: 409, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+            )
+          }
+        }
+      }
+    }
+
+    // ── Initiate payment with MarzPay ────────────────────────────────────────
     const reference = generateReference()
-    const supabaseUrl = SUPABASE_URL.replace(/\/rest\/v1\/?$/, "")
-    const webhookUrl = `${supabaseUrl}/functions/v1/marzpay-webhook`
-    
-    // Generate description based on payment type
+    const supabaseBase = SUPABASE_URL.replace(/\/rest\/v1\/?$/, "")
+    const webhookSecret = Deno.env.get("MARZPAY_WEBHOOK_SECRET") || ""
+    // Embed secret in callback URL so marzpay-webhook can verify origin.
+    const webhookUrl = webhookSecret
+      ? `${supabaseBase}/functions/v1/marzpay-webhook?secret=${encodeURIComponent(webhookSecret)}`
+      : `${supabaseBase}/functions/v1/marzpay-webhook`
+
     let paymentDescription = description
     if (!paymentDescription) {
       if (isWalletTopup) {
-        paymentDescription = `Wallet top-up${metadata?.reference ? ` - ${metadata.reference}` : ''}`
+        paymentDescription = `Wallet top-up${metadata?.reference ? ` - ${metadata.reference}` : ""}`
       } else if (order_id) {
         paymentDescription = `Order #${order_id} payment`
       } else {
         paymentDescription = `Booking #${booking_id} payment`
       }
     }
-    
+
     const marzpayRequest = {
       amount: parseInt(String(amount), 10),
       phone_number: formattedPhone,
@@ -134,7 +273,7 @@ serve(async (req) => {
 
     const responseText = await marzpayResponse.text()
     let marzpayData: any
-      try {
+    try {
       marzpayData = JSON.parse(responseText)
     } catch {
       return new Response(
@@ -175,14 +314,6 @@ serve(async (req) => {
 
     const amountInt = amountData.raw ?? parseInt(String(amount), 10)
     const ref = transactionData.reference || reference
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-    // payments.booking_id, order_id, user_id are UUID columns with FKs; only set when valid UUID
-    // Frontend may send temporary booking ref (e.g. "bk-...") before the booking exists — omit in that case
-    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
-    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
-    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
 
     const { data: paymentRow, error: insertError } = await supabase
       .from("payments")

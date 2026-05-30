@@ -282,188 +282,38 @@ export async function resolveTierCommission(
 }
 
 /**
- * Calculate payment breakdown for a service
- * @param serviceId - The service ID
- * @param purchaseDate - Optional purchase date (defaults to now)
- * @returns Payment calculation details
+ * Calculate payment breakdown for a service.
+ * Item 4: Uses get_effective_pricing RPC — 1 DB round-trip instead of 3.
+ * Falls back to the legacy multi-query path if the RPC is unavailable.
  */
 export async function calculatePayment(
   serviceId: string,
   purchaseDate: Date = new Date()
 ): Promise<PaymentCalculation> {
   try {
-    // Get service details
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('id, price, vendor_id')
-      .eq('id', serviceId)
-      .single();
+    const { data, error } = await supabase.rpc('get_effective_pricing', {
+      p_service_id:    serviceId,
+      p_base_price:    null,
+      p_purchase_date: purchaseDate.toISOString(),
+    });
 
-    if (serviceError || !service) {
-      return {
-        success: false,
-        error: 'Service not found',
-        base_price: 0,
-        platform_fee: 0,
-        tourist_fee: 0,
-        vendor_fee: 0,
-        vendor_payout: 0,
-        total_customer_payment: 0,
-        fee_payer: 'vendor',
-        pricing_source: 'tier',
-        pricing_reference_id: '',
-        service_id: serviceId
-      };
+    if (!error && data && data.success !== false) {
+      return { ...(data as PaymentCalculation), service_id: serviceId };
     }
 
-    const basePrice = service.price;
-
-    // Check for active service pricing override
-    // Some PostgREST filters (complex OR with timestamps) can trigger 406 responses in some environments.
-    // To be robust, fetch candidate overrides for the service and apply date filters client-side.
-    const { data: overridesData, error: overridesError } = await supabase
-      .from('service_pricing_overrides')
-      .select('*')
-      .eq('service_id', serviceId)
-      .eq('override_enabled', true)
-      .order('effective_from', { ascending: false });
-
-    // Debug: log override query outcome to help diagnose why an active override may not be applied
-    try {
-      console.debug('calculatePayment: overrides fetch', { serviceId, purchaseDate: purchaseDate.toISOString(), count: overridesData?.length || 0, overridesError });
-    } catch (e) {
-      // ignore stringify problems
-    }
-
-    let override: any = null;
-    if (overridesData && overridesData.length > 0) {
-      // Find first override row that is active for the purchaseDate
-      for (const o of overridesData) {
-        try {
-          const effFrom = o.effective_from ? new Date(o.effective_from) : null;
-          const effUntil = o.effective_until ? new Date(o.effective_until) : null;
-          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
-            override = o;
-            break;
-          }
-        } catch (e) {
-          // ignore parse errors and continue
-        }
-      }
-    }
-
-    if (override) {
-      // Use override pricing
-      const platformFee = override.override_type === 'flat'
-        ? override.override_value
-        : basePrice * (override.override_value / 100);
-
-      const feePayer = normalizeFeePayer(override.fee_payer);
-      let totalCustomerPayment: number;
-      let vendorPayout: number;
-      let touristFee: number;
-      let vendorFee: number;
-
-      const split = applyFeePayerSplitFromPlatformFee(
-        basePrice,
-        platformFee,
-        feePayer,
-        override.tourist_percentage,
-        override.vendor_percentage
-      );
-      touristFee = split.tourist_fee;
-      vendorFee = split.vendor_fee;
-      totalCustomerPayment = split.total_customer_payment;
-      vendorPayout = split.vendor_payout;
-
-      return {
-        success: true,
-        base_price: basePrice,
-        platform_fee: platformFee,
-        tourist_fee: touristFee,
-        vendor_fee: vendorFee,
-        vendor_payout: vendorPayout,
-        total_customer_payment: totalCustomerPayment,
-        fee_payer: feePayer,
-        pricing_source: 'override',
-        pricing_reference_id: override.id,
-        service_id: serviceId
-      };
-    }
-
-    // Use vendor tier pricing (manual tier wins when active)
-    const { data: vendor, error: vendorError } = await supabase
-      .from('vendors')
-      .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
-      .eq('id', service.vendor_id)
-      .single();
-
-    let platformFee = 0;
-    let pricingReferenceId = '';
-    let tierFeePayer: 'vendor' | 'tourist' | 'shared' = 'vendor';
-    let tierTouristPct: number | null = null;
-    let tierVendorPct: number | null = null;
-
-    const tierId = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
-    if (tierId) {
-      try {
-        console.debug('calculatePayment: resolving tier', { vendorId: service.vendor_id, tierId });
-      } catch (e) {}
-      const resolved = await resolveTierCommission(tierId, basePrice, purchaseDate);
-      platformFee = resolved.platformFee;
-      pricingReferenceId = resolved.pricingReferenceId;
-      tierFeePayer = resolved.fee_payer;
-      tierTouristPct = resolved.tourist_percentage;
-      tierVendorPct = resolved.vendor_percentage;
-    }
-
-    const tierSplit = applyFeePayerSplitFromPlatformFee(
-      basePrice,
-      platformFee,
-      tierFeePayer,
-      tierTouristPct,
-      tierVendorPct
-    );
-
-    return {
-      success: true,
-      base_price: basePrice,
-      platform_fee: platformFee,
-      tourist_fee: tierSplit.tourist_fee,
-      vendor_fee: tierSplit.vendor_fee,
-      vendor_payout: tierSplit.vendor_payout,
-      total_customer_payment: tierSplit.total_customer_payment,
-      fee_payer: tierFeePayer,
-      pricing_source: 'tier',
-      pricing_reference_id: pricingReferenceId,
-      service_id: serviceId
-    };
-
+    // RPC unavailable (not yet deployed) — fall back to legacy path
+    if (error) console.warn('calculatePayment: RPC unavailable, using fallback', error.message);
+    return _calculatePaymentLegacy(serviceId, null, purchaseDate);
   } catch (error) {
     console.error('Error calculating payment:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      base_price: 0,
-      platform_fee: 0,
-      tourist_fee: 0,
-      vendor_fee: 0,
-      vendor_payout: 0,
-      total_customer_payment: 0,
-      fee_payer: 'vendor',
-      pricing_source: 'tier',
-      pricing_reference_id: '',
-      service_id: serviceId
-    };
+    return _pricingError(serviceId, 0);
   }
 }
 
 /**
- * Calculate payment breakdown for a service using a provided base price (useful for ticket unit prices)
- * @param serviceId - The service ID
- * @param basePrice - The unit/base price to use for calculation
- * @param purchaseDate - Optional purchase date (defaults to now)
- * @returns Payment calculation details
+ * Calculate payment breakdown for a service using a provided base price.
+ * Item 4: Uses get_effective_pricing RPC — 1 DB round-trip instead of 3.
+ * Falls back to the legacy multi-query path if the RPC is unavailable.
  */
 export async function calculatePaymentForAmount(
   serviceId: string,
@@ -471,158 +321,101 @@ export async function calculatePaymentForAmount(
   purchaseDate: Date = new Date()
 ): Promise<PaymentCalculation> {
   try {
-    // Get service details (we still need vendor_id to resolve tiers and overrides)
-    const { data: service, error: serviceError } = await supabase
-      .from('services')
-      .select('id, vendor_id')
-      .eq('id', serviceId)
-      .single();
+    const { data, error } = await supabase.rpc('get_effective_pricing', {
+      p_service_id:    serviceId,
+      p_base_price:    basePrice,
+      p_purchase_date: purchaseDate.toISOString(),
+    });
 
-    if (serviceError || !service) {
-      return {
-        success: false,
-        error: 'Service not found',
-        base_price: basePrice,
-        platform_fee: 0,
-        tourist_fee: 0,
-        vendor_fee: 0,
-        vendor_payout: 0,
-        total_customer_payment: 0,
-        fee_payer: 'vendor',
-        pricing_source: 'tier',
-        pricing_reference_id: '',
-        service_id: serviceId
-      };
+    if (!error && data && data.success !== false) {
+      return { ...(data as PaymentCalculation), service_id: serviceId };
     }
 
-    // Check for active service pricing override
-    // Fetch candidate overrides and apply effective date filtering client-side to avoid complex REST filters.
-    const { data: overridesData, error: overridesError } = await supabase
-      .from('service_pricing_overrides')
-      .select('*')
-      .eq('service_id', serviceId)
-      .eq('override_enabled', true)
-      .order('effective_from', { ascending: false });
-
-    try {
-      console.debug('calculatePaymentForAmount: overrides fetch', { serviceId, purchaseDate: purchaseDate.toISOString(), count: overridesData?.length || 0, overridesError });
-    } catch (e) {}
-
-    let override: any = null;
-    if (overridesData && overridesData.length > 0) {
-      for (const o of overridesData) {
-        try {
-          const effFrom = o.effective_from ? new Date(o.effective_from) : null;
-          const effUntil = o.effective_until ? new Date(o.effective_until) : null;
-          if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
-            override = o;
-            break;
-          }
-        } catch (e) {}
-      }
-    }
-
-    if (override) {
-      const platformFee = override.override_type === 'flat'
-        ? Number(override.override_value)
-        : basePrice * (Number(override.override_value) / 100);
-
-      const feePayer = normalizeFeePayer(override.fee_payer);
-      let totalCustomerPayment: number;
-      let vendorPayout: number;
-      let touristFee: number;
-      let vendorFee: number;
-
-      const splitAmt = applyFeePayerSplitFromPlatformFee(
-        basePrice,
-        platformFee,
-        feePayer,
-        override.tourist_percentage,
-        override.vendor_percentage
-      );
-      touristFee = splitAmt.tourist_fee;
-      vendorFee = splitAmt.vendor_fee;
-      totalCustomerPayment = splitAmt.total_customer_payment;
-      vendorPayout = splitAmt.vendor_payout;
-
-      return {
-        success: true,
-        base_price: basePrice,
-        platform_fee: platformFee,
-        tourist_fee: touristFee,
-        vendor_fee: vendorFee,
-        vendor_payout: vendorPayout,
-        total_customer_payment: totalCustomerPayment,
-        fee_payer: feePayer,
-        pricing_source: 'override',
-        pricing_reference_id: override.id,
-        service_id: serviceId
-      };
-    }
-
-    // Use vendor tier pricing (manual tier wins when active)
-    const { data: vendor, error: vendorError } = await supabase
-      .from('vendors')
-      .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
-      .eq('id', service.vendor_id)
-      .single();
-
-    let platformFee = 0;
-    let pricingReferenceId = '';
-    let tierFeePayerFA: 'vendor' | 'tourist' | 'shared' = 'vendor';
-    let tierTouristPctFA: number | null = null;
-    let tierVendorPctFA: number | null = null;
-
-    const tierIdForAmount = vendor && !vendorError ? effectiveVendorTierId(vendor) : null;
-    if (tierIdForAmount) {
-      try { console.debug('calculatePaymentForAmount: resolving tier', { vendorId: service.vendor_id, tierId: tierIdForAmount }); } catch (e) {}
-      const resolved = await resolveTierCommission(tierIdForAmount, basePrice, purchaseDate);
-      platformFee = resolved.platformFee;
-      pricingReferenceId = resolved.pricingReferenceId;
-      tierFeePayerFA = resolved.fee_payer;
-      tierTouristPctFA = resolved.tourist_percentage;
-      tierVendorPctFA = resolved.vendor_percentage;
-    }
-
-    const tierSplitFA = applyFeePayerSplitFromPlatformFee(
-      basePrice,
-      platformFee,
-      tierFeePayerFA,
-      tierTouristPctFA,
-      tierVendorPctFA
-    );
-
-    return {
-      success: true,
-      base_price: basePrice,
-      platform_fee: platformFee,
-      tourist_fee: tierSplitFA.tourist_fee,
-      vendor_fee: tierSplitFA.vendor_fee,
-      vendor_payout: tierSplitFA.vendor_payout,
-      total_customer_payment: tierSplitFA.total_customer_payment,
-      fee_payer: tierFeePayerFA,
-      pricing_source: 'tier',
-      pricing_reference_id: pricingReferenceId,
-      service_id: serviceId
-    };
-
+    if (error) console.warn('calculatePaymentForAmount: RPC unavailable, using fallback', error.message);
+    return _calculatePaymentLegacy(serviceId, basePrice, purchaseDate);
   } catch (error) {
     console.error('Error calculating payment for amount:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      base_price: basePrice,
-      platform_fee: 0,
-      tourist_fee: 0,
-      vendor_fee: 0,
-      vendor_payout: 0,
-      total_customer_payment: 0,
-      fee_payer: 'vendor',
-      pricing_source: 'tier',
-      pricing_reference_id: '',
-      service_id: serviceId
-    };
+    return _pricingError(serviceId, basePrice);
   }
+}
+
+// ── Legacy multi-query fallback (used when get_effective_pricing RPC is not yet deployed) ──
+
+function _pricingError(serviceId: string, basePrice: number): PaymentCalculation {
+  return {
+    success: false,
+    error: 'Pricing unavailable',
+    base_price: basePrice,
+    platform_fee: 0,
+    tourist_fee: 0,
+    vendor_fee: 0,
+    vendor_payout: basePrice,
+    total_customer_payment: basePrice,
+    fee_payer: 'vendor',
+    pricing_source: 'tier',
+    pricing_reference_id: '',
+    service_id: serviceId,
+  };
+}
+
+async function _calculatePaymentLegacy(
+  serviceId: string,
+  basePriceOverride: number | null,
+  purchaseDate: Date
+): Promise<PaymentCalculation> {
+  const { data: service, error: serviceError } = await supabase
+    .from('services')
+    .select('id, price, vendor_id')
+    .eq('id', serviceId)
+    .single();
+
+  if (serviceError || !service) return _pricingError(serviceId, basePriceOverride ?? 0);
+
+  const basePrice = basePriceOverride ?? Number(service.price ?? 0);
+
+  const { data: overridesData } = await supabase
+    .from('service_pricing_overrides')
+    .select('*')
+    .eq('service_id', serviceId)
+    .eq('override_enabled', true)
+    .order('effective_from', { ascending: false });
+
+  let override: any = null;
+  for (const o of overridesData || []) {
+    try {
+      const effFrom  = o.effective_from  ? new Date(o.effective_from)  : null;
+      const effUntil = o.effective_until ? new Date(o.effective_until) : null;
+      if (effFrom && effFrom <= purchaseDate && (!effUntil || effUntil >= purchaseDate)) {
+        override = o; break;
+      }
+    } catch { /* skip unparseable dates */ }
+  }
+
+  if (override) {
+    const platformFee = override.override_type === 'flat'
+      ? Number(override.override_value)
+      : basePrice * (Number(override.override_value) / 100);
+    const feePayer = normalizeFeePayer(override.fee_payer);
+    const split = applyFeePayerSplitFromPlatformFee(basePrice, platformFee, feePayer, override.tourist_percentage, override.vendor_percentage);
+    return { success: true, base_price: basePrice, platform_fee: platformFee, ...split, fee_payer: feePayer, pricing_source: 'override', pricing_reference_id: override.id, service_id: serviceId };
+  }
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('current_tier_id, manual_tier_id, manual_tier_expires_at')
+    .eq('id', service.vendor_id)
+    .single();
+
+  let platformFee = 0, pricingReferenceId = '', feePayer: 'vendor'|'tourist'|'shared' = 'vendor', touristPct: number|null = null, vendorPct: number|null = null;
+  const tierId = vendor ? effectiveVendorTierId(vendor) : null;
+  if (tierId) {
+    const resolved = await resolveTierCommission(tierId, basePrice, purchaseDate);
+    platformFee = resolved.platformFee; pricingReferenceId = resolved.pricingReferenceId;
+    feePayer = resolved.fee_payer; touristPct = resolved.tourist_percentage; vendorPct = resolved.vendor_percentage;
+  }
+
+  const split = applyFeePayerSplitFromPlatformFee(basePrice, platformFee, feePayer, touristPct, vendorPct);
+  return { success: true, base_price: basePrice, platform_fee: platformFee, ...split, fee_payer: feePayer, pricing_source: 'tier', pricing_reference_id: pricingReferenceId, service_id: serviceId };
 }
 
 /**

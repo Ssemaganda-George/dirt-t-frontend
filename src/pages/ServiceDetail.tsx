@@ -27,6 +27,11 @@ import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
 import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
+import BookingDrawer from '../components/BookingDrawer'
+import {
+  buildBookingNavigateState,
+  usesInlineBookingDrawer,
+} from '../lib/bookingFlow'
 // import PricingBreakdown from '../components/PricingBreakdown'
 
 interface ServiceDetail {
@@ -238,6 +243,7 @@ export default function ServiceDetail() {
   const bookingRef = useRef<HTMLDivElement>(null)
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   // Transport unit price (kept as top-level hook to preserve hook order)
   const [unitPrice, setUnitPrice] = useState<number>(0)
   useEffect(() => {
@@ -469,33 +475,56 @@ export default function ServiceDetail() {
     return categoryMap[categoryName.toLowerCase()] || 'activities' // Default to activities
   }
 
-  const handleBooking = () => {
-    if (!service) return
-    
-    // For transport services, check for date range
-    if (service.service_categories?.name?.toLowerCase() === 'transport') {
-      if (!startDate || !endDate) return
-    } else if (['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')) {
-      if (!checkInDate || !checkOutDate) return
-    } else {
-      if (!selectedDate) return
+  /** Sidebar + drawer require dates (and transport zone) before booking opens. */
+  const bookingPrefillReady = (): boolean => {
+    if (!service) return false
+    const cat = service.service_categories?.name?.toLowerCase() || ''
+    if (cat === 'transport') return Boolean(startDate && endDate && transportZone)
+    if (['hotels', 'hotel', 'accommodation'].includes(cat)) {
+      return Boolean(checkInDate && checkOutDate)
     }
-    
-    const bookingCategory = mapCategoryToBookingFlow(service.service_categories?.name || 'service')
-    
-    // Navigate to clean booking URL without query parameters
-    const bookingUrl = `/service/${service.slug}/book/${bookingCategory}`
-    
-    // Pass selected dates and guests via navigation state
-    const navigationState = service.service_categories?.name?.toLowerCase() === 'transport' 
-      ? { startDate, endDate, guests, transportZone }
-      : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-      ? { checkInDate, checkOutDate, guests, rooms: 1 }
-      : { selectedDate, guests }
-    
-    // Use React Router navigation with state
-    navigate(bookingUrl, { state: navigationState })
+    return Boolean(selectedDate)
   }
+
+  const handleBooking = () => {
+    if (!service?.slug) return
+    if (!bookingPrefillReady()) {
+      try {
+        bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setMobileBookingOpen(true)
+        setTimeout(() => setMobileBookingOpen(false), 2200)
+      } catch {
+        // ignore
+      }
+      return
+    }
+
+    const mappedCategory = mapCategoryToBookingFlow(
+      service.service_categories?.name || 'activities'
+    )
+    const prefill = {
+      selectedDate,
+      checkInDate,
+      checkOutDate,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      guests,
+      transportZone,
+    }
+
+    if (usesInlineBookingDrawer(mappedCategory)) {
+      setDrawerOpen(true)
+      return
+    }
+
+    const state = buildBookingNavigateState(mappedCategory, prefill)
+    navigate(`/service/${service.slug}/book/${mappedCategory}`, {
+      state: state ?? undefined,
+    })
+  }
+
 
   // Determine unit text for price (per person/per night/etc.)
   const getUnitLabel = (categoryName: string) => {
@@ -2358,11 +2387,7 @@ export default function ServiceDetail() {
 
                   {/* Action Buttons */}
                     <div className="flex gap-2 mb-3">
-                    <button onClick={handleBooking} disabled={
-                      service?.service_categories?.name?.toLowerCase() === 'transport' ? !startDate || !endDate || !transportZone :
-                      ['hotels', 'hotel', 'accommodation'].includes(service?.service_categories?.name?.toLowerCase() || '') ? !checkInDate || !checkOutDate :
-                      !selectedDate
-                    } className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    <button onClick={handleBooking} disabled={!bookingPrefillReady()} className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
@@ -2423,14 +2448,9 @@ export default function ServiceDetail() {
               </div>
             </button>
             <button
-              onClick={() => {
-                if (!showMobileBookButton) {
-                  handleBooking()
-                } else {
-                  openMobileBooking()
-                }
-              }}
-              className="w-16 bg-emerald-700 text-white flex items-center justify-center font-bold py-2 px-2 hover:bg-emerald-800 transition-all duration-300 rounded-none relative overflow-hidden group shadow-lg"
+              onClick={handleBooking}
+              disabled={!bookingPrefillReady()}
+              className="w-16 bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white flex items-center justify-center font-bold py-2 px-2 hover:bg-emerald-800 transition-all duration-300 rounded-none relative overflow-hidden group shadow-lg"
               aria-hidden={!showMobileBookButton}
               style={{ fontSize: '13px' }}
             >
@@ -2443,7 +2463,28 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      {/* Booking Modal - Removed, replaced with direct navigation */}
+      {/* Inline drawer — activities & restaurants only (hybrid booking) */}
+      {service &&
+        usesInlineBookingDrawer(
+          mapCategoryToBookingFlow(service.service_categories?.name || 'activities')
+        ) && (
+          <BookingDrawer
+            isOpen={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            service={service}
+            prefill={{
+              selectedDate,
+              checkInDate,
+              checkOutDate,
+              startDate,
+              endDate,
+              startTime,
+              endTime,
+              guests,
+              transportZone,
+            }}
+          />
+        )}
 
       {/* Fullscreen Image Lightbox */}
       {lightboxOpen && service.images && service.images.length > 0 && (

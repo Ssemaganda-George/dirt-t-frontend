@@ -166,45 +166,73 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
 
   const today = new Date().toISOString().slice(0, 10)
 
-  // Bookings and ticket issuance run in parallel
-  await Promise.all([
-    ...Object.keys(groups).map(async (sid) => {
-      const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
-      const vendorId = (svc as any)?.vendor_id || order.vendor_id
-      const createRes = await supabase.rpc("create_booking_atomic", {
-        p_service_id: sid,
-        p_vendor_id: vendorId,
-        p_booking_date: today,
-        p_guests: groups[sid].qty,
-        p_total_amount: groups[sid].total,
-        p_tourist_id: order.user_id || null,
-        p_service_date: today,
-        p_currency: order.currency || "UGX",
-        p_guest_name: order.guest_name || null,
-        p_guest_email: order.guest_email || null,
-        p_guest_phone: order.guest_phone || null,
-      })
-      if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
-        await supabase.rpc("update_booking_status_atomic", {
-          p_booking_id: (createRes.data as any).booking_id,
-          p_status: "confirmed",
-          p_payment_status: "paid",
-        })
-      }
-    }),
-    ...items.map(async (it: any) => {
-      const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
-        p_ticket_type_id: it.ticket_type_id,
-        p_quantity: it.quantity,
-        p_order_id: orderId,
-      })
-      if (bookErr || !(bookData as any)?.success) {
-        throw new Error(
-          `ticket-book-failed:${it.ticket_type_id}:${bookErr?.message || (bookData as any)?.error || "unknown"}`
-        )
-      }
-    }),
+  // Item 2: Idempotency guards — if a prior run (or the webhook) already created
+  // bookings/tickets for this payment, skip creation entirely on retry.
+  const [{ data: existingBookingForRef }, { data: existingTicketForOrder }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id")
+      .eq("payment_reference", reference)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("tickets")
+      .select("id")
+      .eq("order_id", orderId)
+      .limit(1)
+      .maybeSingle(),
   ])
+
+  const needsBookings = !existingBookingForRef
+  const needsTickets  = !existingTicketForOrder
+
+  if (!needsBookings && !needsTickets) {
+    // Both already exist — fulfillment was completed by a prior run, nothing to do.
+    console.log("Worker: fulfillment already complete for order", orderId, "— skipping booking/ticket creation")
+  } else {
+    await Promise.all([
+      ...(needsBookings
+        ? Object.keys(groups).map(async (sid) => {
+            const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
+            const vendorId = (svc as any)?.vendor_id || order.vendor_id
+            const createRes = await supabase.rpc("create_booking_atomic", {
+              p_service_id: sid,
+              p_vendor_id: vendorId,
+              p_booking_date: today,
+              p_guests: groups[sid].qty,
+              p_total_amount: groups[sid].total,
+              p_tourist_id: order.user_id || null,
+              p_service_date: today,
+              p_currency: order.currency || "UGX",
+              p_guest_name: order.guest_name || null,
+              p_guest_email: order.guest_email || null,
+              p_guest_phone: order.guest_phone || null,
+            })
+            if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
+              await supabase.rpc("update_booking_status_atomic", {
+                p_booking_id: (createRes.data as any).booking_id,
+                p_status: "confirmed",
+                p_payment_status: "paid",
+              })
+            }
+          })
+        : []),
+      ...(needsTickets
+        ? items.map(async (it: any) => {
+            const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
+              p_ticket_type_id: it.ticket_type_id,
+              p_quantity: it.quantity,
+              p_order_id: orderId,
+            })
+            if (bookErr || !(bookData as any)?.success) {
+              throw new Error(
+                `ticket-book-failed:${it.ticket_type_id}:${bookErr?.message || (bookData as any)?.error || "unknown"}`
+              )
+            }
+          })
+        : []),
+    ])
+  }
 
   let recipientEmail = (order as any).guest_email?.trim() || null
   if (!recipientEmail && (order as any).user_id) {

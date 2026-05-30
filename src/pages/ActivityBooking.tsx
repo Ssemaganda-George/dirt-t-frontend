@@ -256,12 +256,46 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       setPaymentError(null)
 
       setIsSubmitting(true)
+      setPollingMessage('Creating booking…')
+
+      // SO4: Create booking in pending state BEFORE charging the user.
+      // This ensures the booking exists when the webhook fires, and eliminates
+      // the race where payment succeeds but booking creation fails afterwards.
+      let pendingBooking: any = null
+      try {
+        const contact = resolveGuestContact()
+        const platformFeeTotal = pricingCalc && typeof pricingCalc.platform_fee === 'number'
+          ? Math.round(pricingCalc.platform_fee * bookingData.guests)
+          : 0
+        pendingBooking = await createBooking({
+          service_id: service.id,
+          vendor_id: service.vendor_id || service.vendors?.id || '',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.date,
+          guests: bookingData.guests,
+          total_amount: customerPaysTotal,
+          currency: service.currency,
+          status: 'pending',
+          payment_status: 'pending',
+          special_requests: bookingData.specialRequests,
+          tourist_id: user?.id,
+          guest_name: user ? undefined : contact.guest_name,
+          guest_email: user ? undefined : contact.guest_email,
+          guest_phone: user ? undefined : contact.guest_phone,
+          pricing_base_amount: totalPrice,
+          platform_fee: platformFeeTotal,
+        })
+      } catch (bookingErr) {
+        console.error('Failed to pre-create booking:', bookingErr)
+        setPaymentError('Failed to create booking. Please try again.')
+        setIsSubmitting(false)
+        return
+      }
+
       setPollingMessage('Initiating payment…')
 
       try {
         const { data: session } = await supabase.auth.getSession()
-        // Use a temporary booking reference for the payment
-        const tempRef = `bk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
         const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
           method: 'POST',
@@ -269,10 +303,10 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${supabaseAnonKey}`,
           },
-            body: JSON.stringify({
+          body: JSON.stringify({
             amount: Math.round(grandTotal),
             phone_number: phone,
-            booking_id: tempRef,
+            booking_id: pendingBooking.id,
             description: `${service.title} booking — ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`,
             user_id: session?.session?.user?.id || undefined,
           }),
@@ -316,10 +350,11 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               if (row.status === 'completed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                await finaliseBooking('paid')
+                await finaliseBooking('paid', pendingBooking)
               } else if (row.status === 'failed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+                supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
                 setPollingMessage('')
                 setIsSubmitting(false)
                 setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -327,30 +362,30 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             })
           .subscribe()
 
-        // Immediate check
         const immediate = await checkStatus()
         if (immediate === 'completed') {
           channel.unsubscribe()
-          await finaliseBooking('paid')
+          await finaliseBooking('paid', pendingBooking)
           return
         } else if (immediate === 'failed') {
           channel.unsubscribe()
+          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
           setPollingMessage('')
           setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
           return
         }
 
-        // Backup poll every 4s, stop after 2 min
         backupPollRef.current = setInterval(async () => {
           const status = await checkStatus()
           if (status === 'completed') {
             channel.unsubscribe()
             if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            await finaliseBooking('paid')
+            await finaliseBooking('paid', pendingBooking)
           } else if (status === 'failed') {
             channel.unsubscribe()
             if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+            supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
             setPollingMessage('')
             setIsSubmitting(false)
             setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -362,6 +397,9 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
       } catch (err) {
         console.error('Payment error:', err)
+        if (pendingBooking?.id) {
+          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
+        }
         setPollingMessage('')
         setIsSubmitting(false)
         setPaymentError((err as Error).message || 'Payment failed. Please try again.')
@@ -374,41 +412,47 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     await finaliseBooking('pending')
   }
 
-  const finaliseBooking = async (paymentStatus: 'paid' | 'pending') => {
+  // SO4: existingBooking is pre-created (pending) before payment; skip DB insert for mobile-money path.
+  const finaliseBooking = async (paymentStatus: 'paid' | 'pending', existingBooking?: any) => {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
-      // Calculate total platform fee from pricing calculation
-      // pricingCalc contains platform_fee (per unit), we multiply by guests
-      const platformFeeTotal = pricingCalc && typeof pricingCalc.platform_fee === 'number'
-        ? Math.round(pricingCalc.platform_fee * bookingData.guests)
-        : 0
-      
-      const contact = resolveGuestContact()
-      const booking = await createBooking({
-        service_id: service.id,
-        vendor_id: service.vendor_id || service.vendors?.id || '',
-        booking_date: new Date().toISOString(),
-        service_date: bookingData.date,
-        guests: bookingData.guests,
-        total_amount: customerPaysTotal,
-        currency: service.currency,
-        status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
-        payment_status: paymentStatus,
-        special_requests: bookingData.specialRequests,
-        tourist_id: user?.id,
-        guest_name: user ? undefined : contact.guest_name,
-        guest_email: user ? undefined : contact.guest_email,
-        guest_phone: user ? undefined : contact.guest_phone,
-        pricing_base_amount: totalPrice,
-        platform_fee: platformFeeTotal
-      })
-      setCompletedBooking(booking)
+      let booking = existingBooking
+      if (!booking) {
+        const platformFeeTotal = pricingCalc && typeof pricingCalc.platform_fee === 'number'
+          ? Math.round(pricingCalc.platform_fee * bookingData.guests)
+          : 0
+        const contact = resolveGuestContact()
+        booking = await createBooking({
+          service_id: service.id,
+          vendor_id: service.vendor_id || service.vendors?.id || '',
+          booking_date: new Date().toISOString(),
+          service_date: bookingData.date,
+          guests: bookingData.guests,
+          total_amount: customerPaysTotal,
+          currency: service.currency,
+          status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
+          payment_status: paymentStatus,
+          special_requests: bookingData.specialRequests,
+          tourist_id: user?.id,
+          guest_name: user ? undefined : contact.guest_name,
+          guest_email: user ? undefined : contact.guest_email,
+          guest_phone: user ? undefined : contact.guest_phone,
+          pricing_base_amount: totalPrice,
+          platform_fee: platformFeeTotal,
+        })
+      }
+      // Optimistic display: show receipt as confirmed — webhook confirms the DB record asynchronously.
+      setCompletedBooking(
+        existingBooking
+          ? { ...existingBooking, status: 'confirmed', payment_status: 'paid' }
+          : booking
+      )
       setPollingMessage('')
       setCurrentStep(5)
     } catch (error) {
       finaliseInFlightRef.current = false
-      console.error('Error creating booking:', error)
+      console.error('Error finalising booking:', error)
       setPaymentError('Failed to complete booking. Please try again.')
     } finally {
       setIsSubmitting(false)

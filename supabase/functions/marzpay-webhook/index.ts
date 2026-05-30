@@ -4,6 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 const PROCESS_QUEUE_SECRET = Deno.env.get("PROCESS_QUEUE_SECRET") || ""
+// CRITICAL-2: Secret set by marzpay-collect in the callback URL query param.
+const MARZPAY_WEBHOOK_SECRET = Deno.env.get("MARZPAY_WEBHOOK_SECRET") || ""
 
 const HIRER_TRANSPORT_FEE_RATE = 0.02
 const PROVIDER_TRANSPORT_FEE_RATE = 0.02
@@ -28,7 +30,6 @@ async function enqueueFulfillmentJob(
       },
       { onConflict: "idempotency_key" }
     )
-
   if (error) throw error
 }
 
@@ -79,6 +80,23 @@ serve(async (req) => {
     })
   }
 
+  // ── CRITICAL-2: Webhook secret verification ──────────────────────────────
+  // The secret is embedded in the callback URL by marzpay-collect (?secret=...).
+  // Set MARZPAY_WEBHOOK_SECRET in Supabase edge function secrets.
+  // Without this any party could POST fabricated "completed" events to issue free tickets.
+  if (MARZPAY_WEBHOOK_SECRET) {
+    const url = new URL(req.url)
+    const provided =
+      url.searchParams.get("secret") || req.headers.get("x-webhook-secret") || ""
+    if (provided !== MARZPAY_WEBHOOK_SECRET) {
+      console.warn("Webhook: unauthorized request — invalid or missing secret")
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+  }
+
   let body: any
   try {
     body = await req.json()
@@ -93,16 +111,17 @@ serve(async (req) => {
   if (body.data?.transaction) transaction = body.data.transaction
 
   if (!transaction?.reference) {
-    return new Response(JSON.stringify({ success: false, error: "Missing transaction.reference" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })
+    return new Response(
+      JSON.stringify({ success: false, error: "Missing transaction.reference" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
   }
 
   const reference = transaction.reference
   let paymentStatus = (transaction.status || "").toLowerCase()
   if (paymentStatus === "successful" || paymentStatus === "success") paymentStatus = "completed"
-  else if (["failed", "cancelled", "rejected", "expired"].includes(paymentStatus)) paymentStatus = "failed"
+  else if (["failed", "cancelled", "rejected", "expired"].includes(paymentStatus))
+    paymentStatus = "failed"
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -114,10 +133,10 @@ serve(async (req) => {
   const payment = payments?.[0]
   if (payErr || !payment) {
     console.log("Webhook: payment not found for reference", reference)
-    return new Response(JSON.stringify({ success: true, message: "Payment not found, acknowledged" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    })
+    return new Response(
+      JSON.stringify({ success: true, message: "Payment not found, acknowledged" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
   }
 
   await supabase
@@ -131,60 +150,60 @@ serve(async (req) => {
     })
     .eq("reference", reference)
 
-  // If this payment completed and is linked to a booking, mark the booking paid/confirmed
+  // ── Booking-linked payment (hotel / transport / activity bookings) ────────
   if (paymentStatus === "completed" && payment.booking_id) {
     const bookingId = payment.booking_id
     try {
-      const { data: booking, error: bookingFetchErr } = await supabase
+      await supabase
         .from("bookings")
-        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+        .update({
+          status: "confirmed",
+          payment_status: "paid",
+          payment_reference: reference,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", bookingId)
-        .single()
 
-      if (!booking || bookingFetchErr) {
-        console.warn("Webhook: booking not found for payment.booking_id", bookingId)
-      } else {
-        await supabase
-          .from("bookings")
-          .update({
-            status: "confirmed",
-            payment_status: "paid",
-            payment_reference: reference,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", bookingId)
-
-        try {
-          await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
-            reference,
-            amount: Number(payment.amount || 0),
-            transport_fee_rates: {
-              hirer: HIRER_TRANSPORT_FEE_RATE,
-              provider: PROVIDER_TRANSPORT_FEE_RATE,
-            },
-          })
-          triggerQueueWorker()
-        } catch (queueErr) {
-          console.warn("Webhook: failed to enqueue booking fulfillment job", bookingId, queueErr)
-        }
+      // CRITICAL-1: booking/transaction creation is the queue worker's sole responsibility.
+      // Do NOT call create_booking_atomic or book_tickets_atomic here — the queue worker
+      // handles fulfillment with idempotency guards, preventing double-issuance.
+      try {
+        await enqueueFulfillmentJob(supabase, "booking_fulfillment", bookingId, {
+          reference,
+          amount: Number(payment.amount || 0),
+          transport_fee_rates: {
+            hirer: HIRER_TRANSPORT_FEE_RATE,
+            provider: PROVIDER_TRANSPORT_FEE_RATE,
+          },
+        })
+        triggerQueueWorker()
+      } catch (queueErr) {
+        console.warn(
+          "Webhook: failed to enqueue booking fulfillment job",
+          bookingId,
+          queueErr
+        )
       }
     } catch (err) {
       console.warn("Webhook: error handling booking-linked payment", err)
     }
   }
 
-  // Transport fallback: payment can complete before booking is created/linked.
-  // In that case, attach by booking.payment_reference and enqueue queue work.
+  // ── Transport fallback: payment completed before booking was linked ───────
   if (paymentStatus === "completed" && !payment.booking_id && !payment.order_id) {
     try {
       const { data: bookingByReference, error: bookingByRefErr } = await supabase
         .from("bookings")
-        .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+        .select("id")
         .eq("payment_reference", reference)
         .maybeSingle()
 
       if (bookingByRefErr) {
-        console.warn("Webhook: booking lookup by payment_reference failed", reference, bookingByRefErr)
+        console.warn(
+          "Webhook: booking lookup by payment_reference failed",
+          reference,
+          bookingByRefErr
+        )
       } else if (bookingByReference?.id) {
         const bookingId = bookingByReference.id
 
@@ -214,7 +233,11 @@ serve(async (req) => {
           })
           triggerQueueWorker()
         } catch (queueErr) {
-          console.warn("Webhook: failed to enqueue fallback booking fulfillment job", bookingId, queueErr)
+          console.warn(
+            "Webhook: failed to enqueue fallback booking fulfillment job",
+            bookingId,
+            queueErr
+          )
         }
       }
     } catch (err) {
@@ -222,24 +245,12 @@ serve(async (req) => {
     }
   }
 
+  // ── Order-linked payment (event tickets) ─────────────────────────────────
   if (paymentStatus === "completed" && payment.order_id) {
     const orderId = payment.order_id
 
-    const { data: order, error: orderFetchErr } = await supabase
-      .from("orders")
-      .select("id, vendor_id, user_id, currency, guest_name, guest_email, guest_phone")
-      .eq("id", orderId)
-      .single()
-
-    if (orderFetchErr || !order) {
-      console.error("Webhook: order not found", orderId)
-      return new Response(JSON.stringify({ success: true, reference, status: paymentStatus }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
-    }
-
-    await supabase
+    // HIGH-3: Status precondition prevents webhook from reviving expired or already-paid orders.
+    const { error: orderUpdateErr } = await supabase
       .from("orders")
       .update({
         status: "paid",
@@ -248,7 +259,17 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId)
+      .in("status", ["pending", "processing"])
 
+    if (orderUpdateErr) {
+      console.warn(
+        "Webhook: order status update skipped (order already paid, expired, or not found)",
+        orderId,
+        orderUpdateErr.message
+      )
+    }
+
+    // CRITICAL-1: ticket issuance delegated entirely to the queue worker.
     try {
       await enqueueFulfillmentJob(supabase, "order_fulfillment", orderId, {
         reference,
@@ -259,76 +280,11 @@ serve(async (req) => {
       console.warn("Webhook: failed to enqueue order fulfillment job", orderId, queueErr)
     }
 
-    const { data: items, error: itemsErr } = await supabase
-      .from("order_items")
-      .select("*, ticket_types(*)")
-      .eq("order_id", orderId)
-
-    if (!itemsErr && items && items.length > 0) {
-      const groups: Record<string, { qty: number; total: number }> = {}
-      for (const it of items) {
-        const sid = (it as any).ticket_types?.service_id
-        if (!sid) continue
-        groups[sid] = groups[sid] || { qty: 0, total: 0 }
-        groups[sid].qty += it.quantity
-        groups[sid].total += Number(it.unit_price || 0) * it.quantity
-      }
-
-      for (const sid of Object.keys(groups)) {
-        const { data: svc } = await supabase.from("services").select("vendor_id").eq("id", sid).single()
-        const vendorId = (svc as any)?.vendor_id || order.vendor_id
-        const today = new Date().toISOString().slice(0, 10)
-        try {
-          // Must match public.create_booking_atomic (14-arg) parameter names — see src/lib/createBookingAtomicRpc.ts
-          const createRes = await supabase.rpc("create_booking_atomic", {
-            p_service_id: sid,
-            p_vendor_id: vendorId,
-            p_booking_date: today,
-            p_guests: groups[sid].qty,
-            p_total_amount: groups[sid].total,
-            p_tourist_id: order.user_id || null,
-            p_service_date: today,
-            p_currency: order.currency || "UGX",
-            p_special_requests: null,
-            p_guest_name: order.guest_name || null,
-            p_guest_email: order.guest_email || null,
-            p_guest_phone: order.guest_phone || null,
-            p_pickup_location: null,
-            p_dropoff_location: null,
-            p_pricing_base_amount: groups[sid].total,
-          })
-          if ((createRes.data as any)?.success && (createRes.data as any)?.booking_id) {
-            await supabase.rpc("update_booking_status_atomic", {
-              p_booking_id: (createRes.data as any).booking_id,
-              p_status: "confirmed",
-              p_payment_status: "paid",
-            })
-          }
-        } catch (bkErr) {
-          console.warn("Webhook: create booking failed for service", sid, bkErr)
-        }
-      }
-
-      for (const it of items) {
-        try {
-          const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
-            p_ticket_type_id: it.ticket_type_id,
-            p_quantity: it.quantity,
-            p_order_id: orderId,
-          })
-          if (bookErr || !(bookData as any)?.success) {
-            console.warn("Webhook: book_tickets_atomic failed", it.ticket_type_id, bookErr || (bookData as any)?.error)
-          }
-        } catch (ticketErr) {
-          console.warn("Webhook: ticket booking failed", ticketErr)
-        }
-      }
-    }
-
     const collection = body?.collection ?? (transaction as any)?.collection
     const amountFmt = (collection?.amount as any)?.formatted || `${payment.amount} UGX`
+    // LOW-3: phone number omitted from Telegram notification to avoid PII in chat logs.
     await sendTelegramMessage(
-      `🎉 Payment completed\nOrder #${orderId}\nAmount: ${amountFmt}\nPhone: ${payment.phone_number}\nRef: ${reference}`
+      `🎉 Payment completed\nOrder #${orderId}\nAmount: ${amountFmt}\nRef: ${reference}`
     )
   } else if (paymentStatus === "failed" && payment.order_id) {
     await sendTelegramMessage(
@@ -336,8 +292,8 @@ serve(async (req) => {
     )
   }
 
-  return new Response(JSON.stringify({ success: true, reference, status: paymentStatus }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  })
+  return new Response(
+    JSON.stringify({ success: true, reference, status: paymentStatus }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  )
 })

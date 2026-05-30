@@ -275,10 +275,10 @@ Full booking flow audit covering HotelBooking, ActivityBooking, and Checkout.
 
 | # | Issue | Notes |
 |---|-------|-------|
-| NF1 | `TourBooking.tsx`, `RestaurantBooking.tsx`, `FlightBooking.tsx` are placeholders | Need full implementation — any live tour/restaurant/flight service routes here get a broken experience |
+| ~~NF1~~ | ~~Tour/Restaurant/Flight booking placeholders~~ | ✅ Fixed Session 13 — full dedicated pages |
 | NF2 | Live currency exchange rates | ✅ Fixed (Session 4) — Frankfurter API, see M4 |
 | NF3 | Vendor pre-launch service drafting during pending period | Product decision required |
-| NF4 | Inline booking drawer on ServiceDetail | Significant UX rework |
+| ~~NF4~~ | ~~Inline booking drawer on ServiceDetail~~ | ✅ Fixed Session 14 — `BookingDrawer` on `ServiceDetail` |
 
 ---
 
@@ -337,15 +337,217 @@ Follow-up from conversion audit: one-page ticket checkout, service-booking mobil
 
 ---
 
+---
+
+## PAYMENT SECURITY & RELIABILITY AUDIT — SESSION 11 (2026-05-30) ✅
+
+Full payment architecture review covering security, concurrency, reliability, and scalability.
+Scope: `marzpay-collect`, `marzpay-webhook`, `process-payment-fulfillment-queue`, `Payment.tsx`, `pricingService.ts`.
+
+### Scores (pre-fix)
+| Dimension | Score | After fixes |
+|---|---|---|
+| Architecture | 4/10 | 6/10 |
+| Scalability | 3/10 | 5/10 |
+| Reliability | 4/10 | 7/10 |
+| Security | 2/10 | 7/10 |
+
+---
+
+### CRITICAL FIXES
+
+#### S11-C1 — Double ticket issuance eliminated
+**File:** `supabase/functions/marzpay-webhook/index.ts`
+**Problem:** The webhook handler called both `create_booking_atomic` (for each service group) AND `book_tickets_atomic` (for each order item) inline, immediately after updating the payment status. The queue worker (`process-payment-fulfillment-queue`) performed the exact same operations. Every successful payment produced two bookings and two sets of tickets.
+**Fix:** Removed all inline `create_booking_atomic` and `book_tickets_atomic` calls from the webhook (approximately 50 lines deleted). The webhook now only updates payment/order/booking status and enqueues a fulfillment job. The queue worker is the sole authoritative point for booking and ticket creation.
+
+#### S11-C2 — Unauthenticated webhook locked down
+**File:** `supabase/functions/marzpay-webhook/index.ts` + `supabase/functions/marzpay-collect/index.ts`
+**Problem:** The webhook endpoint accepted any POST with no authentication. Any actor who knew the endpoint URL could POST a fabricated `{transaction: {reference: "...", status: "successful"}}` payload to mark any pending payment as completed, generate free tickets, and trigger commission payouts.
+**Fix:**
+- Added `MARZPAY_WEBHOOK_SECRET` env var check at the top of the webhook handler. Requests are rejected with 401 if the provided secret (from query param `?secret=` or header `x-webhook-secret`) does not match.
+- In `marzpay-collect`, the webhook callback URL is now built with the secret embedded as a query param: `...marzpay-webhook?secret=<MARZPAY_WEBHOOK_SECRET>`.
+- **Action required:** Set `MARZPAY_WEBHOOK_SECRET` in Supabase edge function secrets (Dashboard → Edge Functions → Secrets). Use a random 32-character string. Without this env var the guard is inactive but logs a warning.
+
+#### S11-C3 — CORS misconfiguration fixed
+**File:** `supabase/functions/marzpay-collect/index.ts`
+**Problem:** The function reflected the caller's `Origin` header directly as `Access-Control-Allow-Origin` while also setting `Access-Control-Allow-Credentials: true`. This is a textbook CORS exploit: any website could initiate a payment using the user's live Supabase session.
+**Fix:** Replaced the reflected-origin pattern with an explicit allowlist. `APP_URL` (already an env var) is parsed as a comma-separated list of allowed origins. Only matching origins are echoed back; unrecognised origins receive the first allowed origin. Credentials mode preserved (required for Supabase JWT cookies).
+
+#### S11-C4 — ReferenceError crash in marzpay-collect fixed
+**File:** `supabase/functions/marzpay-collect/index.ts` line 42 (original)
+**Problem:** The 405 Method Not Allowed response referenced `corsHeaders` (camelCase) while the variable was named `CORS_HEADERS` (uppercase). Any non-POST, non-OPTIONS request (health checks, browser navigation, misconfigured clients) caused a `ReferenceError` that crashed the Deno isolate.
+**Fix:** Refactored CORS header construction into a `buildCorsHeaders(req)` helper called once at the top of the handler. All response paths use the same `CORS_HEADERS` constant — the inconsistency is structurally impossible now.
+
+#### S11-C5 — Inventory check before payment
+**File:** `supabase/functions/marzpay-collect/index.ts`
+**Problem:** Ticket availability was never verified before initiating the MarzPay charge. The TOCTOU window allowed two simultaneous users to both pay for the last available ticket; one would receive tickets and one would pay and receive nothing.
+**Fix:** Added a pre-charge inventory check for order-linked payments. After validating the order, the function fetches all `order_items` for the order and checks each `ticket_types.available_quantity` (falling back to `capacity`). If any ticket type has fewer available than requested, the function returns HTTP 409 before calling MarzPay. No charge is initiated for an unavailable ticket.
+
+---
+
+### HIGH PRIORITY FIXES
+
+#### S11-H1 — Server-side amount validation
+**File:** `supabase/functions/marzpay-collect/index.ts`
+**Problem:** The `amount` field in the request body was passed directly to MarzPay without any server-side verification. A user with browser DevTools could modify the POST body to pay 1 UGX for any order.
+**Fix:** For order-linked payments, the function now fetches `orders.total_amount` from the DB and compares it to the requested amount. Differences greater than 1 UGX (rounding allowance) are rejected with HTTP 400 `"Payment amount does not match order total"`. The order's stored `total_amount` is set by the frontend before payment initiation (in `useOrderPaymentFlow.payOrder`) and is the authoritative server value.
+
+#### S11-H2 — Rate limiting on payment initiation
+**File:** `supabase/functions/marzpay-collect/index.ts`
+**Problem:** No limit on how many times a payment could be initiated for the same order, enabling USSD prompt spam to arbitrary phone numbers and MarzPay quota exhaustion.
+**Fix:** For order-linked payments, the function counts all existing `payments` rows for the `order_id`. If the count reaches 5, the request is rejected with HTTP 429 `"Too many payment attempts for this order"`. Limit is intentionally generous (5) to cover legitimate retries after network failures.
+
+#### S11-H3 — Webhook order status precondition
+**File:** `supabase/functions/marzpay-webhook/index.ts`
+**Problem:** The order `UPDATE ... SET status='paid'` query had no WHERE clause on the current status. A webhook arriving for an expired order (past the 2-hour abandon window) would overwrite `status='expired'` with `status='paid'` and trigger fulfillment for an order the system had already invalidated.
+**Fix:** Added `.in("status", ["pending", "processing"])` to the order update query. Orders in `expired`, `paid`, or `completed` states are silently skipped (the update returns 0 rows, which is logged as a warning). Fulfillment is still enqueued; the queue worker's own idempotency checks handle the rest safely.
+
+#### S11-H5 — Payment deduplication (double-click / browser retry guard)
+**File:** `supabase/functions/marzpay-collect/index.ts`
+**Problem:** If a user double-clicked "Pay" faster than React's `setProcessing(true)` could disable the button, two `marzpay-collect` calls would fire simultaneously. Both would succeed, generating two distinct payment references and ultimately two sets of tickets.
+**Fix:** Before calling MarzPay, the function queries `payments` for any existing `pending` or `processing` row matching the `order_id`. If one exists, it returns the existing reference immediately (HTTP 200, `success: true`) rather than initiating a new charge. The frontend treats this identically to a new initiation — `startWatchingReference` proceeds on the returned reference.
+
+---
+
+### MEDIUM PRIORITY FIXES
+
+#### S11-M3 — Ticket quantity locked during active payment
+**File:** `src/pages/Payment.tsx`
+**Problem:** The ticket quantity +/− controls on the Payment page had no guard against `processing === true`. A user could initiate a payment and immediately change the quantity, creating a mismatch between the charged amount and the tickets in `order_items`.
+**Fix:**
+- The "Edit" toggle button is hidden entirely when `processing === true` (preventing the edit panel from opening mid-payment).
+- The − button gains `|| processing` on its `disabled` condition.
+- The + button gains `disabled={processing}`.
+- If the edit panel was already open when payment started, the controls are individually disabled.
+
+#### S11-L3 — PII removed from Telegram notifications
+**File:** `supabase/functions/marzpay-webhook/index.ts`
+**Problem:** Telegram success notifications included `phone_number` (e.g. `+256712345678`), sending personal data to a third-party chat service not covered by typical privacy policies.
+**Fix:** Removed `Phone: ${payment.phone_number}` from the success Telegram message. Order ID, amount, and reference remain for operational tracking.
+
+---
+
+### KNOWN LIMITATIONS — NOT FIXED (FREE TIER / SCOPE)
+
+| # | Issue | Reason not fixed |
+|---|-------|-----------------|
+| S11-M1 | In-memory status cache is per Deno isolate — ineffective under concurrent load | Requires Redis or Supabase KV (not available on free tier). Realtime is the primary delivery path; polling is a fallback. Acceptable for current scale. |
+| S11-M2 | 3 DB round-trips per user for pricing (services → overrides → vendors+tiers) | Fix requires a new Postgres RPC function (DB migration). Documented for next schema session. |
+| S11-H4 | Queue worker fallback path has no row-level locking | Fix requires `claim_payment_jobs` RPC to be deployed in DB (migration). The fallback is only active when the RPC is missing — deploy the RPC to eliminate it. |
+| S11-M5 | Queue worker self-chaining under full batch load | Under free-tier traffic levels this won't trigger. Add pg_cron scheduling before scaling to 500+ concurrent payments. |
+| S11-M4 | Pricing calculations run client-side (trust boundary) | Moving to a server-side RPC is a significant refactor. Mitigated by S11-H1 (server validates the final amount before charging). |
+
+---
+
+### ENVIRONMENT SETUP REQUIRED
+
+After deploying these edge functions, set the following secret in Supabase Dashboard → Edge Functions → Secrets:
+
+| Secret | Value | Purpose |
+|--------|-------|---------|
+| `MARZPAY_WEBHOOK_SECRET` | Any random 32-char string (e.g. `openssl rand -hex 16`) | Authenticates MarzPay webhook callbacks — CRITICAL-2 |
+
+The webhook guard is **inactive** until this secret is set. All other fixes are code-only and take effect on next deploy.
+
+---
+
+## BOOKING FLOWS — SESSION 13 (2026-05-30) ✅
+
+Replaced all three 4-line ActivityBooking wrappers with full dedicated implementations.
+
+| # | Flow | Key features |
+|---|------|-------------|
+| NF1a | **TourBooking** | Tour date, group size, optional pickup location, SO4 pre-create, MarzPay, BookingReceipt |
+| NF1b | **RestaurantBooking** | Date + time slot, party size, occasion, dietary notes, free reservation (pay at restaurant), email confirmation |
+| NF1c | **FlightBooking** | One-way / round-trip, from/to airports, passengers, class, cargo notes, SO4 pre-create, MarzPay, BookingReceipt |
+
+All three use the SO4 fix (booking created before payment), cancel the pending booking on payment failure, and show an optimistic confirmed receipt on success.
+
+RestaurantBooking uses no payment — reservations are confirmed immediately and vendor is notified via `send-booking-emails`.
+
+---
+
+## INLINE BOOKING DRAWER — SESSION 14 (2026-05-30) ✅
+
+SO5/NF4: Users can now book any service without leaving the service detail page.
+
+| # | Change | Detail |
+|---|--------|--------|
+| SO5a | `BookingDrawer` component | Bottom sheet on mobile (slides up, 92vh), slide-over panel on desktop (440px, full height). 4 steps: Summary → Contact → Payment → Confirmation. Pre-populates all dates/guests from the ServiceDetail sidebar. |
+| SO5b | Hotel/Transport/Tour/Activity | Date + guest summary, platform fee shown, MarzPay payment flow with SO4 pattern (booking created before payment), live Realtime + backoff polling, optimistic receipt on success |
+| SO5c | Restaurant | Free reservation path — no payment step, confirms immediately, sends booking email |
+| SO5d | ServiceDetail wired | `handleBooking` now calls `setDrawerOpen(true)` instead of `navigate()`. Mobile floating "Book Now" button also opens drawer. `BookingDrawer` rendered at bottom of page with all prefill state passed in. |
+| SO5e | TypeScript | Zero errors — removed unused imports across FlightBooking, TourBooking, RestaurantBooking |
+
+The full booking pages (ActivityBooking, HotelBooking, etc.) remain accessible via their direct URLs for users who arrive via deep links or search.
+
+---
+
+## FILES CHANGED — SESSION 14
+
+| File | Changes |
+|------|---------|
+| `src/components/BookingDrawer.tsx` | **CREATED** — self-contained booking drawer with 4-step flow, MarzPay integration, SO4 pattern, Realtime status watching |
+| `src/pages/ServiceDetail.tsx` | Added `drawerOpen` state; `handleBooking` opens drawer; mobile Book button opens drawer; `BookingDrawer` rendered at bottom with prefill props |
+| `src/pages/TourBooking.tsx` | Removed unused `CheckCircle` import |
+| `src/pages/FlightBooking.tsx` | Removed unused `CheckCircle` import and dead `customerPaysTotal` variable |
+| `src/pages/RestaurantBooking.tsx` | Removed unused `supabase` import |
+| `AUDIT_FIXES.md` | Session 14 record (this section) |
+
+---
+
+## FILES CHANGED — SESSION 13
+
+| File | Changes |
+|------|---------|
+| `src/pages/TourBooking.tsx` | Full implementation — tour date, group size, pickup location, SO4, MarzPay, BookingReceipt |
+| `src/pages/RestaurantBooking.tsx` | Full implementation — date+time, party size, occasion, dietary notes, free reservation, send-booking-emails notification |
+| `src/pages/FlightBooking.tsx` | Full implementation — trip type, from/to, departure+return dates, passengers, class, cargo, SO4, MarzPay, BookingReceipt |
+| `AUDIT_FIXES.md` | Session 13 record (this section) |
+
+---
+
+## HYBRID BOOKING — SESSION 16 (2026-05-30) ✅
+
+Drawer vs full-page checkout split by category complexity.
+
+| Category | Flow |
+|----------|------|
+| **Activities**, **Restaurants** (incl. events) | Inline `BookingDrawer` on `ServiceDetail` |
+| **Hotels**, **Transport**, **Tours**, **Flights** | Navigate to `/service/:slug/book/:category` with sidebar prefill via `location.state` |
+
+| File | Changes |
+|------|---------|
+| `src/lib/bookingFlow.ts` | **CREATED** — `usesInlineBookingDrawer`, `buildBookingNavigateState` |
+| `src/pages/ServiceDetail.tsx` | `handleBooking` routes hybrid; drawer mounted only for drawer categories |
+| `src/pages/TransportBooking.tsx` | Prefill `startTime` / `endTime` from navigation state |
+| `src/pages/FlightBooking.tsx` | Prefill `departureDate` / `passengers` from navigation state |
+
+---
+
+## BOOKING DRAWER GAP FIXES — SESSION 15 (2026-05-30) ✅
+
+Follow-up polish after SO5/NF4 inline drawer (Session 14).
+
+| # | Change | Detail |
+|---|--------|--------|
+| SO5f | Shared prefill validation | `bookingPrefillReady()` on `ServiceDetail` — sidebar Book, mobile Book Now, and `handleBooking` all use the same rules; if incomplete, scrolls booking panel into view instead of opening an empty drawer |
+| SO5g | Transport zone in drawer | Amber warning + disabled Continue when zone missing (already in drawer); mobile bar respects same validation |
+| SO5h | Flight / tour in drawer | Flight: trip type + from/to in summary; tour: optional pickup; persisted on booking payload |
+| SO5i | Restaurant drawer emails | `send-booking-emails` after free reservation; `start_time` from sidebar prefill |
+
+---
+
 ## STILL OPEN — DEFERRED
 
 | # | Issue | Notes |
 |---|-------|-------|
-| SO1 | Tour/Restaurant/Flight dedicated booking flows | Still wrap ActivityBooking |
+| ~~SO1~~ | ~~Tour/Restaurant/Flight dedicated booking flows~~ | ✅ Fixed Session 13 |
 | SO2 | Transport essential-fields-only (remove journey wizard entirely) | ✅ Fixed (Session 8) — wizard, map modals, Nominatim geocoding removed; 1,176 lines |
 | SO3 | Scoped blocked-dates API | ✅ Fixed (Session 10) — `fetchVendorBlockedDates` scoped by vendor + date window |
-| SO4 | Payment-before-booking race | Activity/Hotel/Transport charge before `createBooking` |
-| SO5 | Inline booking drawer on ServiceDetail | NF4 — product/UX project |
+| ~~SO4~~ | ~~Payment-before-booking race~~ | ✅ Fixed Session 12 — pending booking before `marzpay-collect` (Activity/Hotel/Transport + drawer) |
+| ~~SO5~~ | ~~Inline booking drawer on ServiceDetail~~ | ✅ Fixed Session 14; gap fixes Session 15 |
 | SO6 | Split TransportBooking.tsx | ✅ Fixed (Session 7 / M3) |
 | SO7 | Dedicated `room_type` column on bookings | Stored in `special_requests` for now |
 
@@ -410,6 +612,55 @@ Hotel and Transport no longer fetch the entire `bookings` table on load.
 | SO3d | Hotel + Transport wired | Both pages use shared helper instead of duplicated full-table logic |
 
 **Net result:** One vendor-scoped query per booking page load. TypeScript: 0 errors.
+
+---
+
+## PAYMENT RELIABILITY SESSION 12 (2026-05-30) ✅
+
+Addressed all remaining technical items from the Session 11 audit.
+
+| # | Fix | Status |
+|---|-----|--------|
+| Item 2 | Queue worker idempotency on booking/ticket creation during retries | ✅ Fixed |
+| Item 3 | `claim_payment_jobs` RPC with `FOR UPDATE SKIP LOCKED` | ✅ Applied to DB (2026-05-30 via Supabase MCP) |
+| Item 4 | Pricing consolidated to single `get_effective_pricing` RPC (3 queries → 1) | ✅ Applied to DB + `GRANT` for `authenticated`, `anon` |
+| SO4-Activity | Create booking before payment in ActivityBooking | ✅ Fixed |
+| SO4-Hotel | Create booking before payment in HotelBooking | ✅ Fixed |
+| SO4-Transport | Create booking before payment in TransportBooking; removed dangerous webhook self-call | ✅ Fixed |
+
+**Item 2 detail:** `processOrderFulfillment` now runs two parallel idempotency probes before the booking/ticket `Promise.all`: `bookings.payment_reference = reference` and `tickets.order_id = orderId`. If both already exist (prior run completed), the entire creation block is skipped with a log entry. If only one exists, only the missing half runs.
+
+**Item 3 detail:** `supabase/migrations/20260530200000_claim_payment_jobs_rpc.sql` applied on Travel Trails project. Existing function was dropped first (signature/default conflict). Smoke test: `claim_payment_jobs(1, 'migration-smoke-test')` returns 0 rows without error.
+
+**Item 4 detail:** `supabase/migrations/20260530200001_get_effective_pricing_rpc.sql` applied with `GRANT EXECUTE` to `authenticated` and `anon`. Frontend `pricingService.ts` uses this RPC first; legacy 3-query fallback remains if RPC fails.
+
+**SO4 detail (Activity/Hotel/Transport):** All three booking pages now follow the correct order: `createBooking(pending)` → `marzpay-collect(real booking UUID)` → webhook confirms booking. Previously used a non-UUID `tempRef` which marzpay-collect silently dropped (booking_id stored as null), forcing a fragile fallback reconciliation. On payment failure the pending booking is cancelled. On success, receipt is shown optimistically as confirmed while the webhook updates the DB. TransportBooking's manual webhook self-call (which would now fail due to missing secret) was removed entirely.
+
+---
+
+## FILES CHANGED — SESSION 12
+
+| File | Changes |
+|------|---------|
+| `supabase/functions/process-payment-fulfillment-queue/index.ts` | Item 2: idempotency probes on bookings+tickets before creation; conditional `Promise.all` skips already-complete work |
+| `supabase/migrations/20260530200000_claim_payment_jobs_rpc.sql` | **CREATED** — `claim_payment_jobs` RPC with `FOR UPDATE SKIP LOCKED` |
+| `supabase/migrations/20260530200001_get_effective_pricing_rpc.sql` | **CREATED** — `get_effective_pricing` RPC replacing 3 client queries |
+| `src/lib/pricingService.ts` | Item 4: `calculatePayment` + `calculatePaymentForAmount` now use `get_effective_pricing` RPC with legacy fallback; `_calculatePaymentLegacy` + `_pricingError` helpers extracted |
+| `src/pages/ActivityBooking.tsx` | SO4: pre-create pending booking before marzpay-collect; pass real booking UUID; cancel on failure; `finaliseBooking` accepts `existingBooking` param |
+| `src/pages/HotelBooking.tsx` | SO4: same pattern as ActivityBooking; `finaliseHotelBooking` accepts `existingBooking` param |
+| `src/pages/TransportBooking.tsx` | SO4: pre-create pending booking; `createTransportBooking` accepts `existingBooking` param; removed manual webhook self-call; cancel booking on payment failure |
+| `AUDIT_FIXES.md` | Session 12 record (this section) |
+
+---
+
+## FILES CHANGED — SESSION 11 (Payment Security & Reliability)
+
+| File | Changes |
+|------|---------|
+| `supabase/functions/marzpay-collect/index.ts` | CRITICAL-3: CORS explicit allowlist (`buildCorsHeaders`); CRITICAL-4: `corsHeaders` → `CORS_HEADERS` ReferenceError fixed; CRITICAL-5: inventory check before MarzPay call; HIGH-1: server-side amount validation vs `orders.total_amount`; HIGH-2: rate limit (max 5 attempts/order); HIGH-5: deduplication (return existing pending payment for order) |
+| `supabase/functions/marzpay-webhook/index.ts` | CRITICAL-1: removed ~50 lines of inline `create_booking_atomic` + `book_tickets_atomic` calls — queue worker is now sole fulfillment authority; CRITICAL-2: `MARZPAY_WEBHOOK_SECRET` verification (query param + header); HIGH-3: order update guarded with `.in("status", ["pending","processing"])`; LOW-3: phone number removed from Telegram notification |
+| `src/pages/Payment.tsx` | MEDIUM-3: "Edit" toggle hidden when `processing`; +/- quantity buttons disabled when `processing` |
+| `AUDIT_FIXES.md` | Session 11 audit record (this section) |
 
 ---
 

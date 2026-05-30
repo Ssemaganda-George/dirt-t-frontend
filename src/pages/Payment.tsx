@@ -608,7 +608,10 @@ export default function PaymentPage() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium">Tickets</div>
                   <div>
-                    <button type="button" onClick={() => setShowEdit(s => !s)} className="text-sm text-blue-600">{showEdit ? 'Done' : 'Edit'}</button>
+                    {/* MEDIUM-3: hide edit toggle while payment is processing to prevent quantity drift */}
+                    {!processing && (
+                      <button type="button" onClick={() => setShowEdit(s => !s)} className="text-sm text-blue-600">{showEdit ? 'Done' : 'Edit'}</button>
+                    )}
                   </div>
                 </div>
 
@@ -625,7 +628,7 @@ export default function PaymentPage() {
                             <button
                               onClick={async () => updateTicketQuantity(item.ticket_type_id, (item.quantity || 0) - 1)}
                               className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium"
-                              disabled={(item.quantity || 0) <= 0}
+                              disabled={(item.quantity || 0) <= 0 || processing}
                             >
                               -
                             </button>
@@ -633,6 +636,7 @@ export default function PaymentPage() {
                             <button
                               onClick={async () => updateTicketQuantity(item.ticket_type_id, (item.quantity || 0) + 1)}
                               className="w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-medium"
+                              disabled={processing}
                             >
                               +
                             </button>
