@@ -10,6 +10,15 @@ import {
   touristFeeTotalFromUnitCalc,
 } from '../lib/pricingService'
 import { formatCurrencyWithConversion } from '../lib/utils'
+import { BookingFormBanner, FieldError } from './booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +82,8 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const [provider, setProvider] = useState<'MTN' | 'Airtel' | ''>('')
   const [pollingMessage, setPollingMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
   const [completedBooking, setCompletedBooking] = useState<any>(null)
   const [pricingCalc, setPricingCalc] = useState<any>(null)
@@ -107,6 +118,8 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     if (isOpen) {
       setStep('summary')
       setError(null)
+      setFieldErrors({})
+      setFormBanner(null)
       setPollingMessage('')
       setProcessing(false)
       finaliseRef.current = false
@@ -210,11 +223,44 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
   // ─── Payment flow ─────────────────────────────────────────────────────────────
 
+  const validateSummary = (): boolean => {
+    const errs: FieldErrors = {}
+    if (isRestaurant && !prefill.selectedDate) errs.date = 'Select a date on the listing before booking.'
+    if (!isHotel && !isTransport && !isRestaurant && !prefill.selectedDate) errs.date = 'Select a date on the listing before booking.'
+    if (isHotel && (!prefill.checkInDate || !prefill.checkOutDate)) errs.date = 'Select check-in and check-out dates on the listing.'
+    if (isTransport && (!prefill.startDate || !prefill.endDate)) errs.date = 'Select pick-up and drop-off dates on the listing.'
+    if (isTransport && prefill.startDate && prefill.endDate && !prefill.transportZone) errs.transportZone = 'Select Within Town or Upcountry on the listing.'
+    if (isFlight) {
+      if (!flightFrom.trim()) errs.flightFrom = 'Departure location is required.'
+      if (!flightTo.trim()) errs.flightTo = 'Destination is required.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
+  const validateContact = (): boolean => {
+    const errs: FieldErrors = {}
+    if (!user) {
+      if (!contact.name.trim()) errs.name = 'Full name is required.'
+      if (!contact.email.trim()) errs.email = 'Email is required.'
+      else if (!isValidEmail(contact.email)) errs.email = 'Enter a valid email address.'
+    }
+    if (!contact.phone.trim()) errs.phone = 'Mobile money number is required.'
+    else if (!isValidUgMobileMoneyPhone(contact.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
+  const validatePayment = (): boolean => {
+    const errs: FieldErrors = {}
+    if (!provider) errs.mobileProvider = 'Select MTN or Airtel.'
+    if (!contact.phone.trim()) errs.phone = 'Mobile money number is required.'
+    else if (!isValidUgMobileMoneyPhone(contact.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
   const handlePay = useCallback(async () => {
     if (processing) return
+    if (!validatePayment()) return
     const phone = formatPhone(contact.phone)
-    if (!phone || phone.length < 12) { setError('Enter a valid mobile money number.'); return }
-    if (!provider) { setError('Select MTN or Airtel.'); return }
     setError(null)
     setProcessing(true)
     setPollingMessage('Creating booking…')
@@ -301,6 +347,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   // Restaurant reservations need no payment
   const handleRestaurantReserve = useCallback(async () => {
     if (processing) return
+    if (!user && !validateContact()) return
     setProcessing(true)
     setError(null)
     try {
@@ -341,9 +388,15 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     else onClose()
   }
 
-  const contactValid = Boolean(
-    (user || (contact.name.trim() && contact.email.trim())) && contact.phone.trim()
-  )
+  const goFromSummary = () => {
+    if (!validateSummary()) return
+    if (isRestaurant) {
+      if (user) setStep('payment')
+      else setStep('contact')
+      return
+    }
+    setStep(user ? 'payment' : 'contact')
+  }
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -405,6 +458,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           {/* ── Step: Summary ── */}
           {step === 'summary' && (
             <div className="p-5 space-y-4">
+              <BookingFormBanner message={formBanner} />
               {/* Service thumbnail */}
               <div className="flex items-center gap-3">
                 {service.images?.[0] ? (
@@ -486,13 +540,15 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">From *</label>
-                    <input type="text" placeholder="e.g. Entebbe International" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
-                      value={flightFrom} onChange={e => setFlightFrom(e.target.value)} />
+                    <input type="text" placeholder="e.g. Entebbe International" className={fieldInputClass(Boolean(fieldErrors.flightFrom), 'w-full px-3 py-2.5 border rounded-lg text-sm')}
+                      value={flightFrom} onChange={e => { setFlightFrom(e.target.value); setFieldErrors(p => clearFieldError(p, 'flightFrom')); setFormBanner(null) }} aria-invalid={Boolean(fieldErrors.flightFrom)} />
+                    <FieldError message={fieldErrors.flightFrom} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">To *</label>
-                    <input type="text" placeholder="e.g. Kidepo Valley Airstrip" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm"
-                      value={flightTo} onChange={e => setFlightTo(e.target.value)} />
+                    <input type="text" placeholder="e.g. Kidepo Valley Airstrip" className={fieldInputClass(Boolean(fieldErrors.flightTo), 'w-full px-3 py-2.5 border rounded-lg text-sm')}
+                      value={flightTo} onChange={e => { setFlightTo(e.target.value); setFieldErrors(p => clearFieldError(p, 'flightTo')); setFormBanner(null) }} aria-invalid={Boolean(fieldErrors.flightTo)} />
+                    <FieldError message={fieldErrors.flightTo} />
                   </div>
                 </div>
               )}
@@ -515,6 +571,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           {/* ── Step: Contact ── */}
           {step === 'contact' && (
             <div className="p-5 space-y-4">
+              <BookingFormBanner message={formBanner} />
               {user && profile?.full_name ? (
                 <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
                   Booking as <span className="font-medium">{profile.full_name}</span> ({profile.email})
@@ -523,26 +580,32 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                    <input type="text" className="w-full px-3 py-3 border border-gray-300 rounded-xl text-base" value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} autoComplete="name" />
+                    <input type="text" className={fieldInputClass(Boolean(fieldErrors.name), 'w-full px-3 py-3 border rounded-xl text-base')} value={contact.name} onChange={e => { setContact(c => ({ ...c, name: e.target.value })); setFieldErrors(p => clearFieldError(p, 'name')); setFormBanner(null) }} autoComplete="name" aria-invalid={Boolean(fieldErrors.name)} />
+                    <FieldError message={fieldErrors.name} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input type="email" className="w-full px-3 py-3 border border-gray-300 rounded-xl text-base" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} autoComplete="email" />
+                    <input type="email" className={fieldInputClass(Boolean(fieldErrors.email), 'w-full px-3 py-3 border rounded-xl text-base')} value={contact.email} onChange={e => { setContact(c => ({ ...c, email: e.target.value })); setFieldErrors(p => clearFieldError(p, 'email')); setFormBanner(null) }} autoComplete="email" aria-invalid={Boolean(fieldErrors.email)} />
+                    <FieldError message={fieldErrors.email} />
                   </div>
                 </div>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
                 {provider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{provider}</span> (auto-detected)</p>}
-                <input type="tel" placeholder="0712345678" className="w-full px-3 py-3 border border-gray-300 rounded-xl text-base"
+                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-3 border rounded-xl text-base')}
                   value={contact.phone}
                   onChange={e => {
                     setContact(c => ({ ...c, phone: e.target.value }))
+                    setFieldErrors(p => clearFieldError(p, 'phone'))
+                    setFormBanner(null)
                     const detected = detectMobileProvider(e.target.value)
                     if (detected) setProvider(detected)
                   }}
                   autoComplete="tel"
+                  aria-invalid={Boolean(fieldErrors.phone)}
                 />
+                <FieldError message={fieldErrors.phone} />
               </div>
             </div>
           )}
@@ -550,6 +613,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           {/* ── Step: Payment ── */}
           {step === 'payment' && (
             <div className="p-5 space-y-4">
+              <BookingFormBanner message={formBanner || error} />
               {/* Order recap */}
               <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
                 <div className="flex justify-between text-gray-600"><span>{service.title}</span></div>
@@ -563,27 +627,30 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               {/* Provider */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <div className="flex gap-3">
+                <div className={`flex gap-3 ${fieldErrors.mobileProvider ? 'ring-1 ring-red-500 rounded-xl p-1' : ''}`}>
                   {(['MTN', 'Airtel'] as const).map(p => (
-                    <button key={p} type="button" onClick={() => setProvider(p)} className={`flex-1 py-2.5 rounded-xl border font-medium text-sm ${provider === p ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{p}</button>
+                    <button key={p} type="button" onClick={() => { setProvider(p); setFieldErrors(prev => clearFieldError(prev, 'mobileProvider')); setFormBanner(null) }} className={`flex-1 py-2.5 rounded-xl border font-medium text-sm ${provider === p ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{p}</button>
                   ))}
                 </div>
+                <FieldError message={fieldErrors.mobileProvider} />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
                 {provider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{provider}</span></p>}
-                <input type="tel" placeholder="0712345678" className="w-full px-3 py-3 border border-gray-300 rounded-xl text-base"
+                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-3 border rounded-xl text-base')}
                   value={contact.phone}
                   onChange={e => {
                     setContact(c => ({ ...c, phone: e.target.value }))
+                    setFieldErrors(prev => clearFieldError(prev, 'phone'))
+                    setFormBanner(null)
                     const detected = detectMobileProvider(e.target.value)
                     if (detected) setProvider(detected)
                   }}
+                  aria-invalid={Boolean(fieldErrors.phone)}
                 />
+                <FieldError message={fieldErrors.phone} />
               </div>
-
-              {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
 
               <div className="text-xs text-gray-500 bg-gray-50 border rounded-xl px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> You will receive a USSD prompt on your phone.
@@ -644,33 +711,17 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
             <>
               {isRestaurant ? (
                 <button
-                  disabled={!prefill.selectedDate}
-                  onClick={() => user ? setStep('payment') : setStep('contact')}
-                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${!prefill.selectedDate ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  type="button"
+                  onClick={goFromSummary}
+                  className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
                 >
                   Reserve Table
                 </button>
               ) : (
                 <button
-                  disabled={
-                    (!isHotel && !isTransport && !prefill.selectedDate) ||
-                    (isHotel && (!prefill.checkInDate || !prefill.checkOutDate)) ||
-                    (isTransport && (!prefill.startDate || !prefill.endDate)) ||
-                    (isTransport && !prefill.transportZone) ||
-                    (isFlight && (!flightFrom.trim() || !flightTo.trim()))
-                  }
-                  onClick={() => user ? setStep('payment') : setStep('contact')}
-                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${
-                    (
-                      (!isHotel && !isTransport && !prefill.selectedDate) ||
-                      (isHotel && (!prefill.checkInDate || !prefill.checkOutDate)) ||
-                      (isTransport && (!prefill.startDate || !prefill.endDate)) ||
-                      (isTransport && !prefill.transportZone) ||
-                      (isFlight && (!flightFrom.trim() || !flightTo.trim()))
-                    )
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
+                  type="button"
+                  onClick={goFromSummary}
+                  className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
                 >
                   Continue to {user ? 'Payment' : 'Your Details'}
                 </button>
@@ -681,9 +732,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
           {step === 'contact' && (
             <button
-              disabled={!contactValid}
-              onClick={() => setStep('payment')}
-              className={`w-full py-3 rounded-xl font-semibold text-base transition ${!contactValid ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              type="button"
+              onClick={() => { if (validateContact()) setStep('payment') }}
+              className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
             >
               Continue to Payment
             </button>
@@ -697,9 +748,10 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 </button>
               ) : (
                 <button
-                  disabled={processing || !provider || !contact.phone.trim()}
+                  type="button"
+                  disabled={processing}
                   onClick={handlePay}
-                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing || !provider || !contact.phone.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                 >
                   {processing
                     ? (pollingMessage || 'Processing…')

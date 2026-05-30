@@ -12,6 +12,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import BookingReceipt from '../components/BookingReceipt'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 
 interface ServiceDetail {
   id: string
@@ -157,7 +166,27 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     { id: 5, title: 'Confirmation', icon: CheckCircle }
   ]
 
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {}
+    if (step === 1) {
+      if (!bookingData.date.trim()) errs.date = 'Please select an activity date.'
+    }
+    if (step === 2 && !loggedInReady) {
+      if (!bookingData.contactName.trim()) errs.contactName = 'Full name is required.'
+      if (!bookingData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+      else if (!isValidEmail(bookingData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+    }
+    if (step === 3 && bookingData.paymentMethod === 'mobile') {
+      if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
+      else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+      if (!bookingData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
   const handleNext = () => {
+    setPaymentError(null)
+    if (!validateStep(currentStep)) return
     if (currentStep === 1 && loggedInReady) {
       setCurrentStep(3)
       return
@@ -190,10 +219,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   })
 
   const handleInputChange = (field: string, value: string | number) => {
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setFormBanner(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
   }
 
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
   const handlePaymentMethodChange = (value: string) => {
     setBookingData(prev => ({ ...prev, paymentMethod: value }))
   }
@@ -243,16 +276,9 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
     // If mobile money selected, process payment via MarzPay first
     if (bookingData.paymentMethod === 'mobile') {
+      if (!validateStep(3)) return
       const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
       const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
-      if (!phone || phone.length < 12) {
-        setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
-        return
-      }
-      if (!bookingData.mobileProvider) {
-        setPaymentError('Please select a mobile money provider (MTN or Airtel).')
-        return
-      }
       setPaymentError(null)
 
       setIsSubmitting(true)
@@ -464,20 +490,23 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       case 1:
         return (
           <div className="space-y-6">
+            <BookingFormBanner message={formBanner} />
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date & Number of Guests</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Activity Date
+                    Activity Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                    className={fieldInputClass(Boolean(fieldErrors.date))}
                     value={bookingData.date}
                     onChange={(e) => handleInputChange('date', e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
+                    aria-invalid={Boolean(fieldErrors.date)}
                   />
+                  <FieldError message={fieldErrors.date} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -513,6 +542,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       case 2:
         return (
           <div className="space-y-6">
+            <BookingFormBanner message={formBanner} />
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Contact Information</h3>
             {loggedInReady && (
               <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
@@ -526,11 +556,12 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  className={fieldInputClass(Boolean(fieldErrors.contactName))}
                   value={bookingData.contactName}
                   onChange={(e) => handleInputChange('contactName', e.target.value)}
-                  required
+                  aria-invalid={Boolean(fieldErrors.contactName)}
                 />
+                <FieldError message={fieldErrors.contactName} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -538,11 +569,12 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 </label>
                 <input
                   type="email"
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                  className={fieldInputClass(Boolean(fieldErrors.contactEmail))}
                   value={bookingData.contactEmail}
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  required
+                  aria-invalid={Boolean(fieldErrors.contactEmail)}
                 />
+                <FieldError message={fieldErrors.contactEmail} />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -611,6 +643,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       case 3:
         return (
           <div className="space-y-6">
+            <BookingFormBanner message={formBanner} />
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center mb-2">
@@ -655,13 +688,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             {bookingData.paymentMethod === 'mobile' && (
               <div className="mt-3 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => {
                       const val = e.target.value.trimStart()
                       setPhoneNumber(val)
+                      setFieldErrors(prev => clearFieldError(prev, 'phone'))
+                      setFormBanner(null)
                       const digits = val.replace(/\D/g, '')
                       const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
                       if (local.length >= 2) {
@@ -671,12 +706,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                       }
                     }}
                     placeholder="0712345678 or +256712345678"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                    className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-2 border rounded-lg text-base')}
+                    aria-invalid={Boolean(fieldErrors.phone)}
                   />
+                  <FieldError message={fieldErrors.phone} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                  <div className="flex gap-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider <span className="text-red-500">*</span></label>
+                  <div className={`flex gap-2 ${fieldErrors.mobileProvider ? 'ring-1 ring-red-500 rounded-lg p-1' : ''}`}>
                     <button
                       type="button"
                       onClick={() => handleInputChange('mobileProvider', 'MTN')}
@@ -694,6 +731,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                       <span className="text-sm font-medium">Airtel</span>
                     </button>
                   </div>
+                  <FieldError message={fieldErrors.mobileProvider} />
                 </div>
                 {pollingMessage && (
                   <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
@@ -827,12 +865,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               </button>
               <button
                 onClick={currentStep === 3 ? handleCompleteBooking : handleNext}
-                disabled={
-                  isSubmitting ||
-                  (currentStep === 1 && !bookingData.date) ||
-                  (currentStep === 2 && !loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) ||
-                  (currentStep === 3 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-                }
+                disabled={isSubmitting}
                 className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 {isSubmitting

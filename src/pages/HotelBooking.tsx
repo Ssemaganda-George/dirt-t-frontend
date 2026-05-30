@@ -3,6 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { fetchVendorBlockedDates } from '../lib/blockedDates'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
@@ -88,6 +97,8 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
 
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
@@ -194,13 +205,33 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const contactReady = Boolean(bookingData.contactName?.trim() && bookingData.contactEmail?.trim())
   const loggedInReady = Boolean(user && contactReady)
 
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {}
+    if (step === 1) {
+      if (!bookingData.checkInDate) errs.checkInDate = 'Check-in date is required.'
+      if (!bookingData.checkOutDate) errs.checkOutDate = 'Check-out date is required.'
+      else if (bookingData.checkInDate && bookingData.checkOutDate <= bookingData.checkInDate) {
+        errs.checkOutDate = 'Check-out must be after check-in.'
+      }
+      if (blockedError) errs.checkInDate = blockedError
+    }
+    if (step === 2 && !loggedInReady) {
+      if (!bookingData.contactName.trim()) errs.contactName = 'Full name is required.'
+      if (!bookingData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+      else if (!isValidEmail(bookingData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+    }
+    if (step === 2 && bookingData.paymentMethod === 'mobile') {
+      if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
+      else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+      if (!bookingData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
   const handleNext = () => {
     if (currentStep < steps.length) {
       setPaymentError(null)
-      if (currentStep === 2 && !loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) {
-        setPaymentError('Please fill in all required details.')
-        return
-      }
+      if (!validateStep(currentStep)) return
       setCurrentStep(currentStep + 1)
     }
   }
@@ -214,8 +245,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   }
 
   const handleInputChange = (field: string, value: string | number) => {
-    // Clear blocked error on change
     setBlockedError(null)
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setFormBanner(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
 
     // Validate blocked dates immediately when checkInDate changes
@@ -274,16 +306,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     if (isSubmitting) return
 
     if (bookingData.paymentMethod === 'mobile') {
+      if (!validateStep(2)) return
       const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
       const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
-      if (!phone || phone.length < 12) {
-        setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
-        return
-      }
-      if (!bookingData.mobileProvider) {
-        setPaymentError('Please select a mobile money provider (MTN or Airtel).')
-        return
-      }
       setPaymentError(null)
 
       setIsSubmitting(true)
@@ -484,37 +509,37 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       case 1:
         return (
           <div className="space-y-6">
+            <BookingFormBanner message={formBanner} />
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Check-in & Check-out Dates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Check-in Date
+                    Check-in Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      blockedError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={fieldInputClass(Boolean(fieldErrors.checkInDate || blockedError), 'w-full px-3 py-2 border rounded-lg')}
                     value={bookingData.checkInDate}
                     onChange={(e) => handleInputChange('checkInDate', e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
+                    aria-invalid={Boolean(fieldErrors.checkInDate || blockedError)}
                   />
-                  {blockedError && (
-                    <p className="text-xs text-red-600 mt-1">{blockedError}</p>
-                  )}
+                  <FieldError message={fieldErrors.checkInDate || blockedError || undefined} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Check-out Date
+                    Check-out Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={fieldInputClass(Boolean(fieldErrors.checkOutDate), 'w-full px-3 py-2 border rounded-lg')}
                     value={bookingData.checkOutDate}
                     onChange={(e) => handleInputChange('checkOutDate', e.target.value)}
                     min={bookingData.checkInDate || new Date().toISOString().split('T')[0]}
+                    aria-invalid={Boolean(fieldErrors.checkOutDate)}
                   />
+                  <FieldError message={fieldErrors.checkOutDate} />
                 </div>
               </div>
               {nights > 0 && (
@@ -553,6 +578,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       case 2:
         return (
           <div className="space-y-6">
+            <BookingFormBanner message={formBanner} />
             {/* Room Details */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">Room Selection</h3>
@@ -626,11 +652,13 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    className={fieldInputClass(Boolean(fieldErrors.contactName), 'w-full px-4 py-2 border rounded-lg text-sm font-light')}
                     placeholder="John Doe"
                     value={bookingData.contactName}
                     onChange={(e) => handleInputChange('contactName', e.target.value)}
+                    aria-invalid={Boolean(fieldErrors.contactName)}
                   />
+                  <FieldError message={fieldErrors.contactName} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -638,11 +666,13 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                    className={fieldInputClass(Boolean(fieldErrors.contactEmail), 'w-full px-4 py-2 border rounded-lg text-sm font-light')}
                     placeholder="john@example.com"
                     value={bookingData.contactEmail}
                     onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                    aria-invalid={Boolean(fieldErrors.contactEmail)}
                   />
+                  <FieldError message={fieldErrors.contactEmail} />
                 </div>
                   </>
                 )}
@@ -753,6 +783,8 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                       onChange={(e) => {
                         const val = e.target.value.trimStart()
                         setPhoneNumber(val)
+                        setFieldErrors(p => clearFieldError(p, 'phone'))
+                        setFormBanner(null)
                         const digits = val.replace(/\D/g, '')
                         const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
                         if (local.length >= 2) {
@@ -762,12 +794,14 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                         }
                       }}
                       placeholder="0712345678 or +256712345678"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                      className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-4 py-2 border rounded-lg text-sm font-light')}
+                      aria-invalid={Boolean(fieldErrors.phone)}
                     />
+                    <FieldError message={fieldErrors.phone} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-900 mb-2">Provider</label>
-                    <div className="flex gap-2">
+                    <div className={`flex gap-2 ${fieldErrors.mobileProvider ? 'ring-1 ring-red-500 rounded-lg p-1' : ''}`}>
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'MTN')}
@@ -785,6 +819,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                         <span className="text-sm font-medium">Airtel</span>
                       </button>
                     </div>
+                    <FieldError message={fieldErrors.mobileProvider} />
                   </div>
                   {pollingMessage && (
                     <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">{pollingMessage}</p>
@@ -1052,11 +1087,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               </button>
               <button
                 onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
-                disabled={
-                  isSubmitting ||
-                  (currentStep === 2 && !loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) ||
-                  (currentStep === 2 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-                }
+                disabled={isSubmitting}
                 className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
               >
                 {isSubmitting

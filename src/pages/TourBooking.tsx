@@ -7,6 +7,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import BookingReceipt from '../components/BookingReceipt'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 
 interface ServiceDetail {
   id: string; slug?: string; title: string; description: string; price: number; currency: string;
@@ -35,6 +44,8 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
     mobileProvider: '', paymentMethod: 'mobile',
   })
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
   const [pricingCalc, setPricingCalc] = useState<any | null>(null)
 
   useEffect(() => {
@@ -58,9 +69,30 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
   const touristFeeTotal = touristFeeTotalFromUnitCalc(pricingCalc, formData.travelers, 0)
   const loggedInReady = Boolean(user && profile?.full_name && profile?.email)
 
-  const set = (field: string, value: any) => setFormData(p => ({ ...p, [field]: value }))
+  const set = (field: string, value: any) => {
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setFormBanner(null)
+    setFormData(p => ({ ...p, [field]: value }))
+  }
+
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {}
+    if (step === 1 && !formData.tourDate) errs.tourDate = 'Tour date is required.'
+    if (step === 2 && !loggedInReady) {
+      if (!formData.contactName.trim()) errs.contactName = 'Full name is required.'
+      if (!formData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+      else if (!isValidEmail(formData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+    }
+    if (step === 3 && formData.paymentMethod === 'mobile') {
+      if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
+      else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+      if (!formData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
 
   const handleNext = () => {
+    if (!validateStep(currentStep)) return
     if (currentStep === 1 && loggedInReady) { setCurrentStep(3); return }
     setCurrentStep(s => Math.min(s + 1, 5))
   }
@@ -80,10 +112,9 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
     if (formData.paymentMethod === 'mobile') {
+      if (!validateStep(3)) return
       const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
       const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
-      if (!phone || phone.length < 12) { setPaymentError('Please enter a valid mobile money number.'); return }
-      if (!formData.mobileProvider) { setPaymentError('Please select MTN or Airtel.'); return }
       setPaymentError(null)
       setIsSubmitting(true)
       setPollingMessage('Creating booking…')
@@ -233,12 +264,14 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           {/* Step 1 — Tour Details */}
           {currentStep === 1 && (
             <>
+              <BookingFormBanner message={formBanner} />
               <h2 className="text-lg font-semibold flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-600" />Tour Details</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tour Date *</label>
-                  <input type="date" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                    value={formData.tourDate} onChange={e => set('tourDate', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                  <input type="date" className={fieldInputClass(Boolean(fieldErrors.tourDate))}
+                    value={formData.tourDate} onChange={e => set('tourDate', e.target.value)} min={new Date().toISOString().split('T')[0]} aria-invalid={Boolean(fieldErrors.tourDate)} />
+                  <FieldError message={fieldErrors.tourDate} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Travelers *</label>
@@ -276,7 +309,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
               </div>
 
-              <button disabled={!formData.tourDate} onClick={handleNext} className={`w-full py-3 rounded-lg font-semibold text-base transition ${!formData.tourDate ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
                 Continue
               </button>
             </>
@@ -285,18 +318,21 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           {/* Step 2 — Contact Details */}
           {currentStep === 2 && (
             <>
+              <BookingFormBanner message={formBanner} />
               <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" />Your Details</h2>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input type="text" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactName} onChange={e => set('contactName', e.target.value)} autoComplete="name" />
+                  <input type="text" className={fieldInputClass(Boolean(fieldErrors.contactName))} value={formData.contactName} onChange={e => set('contactName', e.target.value)} autoComplete="name" aria-invalid={Boolean(fieldErrors.contactName)} />
+                  <FieldError message={fieldErrors.contactName} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                  <input type="email" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} autoComplete="email" />
+                  <input type="email" className={fieldInputClass(Boolean(fieldErrors.contactEmail))} value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} autoComplete="email" aria-invalid={Boolean(fieldErrors.contactEmail)} />
+                  <FieldError message={fieldErrors.contactEmail} />
                 </div>
               </div>
-              <button disabled={!formData.contactName.trim() || !formData.contactEmail.trim()} onClick={handleNext} className={`w-full py-3 rounded-lg font-semibold text-base transition ${!formData.contactName.trim() || !formData.contactEmail.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
                 Continue to Payment
               </button>
             </>
@@ -305,6 +341,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           {/* Step 3 — Payment */}
           {currentStep === 3 && (
             <>
+              <BookingFormBanner message={formBanner || paymentError} />
               <h2 className="text-lg font-semibold flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-600" />Payment</h2>
               <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between text-gray-600"><span>{formData.tourDate} · {formData.travelers} traveler{formData.travelers !== 1 ? 's' : ''}</span></div>
@@ -319,15 +356,16 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
                 {formData.mobileProvider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{formData.mobileProvider}</span> (auto-detected)</p>}
-                <input type="tel" placeholder="0712345678" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                  value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); detectProvider(e.target.value) }} autoComplete="tel" />
+                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone))}
+                  value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setFieldErrors(p => clearFieldError(p, 'phone')); detectProvider(e.target.value) }} autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
+                <FieldError message={fieldErrors.phone} />
+                <FieldError message={fieldErrors.mobileProvider} />
               </div>
-              {paymentError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded">{paymentError}</div>}
               <div className="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Free cancellation up to 24 hours before your tour — contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a>.
               </div>
-              <button disabled={isSubmitting || !formData.mobileProvider || !phoneNumber.trim()} onClick={handleCompleteBooking}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting || !formData.mobileProvider || !phoneNumber.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with Mobile Money`}
               </button>
             </>

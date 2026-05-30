@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+} from '../lib/bookingFormValidation'
 
 interface ServiceDetail {
   id: string; slug?: string; title: string; description: string; price: number; currency: string;
@@ -21,6 +29,8 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [confirmed, setConfirmed] = useState<any | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     date: '', time: '', partySize: 2, occasion: '', dietaryNotes: '',
@@ -32,13 +42,33 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
     setFormData(p => ({ ...p, contactName: profile.full_name || '', contactEmail: profile.email || '' }))
   }, [user, profile])
 
-  const set = (field: string, value: any) => setFormData(p => ({ ...p, [field]: value }))
+  const set = (field: string, value: any) => {
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setFormBanner(null)
+    setFormData(p => ({ ...p, [field]: value }))
+  }
 
-  const step1Valid = Boolean(formData.date && formData.time)
-  const step2Valid = Boolean(formData.contactName.trim() && formData.contactEmail.trim())
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {}
+    if (step === 1) {
+      if (!formData.date) errs.date = 'Reservation date is required.'
+      if (!formData.time) errs.time = 'Please select a time.'
+    }
+    if (step === 2 && !user) {
+      if (!formData.contactName.trim()) errs.contactName = 'Full name is required.'
+      if (!formData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+      else if (!isValidEmail(formData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
 
   const handleReserve = async () => {
     if (isSubmitting) return
+    if (!validateStep(1)) {
+      setCurrentStep(1)
+      return
+    }
+    if (!validateStep(2)) return
     setError(null)
     setIsSubmitting(true)
     try {
@@ -146,21 +176,24 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
           {/* Step 1 — Reservation Details */}
           {currentStep === 1 && (
             <>
+              <BookingFormBanner message={formBanner} />
               <h2 className="text-lg font-semibold flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-600" />Reservation Details</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                  <input type="date" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                    value={formData.date} onChange={e => set('date', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                  <input type="date" className={fieldInputClass(Boolean(fieldErrors.date))}
+                    value={formData.date} onChange={e => set('date', e.target.value)} min={new Date().toISOString().split('T')[0]} aria-invalid={Boolean(fieldErrors.date)} />
+                  <FieldError message={fieldErrors.date} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
-                  <select className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base bg-white"
-                    value={formData.time} onChange={e => set('time', e.target.value)}>
+                  <select className={fieldInputClass(Boolean(fieldErrors.time), 'w-full px-3 py-3 border rounded-lg text-base bg-white')}
+                    value={formData.time} onChange={e => set('time', e.target.value)} aria-invalid={Boolean(fieldErrors.time)}>
                     <option value="">Select a time…</option>
                     {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                  <FieldError message={fieldErrors.time} />
                 </div>
               </div>
 
@@ -189,8 +222,8 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
                   value={formData.dietaryNotes} onChange={e => set('dietaryNotes', e.target.value)} />
               </div>
 
-              <button disabled={!step1Valid} onClick={() => setCurrentStep(2)}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${!step1Valid ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" onClick={() => { if (validateStep(1)) setCurrentStep(2) }}
+                className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
                 Continue
               </button>
             </>
@@ -199,6 +232,7 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
           {/* Step 2 — Contact Details */}
           {currentStep === 2 && (
             <>
+              <BookingFormBanner message={formBanner || error} />
               <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" />Your Details</h2>
               <p className="text-sm text-gray-500">We'll send your booking confirmation to this email.</p>
 
@@ -212,11 +246,13 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                    <input type="text" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactName} onChange={e => set('contactName', e.target.value)} autoComplete="name" />
+                    <input type="text" className={fieldInputClass(Boolean(fieldErrors.contactName))} value={formData.contactName} onChange={e => set('contactName', e.target.value)} autoComplete="name" aria-invalid={Boolean(fieldErrors.contactName)} />
+                    <FieldError message={fieldErrors.contactName} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input type="email" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} autoComplete="email" />
+                    <input type="email" className={fieldInputClass(Boolean(fieldErrors.contactEmail))} value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} autoComplete="email" aria-invalid={Boolean(fieldErrors.contactEmail)} />
+                    <FieldError message={fieldErrors.contactEmail} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -235,10 +271,8 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
                 <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t border-gray-200 mt-2"><span>Reservation fee</span><span className="text-green-700">Free</span></div>
               </div>
 
-              {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded">{error}</div>}
-
-              <button disabled={isSubmitting || (!user && !step2Valid)} onClick={handleReserve}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting || (!user && !step2Valid) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" disabled={isSubmitting} onClick={handleReserve}
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                 {isSubmitting ? 'Confirming reservation…' : 'Confirm Reservation'}
               </button>
               <p className="text-xs text-center text-gray-500">No payment required — reservations are free. Pay at the restaurant.</p>

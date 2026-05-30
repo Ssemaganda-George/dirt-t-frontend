@@ -7,6 +7,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import BookingReceipt from '../components/BookingReceipt'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 
 interface ServiceDetail {
   id: string; slug?: string; title: string; description: string; price: number; currency: string;
@@ -27,6 +36,8 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
   const [pollingMessage, setPollingMessage] = useState('')
   const [completedBooking, setCompletedBooking] = useState<any | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
   const [phoneNumber, setPhoneNumber] = useState('')
   const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const finaliseInFlightRef = useRef(false)
@@ -67,7 +78,32 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
     ? (Number(pricingCalc.total_customer_payment || service.price) * formData.passengers)
     : baseTotal
 
-  const set = (field: string, value: any) => setFormData(p => ({ ...p, [field]: value }))
+  const set = (field: string, value: any) => {
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setFormBanner(null)
+    setFormData(p => ({ ...p, [field]: value }))
+  }
+
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {}
+    if (step === 1) {
+      if (!formData.departureFrom.trim()) errs.departureFrom = 'Departure location is required.'
+      if (!formData.destination.trim()) errs.destination = 'Destination is required.'
+      if (!formData.departureDate) errs.departureDate = 'Departure date is required.'
+      if (formData.tripType === 'Round-trip' && !formData.returnDate) errs.returnDate = 'Return date is required.'
+      if (!user) {
+        if (!formData.contactName.trim()) errs.contactName = 'Full name is required.'
+        if (!formData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+        else if (!isValidEmail(formData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+      }
+    }
+    if (step === 2) {
+      if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
+      else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+      if (!formData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+    }
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
 
   const detectProvider = (val: string) => {
     const d = val.replace(/\D/g, '').replace(/^256/, '').replace(/^0/, '')
@@ -76,10 +112,9 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
     else if (['70','74','75','20','50'].includes(p)) set('mobileProvider', 'Airtel')
   }
 
-  const step1Valid = Boolean(formData.departureDate && formData.departureFrom && formData.destination && (formData.tripType === 'One-way' || formData.returnDate))
-
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
+    if (!validateStep(2)) return
     const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
     const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
     if (!phone || phone.length < 12) { setPaymentError('Please enter a valid mobile money number.'); return }
@@ -220,6 +255,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
           {/* Step 1 — Flight Details */}
           {currentStep === 1 && (
             <>
+              <BookingFormBanner message={formBanner} />
               <h2 className="text-lg font-semibold">Flight Details</h2>
 
               {/* Trip type */}
@@ -232,24 +268,28 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">From *</label>
-                  <input type="text" placeholder="e.g. Entebbe International" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                    value={formData.departureFrom} onChange={e => set('departureFrom', e.target.value)} />
+                  <input type="text" placeholder="e.g. Entebbe International" className={fieldInputClass(Boolean(fieldErrors.departureFrom))}
+                    value={formData.departureFrom} onChange={e => set('departureFrom', e.target.value)} aria-invalid={Boolean(fieldErrors.departureFrom)} />
+                  <FieldError message={fieldErrors.departureFrom} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">To *</label>
-                  <input type="text" placeholder="e.g. Kidepo Valley Airstrip" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                    value={formData.destination} onChange={e => set('destination', e.target.value)} />
+                  <input type="text" placeholder="e.g. Kidepo Valley Airstrip" className={fieldInputClass(Boolean(fieldErrors.destination))}
+                    value={formData.destination} onChange={e => set('destination', e.target.value)} aria-invalid={Boolean(fieldErrors.destination)} />
+                  <FieldError message={fieldErrors.destination} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Departure Date *</label>
-                  <input type="date" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                    value={formData.departureDate} onChange={e => set('departureDate', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                  <input type="date" className={fieldInputClass(Boolean(fieldErrors.departureDate))}
+                    value={formData.departureDate} onChange={e => set('departureDate', e.target.value)} min={new Date().toISOString().split('T')[0]} aria-invalid={Boolean(fieldErrors.departureDate)} />
+                  <FieldError message={fieldErrors.departureDate} />
                 </div>
                 {formData.tripType === 'Round-trip' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Return Date *</label>
-                    <input type="date" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                      value={formData.returnDate} onChange={e => set('returnDate', e.target.value)} min={formData.departureDate || new Date().toISOString().split('T')[0]} />
+                    <input type="date" className={fieldInputClass(Boolean(fieldErrors.returnDate))}
+                      value={formData.returnDate} onChange={e => set('returnDate', e.target.value)} min={formData.departureDate || new Date().toISOString().split('T')[0]} aria-invalid={Boolean(fieldErrors.returnDate)} />
+                    <FieldError message={fieldErrors.returnDate} />
                   </div>
                 )}
               </div>
@@ -286,8 +326,14 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
               {!user && (
                 <div className="border-t pt-4 space-y-3">
                   <p className="text-sm font-medium text-gray-700">Contact Details</p>
-                  <input type="text" placeholder="Full name *" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactName} onChange={e => set('contactName', e.target.value)} />
-                  <input type="email" placeholder="Email *" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base" value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} />
+                  <div>
+                    <input type="text" placeholder="Full name *" className={fieldInputClass(Boolean(fieldErrors.contactName))} value={formData.contactName} onChange={e => set('contactName', e.target.value)} aria-invalid={Boolean(fieldErrors.contactName)} />
+                    <FieldError message={fieldErrors.contactName} />
+                  </div>
+                  <div>
+                    <input type="email" placeholder="Email *" className={fieldInputClass(Boolean(fieldErrors.contactEmail))} value={formData.contactEmail} onChange={e => set('contactEmail', e.target.value)} aria-invalid={Boolean(fieldErrors.contactEmail)} />
+                    <FieldError message={fieldErrors.contactEmail} />
+                  </div>
                 </div>
               )}
 
@@ -297,8 +343,8 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
                 <div className="flex justify-between font-semibold pt-2 border-t border-gray-200"><span>Total</span><span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span></div>
               </div>
 
-              <button disabled={!step1Valid || (!user && (!formData.contactName.trim() || !formData.contactEmail.trim()))} onClick={() => setCurrentStep(2)}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${!step1Valid || (!user && (!formData.contactName.trim() || !formData.contactEmail.trim())) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" onClick={() => { if (validateStep(1)) setCurrentStep(2) }}
+                className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
                 Continue to Payment
               </button>
             </>
@@ -307,6 +353,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
           {/* Step 2 — Payment */}
           {currentStep === 2 && (
             <>
+              <BookingFormBanner message={formBanner || paymentError} />
               <h2 className="text-lg font-semibold">Payment</h2>
 
               <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
@@ -325,18 +372,18 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
                 </div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
                 {formData.mobileProvider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{formData.mobileProvider}</span></p>}
-                <input type="tel" placeholder="0712345678" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
-                  value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); detectProvider(e.target.value) }} />
+                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone))}
+                  value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setFieldErrors(p => clearFieldError(p, 'phone')); detectProvider(e.target.value) }} aria-invalid={Boolean(fieldErrors.phone)} />
+                <FieldError message={fieldErrors.phone} />
+                <FieldError message={fieldErrors.mobileProvider} />
               </div>
-
-              {paymentError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded">{paymentError}</div>}
 
               <div className="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a> for cancellations or changes.
               </div>
 
-              <button disabled={isSubmitting || !formData.mobileProvider || !phoneNumber.trim()} onClick={handleCompleteBooking}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting || !formData.mobileProvider || !phoneNumber.trim() ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+              <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : `Pay ${formatCurrencyWithConversion(grandTotal, service.currency)} with Mobile Money`}
               </button>
             </>

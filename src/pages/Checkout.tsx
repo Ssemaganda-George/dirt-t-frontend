@@ -7,6 +7,15 @@ import { useOrderPaymentFlow } from '../hooks/useOrderPaymentFlow'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import { calculatePaymentForAmount } from '../lib/pricingService'
 import { formatCurrencyWithConversion } from '../lib/utils'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 
 function detectMobileProvider(digits: string): 'MTN' | 'Airtel' | '' {
   const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
@@ -35,6 +44,8 @@ export default function CheckoutPage() {
   const [showAllTickets, setShowAllTickets] = useState(false)
   const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formBanner, setFormBanner] = useState<string | null>(null)
   const { profile } = useAuth()
   const {
     processing,
@@ -86,8 +97,6 @@ export default function CheckoutPage() {
     return () => { cancelled = true }
   }, [items, allTicketTypes, order?._service?.id])
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-
   const ticketPricingReady =
     items.length === 0 ||
     items.every(
@@ -96,14 +105,20 @@ export default function CheckoutPage() {
         (ticketCalculations[it.ticket_type_id] && ticketCalculations[it.ticket_type_id].success !== false)
     )
 
-  const canPay = Boolean(
-    buyer.fullName?.trim() &&
-    validateEmail(buyer.email || '') &&
-    buyer.phone?.trim() &&
-    mobileProvider &&
-    ticketPricingReady &&
-    items.some((it: any) => Number(it.quantity ?? 0) > 0)
-  )
+  const hasTickets = items.some((it: any) => Number(it.quantity ?? 0) > 0)
+
+  const validateCheckout = (): boolean => {
+    const errs: FieldErrors = {}
+    if (!buyer.fullName.trim()) errs.fullName = 'Full name is required.'
+    if (!buyer.email.trim()) errs.email = 'Email is required.'
+    else if (!isValidEmail(buyer.email)) errs.email = 'Enter a valid email address.'
+    if (!buyer.phone.trim()) errs.phone = 'Mobile money number is required.'
+    else if (!isValidUgMobileMoneyPhone(buyer.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+    if (!mobileProvider) errs.mobileProvider = 'Select MTN or Airtel (use a recognized number prefix).'
+    if (!hasTickets) errs.tickets = 'Select at least one ticket.'
+    if (!ticketPricingReady) errs.tickets = 'Total is still calculating — try again in a moment.'
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
 
   const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
     if (newQuantity < 0 || !orderId) return
@@ -156,7 +171,8 @@ export default function CheckoutPage() {
     : items.reduce((s: number, it: any) => s + Number(it.unit_price ?? 0) * Number(it.quantity ?? 0), 0)
 
   const handlePay = async () => {
-    if (!orderId || !order || !canPay) return
+    if (!orderId || !order || processing) return
+    if (!validateCheckout()) return
     setCheckoutError(null)
     setPaymentError(null)
     const phone = formatPhone(buyer.phone)
@@ -174,8 +190,19 @@ export default function CheckoutPage() {
 
   const handlePhoneChange = (val: string) => {
     setBuyer(s => ({ ...s, phone: val }))
+    setFieldErrors(p => clearFieldError(p, 'phone'))
+    setFormBanner(null)
     const provider = detectMobileProvider(val.replace(/\D/g, ''))
-    if (provider) setMobileProvider(provider)
+    if (provider) {
+      setMobileProvider(provider)
+      setFieldErrors(p => clearFieldError(p, 'mobileProvider'))
+    }
+  }
+
+  const setBuyerField = (field: 'fullName' | 'email', value: string) => {
+    setBuyer(s => ({ ...s, [field]: value }))
+    setFieldErrors(p => clearFieldError(p, field === 'fullName' ? 'fullName' : 'email'))
+    setFormBanner(null)
   }
 
   if (isLoading) return <PageSkeleton type="checkout" />
@@ -241,22 +268,28 @@ export default function CheckoutPage() {
               <div className="bg-white p-4 rounded border border-gray-200">
                 <h3 className="font-semibold text-lg">Your details</h3>
                 <p className="text-xs text-gray-500 mt-1">One step — pay with mobile money on this page.</p>
+                <BookingFormBanner message={formBanner} />
                 <div className="grid gap-3 mt-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Full name *</label>
-                    <input className="w-full border border-gray-300 px-3 py-3 rounded text-base" value={buyer.fullName} onChange={(e) => setBuyer(s => ({ ...s, fullName: e.target.value }))} autoComplete="name" />
+                    <input className={fieldInputClass(Boolean(fieldErrors.fullName))} value={buyer.fullName} onChange={(e) => setBuyerField('fullName', e.target.value)} autoComplete="name" aria-invalid={Boolean(fieldErrors.fullName)} />
+                    <FieldError message={fieldErrors.fullName} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input type="email" className="w-full border border-gray-300 px-3 py-3 rounded text-base" value={buyer.email} onChange={(e) => setBuyer(s => ({ ...s, email: e.target.value }))} autoComplete="email" />
+                    <input type="email" className={fieldInputClass(Boolean(fieldErrors.email))} value={buyer.email} onChange={(e) => setBuyerField('email', e.target.value)} autoComplete="email" aria-invalid={Boolean(fieldErrors.email)} />
+                    <FieldError message={fieldErrors.email} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money number *</label>
                     {mobileProvider && (
                       <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{mobileProvider}</span> (auto-detected)</p>
                     )}
-                    <input type="tel" className="w-full border border-gray-300 px-3 py-3 rounded text-base" value={buyer.phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="0712345678" autoComplete="tel" />
+                    <input type="tel" className={fieldInputClass(Boolean(fieldErrors.phone))} value={buyer.phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="0712345678" autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
+                    <FieldError message={fieldErrors.phone} />
+                    <FieldError message={fieldErrors.mobileProvider} />
                   </div>
+                  <FieldError message={fieldErrors.tickets} />
                 </div>
               </div>
             </div>
@@ -332,9 +365,9 @@ export default function CheckoutPage() {
           )}
           <button
             type="button"
-            disabled={!canPay || processing}
+            disabled={processing}
             onClick={handlePay}
-            className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${!canPay || processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:opacity-90'}`}
+            className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:opacity-90'}`}
           >
             {processing ? (pollingMessage || 'Processing payment…') : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
           </button>

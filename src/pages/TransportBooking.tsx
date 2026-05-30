@@ -13,6 +13,15 @@ import {
 import { COUNTRIES } from '../lib/countries'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { fetchVendorBlockedDates } from '../lib/blockedDates'
+import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
+import {
+  type FieldErrors,
+  applyFieldErrors,
+  clearFieldError,
+  fieldInputClass,
+  isValidEmail,
+  isValidUgMobileMoneyPhone,
+} from '../lib/bookingFormValidation'
 import { calculateDays } from '../lib/transportUtils'
 import TransportImageGallery from '../components/TransportImageGallery'
 import TransportBookingReceipt from '../components/TransportBookingReceipt'
@@ -107,6 +116,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [bookingResult, setBookingResult] = useState<any | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [stepError, setStepError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
@@ -141,7 +151,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Blocked dates (single-booking categories)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
-  const [blockedError, setBlockedError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -300,43 +309,36 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const validateCurrentStep = () => {
     setStepError(null)
-    switch (currentStep) {
-      case 1: {
-        if (!bookingData.startDate || !bookingData.endDate) {
-          setStepError('Please select both start and end dates.')
-          return false
-        }
-        const start = bookingData.startDate
-        if (start && blockedDates.has(start)) {
-          setBlockedError('Selected start date is unavailable for booking (another transport/accommodation is already booked).')
-          return false
-        }
-        if (bookingData.driverOption === 'with-driver') {
-          if (!bookingData.pickupLocation || !bookingData.dropoffLocation) {
-            setStepError('Please enter both pickup and drop-off locations when booking with driver.')
-            return false
-          }
-        }
-        const maxCapacity = (service.vehicle_capacity ?? service.max_capacity) ?? null
-        if (bookingData.passengers < 1 || (maxCapacity !== null && bookingData.passengers > maxCapacity)) {
-          setStepError(`Number of passengers must be between 1 and ${maxCapacity !== null ? maxCapacity : 'unlimited'}.`)
-          return false
-        }
-        if (!loggedInReady) {
-          if (!bookingData.contactName.trim()) {
-            setStepError('Please enter your full name.')
-            return false
-          }
-          if (!bookingData.contactEmail.trim() || !bookingData.contactEmail.includes('@')) {
-            setStepError('Please enter a valid email address.')
-            return false
-          }
-        }
-        break
+    const errs: FieldErrors = {}
+    if (currentStep === 1) {
+      if (!bookingData.startDate) errs.startDate = 'Pick-up date is required.'
+      if (!bookingData.endDate) errs.endDate = 'Drop-off date is required.'
+      const start = bookingData.startDate
+      if (start && blockedDates.has(start)) {
+        const unavailableMsg = 'Selected start date is unavailable (already booked).'
+        errs.startDate = unavailableMsg
       }
-      default:
-        break
+      if (!transportZone) errs.transportZone = 'Select Within Town or Upcountry.'
+      if (bookingData.driverOption === 'with-driver') {
+        if (!bookingData.pickupLocation?.trim()) errs.pickupLocation = 'Pickup location is required.'
+        if (!bookingData.dropoffLocation?.trim()) errs.dropoffLocation = 'Drop-off location is required.'
+      }
+      const maxCapacity = (service.vehicle_capacity ?? service.max_capacity) ?? null
+      if (bookingData.passengers < 1 || (maxCapacity !== null && bookingData.passengers > maxCapacity)) {
+        errs.passengers = `Passengers must be between 1 and ${maxCapacity ?? 'unlimited'}.`
+      }
+      if (!loggedInReady) {
+        if (!bookingData.contactName.trim()) errs.contactName = 'Full name is required.'
+        if (!bookingData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
+        else if (!isValidEmail(bookingData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
+      }
+      if (bookingData.paymentMethod === 'mobile') {
+        if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
+        else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+        if (!bookingData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+      }
     }
+    if (!applyFieldErrors(errs, setFieldErrors, (msg) => setStepError(msg))) return false
     return true
   }
 
@@ -652,11 +654,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   const handleInputChange = (field: string, value: string | number | boolean | undefined) => {
-    setBlockedError(null)
+    setFieldErrors(prev => clearFieldError(prev, field))
+    setStepError(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
 
     if (field === 'startDate' && value && blockedDates.has(value as string)) {
-      setBlockedError('Selected start date is unavailable for booking (another transport/accommodation is already booked).')
+      setFieldErrors(prev => ({
+        ...prev,
+        startDate: 'Selected start date is unavailable for booking (another transport/accommodation is already booked).',
+      }))
     }
   }
 
@@ -694,21 +700,21 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       case 1:
         return (
           <div className="space-y-4 sm:space-y-6">
+            <BookingFormBanner message={stepError} />
             {/* Trip Dates Section */}
             <div>
               <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 sm:mb-4">Trip Dates & Times</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Pick-up Date & Time</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Pick-up Date & Time <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className={`w-full px-2 py-2 border rounded text-xs sm:text-sm ${
-                        blockedError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
+                      className={fieldInputClass(Boolean(fieldErrors.startDate), 'w-full px-2 py-2 border rounded text-xs sm:text-sm')}
                       value={bookingData.startDate}
                       onChange={(e) => handleInputChange('startDate', e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
+                      aria-invalid={Boolean(fieldErrors.startDate)}
                     />
                     <input
                       type="time"
@@ -717,17 +723,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       onChange={(e) => handleInputChange('startTime', e.target.value)}
                     />
                   </div>
-                  {blockedError && <p className="text-xs text-red-600 mt-1">{blockedError}</p>}
+                  <FieldError message={fieldErrors.startDate} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Drop-off Date & Time</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Drop-off Date & Time <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      className="w-full px-2 py-2 border border-gray-300 rounded text-xs sm:text-sm"
+                      className={fieldInputClass(Boolean(fieldErrors.endDate), 'w-full px-2 py-2 border rounded text-xs sm:text-sm')}
                       value={bookingData.endDate}
                       onChange={(e) => handleInputChange('endDate', e.target.value)}
                       min={bookingData.startDate || new Date().toISOString().split('T')[0]}
+                      aria-invalid={Boolean(fieldErrors.endDate)}
                     />
                     <input
                       type="time"
@@ -736,6 +743,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       onChange={(e) => handleInputChange('endTime', e.target.value)}
                     />
                   </div>
+                  <FieldError message={fieldErrors.endDate} />
                 </div>
               </div>
             </div>
@@ -777,22 +785,28 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Pickup & Drop-off Locations</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Pickup location"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    value={bookingData.pickupLocation}
-                    onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Drop-off location"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    value={bookingData.dropoffLocation}
-                    onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
-                    required
-                  />
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Pickup location *"
+                      className={fieldInputClass(Boolean(fieldErrors.pickupLocation), 'w-full px-3 py-2 border rounded-lg text-sm')}
+                      value={bookingData.pickupLocation}
+                      onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
+                      aria-invalid={Boolean(fieldErrors.pickupLocation)}
+                    />
+                    <FieldError message={fieldErrors.pickupLocation} />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Drop-off location *"
+                      className={fieldInputClass(Boolean(fieldErrors.dropoffLocation), 'w-full px-3 py-2 border rounded-lg text-sm')}
+                      value={bookingData.dropoffLocation}
+                      onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
+                      aria-invalid={Boolean(fieldErrors.dropoffLocation)}
+                    />
+                    <FieldError message={fieldErrors.dropoffLocation} />
+                  </div>
                 </div>
               </div>
             )}
@@ -819,22 +833,28 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {!loggedInReady && (
                   <>
-                <input
-                  type="text"
-                  placeholder="Full name *"
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm"
-                  value={bookingData.contactName}
-                  onChange={(e) => handleInputChange('contactName', e.target.value)}
-                  required
-                />
-                <input
-                  type="email"
-                  placeholder="Email address *"
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  value={bookingData.contactEmail}
-                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                  required
-                />
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Full name *"
+                    className={fieldInputClass(Boolean(fieldErrors.contactName), 'w-full px-3 py-2 border rounded-lg text-xs sm:text-sm')}
+                    value={bookingData.contactName}
+                    onChange={(e) => handleInputChange('contactName', e.target.value)}
+                    aria-invalid={Boolean(fieldErrors.contactName)}
+                  />
+                  <FieldError message={fieldErrors.contactName} />
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    placeholder="Email address *"
+                    className={fieldInputClass(Boolean(fieldErrors.contactEmail), 'w-full px-3 py-2 border rounded-lg text-sm')}
+                    value={bookingData.contactEmail}
+                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                    aria-invalid={Boolean(fieldErrors.contactEmail)}
+                  />
+                  <FieldError message={fieldErrors.contactEmail} />
+                </div>
                   </>
                 )}
                 <div className="md:col-span-2">
@@ -957,9 +977,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     <input
                       type="tel"
                       value={phoneNumber}
+                      className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-2 border rounded-lg text-sm')}
+                      aria-invalid={Boolean(fieldErrors.phone)}
                       onChange={(e) => {
                         const val = e.target.value.trimStart()
                         setPhoneNumber(val)
+                        setFieldErrors(prev => clearFieldError(prev, 'phone'))
+                        setStepError(null)
                         const digits = val.replace(/\D/g, '')
                         const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
                         if (local.length >= 2) {
@@ -969,12 +993,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                         }
                       }}
                       placeholder="0712345678 or +256712345678"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
+                    <FieldError message={fieldErrors.phone} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Provider *</label>
-                    <div className="flex gap-2">
+                    <div className={`flex gap-2 ${fieldErrors.mobileProvider ? 'ring-1 ring-red-500 rounded-lg p-1' : ''}`}>
                       <button
                         type="button"
                         onClick={() => handleInputChange('mobileProvider', 'MTN')}
@@ -992,6 +1016,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                         <span className="text-sm font-medium">Airtel</span>
                       </button>
                     </div>
+                    <FieldError message={fieldErrors.mobileProvider} />
                   </div>
                   {pollingMessage && (
                     <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">{pollingMessage}</p>
@@ -1120,18 +1145,19 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 <div className="flex items-center gap-4 text-sm mb-2">
                   {(service as any).price_within_town !== undefined && (
                     <label className="inline-flex items-center">
-                      <input type="radio" name="transportZoneTop" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                      <input type="radio" name="transportZoneTop" value="within" checked={transportZone === 'within'} onChange={() => { setTransportZone('within'); setFieldErrors(p => clearFieldError(p, 'transportZone')); setStepError(null) }} className="mr-2" />
                       <span>Within Town {typeof (service as any).price_within_town === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_within_town, service.currency)}` : ''}</span>
                     </label>
                   )}
                   {(service as any).price_upcountry !== undefined && (
                     <label className="inline-flex items-center">
-                      <input type="radio" name="transportZoneTop" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                      <input type="radio" name="transportZoneTop" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => { setTransportZone('upcountry'); setFieldErrors(p => clearFieldError(p, 'transportZone')); setStepError(null) }} className="mr-2" />
                       <span>Upcountry {typeof (service as any).price_upcountry === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_upcountry, service.currency)}` : ''}</span>
                     </label>
                   )}
                 </div>
                 <p className="text-xs text-emerald-700">Select whether this trip is within town or upcountry to see the correct price.</p>
+                <FieldError message={fieldErrors.transportZone} />
               </div>
             )}
             {/* Step progress */}
@@ -1169,16 +1195,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 )}
                 <button
                   onClick={handleNext}
-                  disabled={
-                    isPaymentProcessing ||
-                    !bookingData.startDate ||
-                    !bookingData.endDate ||
-                    (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
-                    (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                    (!loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) ||
-                    bookingData.paymentMethod === 'card' ||
-                    (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-                  }
+                  disabled={isPaymentProcessing || bookingData.paymentMethod === 'card'}
                   className="w-full sm:w-auto sm:ml-auto sm:flex px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
                 >
                   {isPaymentProcessing
