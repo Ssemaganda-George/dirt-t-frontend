@@ -1,6 +1,6 @@
 // Partnership types
 import { supabase } from './supabaseClient';
-import { formatCurrency } from './utils';
+import { formatCurrency, normalizeServiceCurrency } from './utils';
 import { executeWithCircuitBreaker } from './concurrency';
 import { buildCreateBookingAtomicRpcPayload } from './createBookingAtomicRpc';
 import { creditWallet } from './creditWallet';
@@ -2936,7 +2936,7 @@ export async function createBooking(
       p_total_amount: bookingData.total_amount,
       p_tourist_id: bookingData.tourist_id || null,
       p_service_date: bookingData.service_date || null,
-      p_currency: bookingData.currency || 'UGX',
+      p_currency: normalizeServiceCurrency(bookingData.currency),
       p_special_requests: bookingData.special_requests || null,
       p_guest_name: bookingData.guest_name || null,
       p_guest_email: bookingData.guest_email || null,
@@ -2947,14 +2947,6 @@ export async function createBooking(
         bookingData.pricing_base_amount !== undefined && bookingData.pricing_base_amount !== null
           ? Number(bookingData.pricing_base_amount)
           : null,
-      p_platform_fee:
-        bookingData.platform_fee !== undefined && bookingData.platform_fee !== null
-          ? Number(bookingData.platform_fee)
-          : null,
-      p_commission_amount:
-        bookingData.commission_amount !== undefined && bookingData.commission_amount !== null
-          ? Number(bookingData.commission_amount)
-          : null
     })
   );
 
@@ -2966,6 +2958,15 @@ export async function createBooking(
 
   const bookingId: string = result.data.booking_id
   console.log('Booking created successfully (atomic):', bookingId)
+
+  // Patch platform fee calculated client-side (not accepted by create_booking_atomic overload).
+  if (bookingData.platform_fee != null) {
+    const { error: feePatchError } = await supabase
+      .from('bookings')
+      .update({ platform_fee: Number(bookingData.platform_fee) })
+      .eq('id', bookingId)
+    if (feePatchError) console.warn('Failed to patch booking platform_fee:', feePatchError)
+  }
 
   // Fetch complete booking with relations (used by callers and downstream logic)
   const { data, error } = await supabase

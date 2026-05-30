@@ -2,6 +2,19 @@ import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { getRate } from './currencyRates'
 
+/** ISO-like codes we accept for service pricing and bookings. */
+export const VALID_SERVICE_CURRENCIES = [
+  'UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'INR', 'CNY', 'JPY',
+  'CAD', 'AUD', 'CHF', 'ZAR', 'NGN', 'GHS', 'BRL', 'MXN', 'EGP',
+  'MAD', 'TRY', 'THB', 'KRW', 'SEK', 'NOK', 'DKK', 'PLN',
+] as const
+
+/** Vendors sometimes store labels (e.g. "Hand made") in currency — coerce to UGX. */
+export function normalizeServiceCurrency(currency: string | null | undefined): string {
+  const code = (currency || '').trim().toUpperCase()
+  return (VALID_SERVICE_CURRENCIES as readonly string[]).includes(code) ? code : 'UGX'
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -9,8 +22,8 @@ export function cn(...inputs: ClassValue[]) {
 export function formatCurrency(amount: number, currency: string = 'UGX'): string {
   try {
     // Validate currency code - only allow known valid codes
-    const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF'];
-    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
+    const validCurrencies = VALID_SERVICE_CURRENCIES as readonly string[]
+    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX'
     
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
@@ -44,11 +57,14 @@ export function formatTierCommission(tier: {
 // Rates are cached in currencyRates.ts and refreshed once per session.
 export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string) {
   if (fromCurrency === toCurrency) return amount
-  const fromRate = getRate(fromCurrency)
-  const toRate = getRate(toCurrency)
+  const from = normalizeServiceCurrency(fromCurrency)
+  const to = normalizeServiceCurrency(toCurrency)
+  if (from === to) return amount
+  const fromRate = getRate(from)
+  const toRate = getRate(to)
   // All rates are expressed as "1 UGX = X foreign", so:
   // amount_in_ugx = fromCurrency === 'UGX' ? amount : amount / fromRate
-  const amountInUGX = fromCurrency === 'UGX' ? amount : amount / fromRate
+  const amountInUGX = from === 'UGX' ? amount : amount / fromRate
   return amountInUGX * toRate
 }
 
@@ -58,11 +74,13 @@ export function formatCurrencyWithConversion(
   targetCurrency: string = 'UGX',
   locale: string = 'en-US'
 ) {
-  const converted = convertCurrency(amount, serviceCurrency, targetCurrency)
+  const from = normalizeServiceCurrency(serviceCurrency)
+  const to = normalizeServiceCurrency(targetCurrency)
+  const converted = convertCurrency(amount, from, to)
   try {
     return new Intl.NumberFormat(locale || 'en-US', {
       style: 'currency',
-      currency: targetCurrency,
+      currency: to,
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(converted)

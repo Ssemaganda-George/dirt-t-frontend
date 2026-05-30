@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { fetchMarzpayPaymentStatus } from '../lib/marzpayApi'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -9,16 +10,7 @@ const BACKOFF_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000, 32000]
 const POLL_TIMEOUT_MS = 90_000
 
 async function checkPaymentStatus(ref: string): Promise<'completed' | 'failed' | null> {
-  try {
-    const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`
-    const res = await fetch(url, { cache: 'no-store' })
-    const data = JSON.parse((await res.text()) || '{}') as { status?: string }
-    if (data?.status === 'completed') return 'completed'
-    if (data?.status === 'failed') return 'failed'
-    return null
-  } catch {
-    return null
-  }
+  return fetchMarzpayPaymentStatus(ref)
 }
 
 export function useOrderPaymentFlow(orderId: string | undefined) {

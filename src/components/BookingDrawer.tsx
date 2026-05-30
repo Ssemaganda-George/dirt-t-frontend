@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { X, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
+import { fetchMarzpayPaymentStatus } from '../lib/marzpayApi'
 import { supabase } from '../lib/supabaseClient'
 import {
   calculatePaymentForAmount,
   customerTotalFromUnitPricingCalc,
   touristFeeTotalFromUnitCalc,
 } from '../lib/pricingService'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { formatCurrencyWithConversion, normalizeServiceCurrency } from '../lib/utils'
 import { BookingFormBanner, FieldError } from './booking/BookingFormFeedback'
 import {
   type FieldErrors,
@@ -185,7 +186,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       booking_date: new Date().toISOString(),
       guests: isTransport ? 1 : (prefill.guests || 1),
       total_amount: Math.round(customerTotal),
-      currency: service.currency || 'UGX',
+      currency: normalizeServiceCurrency(service.currency),
       status,
       payment_status: status === 'confirmed' ? 'paid' : 'pending',
       pricing_base_amount: baseTotal,
@@ -293,13 +294,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       const ref = result.data.reference
       setPollingMessage('Check your phone for the USSD prompt…')
 
-      const checkStatus = async () => {
-        try {
-          const r = await fetch(`${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`, { headers: { Authorization: `Bearer ${supabaseAnonKey}` } })
-          const d = await r.json().catch(() => ({})) as { status?: string }
-          return d?.status === 'completed' ? 'completed' : d?.status === 'failed' ? 'failed' : null
-        } catch { return null }
-      }
+      const checkStatus = async () => fetchMarzpayPaymentStatus(ref)
 
       const onSuccess = () => {
         if (finaliseRef.current) return
