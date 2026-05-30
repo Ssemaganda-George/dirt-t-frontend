@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 import { Clock, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function VendorPending() {
@@ -15,9 +17,35 @@ export default function VendorPending() {
     }
   }
 
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshedStatus, setRefreshedStatus] = useState<string | null>(null)
+
+  const handleRefreshStatus = async () => {
+    setRefreshing(true)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData.user) return
+      const { data: vendorData } = await supabase
+        .from('vendors')
+        .select('status')
+        .eq('user_id', userData.user.id)
+        .single()
+      if (vendorData?.status) {
+        setRefreshedStatus(vendorData.status)
+        if (vendorData.status === 'approved') {
+          window.location.reload()
+        }
+      }
+    } catch (e) {
+      console.error('Failed to refresh status:', e)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const getStatusInfo = () => {
     // Use profile status to determine account state
-    const status = profile?.status
+    const status = refreshedStatus || profile?.status
     switch (status) {
       case 'pending':
         return {
@@ -114,15 +142,24 @@ export default function VendorPending() {
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
                 Return to Home
               </button>
             )}
 
+            {(refreshedStatus || profile?.status) === 'pending' && (
+              <button
+                onClick={handleRefreshStatus}
+                disabled={refreshing}
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {refreshing ? 'Checking…' : 'Check Approval Status'}
+              </button>
+            )}
             <button
               onClick={handleSignOut}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             >
               Sign Out
             </button>

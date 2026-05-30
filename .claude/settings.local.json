@@ -16,11 +16,25 @@
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(dir /s /b)",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(Get-Content \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\\\\src\\\\pages\\\\Checkout.tsx\")",
+      "Bash(Select-Object -Skip 79 -First 5)",
+      "Bash(Write-Host \"---\")",
+      "Bash(Select-Object -Skip 289 -First 5)",
+      "PowerShell($c = Get-Content \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\\\\src\\\\pages\\\\Checkout.tsx\"; Write-Host \"Line 80: $\\($c[79]\\)\"; Write-Host \"Line 290: $\\($c[289]\\)\"; Write-Host \"Line 291: $\\($c[290]\\)\")",
+      "PowerShell($v = Get-Content \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\\\\src\\\\pages\\\\VendorLogin.tsx\"; Write-Host \"Line 64: $\\($v[63]\\)\"; Write-Host \"Line 273: $\\($v[272]\\)\"; Write-Host \"Line 274: $\\($v[273]\\)\")",
+      "Bash(claude mcp *)",
+      "Bash(supabase --version)",
+      "Bash(supabase status *)",
+      "Bash(supabase db *)",
+      "Bash(python3 *)",
+      "Bash(git stash *)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return p
   }
 
-  /** -------------------- Vendor Post Verify Email (async) -------------------- */
+  /** -------------------- Vendor Post Verify (fires once after email confirmed) -------------------- */
   const handleVendorPostVerify = async (u: any, p: Profile) => {
     if (p.role !== 'vendor') return
     try {
@@ -230,7 +230,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const confirmedAt = u.email_confirmed_at || u.confirmed_at
         const flagKey = `vendorPostVerifySent:${u.id}`
         if (confirmedAt && !localStorage.getItem(flagKey)) {
+          // Send welcome email and notify admin only after email is verified
           sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch(console.error)
+          notifyAdminNewAccount({ userId: u.id, email: u.email ?? '', fullName: p.full_name, role: 'vendor', businessName: vendorData.business_name }).catch(console.error)
           try { localStorage.setItem(flagKey, '1') } catch {}
         }
       }
@@ -453,9 +455,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Unexpected error creating vendor during sign up:', err);
       }
-      sendVendorSignupEmail({ userId: u.id, email, fullName: `${firstName} ${lastName}` }).catch(console.error)
-      // Notify admin of new vendor registration pending approval
-      notifyAdminNewAccount({ userId: u.id, email, fullName: `${firstName} ${lastName}`, role: 'vendor' }).catch(console.error)
+      // Welcome email and admin notification deferred to handleVendorPostVerify
+      // so they only fire after the vendor confirms their email address.
     }
 
     // Do not fetch profile into context yet; user will load it after verified sign-in.

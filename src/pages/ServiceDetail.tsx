@@ -229,6 +229,7 @@ export default function ServiceDetail() {
   const [reviewForm, setReviewForm] = useState({ name: '', email: '', rating: 0, comment: '', city: '', country: '' })
   const [ticketQuantities, setTicketQuantities] = useState<{ [key: string]: number }>({})
   const [creatingOrder, setCreatingOrder] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
 
   const [hoverRating, setHoverRating] = useState(0)
   const [kpiRatings, setKpiRatings] = useState<KpiRatings>({})
@@ -515,7 +516,6 @@ export default function ServiceDetail() {
   const handleBuyTickets = async () => {
     if (!service) return
 
-    // Build selected ticket lines for order creation
     const items = ticketTypes
       .filter((t: any) => (ticketQuantities[t.id] || 0) > 0)
       .map((t: any) => ({ ticket_type_id: t.id, quantity: ticketQuantities[t.id] || 0, unit_price: Number(t.price || 0) }))
@@ -524,22 +524,19 @@ export default function ServiceDetail() {
 
     let order: any = null
     setCreatingOrder(true)
+    setOrderError(null)
     try {
-      // Create an order server-side and navigate to the checkout page for that order
       const userId = user?.id ?? null
       const vendorId = service.vendor_id || service.vendors?.id || null
       order = await createOrder(userId, vendorId, items, service.currency)
       if (order && order.id) {
         navigate(`/checkout/${order.id}`)
       } else {
-        // Fallback: show minimal feedback
-        // eslint-disable-next-line no-alert
-        alert('Failed to create order. Please try again.')
+        setOrderError('Failed to create order. Please try again.')
       }
     } catch (err) {
       console.error('Failed to create order for tickets:', err)
-      // eslint-disable-next-line no-alert
-      alert('Failed to create order. Please try again later.')
+      setOrderError('Failed to create order. Please try again later.')
     } finally {
       setCreatingOrder(false)
     }
@@ -2245,6 +2242,9 @@ export default function ServiceDetail() {
                       {creatingOrder ? 'Creating...' : 'Buy Tickets'}
                     </button>
                   </div>
+                  {orderError && (
+                    <p className="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{orderError}</p>
+                  )}
                 </div>
               ) : (
                 <div>

@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
+import { initCurrencyRates } from './lib/currencyRates'
+
+initCurrencyRates().catch(() => {/* use fallback rates */})
 
 const queryClient = new QueryClient({
   defaultOptions: {

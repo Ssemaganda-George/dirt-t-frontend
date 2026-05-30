@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
-// use the local formatCurrencyWithConversion helper defined below
+import { formatCurrencyWithConversion } from '../lib/utils'
+import { fetchVendorBlockedDates } from '../lib/blockedDates'
+import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import {
@@ -52,7 +54,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, profile } = useAuth()
-  const [currentStep, setCurrentStep] = useState(2) // Start at step 2 (Booking Details)
+  const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
@@ -61,271 +63,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
-  // Currency conversion rates (simplified)
-  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
-    const rates: { [key: string]: { [key: string]: number } } = {
-      'UGX': { 'USD': 0.00027, 'EUR': 0.00025, 'GBP': 0.00021, 'ZAR': 0.005, 'KES': 0.027, 'TZS': 0.62, 'BRL': 0.0013, 'MXN': 0.0054, 'EGP': 0.0084, 'MAD': 0.0025, 'TRY': 0.0089, 'THB': 0.0095, 'KRW': 0.35, 'RUB': 0.025 },
-      'USD': { 'UGX': 3700, 'EUR': 0.92, 'GBP': 0.79, 'ZAR': 18.5, 'KES': 100, 'TZS': 2300, 'BRL': 4.8, 'MXN': 20, 'EGP': 31, 'MAD': 9.2, 'TRY': 33, 'THB': 35, 'KRW': 1300, 'RUB': 92 },
-      'EUR': { 'UGX': 4000, 'USD': 1.09, 'GBP': 0.86, 'ZAR': 20.1, 'KES': 109, 'TZS': 2500, 'BRL': 5.2, 'MXN': 21.8, 'EGP': 33.8, 'MAD': 10, 'TRY': 36, 'THB': 38, 'KRW': 1410, 'RUB': 100 },
-      'GBP': { 'UGX': 4700, 'USD': 1.27, 'EUR': 1.16, 'ZAR': 23.4, 'KES': 127, 'TZS': 2900, 'BRL': 6.1, 'MXN': 25.5, 'EGP': 39.5, 'MAD': 11.7, 'TRY': 42, 'THB': 44.5, 'KRW': 1650, 'RUB': 117 },
-      'ZAR': { 'UGX': 200, 'USD': 0.054, 'EUR': 0.050, 'GBP': 0.043, 'KES': 5.4, 'TZS': 124, 'BRL': 0.26, 'MXN': 1.08, 'EGP': 1.68, 'MAD': 0.50, 'TRY': 1.79, 'THB': 1.89, 'KRW': 70, 'RUB': 5.0 },
-      'KES': { 'UGX': 37, 'USD': 0.01, 'EUR': 0.0092, 'GBP': 0.0079, 'ZAR': 0.185, 'TZS': 23, 'BRL': 0.048, 'MXN': 0.20, 'EGP': 0.31, 'MAD': 0.092, 'TRY': 0.33, 'THB': 0.35, 'KRW': 13, 'RUB': 0.92 },
-      'TZS': { 'UGX': 1.61, 'USD': 0.00043, 'EUR': 0.0004, 'GBP': 0.00034, 'ZAR': 0.008, 'KES': 0.043, 'BRL': 0.0021, 'MXN': 0.0087, 'EGP': 0.0135, 'MAD': 0.004, 'TRY': 0.0143, 'THB': 0.0152, 'KRW': 0.565, 'RUB': 0.04 },
-      'BRL': { 'UGX': 770, 'USD': 0.208, 'EUR': 0.192, 'GBP': 0.164, 'ZAR': 3.85, 'KES': 20.8, 'TZS': 476, 'MXN': 4.17, 'EGP': 6.46, 'MAD': 1.92, 'TRY': 6.88, 'THB': 7.29, 'KRW': 271, 'RUB': 19.2 },
-      'MXN': { 'UGX': 185, 'USD': 0.05, 'EUR': 0.046, 'GBP': 0.039, 'ZAR': 0.926, 'KES': 5.0, 'TZS': 115, 'BRL': 0.24, 'EGP': 1.55, 'MAD': 0.46, 'TRY': 1.65, 'THB': 1.75, 'KRW': 65, 'RUB': 4.6 },
-      'EGP': { 'UGX': 119, 'USD': 0.032, 'EUR': 0.030, 'GBP': 0.025, 'ZAR': 0.595, 'KES': 3.22, 'TZS': 74, 'BRL': 0.155, 'MXN': 0.645, 'MAD': 0.296, 'TRY': 1.06, 'THB': 1.13, 'KRW': 42, 'RUB': 2.96 },
-      'MAD': { 'UGX': 400, 'USD': 0.109, 'EUR': 0.10, 'GBP': 0.085, 'ZAR': 2.0, 'KES': 10.9, 'TZS': 250, 'BRL': 0.52, 'MXN': 2.17, 'EGP': 3.38, 'TRY': 3.59, 'THB': 3.81, 'KRW': 142, 'RUB': 10.0 },
-      'TRY': { 'UGX': 112, 'USD': 0.030, 'EUR': 0.028, 'GBP': 0.024, 'ZAR': 0.559, 'KES': 3.03, 'TZS': 70, 'BRL': 0.145, 'MXN': 0.606, 'EGP': 0.94, 'MAD': 0.279, 'THB': 0.296, 'KRW': 11, 'RUB': 0.78 },
-      'THB': { 'UGX': 105, 'USD': 0.028, 'EUR': 0.026, 'GBP': 0.022, 'ZAR': 0.529, 'KES': 2.86, 'TZS': 66, 'BRL': 0.137, 'MXN': 0.571, 'EGP': 0.885, 'MAD': 0.262, 'TRY': 3.38, 'KRW': 10.5, 'RUB': 0.74 },
-      'KRW': { 'UGX': 2.85, 'USD': 0.00077, 'EUR': 0.00071, 'GBP': 0.00061, 'ZAR': 0.0143, 'KES': 0.077, 'TZS': 1.77, 'BRL': 0.0037, 'MXN': 0.0154, 'EGP': 0.0238, 'MAD': 0.007, 'TRY': 0.090, 'THB': 0.095, 'RUB': 0.0067 },
-      'RUB': { 'UGX': 40, 'USD': 0.011, 'EUR': 0.01, 'GBP': 0.0085, 'ZAR': 0.20, 'KES': 1.09, 'TZS': 25, 'BRL': 0.052, 'MXN': 0.217, 'EGP': 0.337, 'MAD': 0.10, 'TRY': 1.28, 'THB': 1.35, 'KRW': 50 }
-    };
-
-    if (rates[fromCurrency] && rates[fromCurrency][toCurrency]) {
-      return amount * rates[fromCurrency][toCurrency];
-    }
-    return amount;
-  }
-
-  const formatAmount = (amount: number, currency: string): string => {
-    const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'ZAR', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK', 'DKK', 'JPY', 'CNY', 'INR', 'BRL', 'MXN', 'ARS', 'CLP', 'PEN', 'COP', 'EGP', 'MAD', 'TRY', 'THB', 'KRW', 'RUB'];
-    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: safeCurrency,
-      minimumFractionDigits: 0
-    }).format(amount);
-  }
-
-  // Create a formatCurrency function that uses UGX as default
-  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
-    try {
-      // Always display in UGX as default
-      const displayCurrency = 'UGX';
-      if (displayCurrency === serviceCurrency) {
-        return formatAmount(amount, displayCurrency);
-      }
-      const convertedAmount = convertCurrency(amount, serviceCurrency, displayCurrency);
-      return formatAmount(convertedAmount, displayCurrency);
-    } catch (error) {
-      console.warn('Currency conversion failed, using UGX as default:', error);
-      return formatAmount(amount, 'UGX');
-    }
-  }
-
-  const countries = [
-    { code: '+1', name: 'United States', flag: '🇺🇸' },
-    { code: '+1', name: 'Canada', flag: '🇨🇦' },
-    { code: '+7', name: 'Russia', flag: '🇷🇺' },
-    { code: '+20', name: 'Egypt', flag: '🇪🇬' },
-    { code: '+27', name: 'South Africa', flag: '🇿🇦' },
-    { code: '+30', name: 'Greece', flag: '🇬🇷' },
-    { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
-    { code: '+32', name: 'Belgium', flag: '🇧🇪' },
-    { code: '+33', name: 'France', flag: '🇫🇷' },
-    { code: '+34', name: 'Spain', flag: '🇪🇸' },
-    { code: '+36', name: 'Hungary', flag: '🇭🇺' },
-    { code: '+39', name: 'Italy', flag: '🇮🇹' },
-    { code: '+40', name: 'Romania', flag: '🇷🇴' },
-    { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
-    { code: '+43', name: 'Austria', flag: '🇦🇹' },
-    { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
-    { code: '+45', name: 'Denmark', flag: '🇩🇰' },
-    { code: '+46', name: 'Sweden', flag: '🇸🇪' },
-    { code: '+47', name: 'Norway', flag: '🇳🇴' },
-    { code: '+48', name: 'Poland', flag: '🇵🇱' },
-    { code: '+49', name: 'Germany', flag: '🇩🇪' },
-    { code: '+51', name: 'Peru', flag: '🇵🇪' },
-    { code: '+52', name: 'Mexico', flag: '🇲🇽' },
-    { code: '+53', name: 'Cuba', flag: '🇨🇺' },
-    { code: '+54', name: 'Argentina', flag: '🇦🇷' },
-    { code: '+55', name: 'Brazil', flag: '🇧🇷' },
-    { code: '+56', name: 'Chile', flag: '🇨🇱' },
-    { code: '+57', name: 'Colombia', flag: '🇨🇴' },
-    { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
-    { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
-    { code: '+61', name: 'Australia', flag: '🇦🇺' },
-    { code: '+62', name: 'Indonesia', flag: '🇮🇩' },
-    { code: '+63', name: 'Philippines', flag: '🇵🇭' },
-    { code: '+64', name: 'New Zealand', flag: '🇳🇿' },
-    { code: '+65', name: 'Singapore', flag: '🇸🇬' },
-    { code: '+66', name: 'Thailand', flag: '🇹🇭' },
-    { code: '+81', name: 'Japan', flag: '🇯🇵' },
-    { code: '+82', name: 'South Korea', flag: '🇰🇷' },
-    { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
-    { code: '+86', name: 'China', flag: '🇨🇳' },
-    { code: '+90', name: 'Turkey', flag: '🇹🇷' },
-    { code: '+91', name: 'India', flag: '🇮🇳' },
-    { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
-    { code: '+93', name: 'Afghanistan', flag: '🇦🇫' },
-    { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
-    { code: '+95', name: 'Myanmar', flag: '🇲🇲' },
-    { code: '+98', name: 'Iran', flag: '🇮🇷' },
-    { code: '+211', name: 'South Sudan', flag: '🇸🇸' },
-    { code: '+212', name: 'Morocco', flag: '🇲🇦' },
-    { code: '+213', name: 'Algeria', flag: '🇩🇿' },
-    { code: '+216', name: 'Tunisia', flag: '🇹🇳' },
-    { code: '+218', name: 'Libya', flag: '🇱🇾' },
-    { code: '+220', name: 'Gambia', flag: '🇬🇲' },
-    { code: '+221', name: 'Senegal', flag: '🇸🇳' },
-    { code: '+222', name: 'Mauritania', flag: '🇲🇷' },
-    { code: '+223', name: 'Mali', flag: '🇲🇱' },
-    { code: '+224', name: 'Guinea', flag: '🇬🇳' },
-    { code: '+225', name: 'Ivory Coast', flag: '🇨🇮' },
-    { code: '+226', name: 'Burkina Faso', flag: '🇧🇫' },
-    { code: '+227', name: 'Niger', flag: '🇳🇪' },
-    { code: '+228', name: 'Togo', flag: '🇹🇬' },
-    { code: '+229', name: 'Benin', flag: '🇧🇯' },
-    { code: '+230', name: 'Mauritius', flag: '🇲🇺' },
-    { code: '+231', name: 'Liberia', flag: '🇱🇷' },
-    { code: '+232', name: 'Sierra Leone', flag: '🇸🇱' },
-    { code: '+233', name: 'Ghana', flag: '🇬🇭' },
-    { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
-    { code: '+235', name: 'Chad', flag: '🇹🇩' },
-    { code: '+236', name: 'Central African Republic', flag: '🇨🇫' },
-    { code: '+237', name: 'Cameroon', flag: '🇨🇲' },
-    { code: '+238', name: 'Cape Verde', flag: '🇨🇻' },
-    { code: '+239', name: 'São Tomé and Príncipe', flag: '🇸🇹' },
-    { code: '+240', name: 'Equatorial Guinea', flag: '🇬🇶' },
-    { code: '+241', name: 'Gabon', flag: '🇬🇦' },
-    { code: '+242', name: 'Republic of the Congo', flag: '🇨🇬' },
-    { code: '+243', name: 'Democratic Republic of the Congo', flag: '🇨🇩' },
-    { code: '+244', name: 'Angola', flag: '🇦🇴' },
-    { code: '+245', name: 'Guinea-Bissau', flag: '🇬🇼' },
-    { code: '+246', name: 'British Indian Ocean Territory', flag: '🇮🇴' },
-    { code: '+247', name: 'Ascension Island', flag: '🇦🇨' },
-    { code: '+248', name: 'Seychelles', flag: '🇸🇨' },
-    { code: '+249', name: 'Sudan', flag: '🇸🇩' },
-    { code: '+250', name: 'Rwanda', flag: '🇷🇼' },
-    { code: '+251', name: 'Ethiopia', flag: '🇪🇹' },
-    { code: '+252', name: 'Somalia', flag: '🇸🇴' },
-    { code: '+253', name: 'Djibouti', flag: '🇩🇯' },
-    { code: '+254', name: 'Kenya', flag: '🇰🇪' },
-    { code: '+255', name: 'Tanzania', flag: '🇹🇿' },
-    { code: '+256', name: 'Uganda', flag: '🇺🇬' },
-    { code: '+257', name: 'Burundi', flag: '🇧🇮' },
-    { code: '+258', name: 'Mozambique', flag: '🇲🇿' },
-    { code: '+260', name: 'Zambia', flag: '🇿🇲' },
-    { code: '+261', name: 'Madagascar', flag: '🇲🇬' },
-    { code: '+262', name: 'Réunion', flag: '🇷🇪' },
-    { code: '+263', name: 'Zimbabwe', flag: '🇿🇼' },
-    { code: '+264', name: 'Namibia', flag: '🇳🇦' },
-    { code: '+265', name: 'Malawi', flag: '🇲🇼' },
-    { code: '+266', name: 'Lesotho', flag: '🇱🇸' },
-    { code: '+267', name: 'Botswana', flag: '🇧🇼' },
-    { code: '+268', name: 'Eswatini', flag: '🇸🇿' },
-    { code: '+269', name: 'Comoros', flag: '🇰🇲' },
-    { code: '+290', name: 'Saint Helena', flag: '🇸🇭' },
-    { code: '+291', name: 'Eritrea', flag: '🇪🇷' },
-    { code: '+297', name: 'Aruba', flag: '🇦🇼' },
-    { code: '+298', name: 'Faroe Islands', flag: '🇫🇴' },
-    { code: '+299', name: 'Greenland', flag: '🇬🇱' },
-    { code: '+350', name: 'Gibraltar', flag: '🇬🇮' },
-    { code: '+351', name: 'Portugal', flag: '🇵🇹' },
-    { code: '+352', name: 'Luxembourg', flag: '🇱🇺' },
-    { code: '+353', name: 'Ireland', flag: '🇮🇪' },
-    { code: '+354', name: 'Iceland', flag: '🇮🇸' },
-    { code: '+355', name: 'Albania', flag: '🇦🇱' },
-    { code: '+356', name: 'Malta', flag: '🇲🇹' },
-    { code: '+357', name: 'Cyprus', flag: '🇨🇾' },
-    { code: '+358', name: 'Finland', flag: '🇫🇮' },
-    { code: '+359', name: 'Bulgaria', flag: '🇧🇬' },
-    { code: '+370', name: 'Lithuania', flag: '🇱🇹' },
-    { code: '+371', name: 'Latvia', flag: '🇱🇻' },
-    { code: '+372', name: 'Estonia', flag: '🇪🇪' },
-    { code: '+373', name: 'Moldova', flag: '🇲🇩' },
-    { code: '+374', name: 'Armenia', flag: '🇦🇲' },
-    { code: '+375', name: 'Belarus', flag: '🇧🇾' },
-    { code: '+376', name: 'Andorra', flag: '🇦🇩' },
-    { code: '+377', name: 'Monaco', flag: '🇲🇨' },
-    { code: '+378', name: 'San Marino', flag: '🇸🇲' },
-    { code: '+379', name: 'Vatican City', flag: '🇻🇦' },
-    { code: '+380', name: 'Ukraine', flag: '🇺🇦' },
-    { code: '+381', name: 'Serbia', flag: '🇷🇸' },
-    { code: '+382', name: 'Montenegro', flag: '🇲🇪' },
-    { code: '+383', name: 'Kosovo', flag: '🇽🇰' },
-    { code: '+385', name: 'Croatia', flag: '🇭🇷' },
-    { code: '+386', name: 'Slovenia', flag: '🇸🇮' },
-    { code: '+387', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
-    { code: '+389', name: 'North Macedonia', flag: '🇲🇰' },
-    { code: '+420', name: 'Czech Republic', flag: '🇨🇿' },
-    { code: '+421', name: 'Slovakia', flag: '🇸🇰' },
-    { code: '+423', name: 'Liechtenstein', flag: '🇱🇮' },
-    { code: '+500', name: 'Falkland Islands', flag: '🇫🇰' },
-    { code: '+501', name: 'Belize', flag: '🇧🇿' },
-    { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
-    { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
-    { code: '+504', name: 'Honduras', flag: '🇭🇳' },
-    { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
-    { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
-    { code: '+507', name: 'Panama', flag: '🇵🇦' },
-    { code: '+508', name: 'Saint Pierre and Miquelon', flag: '🇵🇲' },
-    { code: '+509', name: 'Haiti', flag: '🇭🇹' },
-    { code: '+590', name: 'Guadeloupe', flag: '🇬🇵' },
-    { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
-    { code: '+592', name: 'Guyana', flag: '🇬🇾' },
-    { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
-    { code: '+594', name: 'French Guiana', flag: '🇬🇫' },
-    { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
-    { code: '+596', name: 'Martinique', flag: '🇲🇶' },
-    { code: '+597', name: 'Suriname', flag: '🇸🇷' },
-    { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
-    { code: '+599', name: 'Curaçao', flag: '🇨🇼' },
-    { code: '+670', name: 'East Timor', flag: '🇹🇱' },
-    { code: '+672', name: 'Antarctica', flag: '🇦🇶' },
-    { code: '+673', name: 'Brunei', flag: '🇧🇳' },
-    { code: '+674', name: 'Nauru', flag: '🇳🇷' },
-    { code: '+675', name: 'Papua New Guinea', flag: '🇵🇬' },
-    { code: '+676', name: 'Tonga', flag: '🇹🇴' },
-    { code: '+677', name: 'Solomon Islands', flag: '🇸🇧' },
-    { code: '+678', name: 'Vanuatu', flag: '🇻🇺' },
-    { code: '+679', name: 'Fiji', flag: '🇫🇯' },
-    { code: '+680', name: 'Palau', flag: '🇵🇼' },
-    { code: '+681', name: 'Wallis and Futuna', flag: '🇼🇫' },
-    { code: '+682', name: 'Cook Islands', flag: '🇨🇰' },
-    { code: '+683', name: 'Niue', flag: '🇳🇺' },
-    { code: '+684', name: 'American Samoa', flag: '🇦🇸' },
-    { code: '+685', name: 'Samoa', flag: '🇼🇸' },
-    { code: '+686', name: 'Kiribati', flag: '🇰🇮' },
-    { code: '+687', name: 'New Caledonia', flag: '🇳🇨' },
-    { code: '+688', name: 'Tuvalu', flag: '🇹🇻' },
-    { code: '+689', name: 'French Polynesia', flag: '🇵🇫' },
-    { code: '+690', name: 'Tokelau', flag: '🇹🇰' },
-    { code: '+691', name: 'Micronesia', flag: '🇫🇲' },
-    { code: '+692', name: 'Marshall Islands', flag: '🇲🇭' },
-    { code: '+850', name: 'North Korea', flag: '🇰🇵' },
-    { code: '+852', name: 'Hong Kong', flag: '🇭🇰' },
-    { code: '+853', name: 'Macau', flag: '🇲🇴' },
-    { code: '+855', name: 'Cambodia', flag: '🇰🇭' },
-    { code: '+856', name: 'Laos', flag: '🇱🇦' },
-    { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
-    { code: '+886', name: 'Taiwan', flag: '🇹🇼' },
-    { code: '+960', name: 'Maldives', flag: '🇲🇻' },
-    { code: '+961', name: 'Lebanon', flag: '🇱🇧' },
-    { code: '+962', name: 'Jordan', flag: '🇯🇴' },
-    { code: '+963', name: 'Syria', flag: '🇸🇾' },
-    { code: '+964', name: 'Iraq', flag: '🇮🇶' },
-    { code: '+965', name: 'Kuwait', flag: '🇰🇼' },
-    { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦' },
-    { code: '+967', name: 'Yemen', flag: '🇾🇪' },
-    { code: '+968', name: 'Oman', flag: '🇴🇲' },
-    { code: '+970', name: 'Palestine', flag: '🇵🇸' },
-    { code: '+971', name: 'United Arab Emirates', flag: '🇦🇪' },
-    { code: '+972', name: 'Israel', flag: '🇮🇱' },
-    { code: '+973', name: 'Bahrain', flag: '🇧🇭' },
-    { code: '+974', name: 'Qatar', flag: '🇶🇦' },
-    { code: '+975', name: 'Bhutan', flag: '🇧🇹' },
-    { code: '+976', name: 'Mongolia', flag: '🇲🇳' },
-    { code: '+977', name: 'Nepal', flag: '🇳🇵' },
-    { code: '+992', name: 'Tajikistan', flag: '🇹🇯' },
-    { code: '+993', name: 'Turkmenistan', flag: '🇹🇲' },
-    { code: '+994', name: 'Azerbaijan', flag: '🇦🇿' },
-    { code: '+995', name: 'Georgia', flag: '🇬🇪' },
-    { code: '+996', name: 'Kyrgyzstan', flag: '🇰🇬' },
-    { code: '+998', name: 'Uzbekistan', flag: '🇺🇿' }
-  ];
 
   const [bookingData, setBookingData] = useState(() => {
     // Initialize with default dates (today and tomorrow)
@@ -344,12 +81,13 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       contactEmail: '',
       contactPhone: '',
       countryCode: '+256', // Default to Uganda
-      paymentMethod: 'card',
+      paymentMethod: 'mobile',
       mobileProvider: ''
     }
   })
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
@@ -376,39 +114,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     let mounted = true
     ;(async () => {
       try {
-        const { data: allBookings } = await supabase.from('bookings').select('service_date, service_id, vendor_id, services (id, service_categories (name))')
-        if (!mounted || !allBookings) return
-        const singleCats = new Set(['transport', 'accommodation', 'hotels', 'hotel'])
-        const set = new Set<string>()
-        for (const b of allBookings) {
-          if (!b || !b.vendor_id || (service.vendor_id && b.vendor_id !== service.vendor_id)) continue
-          // service_categories may be an object or an array depending on the query; handle both
-          let catName = ''
-          try {
-            const sc = (b.services as any)?.service_categories
-            if (!sc) catName = ''
-            else if (Array.isArray(sc)) catName = sc[0]?.name || ''
-            else catName = sc.name || ''
-          } catch (e) {
-            catName = ''
-          }
-          const cat = catName.toString().toLowerCase()
-          if (!cat || !singleCats.has(cat)) continue
-          if (!b.service_date) continue
-          const start = new Date(b.service_date)
-          if (isNaN(start.getTime())) continue
-          const end = (b as any).end_date ? new Date((b as any).end_date) : start
-          if (isNaN(end.getTime())) {
-            set.add(start.toISOString().split('T')[0])
-            continue
-          }
-          const from = start < end ? start : end
-          const to = end >= start ? end : start
-          for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-            set.add(new Date(d).toISOString().split('T')[0])
-          }
-        }
-        setBlockedDates(set)
+        const blocked = await fetchVendorBlockedDates(supabase, service.vendor_id)
+        if (!mounted) return
+        setBlockedDates(blocked)
       } catch (err) {
         console.error('Error loading blocked dates for hotel booking:', err)
       }
@@ -459,7 +167,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   }, [user, profile])
 
   // Filter countries based on search
-  const filteredCountries = countries.filter(country =>
+  const filteredCountries = COUNTRIES.filter(country =>
     country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
     country.code.includes(countrySearch)
   )
@@ -483,25 +191,22 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     { id: 3, title: 'Confirmation', icon: CheckCircle }
   ]
 
+  const contactReady = Boolean(bookingData.contactName?.trim() && bookingData.contactEmail?.trim())
+  const loggedInReady = Boolean(user && contactReady)
+
   const handleNext = () => {
     if (currentStep < steps.length) {
-      // Validate step 2 (Booking Details) before advancing
-      if (currentStep === 2) {
-        if (!bookingData.contactName || !bookingData.contactEmail) {
-          alert('Please fill in all required details.')
-          return
-        }
-        if (bookingData.paymentMethod === 'card') {
-          alert('Please select a valid payment method.')
-          return
-        }
+      setPaymentError(null)
+      if (currentStep === 2 && !loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) {
+        setPaymentError('Please fill in all required details.')
+        return
       }
       setCurrentStep(currentStep + 1)
     }
   }
 
   const handleBack = () => {
-    if (currentStep > 2) { // Can only go back from step 2 onwards
+    if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     } else {
       navigate(`/service/${service.slug || service.id}`)
@@ -572,13 +277,14 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
       const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
       if (!phone || phone.length < 12) {
-        alert('Please enter a valid mobile money phone number (e.g. 0712345678).')
+        setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
         return
       }
       if (!bookingData.mobileProvider) {
-        alert('Please select a mobile money provider (MTN or Airtel).')
+        setPaymentError('Please select a mobile money provider (MTN or Airtel).')
         return
       }
+      setPaymentError(null)
 
       setIsSubmitting(true)
       setPollingMessage('Initiating payment…')
@@ -644,7 +350,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
                 setPollingMessage('')
                 setIsSubmitting(false)
-                alert('Payment was not completed or was declined. Please try again.')
+                setPaymentError('Payment was not completed or was declined. Please try again.')
               }
             })
           .subscribe()
@@ -658,7 +364,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
           channel.unsubscribe()
           setPollingMessage('')
           setIsSubmitting(false)
-          alert('Payment was not completed or was declined. Please try again.')
+          setPaymentError('Payment was not completed or was declined. Please try again.')
           return
         }
 
@@ -673,7 +379,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
             setPollingMessage('')
             setIsSubmitting(false)
-            alert('Payment was not completed or was declined. Please try again.')
+            setPaymentError('Payment was not completed or was declined. Please try again.')
           }
         }, 4000)
         setTimeout(() => {
@@ -684,7 +390,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         console.error('Payment error:', err)
         setPollingMessage('')
         setIsSubmitting(false)
-        alert((err as Error).message || 'Payment failed. Please try again.')
+        setPaymentError((err as Error).message || 'Payment failed. Please try again.')
       }
       return
     }
@@ -697,6 +403,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
+      const roomNote = bookingData.roomType ? `Room: ${bookingData.roomType}` : ''
+      const specialRequests = [roomNote, bookingData.specialRequests].filter(Boolean).join('\n')
+
       await createBooking({
         service_id: service.id,
         vendor_id: service.vendor_id || service.vendors?.id || '',
@@ -708,7 +417,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         currency: 'UGX',
         status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
         payment_status: paymentStatus,
-        special_requests: bookingData.specialRequests,
+        special_requests: specialRequests || undefined,
         tourist_id: user?.id,
         guest_name: user ? undefined : bookingData.contactName,
         guest_email: user ? undefined : bookingData.contactEmail,
@@ -722,7 +431,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
     } catch (error) {
       finaliseInFlightRef.current = false
       console.error('Error creating booking:', error)
-      alert('Failed to complete booking. Please try again.')
+      setPaymentError('Failed to complete booking. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -771,6 +480,30 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   {nights} night{nights > 1 ? 's' : ''} selected
                 </p>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Guests</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={service.max_capacity || 10}
+                  value={bookingData.guests}
+                  onChange={(e) => handleInputChange('guests', parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rooms</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={bookingData.rooms}
+                  onChange={(e) => handleInputChange('rooms', parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
           </div>
         )
@@ -837,7 +570,14 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             {/* Your Details */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 mb-4">Your Information</h3>
+              {loggedInReady && (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+                  Signed in as {bookingData.contactEmail}. Your saved details will be used.
+                </p>
+              )}
               <div className="space-y-4">
+                {!loggedInReady && (
+                  <>
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
                     Full Name <span className="text-red-500">*</span>
@@ -862,6 +602,8 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                   />
                 </div>
+                  </>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
                     Phone Number <span className="font-light text-gray-500">(Optional)</span>
@@ -874,7 +616,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                         onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                       >
                         <span>
-                          {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
+                          {COUNTRIES.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
                         </span>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -934,7 +676,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 </div>
                 {hotelTouristFeeTotal > 0 && (
                   <div className="flex justify-between items-center text-sm text-gray-700 font-light">
-                    <span>Fee (your portion)</span>
+                    <span>Includes booking fee</span>
                     <span>{formatCurrencyWithConversion(hotelTouristFeeTotal, service.currency)}</span>
                   </div>
                 )}
@@ -958,19 +700,6 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <p className="text-sm font-light text-gray-600">MTN Mobile Money, Airtel Money</p>
                   </div>
                 </label>
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer opacity-50 hover:border-gray-300 transition-colors">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    disabled
-                    className="mr-3"
-                  />
-                  <div className="flex-1">
-                    <span className="font-medium text-gray-900">Credit/Debit Card</span>
-                    <p className="text-sm font-light text-gray-600">Coming soon</p>
-                  </div>
-                </label>
               </div>
               {bookingData.paymentMethod === 'mobile' && (
                 <div className="mt-4 space-y-3">
@@ -979,7 +708,17 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <input
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.trimStart()
+                        setPhoneNumber(val)
+                        const digits = val.replace(/\D/g, '')
+                        const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
+                        if (local.length >= 2) {
+                          const p = local.slice(0, 2)
+                          if (['76', '77', '78', '39', '46', '31'].includes(p)) handleInputChange('mobileProvider', 'MTN')
+                          else if (['70', '74', '75', '20', '50'].includes(p)) handleInputChange('mobileProvider', 'Airtel')
+                        }
+                      }}
                       placeholder="0712345678 or +256712345678"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
                     />
@@ -1225,7 +964,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 sm:pb-8">
         {/* Service Summary Card */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex items-center space-x-3">
@@ -1256,28 +995,35 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
         {/* Navigation Buttons */}
         {currentStep < 3 && (
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={handleBack}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-            >
-              Back
-            </button>
-            <button
-              onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
-              disabled={
-                isSubmitting ||
-                (currentStep === 2 && (!bookingData.contactName || !bookingData.contactEmail || bookingData.paymentMethod === 'card')) ||
-                (currentStep === 2 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
-              }
-              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-            >
-              {isSubmitting
-                ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')
-                : currentStep === 2
-                  ? (bookingData.paymentMethod === 'mobile' ? 'Pay with Mobile Money' : 'Complete Booking')
-                  : 'Next'}
-            </button>
+          <div className="fixed sm:relative bottom-0 left-0 right-0 z-30 sm:z-auto flex flex-col gap-3 mt-6 border-t sm:border-0 bg-white/95 sm:bg-transparent backdrop-blur-sm px-4 sm:px-0 py-3 sm:py-0">
+            {paymentError && (
+              <div className="w-full rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {paymentError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleBack}
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
+                disabled={
+                  isSubmitting ||
+                  (currentStep === 2 && !loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) ||
+                  (currentStep === 2 && bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
+                }
+                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {isSubmitting
+                  ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')
+                  : currentStep === 2
+                    ? 'Pay with Mobile Money'
+                    : 'Next'}
+              </button>
+            </div>
           </div>
         )}
       </div>

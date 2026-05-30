@@ -1,69 +1,19 @@
 import { useParams, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
 import HotelBooking from './HotelBooking.tsx'
 import TransportBooking from './TransportBooking.tsx'
 import TourBooking from './TourBooking.tsx'
 import RestaurantBooking from './RestaurantBooking.tsx'
 import ActivityBooking from './ActivityBooking.tsx'
 import FlightBooking from './FlightBooking.tsx'
-import { getServiceBySlug } from '../lib/database'
-
-interface ServiceDetail {
-  id: string
-  vendor_id?: string
-  title: string
-  description: string
-  price: number
-  currency: string
-  images: string[]
-  location: string
-  duration_hours: number
-  max_capacity: number
-  amenities: string[]
-  vendors?: {
-    business_name: string
-    business_description: string
-    business_phone: string
-    business_email: string
-    business_address: string
-  } | null
-  service_categories: {
-    name: string
-  }
-  category_id?: string
-  vehicle_type?: string
-  vehicle_capacity?: number
-  driver_included?: boolean
-  fuel_included?: boolean
-  pickup_locations?: string[]
-  dropoff_locations?: string[]
-}
+import { useServiceDetailQuery } from '../hooks/useServiceDetailQuery'
 
 export default function BookingFlow() {
   const { slug } = useParams<{ slug: string }>()
-  const [service, setService] = useState<ServiceDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Uses the same React Query key as ServiceDetail so the fetch is served from cache
+  const { data, isLoading } = useServiceDetailQuery(slug)
+  const service = data?.service ?? null
 
-  useEffect(() => {
-    if (slug) {
-      fetchService()
-    }
-  }, [slug])
-
-  const fetchService = async () => {
-    try {
-      if (!slug) return
-      
-      const serviceData = await getServiceBySlug(slug)
-      setService(serviceData)
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching service:', error)
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -75,30 +25,22 @@ export default function BookingFlow() {
     return <Navigate to="/" replace />
   }
 
-  // Route to appropriate booking component based on category
-  const categoryName = service.service_categories.name.toLowerCase()
+  const categoryName = (service as any).service_categories?.name?.toLowerCase() ?? ''
 
   switch (categoryName) {
     case 'hotels':
-      return <HotelBooking service={service} />
-
+      return <HotelBooking service={service as any} />
     case 'tours':
-      return <TourBooking service={service} />
-
+      return <TourBooking service={service as any} />
     case 'transport':
-      return <TransportBooking service={service} />
-
+      return <TransportBooking service={service as any} />
     case 'restaurants':
-      return <RestaurantBooking service={service} />
-
+      return <RestaurantBooking service={service as any} />
     case 'activities':
-      return <ActivityBooking service={service} />
-
+      return <ActivityBooking service={service as any} />
     case 'flights':
-      return <FlightBooking service={service} />
-
+      return <FlightBooking service={service as any} />
     default:
-      // Default to general booking flow
-      return <ActivityBooking service={service} />
+      return <ActivityBooking service={service as any} />
   }
 }

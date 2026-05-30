@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { getRate } from './currencyRates'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -39,46 +40,14 @@ export function formatTierCommission(tier: {
   return `${pct}% commission`;
 }
 
-// Convert between currencies using a simple static rates table (base: UGX)
+// Convert between currencies using live rates fetched from Frankfurter (with static fallback).
+// Rates are cached in currencyRates.ts and refreshed once per session.
 export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string) {
-  const exchangeRates: { [key: string]: number } = {
-    'UGX': 1,
-    'USD': 0.00027,
-    'EUR': 0.00025,
-    'GBP': 0.00021,
-    'KES': 0.0023,
-    'TZS': 0.00064,
-    'RWF': 0.0010,
-    'BRL': 0.0014,
-    'MXN': 0.0054,
-    'EGP': 0.0084,
-    'MAD': 0.0025,
-    'TRY': 0.0089,
-    'THB': 0.0077,
-    'KRW': 0.33,
-    'RUB': 0.019,
-    'INR': 0.022,
-    'CNY': 0.0019,
-    'JPY': 0.039,
-    'CAD': 0.00036,
-    'AUD': 0.00037,
-    'CHF': 0.00024,
-    'SEK': 0.0024,
-    'NOK': 0.0024,
-    'DKK': 0.0017,
-    'PLN': 0.0011,
-    'CZK': 0.0064,
-    'HUF': 0.088,
-    'ZAR': 0.0048,
-    'NGN': 0.11,
-    'GHS': 0.0037,
-    'XAF': 0.16,
-    'XOF': 0.16
-  }
-
   if (fromCurrency === toCurrency) return amount
-  const fromRate = exchangeRates[fromCurrency] || 1
-  const toRate = exchangeRates[toCurrency] || 1
+  const fromRate = getRate(fromCurrency)
+  const toRate = getRate(toCurrency)
+  // All rates are expressed as "1 UGX = X foreign", so:
+  // amount_in_ugx = fromCurrency === 'UGX' ? amount : amount / fromRate
   const amountInUGX = fromCurrency === 'UGX' ? amount : amount / fromRate
   return amountInUGX * toRate
 }

@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
-import { jsPDF } from 'jspdf'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
-import SimilarServicesCarousel from '../components/SimilarServicesCarousel'
 import {
   calculatePaymentForAmount,
   customerTotalFromAggregatePricingCalc,
   type PaymentCalculation
 } from '../lib/pricingService'
-import CityPickerModal from '../components/CityPickerModal'
-import MapModal from '../components/MapModal'
+import { COUNTRIES } from '../lib/countries'
+import { formatCurrencyWithConversion } from '../lib/utils'
+import { fetchVendorBlockedDates } from '../lib/blockedDates'
+import { calculateDays } from '../lib/transportUtils'
+import TransportImageGallery from '../components/TransportImageGallery'
+import TransportBookingReceipt from '../components/TransportBookingReceipt'
 
 interface ServiceDetail {
   id: string
@@ -61,224 +63,10 @@ interface TransportBookingProps {
   service: ServiceDetail
 }
 
-// Country codes data
-const countries = [
-  { code: '+1', name: 'United States', flag: '🇺🇸' },
-  { code: '+1', name: 'Canada', flag: '🇨🇦' },
-  { code: '+7', name: 'Russia', flag: '🇷🇺' },
-  { code: '+20', name: 'Egypt', flag: '🇪🇬' },
-  { code: '+27', name: 'South Africa', flag: '🇿🇦' },
-  { code: '+30', name: 'Greece', flag: '🇬🇷' },
-  { code: '+31', name: 'Netherlands', flag: '🇳🇱' },
-  { code: '+32', name: 'Belgium', flag: '🇧🇪' },
-  { code: '+33', name: 'France', flag: '🇫🇷' },
-  { code: '+34', name: 'Spain', flag: '🇪🇸' },
-  { code: '+36', name: 'Hungary', flag: '🇭🇺' },
-  { code: '+39', name: 'Italy', flag: '🇮🇹' },
-  { code: '+40', name: 'Romania', flag: '🇷🇴' },
-  { code: '+41', name: 'Switzerland', flag: '🇨🇭' },
-  { code: '+43', name: 'Austria', flag: '🇦🇹' },
-  { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: '+45', name: 'Denmark', flag: '🇩🇰' },
-  { code: '+46', name: 'Sweden', flag: '🇸🇪' },
-  { code: '+47', name: 'Norway', flag: '🇳🇴' },
-  { code: '+48', name: 'Poland', flag: '🇵🇱' },
-  { code: '+49', name: 'Germany', flag: '🇩🇪' },
-  { code: '+51', name: 'Peru', flag: '🇵🇪' },
-  { code: '+52', name: 'Mexico', flag: '🇲🇽' },
-  { code: '+53', name: 'Cuba', flag: '🇨🇺' },
-  { code: '+54', name: 'Argentina', flag: '🇦🇷' },
-  { code: '+55', name: 'Brazil', flag: '🇧🇷' },
-  { code: '+56', name: 'Chile', flag: '🇨🇱' },
-  { code: '+57', name: 'Colombia', flag: '🇨🇴' },
-  { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
-  { code: '+60', name: 'Malaysia', flag: '🇲🇾' },
-  { code: '+61', name: 'Australia', flag: '🇦🇺' },
-  { code: '+62', name: 'Indonesia', flag: '🇮🇩' },
-  { code: '+63', name: 'Philippines', flag: '🇵🇭' },
-  { code: '+64', name: 'New Zealand', flag: '🇳🇿' },
-  { code: '+65', name: 'Singapore', flag: '🇸🇬' },
-  { code: '+66', name: 'Thailand', flag: '🇹🇭' },
-  { code: '+81', name: 'Japan', flag: '🇯🇵' },
-  { code: '+82', name: 'South Korea', flag: '🇰🇷' },
-  { code: '+84', name: 'Vietnam', flag: '🇻🇳' },
-  { code: '+86', name: 'China', flag: '🇨🇳' },
-  { code: '+90', name: 'Turkey', flag: '🇹🇷' },
-  { code: '+91', name: 'India', flag: '🇮🇳' },
-  { code: '+92', name: 'Pakistan', flag: '🇵🇰' },
-  { code: '+93', name: 'Afghanistan', flag: '🇦🇫' },
-  { code: '+94', name: 'Sri Lanka', flag: '🇱🇰' },
-  { code: '+95', name: 'Myanmar', flag: '🇲🇲' },
-  { code: '+98', name: 'Iran', flag: '🇮🇷' },
-  { code: '+211', name: 'South Sudan', flag: '🇸🇸' },
-  { code: '+212', name: 'Morocco', flag: '🇲🇦' },
-  { code: '+213', name: 'Algeria', flag: '🇩🇿' },
-  { code: '+216', name: 'Tunisia', flag: '🇹🇳' },
-  { code: '+218', name: 'Libya', flag: '🇱🇾' },
-  { code: '+220', name: 'Gambia', flag: '🇬🇲' },
-  { code: '+221', name: 'Senegal', flag: '🇸🇳' },
-  { code: '+222', name: 'Mauritania', flag: '🇲🇷' },
-  { code: '+223', name: 'Mali', flag: '🇲🇱' },
-  { code: '+224', name: 'Guinea', flag: '🇬🇳' },
-  { code: '+225', name: 'Ivory Coast', flag: '🇨🇮' },
-  { code: '+226', name: 'Burkina Faso', flag: '🇧🇫' },
-  { code: '+227', name: 'Niger', flag: '🇳🇪' },
-  { code: '+228', name: 'Togo', flag: '🇹🇬' },
-  { code: '+229', name: 'Benin', flag: '🇧🇯' },
-  { code: '+230', name: 'Mauritius', flag: '🇲🇺' },
-  { code: '+231', name: 'Liberia', flag: '🇱🇷' },
-  { code: '+232', name: 'Sierra Leone', flag: '🇸🇱' },
-  { code: '+233', name: 'Ghana', flag: '🇬🇭' },
-  { code: '+234', name: 'Nigeria', flag: '🇳🇬' },
-  { code: '+235', name: 'Chad', flag: '🇹🇩' },
-  { code: '+236', name: 'Central African Republic', flag: '🇨🇫' },
-  { code: '+237', name: 'Cameroon', flag: '🇨🇲' },
-  { code: '+238', name: 'Cape Verde', flag: '🇨🇻' },
-  { code: '+239', name: 'São Tomé and Príncipe', flag: '🇸🇹' },
-  { code: '+240', name: 'Equatorial Guinea', flag: '🇬🇶' },
-  { code: '+241', name: 'Gabon', flag: '🇬🇦' },
-  { code: '+242', name: 'Republic of the Congo', flag: '🇨🇬' },
-  { code: '+243', name: 'Democratic Republic of the Congo', flag: '🇨🇩' },
-  { code: '+244', name: 'Angola', flag: '🇦🇴' },
-  { code: '+245', name: 'Guinea-Bissau', flag: '🇬🇼' },
-  { code: '+246', name: 'British Indian Ocean Territory', flag: '🇮🇴' },
-  { code: '+248', name: 'Seychelles', flag: '🇸🇨' },
-  { code: '+249', name: 'Sudan', flag: '🇸🇩' },
-  { code: '+250', name: 'Rwanda', flag: '🇷🇼' },
-  { code: '+251', name: 'Ethiopia', flag: '🇪🇹' },
-  { code: '+252', name: 'Somalia', flag: '🇸🇴' },
-  { code: '+253', name: 'Djibouti', flag: '🇩🇯' },
-  { code: '+254', name: 'Kenya', flag: '🇰🇪' },
-  { code: '+255', name: 'Tanzania', flag: '🇹🇿' },
-  { code: '+256', name: 'Uganda', flag: '🇺🇬' },
-  { code: '+257', name: 'Burundi', flag: '🇧🇮' },
-  { code: '+258', name: 'Mozambique', flag: '🇲🇿' },
-  { code: '+260', name: 'Zambia', flag: '🇿🇲' },
-  { code: '+261', name: 'Madagascar', flag: '🇲🇬' },
-  { code: '+262', name: 'Réunion', flag: '🇷🇪' },
-  { code: '+263', name: 'Zimbabwe', flag: '🇿🇼' },
-  { code: '+264', name: 'Namibia', flag: '🇳🇦' },
-  { code: '+265', name: 'Malawi', flag: '🇲🇼' },
-  { code: '+266', name: 'Lesotho', flag: '🇱🇸' },
-  { code: '+267', name: 'Botswana', flag: '🇧🇼' },
-  { code: '+268', name: 'Eswatini', flag: '🇸🇿' },
-  { code: '+269', name: 'Comoros', flag: '🇰🇲' },
-  { code: '+290', name: 'Saint Helena', flag: '🇸🇭' },
-  { code: '+291', name: 'Eritrea', flag: '🇪🇷' },
-  { code: '+297', name: 'Aruba', flag: '🇦🇼' },
-  { code: '+298', name: 'Faroe Islands', flag: '🇫🇴' },
-  { code: '+299', name: 'Greenland', flag: '🇬🇱' },
-  { code: '+350', name: 'Gibraltar', flag: '🇬🇮' },
-  { code: '+351', name: 'Portugal', flag: '🇵🇹' },
-  { code: '+352', name: 'Luxembourg', flag: '🇱🇺' },
-  { code: '+353', name: 'Ireland', flag: '🇮🇪' },
-  { code: '+354', name: 'Iceland', flag: '🇮🇸' },
-  { code: '+355', name: 'Albania', flag: '🇦🇱' },
-  { code: '+356', name: 'Malta', flag: '🇲🇹' },
-  { code: '+357', name: 'Cyprus', flag: '🇨🇾' },
-  { code: '+358', name: 'Finland', flag: '🇫🇮' },
-  { code: '+359', name: 'Bulgaria', flag: '🇧🇬' },
-  { code: '+370', name: 'Lithuania', flag: '🇱🇹' },
-  { code: '+371', name: 'Latvia', flag: '🇱🇻' },
-  { code: '+372', name: 'Estonia', flag: '🇪🇪' },
-  { code: '+373', name: 'Moldova', flag: '🇲🇩' },
-  { code: '+374', name: 'Armenia', flag: '🇦🇲' },
-  { code: '+375', name: 'Belarus', flag: '🇧🇾' },
-  { code: '+376', name: 'Andorra', flag: '🇦🇩' },
-  { code: '+377', name: 'Monaco', flag: '🇲🇨' },
-  { code: '+378', name: 'San Marino', flag: '🇸🇲' },
-  { code: '+380', name: 'Ukraine', flag: '🇺🇦' },
-  { code: '+381', name: 'Serbia', flag: '🇷🇸' },
-  { code: '+382', name: 'Montenegro', flag: '🇲🇪' },
-  { code: '+383', name: 'Kosovo', flag: '🇽🇰' },
-  { code: '+385', name: 'Croatia', flag: '🇭🇷' },
-  { code: '+386', name: 'Slovenia', flag: '🇸🇮' },
-  { code: '+387', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
-  { code: '+389', name: 'North Macedonia', flag: '🇲🇰' },
-  { code: '+420', name: 'Czech Republic', flag: '🇨🇿' },
-  { code: '+421', name: 'Slovakia', flag: '🇸🇰' },
-  { code: '+423', name: 'Liechtenstein', flag: '🇱🇮' },
-  { code: '+500', name: 'Falkland Islands', flag: '🇫🇰' },
-  { code: '+501', name: 'Belize', flag: '🇧🇿' },
-  { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
-  { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
-  { code: '+504', name: 'Honduras', flag: '🇭🇳' },
-  { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
-  
-  { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
-  { code: '+507', name: 'Panama', flag: '🇵🇦' },
-  { code: '+508', name: 'Saint Pierre and Miquelon', flag: '🇵🇲' },
-  { code: '+509', name: 'Haiti', flag: '🇭🇹' },
-  { code: '+590', name: 'Guadeloupe', flag: '🇬🇵' },
-  { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
-  { code: '+592', name: 'Guyana', flag: '🇬🇾' },
-  { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
-  { code: '+594', name: 'French Guiana', flag: '🇬🇫' },
-  { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
-  { code: '+596', name: 'Martinique', flag: '🇲🇶' },
-  { code: '+597', name: 'Suriname', flag: '🇸🇷' },
-  { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
-  { code: '+599', name: 'Curaçao', flag: '🇨🇼' },
-  { code: '+670', name: 'East Timor', flag: '🇹🇱' },
-  { code: '+672', name: 'Antarctica', flag: '🇦🇶' },
-  { code: '+673', name: 'Brunei', flag: '🇧🇳' },
-  { code: '+674', name: 'Nauru', flag: '🇳🇷' },
-  { code: '+675', name: 'Papua New Guinea', flag: '🇵🇬' },
-  { code: '+676', name: 'Tonga', flag: '🇹🇴' },
-  { code: '+677', name: 'Solomon Islands', flag: '🇸🇧' },
-  { code: '+678', name: 'Vanuatu', flag: '🇻🇺' },
-  { code: '+679', name: 'Fiji', flag: '🇫🇯' },
-  { code: '+680', name: 'Palau', flag: '🇵🇼' },
-  { code: '+681', name: 'Wallis and Futuna', flag: '🇼🇫' },
-  { code: '+682', name: 'Cook Islands', flag: '🇨🇰' },
-  { code: '+683', name: 'Niue', flag: '🇳🇺' },
-  { code: '+684', name: 'American Samoa', flag: '🇦🇸' },
-  { code: '+685', name: 'Samoa', flag: '🇼🇸' },
-  { code: '+686', name: 'Kiribati', flag: '🇰🇮' },
-  { code: '+687', name: 'New Caledonia', flag: '🇳🇨' },
-  { code: '+688', name: 'Tuvalu', flag: '🇹🇻' },
-  { code: '+689', name: 'French Polynesia', flag: '🇵🇫' },
-  { code: '+690', name: 'Tokelau', flag: '🇹🇰' },
-  { code: '+691', name: 'Micronesia', flag: '🇫🇲' },
-  { code: '+692', name: 'Marshall Islands', flag: '🇲🇭' },
-  { code: '+850', name: 'North Korea', flag: '🇰🇵' },
-  { code: '+852', name: 'Hong Kong', flag: '🇭🇰' },
-  { code: '+853', name: 'Macau', flag: '🇲🇴' },
-  { code: '+855', name: 'Cambodia', flag: '🇰🇭' },
-  { code: '+856', name: 'Laos', flag: '🇱🇦' },
-  { code: '+880', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: '+886', name: 'Taiwan', flag: '🇹🇼' },
-  { code: '+960', name: 'Maldives', flag: '🇲🇻' },
-  { code: '+961', name: 'Lebanon', flag: '🇱🇧' },
-  { code: '+962', name: 'Jordan', flag: '🇯🇴' },
-  { code: '+963', name: 'Syria', flag: '🇸🇾' },
-  { code: '+964', name: 'Iraq', flag: '🇮🇶' },
-  { code: '+965', name: 'Kuwait', flag: '🇰🇼' },
-  { code: '+966', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { code: '+967', name: 'Yemen', flag: '🇾🇪' },
-  { code: '+968', name: 'Oman', flag: '🇴🇲' },
-  { code: '+970', name: 'Palestine', flag: '🇵🇸' },
-  { code: '+971', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: '+972', name: 'Israel', flag: '🇮🇱' },
-  { code: '+973', name: 'Bahrain', flag: '🇧🇭' },
-  { code: '+974', name: 'Qatar', flag: '🇶🇦' },
-  { code: '+975', name: 'Bhutan', flag: '🇧🇹' },
-  { code: '+976', name: 'Mongolia', flag: '🇲🇳' },
-  { code: '+977', name: 'Nepal', flag: '🇳🇵' },
-  { code: '+992', name: 'Tajikistan', flag: '🇹🇯' },
-  { code: '+993', name: 'Turkmenistan', flag: '🇹🇲' },
-  { code: '+994', name: 'Azerbaijan', flag: '🇦🇿' },
-  { code: '+995', name: 'Georgia', flag: '🇬🇪' },
-  { code: '+996', name: 'Kyrgyzstan', flag: '🇰🇬' },
-  { code: '+998', name: 'Uzbekistan', flag: '🇺🇿' }
-]
 
 export default function TransportBooking({ service }: TransportBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  
-  console.log('TransportBooking - service:', service)
-  console.log('TransportBooking - service.vendor_id:', service.vendor_id)
   
   const { user, profile } = useAuth()
 
@@ -310,64 +98,15 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const messageProviderLabel = user ? 'Message Provider' : 'Chat with provider'
 
-  // Currency conversion rates (simplified)
-  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string): number => {
-    const rates: { [key: string]: { [key: string]: number } } = {
-      'UGX': { 'USD': 0.00027, 'EUR': 0.00025, 'GBP': 0.00021, 'ZAR': 0.005, 'KES': 0.027, 'TZS': 0.62, 'BRL': 0.0013, 'MXN': 0.0054, 'EGP': 0.0084, 'MAD': 0.0025, 'TRY': 0.0089, 'THB': 0.0095, 'KRW': 0.35, 'RUB': 0.025 },
-      'USD': { 'UGX': 3700, 'EUR': 0.92, 'GBP': 0.79, 'ZAR': 18.5, 'KES': 100, 'TZS': 2300, 'BRL': 4.8, 'MXN': 20, 'EGP': 31, 'MAD': 9.2, 'TRY': 33, 'THB': 35, 'KRW': 1300, 'RUB': 92 },
-      'EUR': { 'UGX': 4000, 'USD': 1.09, 'GBP': 0.86, 'ZAR': 20.1, 'KES': 109, 'TZS': 2500, 'BRL': 5.2, 'MXN': 21.8, 'EGP': 33.8, 'MAD': 10, 'TRY': 36, 'THB': 38, 'KRW': 1410, 'RUB': 100 },
-      'GBP': { 'UGX': 4700, 'USD': 1.27, 'EUR': 1.16, 'ZAR': 23.4, 'KES': 127, 'TZS': 2900, 'BRL': 6.1, 'MXN': 25.5, 'EGP': 39.5, 'MAD': 11.7, 'TRY': 42, 'THB': 44.5, 'KRW': 1650, 'RUB': 117 },
-      'ZAR': { 'UGX': 200, 'USD': 0.054, 'EUR': 0.050, 'GBP': 0.043, 'KES': 5.4, 'TZS': 124, 'BRL': 0.26, 'MXN': 1.08, 'EGP': 1.68, 'MAD': 0.50, 'TRY': 1.79, 'THB': 1.89, 'KRW': 70, 'RUB': 5.0 },
-      'KES': { 'UGX': 37, 'USD': 0.01, 'EUR': 0.0092, 'GBP': 0.0079, 'ZAR': 0.185, 'TZS': 23, 'BRL': 0.048, 'MXN': 0.20, 'EGP': 0.31, 'MAD': 0.092, 'TRY': 0.33, 'THB': 0.35, 'KRW': 13, 'RUB': 0.92 },
-      'TZS': { 'UGX': 1.61, 'USD': 0.00043, 'EUR': 0.0004, 'GBP': 0.00034, 'ZAR': 0.008, 'KES': 0.043, 'BRL': 0.0021, 'MXN': 0.0087, 'EGP': 0.0135, 'MAD': 0.004, 'TRY': 0.0143, 'THB': 0.0152, 'KRW': 0.565, 'RUB': 0.04 },
-      'BRL': { 'UGX': 770, 'USD': 0.208, 'EUR': 0.192, 'GBP': 0.164, 'ZAR': 3.85, 'KES': 20.8, 'TZS': 476, 'MXN': 4.17, 'EGP': 6.46, 'MAD': 1.92, 'TRY': 6.88, 'THB': 7.29, 'KRW': 271, 'RUB': 19.2 },
-      'MXN': { 'UGX': 185, 'USD': 0.05, 'EUR': 0.046, 'GBP': 0.039, 'ZAR': 0.926, 'KES': 5.0, 'TZS': 115, 'BRL': 0.24, 'EGP': 1.55, 'MAD': 0.46, 'TRY': 1.65, 'THB': 1.75, 'KRW': 65, 'RUB': 4.6 },
-      'EGP': { 'UGX': 119, 'USD': 0.032, 'EUR': 0.030, 'GBP': 0.025, 'ZAR': 0.595, 'KES': 3.22, 'TZS': 74, 'BRL': 0.155, 'MXN': 0.645, 'MAD': 0.296, 'TRY': 1.06, 'THB': 1.13, 'KRW': 42, 'RUB': 2.96 },
-      'MAD': { 'UGX': 400, 'USD': 0.109, 'EUR': 0.10, 'GBP': 0.085, 'ZAR': 2.0, 'KES': 10.9, 'TZS': 250, 'BRL': 0.52, 'MXN': 2.17, 'EGP': 3.38, 'TRY': 3.59, 'THB': 3.81, 'KRW': 142, 'RUB': 10.0 },
-      'TRY': { 'UGX': 112, 'USD': 0.030, 'EUR': 0.028, 'GBP': 0.024, 'ZAR': 0.559, 'KES': 3.03, 'TZS': 70, 'BRL': 0.145, 'MXN': 0.606, 'EGP': 0.94, 'MAD': 0.279, 'THB': 0.296, 'KRW': 11, 'RUB': 0.78 },
-      'THB': { 'UGX': 105, 'USD': 0.028, 'EUR': 0.026, 'GBP': 0.022, 'ZAR': 0.529, 'KES': 2.86, 'TZS': 66, 'BRL': 0.137, 'MXN': 0.571, 'EGP': 0.885, 'MAD': 0.262, 'TRY': 3.38, 'KRW': 10.5, 'RUB': 0.74 },
-      'KRW': { 'UGX': 2.85, 'USD': 0.00077, 'EUR': 0.00071, 'GBP': 0.00061, 'ZAR': 0.0143, 'KES': 0.077, 'TZS': 1.77, 'BRL': 0.0037, 'MXN': 0.0154, 'EGP': 0.0238, 'MAD': 0.007, 'TRY': 0.090, 'THB': 0.095, 'RUB': 0.0067 },
-      'RUB': { 'UGX': 40, 'USD': 0.011, 'EUR': 0.01, 'GBP': 0.0085, 'ZAR': 0.20, 'KES': 1.09, 'TZS': 25, 'BRL': 0.052, 'MXN': 0.217, 'EGP': 0.337, 'MAD': 0.10, 'TRY': 1.28, 'THB': 1.35, 'KRW': 50 }
-    };
 
-    if (rates[fromCurrency] && rates[fromCurrency][toCurrency]) {
-      return amount * rates[fromCurrency][toCurrency];
-    }
-    return amount;
-  }
 
-  const formatAmount = (amount: number, currency: string): string => {
-    const validCurrencies = ['UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'ZAR', 'CAD', 'AUD', 'NZD', 'CHF', 'SEK', 'NOK', 'DKK', 'JPY', 'CNY', 'INR', 'BRL', 'MXN', 'ARS', 'CLP', 'PEN', 'COP', 'EGP', 'MAD', 'TRY', 'THB', 'KRW', 'RUB'];
-    const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX';
-    
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: safeCurrency,
-      minimumFractionDigits: 0
-    }).format(amount);
-  }
-
-  // Create a formatCurrency function that uses UGX as default
-  const formatCurrencyWithConversion = (amount: number, serviceCurrency: string) => {
-    try {
-      // Always display in UGX as default
-      const displayCurrency = 'UGX';
-      if (displayCurrency === serviceCurrency) {
-        return formatAmount(amount, displayCurrency);
-      }
-      const convertedAmount = convertCurrency(amount, serviceCurrency, displayCurrency);
-      return formatAmount(convertedAmount, displayCurrency);
-    } catch (error) {
-      console.warn('Currency conversion failed, using UGX as default:', error);
-      return formatAmount(amount, 'UGX');
-    }
-  }
 
   const [currentStep, setCurrentStep] = useState(1)
   // Removed unused cartSaved state
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
   const [bookingResult, setBookingResult] = useState<any | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const [stepError, setStepError] = useState<string | null>(null)
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
@@ -377,8 +116,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [selectedImage, setSelectedImage] = useState('')
   const [bookingData, setBookingData] = useState({
     date: '', // No longer pre-filled from URL params
     pickupLocation: service.pickup_locations?.[0] || '',
@@ -386,13 +123,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     passengers: 1,
     returnTrip: false,
     specialRequests: '',
-    tripSetoff: '',
-    tripStopovers: '',
-    tripDestination: '',
-    tripReturnOption: '',
-    // Journey estimation inputs
-    avgSpeedKmph: 60,
-    fuelConsumptionPer100Km: 10,
     contactName: '',
     contactEmail: '',
     contactPhone: '',
@@ -409,84 +139,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Pricing calculation for transport (platform fee / splits)
   const [pricingCalc, setPricingCalc] = useState<PaymentCalculation | null>(null)
 
-  const [journeyStep, setJourneyStep] = useState<'setoff' | 'stopovers' | 'destination'>('setoff')
-
-  // Whether the user has saved the journey summary
-  const [journeySaved, setJourneySaved] = useState(false)
-
-  const buildJourneySummary = () => {
-    const parts: string[] = []
-    if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
-    if (stopovers && stopovers.length > 0) parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
-    else if ((bookingData as any).tripStopovers) parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
-    if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
-    if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
-
-    const coordDistance = computeTotalDistanceKm()
-    if (coordDistance > 0) {
-      const { hours, liters } = computeEstimatesFromDistance(
-        coordDistance,
-        Number((bookingData as any).avgSpeedKmph || 60),
-        Number((bookingData as any).fuelConsumptionPer100Km || 10),
-        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-      )
-      parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
-      parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
-      parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
-      const routeCheck = detectAbnormalRoute()
-      if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
-    } else {
-      const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-      if (estHours > 0) {
-        const { distanceKm, liters } = estimateFuel(
-          estHours,
-          Number((bookingData as any).avgSpeedKmph || 60),
-          Number((bookingData as any).fuelConsumptionPer100Km || 10),
-          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-        )
-        parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
-        if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
-        parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
-      }
-    }
-
-    return parts.join('\n')
-  }
-
-  const saveJourney = () => {
-    const summary = buildJourneySummary()
-    setBookingData(prev => ({ ...prev, journeySummary: summary }))
-    setJourneySaved(true)
-  }
-
-  // Spinner state for return option calculation
-  const [isCalculatingReturn, setIsCalculatingReturn] = useState(false)
-  const calcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleReturnOptionChange = (option: 'return' | 'drop') => {
-    // Set the selection immediately so the radio updates, then show a brief spinner
-    setBookingData(prev => ({ ...prev, tripReturnOption: option }))
-    setIsCalculatingReturn(true)
-    if (calcTimeoutRef.current) {
-      clearTimeout(calcTimeoutRef.current)
-      calcTimeoutRef.current = null
-    }
-    calcTimeoutRef.current = setTimeout(() => {
-      setIsCalculatingReturn(false)
-      calcTimeoutRef.current = null
-    }, 5000)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (calcTimeoutRef.current) {
-        clearTimeout(calcTimeoutRef.current)
-        calcTimeoutRef.current = null
-      }
-    }
-  }, [])
-
-  const hasDestination = Boolean((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())
   // Blocked dates (single-booking categories)
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set())
   const [blockedError, setBlockedError] = useState<string | null>(null)
@@ -495,40 +147,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     let mounted = true
     ;(async () => {
       try {
-        const { data: allBookings } = await supabase.from('bookings').select('service_date, service_id, vendor_id, services (id, service_categories (name))')
-        if (!mounted || !allBookings) return
-        const singleCats = new Set(['transport', 'accommodation', 'hotels', 'hotel'])
-        const set = new Set<string>()
-        for (const b of allBookings) {
-          // Only consider bookings for this vendor
-          if (!b || !b.vendor_id || (service.vendor_id && b.vendor_id !== service.vendor_id)) continue
-          // service_categories may be an object or an array depending on the query; handle both
-          let catName = ''
-          try {
-            const sc = (b.services as any)?.service_categories
-            if (!sc) catName = ''
-            else if (Array.isArray(sc)) catName = sc[0]?.name || ''
-            else catName = sc.name || ''
-          } catch (e) {
-            catName = ''
-          }
-          const cat = catName.toString().toLowerCase()
-          if (!cat || !singleCats.has(cat)) continue
-          if (!b.service_date) continue
-          const start = new Date(b.service_date)
-          if (isNaN(start.getTime())) continue
-          const end = (b as any).end_date ? new Date((b as any).end_date) : start
-          if (isNaN(end.getTime())) {
-            set.add(start.toISOString().split('T')[0])
-            continue
-          }
-          const from = start < end ? start : end
-          const to = end >= start ? end : start
-          for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-            set.add(new Date(d).toISOString().split('T')[0])
-          }
-        }
-        setBlockedDates(set)
+        const blocked = await fetchVendorBlockedDates(supabase, service.vendor_id)
+        if (!mounted) return
+        setBlockedDates(blocked)
       } catch (err) {
         console.error('Error loading blocked dates for transport booking:', err)
       }
@@ -536,101 +157,9 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     return () => { mounted = false }
   }, [service.vendor_id])
 
-  // UI state for card-not-active notice
-  const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
-
   // Country search state
   const [countrySearch, setCountrySearch] = useState('')
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false)
-
-  // City picker modal for selecting destination
-  const [isCityModalOpen, setIsCityModalOpen] = useState(false)
-
-  const handleCitySelect = (city: string, country: string) => {
-    const label = `${city}, ${country}`
-    handleInputChange('tripDestination', label)
-    // Try to geocode the selected city to get coordinates so distance estimates can use them
-    ;(async () => {
-      try {
-        const q = encodeURIComponent(label)
-        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${q}&limit=1`
-        const res = await fetch(url, { headers: { Accept: 'application/json' } })
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data) && data.length > 0) {
-            const d = data[0]
-            setDestinationLocation({ lat: Number(d.lat), lng: Number(d.lon), label: d.display_name || label })
-          }
-        }
-      } catch (e) {
-        // ignore geocode failures — estimates will fall back to time-based calculation
-        console.warn('City geocode failed', e)
-      }
-    })()
-    setIsCityModalOpen(false)
-  }
-
-  // Map modal state used for picking set-off / stopovers / destination
-  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
-  const [mapModalMode, setMapModalMode] = useState<'setoff' | 'stopover' | 'destination' | null>(null)
-  const [mapInitialMarker, setMapInitialMarker] = useState<{ lat: number; lng: number; label?: string } | undefined>(undefined)
-
-  // set-off location stored separately for lat/lng; keep bookingData.tripSetoff string for compatibility
-  const [setoffLocation, setSetoffLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
-
-  // destination location stored separately when selected on map
-  const [destinationLocation, setDestinationLocation] = useState<{ lat: number; lng: number; label: string } | null>(null)
-  
-  // Map search/autocomplete state
-  const [activeSearchTarget, setActiveSearchTarget] = useState<'setoff' | 'destination' | 'stopover' | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Array<any>>([])
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // stopovers as structured array with duration (hours)
-  const [stopovers, setStopovers] = useState<Array<{ id: string; lat: number; lng: number; label: string; durationHours: number }>>([])
-
-  const openMapFor = (mode: 'setoff' | 'stopover' | 'destination') => {
-    setMapModalMode(mode)
-    setIsMapModalOpen(true)
-    // set initial marker depending on existing data
-    if (mode === 'setoff' && setoffLocation) setMapInitialMarker({ lat: setoffLocation.lat, lng: setoffLocation.lng, label: setoffLocation.label })
-    else if (mode === 'destination' && destinationLocation) setMapInitialMarker({ lat: destinationLocation.lat, lng: destinationLocation.lng, label: destinationLocation.label })
-    else setMapInitialMarker(undefined)
-  }
-
-  const handleMapSelect = (lat: number, lng: number, label?: string) => {
-    const place = label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-    if (mapModalMode === 'setoff') {
-      setSetoffLocation({ lat, lng, label: place })
-      handleInputChange('tripSetoff', place)
-    } else if (mapModalMode === 'destination') {
-      // store both a human readable label and structured coords when selecting destination on map
-      // call handleInputChange first (which will clear any previous coords), then set structured coords
-      handleInputChange('tripDestination', place)
-      setDestinationLocation({ lat, lng, label: place })
-    } else if (mapModalMode === 'stopover') {
-      const id = `s_${Date.now().toString(36).slice(2,8)}`
-      const next = [...stopovers, { id, lat, lng, label: place, durationHours: 1 }]
-      setStopovers(next)
-      // store serialized stopovers in bookingData.tripStopovers for persistence
-      handleInputChange('tripStopovers', JSON.stringify(next))
-    }
-    // clear modal mode
-    setMapModalMode(null)
-  }
-
-  const removeStopover = (id: string) => {
-    const next = stopovers.filter(s => s.id !== id)
-    setStopovers(next)
-    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
-  }
-
-  const updateStopoverDuration = (id: string, hours: number) => {
-    const next = stopovers.map(s => s.id === id ? { ...s, durationHours: hours } : s)
-    setStopovers(next)
-    handleInputChange('tripStopovers', next.length ? JSON.stringify(next) : '')
-  }
 
   // Pre-fill dates from navigation state if available
   useEffect(() => {
@@ -652,33 +181,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       }
     }
   }, [location.state])
-
-  useEffect(() => {
-    if (service?.images && service.images.length > 0) {
-      setSelectedImage(service.images[0])
-    }
-  }, [service])
-
-  // Populate booking defaults from service transport metadata (fuel, engine, etc.)
-  useEffect(() => {
-    if (!service) return
-    try {
-      const fuelKmPerL = (service as any).fuel_km_per_liter ?? (service as any).fuelKmPerL ?? null
-      const fuelPer100Km = (service as any).fuel_consumption_per_100km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : null)
-      // If the service provides fuel metadata, prefer it and override defaults so estimates use vendor values
-      if (fuelKmPerL || fuelPer100Km) {
-        setBookingData(prev => ({
-          ...prev,
-          avgSpeedKmph: service?.avgSpeedKmph ?? prev.avgSpeedKmph ?? 60,
-          fuelConsumptionPer100Km: fuelPer100Km ?? (fuelKmPerL ? Number((100 / Number(fuelKmPerL)).toFixed(2)) : prev.fuelConsumptionPer100Km ?? 10),
-          fuel_km_per_liter: fuelKmPerL ?? (prev as any).fuel_km_per_liter,
-          fuelKmPerL: fuelKmPerL ?? (prev as any).fuelKmPerL
-        }))
-      }
-    } catch (e) {
-      console.warn('Failed to populate booking defaults from service:', e)
-    }
-  }, [service])
 
   function getTransportUnitPrice(): number | null {
     const rawWithin = (service as any).price_within_town
@@ -786,39 +288,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     fetchTouristData()
   }, [user, profile])
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Store touch start position
-    const touchDownClientX = e.targetTouches[0].clientX
-    e.currentTarget.setAttribute('data-touch-start', touchDownClientX.toString())
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchDownClientX = parseFloat(e.currentTarget.getAttribute('data-touch-start') || '0')
-    const touchUpClientX = e.changedTouches[0].clientX
-    handleSwipe(touchDownClientX, touchUpClientX)
-  }
-
-  const handleSwipe = (start: number, end: number) => {
-    if (!service?.images || service.images.length <= 1) return
-    
-    const swipeThreshold = 50
-    const diff = start - end
-
-    if (Math.abs(diff) > swipeThreshold) {
-      if (diff > 0) {
-        // Swiped left - show next image
-        const nextIndex = (currentImageIndex + 1) % service.images.length
-        setCurrentImageIndex(nextIndex)
-        setSelectedImage(service.images[nextIndex])
-      } else {
-        // Swiped right - show previous image
-        const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1
-        setCurrentImageIndex(prevIndex)
-        setSelectedImage(service.images[prevIndex])
-      }
-    }
-  }
-
+  const contactReady = Boolean(bookingData.contactName?.trim() && bookingData.contactEmail?.trim())
+  const loggedInReady = Boolean(user && contactReady)
 
   const steps = [
     { id: 1, title: 'Details & Payment', icon: CreditCard },
@@ -826,14 +297,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   ]
 
   const validateCurrentStep = () => {
+    setStepError(null)
     switch (currentStep) {
-      case 1:
-        // Validate trip details
+      case 1: {
         if (!bookingData.startDate || !bookingData.endDate) {
-          alert('Please select both start and end dates.')
+          setStepError('Please select both start and end dates.')
           return false
         }
-        // Prevent booking on blocked dates for single-booking categories (transport/hotels)
         const start = bookingData.startDate
         if (start && blockedDates.has(start)) {
           setBlockedError('Selected start date is unavailable for booking (another transport/accommodation is already booked).')
@@ -841,26 +311,27 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         }
         if (bookingData.driverOption === 'with-driver') {
           if (!bookingData.pickupLocation || !bookingData.dropoffLocation) {
-            alert('Please enter both pickup and drop-off locations when booking with driver.')
+            setStepError('Please enter both pickup and drop-off locations when booking with driver.')
             return false
           }
         }
-        // Only enforce an upper bound when the service specifies a capacity
         const maxCapacity = (service.vehicle_capacity ?? service.max_capacity) ?? null
         if (bookingData.passengers < 1 || (maxCapacity !== null && bookingData.passengers > maxCapacity)) {
-          alert(`Number of passengers must be between 1 and ${maxCapacity !== null ? maxCapacity : 'unlimited'}.`)
+          setStepError(`Number of passengers must be between 1 and ${maxCapacity !== null ? maxCapacity : 'unlimited'}.`)
           return false
         }
-        // Validate contact details
-        if (!bookingData.contactName.trim()) {
-          alert('Please enter your full name.')
-          return false
-        }
-        if (!bookingData.contactEmail.trim() || !bookingData.contactEmail.includes('@')) {
-          alert('Please enter a valid email address.')
-          return false
+        if (!loggedInReady) {
+          if (!bookingData.contactName.trim()) {
+            setStepError('Please enter your full name.')
+            return false
+          }
+          if (!bookingData.contactEmail.trim() || !bookingData.contactEmail.includes('@')) {
+            setStepError('Please enter a valid email address.')
+            return false
+          }
         }
         break
+      }
       default:
         break
     }
@@ -877,17 +348,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       // If completing booking (step 1), handle payment then create booking
       if (currentStep === 1) {
         setBookingError(null)
+        setStepError(null)
 
         if (bookingData.paymentMethod === 'mobile') {
-          // Validate phone number
           const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
           const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
           if (!phone || phone.length < 12) {
-            setBookingError('Please enter a valid mobile money phone number (e.g. 0712345678).')
+            setStepError('Please enter a valid mobile money phone number (e.g. 0712345678).')
             return
           }
           if (!bookingData.mobileProvider) {
-            setBookingError('Please select a mobile money provider (MTN or Airtel).')
+            setStepError('Please select a mobile money provider (MTN or Airtel).')
             return
           }
 
@@ -925,7 +396,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             if (!collectRes.ok) {
               const msg = resultBody?.error || resultBody?.message || resultBody?.raw || JSON.stringify(resultBody)
               console.error('marzpay-collect failed', collectRes.status, msg)
-              setBookingError(`Payment initiation failed: ${msg}`)
+              setStepError(`Payment initiation failed: ${msg}`)
               setPollingMessage('')
               setIsPaymentProcessing(false)
               return
@@ -935,7 +406,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             if (!ref) {
               const msg = resultBody?.error || resultBody?.message || 'No payment reference returned'
               console.error('marzpay-collect missing reference', msg, resultBody)
-              setBookingError(`Payment initiation failed: ${msg}`)
+              setStepError(`Payment initiation failed: ${msg}`)
               setPollingMessage('')
               setIsPaymentProcessing(false)
               return
@@ -980,7 +451,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     setPollingMessage('')
                     setIsPaymentProcessing(false)
                     setIsReceiptFinalizing(false)
-                    setBookingError('Payment was not completed or was declined. Please try again.')
+                    setStepError('Payment was not completed or was declined. Please try again.')
                   }
                 })
               .subscribe()
@@ -995,7 +466,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               setPollingMessage('')
               setIsPaymentProcessing(false)
               setIsReceiptFinalizing(false)
-              setBookingError('Payment was not completed or was declined. Please try again.')
+              setStepError('Payment was not completed or was declined. Please try again.')
               return
             }
 
@@ -1010,7 +481,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 channel.unsubscribe()
                 setPollingMessage('')
                 setIsPaymentProcessing(false)
-                setBookingError('Payment was not completed or was declined. Please try again.')
+                setStepError('Payment was not completed or was declined. Please try again.')
                 return
               }
               await new Promise<void>(r => setTimeout(r, 800))
@@ -1028,7 +499,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 setPollingMessage('')
                 setIsPaymentProcessing(false)
                 setIsReceiptFinalizing(false)
-                setBookingError('Payment was not completed or was declined. Please try again.')
+                setStepError('Payment was not completed or was declined. Please try again.')
               }
             }, 1500)
             setTimeout(() => {
@@ -1040,7 +511,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             setPollingMessage('')
             setIsPaymentProcessing(false)
             setIsReceiptFinalizing(false)
-            setBookingError(err?.message || 'Payment failed. Please try again.')
+            setStepError(err?.message || 'Payment failed. Please try again.')
           }
           return
         }
@@ -1057,36 +528,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
-      // Compute journey estimates (prefer coords) and prepare persisted journey fields
-      const _coordDistance = computeTotalDistanceKm()
-      let _estHours = 0
-      let _estDistance = 0
-      let _estLiters = 0
-      if (_coordDistance > 0) {
-        const res = computeEstimatesFromDistance(
-          _coordDistance,
-          Number((bookingData as any).avgSpeedKmph || 60),
-          Number((bookingData as any).fuelConsumptionPer100Km || 10),
-          Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-        )
-        _estHours = res.hours
-        _estLiters = res.liters
-        _estDistance = _coordDistance
-      } else {
-        const _estH = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-        if (_estH > 0) {
-          const res = estimateFuel(
-            _estH,
-            Number((bookingData as any).avgSpeedKmph || 60),
-            Number((bookingData as any).fuelConsumptionPer100Km || 10),
-            Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-          )
-          _estHours = _estH
-          _estDistance = res.distanceKm
-          _estLiters = res.liters
-        }
-      }
-
       // Save to vendor localStorage for demo panel
       createVendorBooking(service.vendor_id || 'vendor_demo', {
         service_id: service.id,
@@ -1097,46 +538,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         total_amount: transportCustomerPaysTotal,
         currency: service.currency,
         status: 'confirmed' as const,
-        special_requests: (() => {
-          const parts = [] as string[]
-          if ((bookingData as any).tripSetoff) parts.push('Set-off: ' + (bookingData as any).tripSetoff)
-          if (stopovers && stopovers.length > 0) {
-            parts.push('Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; '))
-          } else if ((bookingData as any).tripStopovers) {
-            parts.push('Stop-overs: ' + (bookingData as any).tripStopovers)
-          }
-          if ((bookingData as any).tripDestination) parts.push('Destination: ' + (bookingData as any).tripDestination)
-          if ((bookingData as any).tripReturnOption) parts.push('Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave'))
-          const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-          // Prefer coordinate-based distance estimates when possible
-          const coordDistance = computeTotalDistanceKm()
-          if (coordDistance > 0) {
-            const { hours, liters } = computeEstimatesFromDistance(
-              coordDistance,
-              Number((bookingData as any).avgSpeedKmph || 60),
-              Number((bookingData as any).fuelConsumptionPer100Km || 10),
-              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-            )
-            parts.push(`Estimated hours: ${hours.toFixed(1)} hrs`)
-            parts.push(`Estimated distance: ${coordDistance.toFixed(1)} km`)
-            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
-            // Route sanity check
-            const routeCheck = detectAbnormalRoute()
-            if (routeCheck.abnormal) parts.push('Route anomaly: ' + routeCheck.reasons.join(' ; '))
-          } else if (estHours > 0) {
-            const { distanceKm, liters } = estimateFuel(
-              estHours,
-              Number((bookingData as any).avgSpeedKmph || 60),
-              Number((bookingData as any).fuelConsumptionPer100Km || 10),
-              Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-            )
-            parts.push(`Estimated hours: ${estHours.toFixed(1)} hrs`)
-            if (distanceKm > 0) parts.push(`Estimated distance: ${distanceKm.toFixed(1)} km`)
-            parts.push(`Estimated fuel: ${liters.toFixed(1)} L`)
-          }
-          if (bookingData.specialRequests) parts.push(bookingData.specialRequests)
-          return parts.join('\n')
-        })(),
+        special_requests: bookingData.specialRequests || undefined,
         pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
         dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
         driver_option: bookingData.driverOption,
@@ -1144,18 +546,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         start_time: bookingData.startTime,
         end_time: bookingData.endTime,
         end_date: bookingData.endDate,
-        trip_setoff: (bookingData as any).tripSetoff || null,
-        trip_setoff_lat: setoffLocation?.lat ?? null,
-        trip_setoff_lng: setoffLocation?.lng ?? null,
-        trip_destination: (bookingData as any).tripDestination || null,
-        trip_destination_lat: destinationLocation?.lat ?? null,
-        trip_destination_lng: destinationLocation?.lng ?? null,
-        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
-        trip_return_option: (bookingData as any).tripReturnOption || null,
-        journey_estimated_hours: _estHours || null,
-        journey_estimated_distance: _estDistance || null,
-        journey_estimated_fuel: _estLiters || null,
-        journey_summary: (bookingData as any).journeySummary || buildJourneySummary()
       } as any)
 
       const result = await createDatabaseBooking({
@@ -1171,23 +561,10 @@ export default function TransportBooking({ service }: TransportBookingProps) {
         status: 'confirmed' as const,
         payment_status: paymentStatus as any,
         payment_reference: paymentReference || undefined,
-        special_requests: `${(bookingData as any).tripSetoff ? 'Set-off: ' + (bookingData as any).tripSetoff + '\n' : ''}${stopovers && stopovers.length > 0 ? 'Stop-overs: ' + stopovers.map(s => `${s.label} (${s.durationHours}h)`).join(' ; ') + '\n' : ((bookingData as any).tripStopovers ? 'Stop-overs: ' + (bookingData as any).tripStopovers + '\n' : '')}${(bookingData as any).tripDestination ? 'Destination: ' + (bookingData as any).tripDestination + '\n' : ''}${(bookingData as any).tripReturnOption ? 'Return option: ' + ((bookingData as any).tripReturnOption === 'return' ? 'Return to set-off point' : 'Drop and leave') + '\n\n' : ''}${bookingData.specialRequests || ''}`,
-        trip_setoff: (bookingData as any).tripSetoff || null,
-        trip_setoff_lat: setoffLocation?.lat ?? null,
-        trip_setoff_lng: setoffLocation?.lng ?? null,
-        trip_destination: (bookingData as any).tripDestination || null,
-        trip_destination_lat: destinationLocation?.lat ?? null,
-        trip_destination_lng: destinationLocation?.lng ?? null,
-        trip_destination_extra: (typeof (bookingData as any).tripDestinationExtra === 'number' && !isNaN((bookingData as any).tripDestinationExtra)) ? (bookingData as any).tripDestinationExtra : 0.0,
-        trip_stopovers: stopovers && stopovers.length > 0 ? JSON.stringify(stopovers) : ((bookingData as any).tripStopovers ? (bookingData as any).tripStopovers : null),
-        trip_return_option: (bookingData as any).tripReturnOption || null,
-        journey_estimated_hours: (_estHours as number) || null,
-        journey_estimated_distance: (_estDistance as number) || null,
-        journey_estimated_fuel: (_estLiters as number) || null,
-        journey_summary: (bookingData as any).journeySummary || buildJourneySummary(),
-        guest_name: profile ? undefined : bookingData.contactName,
-        guest_email: profile ? undefined : bookingData.contactEmail,
-        guest_phone: profile ? undefined : `${bookingData.countryCode}${bookingData.contactPhone}`,
+        special_requests: bookingData.specialRequests || undefined,
+        guest_name: user ? undefined : bookingData.contactName,
+        guest_email: user ? undefined : bookingData.contactEmail,
+        guest_phone: user ? undefined : (bookingData.contactPhone ? `${bookingData.countryCode}${bookingData.contactPhone}` : undefined),
         pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
         dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
         driver_option: bookingData.driverOption,
@@ -1245,375 +622,11 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   const handleInputChange = (field: string, value: string | number | boolean | undefined) => {
-    // Clear blocked error on change
     setBlockedError(null)
     setBookingData(prev => ({ ...prev, [field]: value }))
 
-    // If user edited destination or setoff as text or via city picker, clear any previously stored coordinates
-    if (field === 'tripDestination') {
-      setDestinationLocation(null)
-    }
-    if (field === 'tripSetoff') {
-      setSetoffLocation(null)
-    }
-
-    // Validate blocked dates immediately when startDate changes
     if (field === 'startDate' && value && blockedDates.has(value as string)) {
       setBlockedError('Selected start date is unavailable for booking (another transport/accommodation is already booked).')
-    }
-  }
-
-  // Intercept payment method changes so "card" shows a notice and isn't selectable yet
-  const handlePaymentMethodChange = (value: string) => {
-    // Always set the selected method. The provider dropdown is shown only when paymentMethod === 'mobile'.
-    setBookingData(prev => ({ ...prev, paymentMethod: value }))
-    if (value === 'card') {
-      // Show notice that card payments are not active yet
-      setCardNoticeVisible(true)
-      setTimeout(() => setCardNoticeVisible(false), 5000)
-    } else {
-      setCardNoticeVisible(false)
-    }
-  }
-
-  // Calculate number of days for transport services based on actual time difference
-  const calculateDays = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
-    if (!startDate || !endDate) return 1
-    
-    const startDateTime = new Date(`${startDate}T${startTime}`)
-    const endDateTime = new Date(`${endDate}T${endTime}`)
-    
-    const diffTime = Math.abs(endDateTime.getTime() - startDateTime.getTime())
-    const diffHours = diffTime / (1000 * 60 * 60)
-    
-    // Round up to the next day if more than 24 hours
-    return Math.ceil(diffHours / 24) || 1
-  }
-
-  const calculateHours = (startDate: string, startTime: string, endDate: string, endTime: string): number => {
-    if (!startDate || !endDate) return 0
-    const start = new Date(`${startDate}T${startTime}`)
-    const end = new Date(`${endDate}T${endTime}`)
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0
-    const diffMs = end.getTime() - start.getTime()
-    if (diffMs <= 0) return 0
-    return diffMs / (1000 * 60 * 60)
-  }
-
-  const FUEL_ERROR_PCT = 0.15 // 15% buffer for extreme conditions
-
-  const estimateFuel = (hours: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
-    if (!hours || !avgSpeedKmph) return { distanceKm: 0, liters: 0 }
-    const distance = hours * avgSpeedKmph
-    let liters = 0
-    if (fuelKmPerL && fuelKmPerL > 0) {
-      liters = distance / fuelKmPerL
-    } else if (fuelPer100Km && fuelPer100Km > 0) {
-      liters = (distance * fuelPer100Km) / 100
-    }
-    liters = liters * (1 + (errorPct || 0))
-    return { distanceKm: distance, liters }
-  }
-
-  // Haversine distance between two points (km)
-  const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const toRad = (v: number) => (v * Math.PI) / 180
-    const R = 6371 // Earth radius km
-    const dLat = toRad(lat2 - lat1)
-    const dLon = toRad(lon2 - lon1)
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    return R * c
-  }
-
-  // Build waypoints from setoff, stopovers, destination and compute total distance (optionally doubling for return)
-  const computeTotalDistanceKm = (): number => {
-    const pts: Array<{ lat: number; lng: number }> = []
-    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
-    if (stopovers && stopovers.length > 0) {
-      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
-    }
-    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
-
-    if (pts.length < 2) return 0
-
-    let total = 0
-    for (let i = 0; i < pts.length - 1; i++) {
-      total += haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
-    }
-
-    // If the user selected 'return', approximate by doubling the outbound distance
-    // If driver needs to return (either explicit return or drop-and-leave where driver returns), double outbound distance
-    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
-    return total
-  }
-
-  const computeEstimatesFromDistance = (distanceKm: number, avgSpeedKmph: number, fuelPer100Km?: number, fuelKmPerL?: number, errorPct = FUEL_ERROR_PCT) => {
-    if (!distanceKm || !avgSpeedKmph) return { hours: 0, liters: 0 }
-    const hours = distanceKm / avgSpeedKmph
-    let liters = 0
-    if (fuelKmPerL && fuelKmPerL > 0) {
-      liters = distanceKm / fuelKmPerL
-    } else if (fuelPer100Km && fuelPer100Km > 0) {
-      liters = (distanceKm * fuelPer100Km) / 100
-    }
-    liters = liters * (1 + (errorPct || 0))
-    return { hours, liters }
-  }
-
-  // Detect abnormal routing: large legs, huge detours vs direct distance, or very long totals
-  const detectAbnormalRoute = () => {
-    const pts: Array<{ lat: number; lng: number }> = []
-    if (setoffLocation) pts.push({ lat: setoffLocation.lat, lng: setoffLocation.lng })
-    if (stopovers && stopovers.length > 0) {
-      for (const s of stopovers) pts.push({ lat: s.lat, lng: s.lng })
-    }
-    if (destinationLocation) pts.push({ lat: destinationLocation.lat, lng: destinationLocation.lng })
-
-    const reasons: string[] = []
-    if (pts.length < 2) return { abnormal: false, reasons }
-
-    const direct = (setoffLocation && destinationLocation) ? haversineKm(setoffLocation.lat, setoffLocation.lng, destinationLocation.lat, destinationLocation.lng) : 0
-    let total = 0
-    for (let i = 0; i < pts.length - 1; i++) {
-      const leg = haversineKm(pts[i].lat, pts[i].lng, pts[i + 1].lat, pts[i + 1].lng)
-      total += leg
-      if (leg > 2000) reasons.push(`Very long leg: ${leg.toFixed(1)} km between waypoint ${i + 1} and ${i + 2}`)
-    }
-    if ((bookingData as any).tripReturnOption === 'return' || (bookingData as any).tripReturnOption === 'drop') total = total * 2
-
-    if (direct > 0 && total > direct * 3) reasons.push(`Total route ${total.toFixed(1)} km is > 3× direct distance ${direct.toFixed(1)} km`)
-    if (total > 5000) reasons.push(`Total route unusually long: ${total.toFixed(0)} km`)
-
-    return { abnormal: reasons.length > 0, reasons }
-  }
-
-  // Perform a debounced Nominatim search for suggestions
-  const performSearch = async (q: string) => {
-    if (!q || q.trim().length < 2) {
-      setSearchResults([])
-      return
-    }
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(q)}&limit=6`
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setSearchResults(data.map((d: any) => ({ place_id: d.place_id, display_name: d.display_name, lat: d.lat, lon: d.lon })))
-      } else {
-        setSearchResults([])
-      }
-    } catch (e) {
-      console.warn('Map search failed', e)
-      setSearchResults([])
-    }
-  }
-
-  // Trigger debounced search when query changes
-  useEffect(() => {
-    if (!activeSearchTarget) return
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-    searchTimeoutRef.current = setTimeout(() => {
-      performSearch(searchQuery)
-    }, 300)
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
-    }
-  }, [searchQuery, activeSearchTarget])
-
-  const selectSuggestion = (target: 'setoff' | 'destination' | 'stopover', item: any) => {
-    const label = item.display_name || `${item.lat}, ${item.lon}`
-    if (target === 'setoff') {
-      setSetoffLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
-      handleInputChange('tripSetoff', label)
-    } else if (target === 'destination') {
-      setDestinationLocation({ lat: Number(item.lat), lng: Number(item.lon), label })
-      handleInputChange('tripDestination', label)
-    } else {
-      // add a stopover entry
-      const id = `s_${Date.now().toString(36).slice(2,8)}`
-      const next = [...stopovers, { id, lat: Number(item.lat), lng: Number(item.lon), label, durationHours: 1 }]
-      setStopovers(next)
-      handleInputChange('tripStopovers', JSON.stringify(next))
-    }
-    setSearchResults([])
-    setActiveSearchTarget(null)
-    setSearchQuery('')
-  }
-
-  // Geocode a free-text place label using Nominatim (returns {lat,lng,display_name} or null)
-  const geocodeLabel = async (label: string) => {
-    if (!label || !label.trim()) return null
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(label)}&limit=1`
-      const res = await fetch(url, { headers: { Accept: 'application/json' } })
-      if (!res.ok) return null
-      const data = await res.json()
-      if (!Array.isArray(data) || data.length === 0) return null
-      const d = data[0]
-      return { lat: Number(d.lat), lng: Number(d.lon), display_name: d.display_name }
-    } catch (e) {
-      console.warn('geocodeLabel error', e)
-      return null
-    }
-  }
-
-  // Ensure coordinates exist for setoff/destination when user provides text labels
-  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    // debounce to avoid rapid geocoding while typing
-    if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current)
-    geocodeTimeoutRef.current = setTimeout(async () => {
-      try {
-        if (!setoffLocation && (bookingData as any).tripSetoff && (bookingData as any).tripSetoff.toString().trim().length > 3) {
-          const res = await geocodeLabel((bookingData as any).tripSetoff)
-          if (res) setSetoffLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripSetoff })
-        }
-        if (!destinationLocation && (bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim().length > 3) {
-          const res = await geocodeLabel((bookingData as any).tripDestination)
-          if (res) setDestinationLocation({ lat: res.lat, lng: res.lng, label: res.display_name || (bookingData as any).tripDestination })
-        }
-      } catch (e) {
-        // ignore
-      }
-    }, 400)
-    return () => { if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current) }
-  }, [(bookingData as any).tripSetoff, (bookingData as any).tripDestination, stopovers.length])
-
-  // ...existing code...
-
-  // Generate and download a PDF receipt using jsPDF
-  const downloadReceiptPDF = (result: any) => {
-    try {
-      const doc = new jsPDF({ unit: 'pt', format: 'a4' })
-      const pageWidth = doc.internal.pageSize.getWidth()
-      const left = 40
-      let y = 48
-
-      const vendorName = service.vendors?.business_name || 'DIRT TRAILS'
-      const receiptShort = (result.id || '').toString().replace(/-/g, '').slice(0, 8).toUpperCase()
-
-      // Header - Vendor name and receipt title
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(18)
-      doc.text(vendorName, left, y)
-      y += 20
-      doc.setFontSize(13)
-      doc.setFont('helvetica', 'normal')
-      doc.text('Adventure Booking Receipt', left, y)
-      y += 20
-
-      // Receipt meta
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text(`Receipt #: ${receiptShort}`, left, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text(new Date().toLocaleDateString(), pageWidth - left, y, { align: 'right' })
-      y += 18
-
-      // Status
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.text('BOOKING CONFIRMED', left, y)
-      y += 18
-
-      // Customer info
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.text('CUSTOMER INFORMATION', left, y)
-      y += 14
-      doc.setFont('helvetica', 'normal')
-      doc.text(`Name: ${bookingData.contactName || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Email: ${bookingData.contactEmail || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Phone: ${bookingData.countryCode || ''}${bookingData.contactPhone || ''}`, left + 8, y)
-      y += 18
-
-      // Service details
-      doc.setFont('helvetica', 'bold')
-      doc.text('SERVICE DETAILS', left, y)
-      y += 14
-      doc.setFont('helvetica', 'normal')
-      doc.text(`Activity: ${service.title}`, left + 8, y)
-      y += 12
-      doc.text(`Location: ${service.location || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Category: ${service.service_categories?.name || 'N/A'}`, left + 8, y)
-      y += 12
-      const dateText = bookingData.startDate ? new Date(bookingData.startDate).toLocaleDateString() : 'N/A'
-      doc.text(`Date: ${dateText}`, left + 8, y)
-      y += 12
-      const durationHours = Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
-      doc.text(`Duration: ${durationHours} hours`, left + 8, y)
-      y += 12
-      doc.text(`Participants: ${bookingData.passengers || 1}`, left + 8, y)
-      y += 18
-
-      // Provider
-      doc.setFont('helvetica', 'bold')
-      doc.text('SERVICE PROVIDER', left, y)
-      y += 14
-      doc.setFont('helvetica', 'normal')
-      doc.text(`Provider: ${service.vendors?.business_name || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Contact: ${service.vendors?.business_phone || 'N/A'}`, left + 8, y)
-      y += 18
-
-      // Trip details (pickup/dropoff, duration, locations, special requests)
-      doc.setFont('helvetica', 'bold')
-      doc.text('TRIP DETAILS', left, y)
-      y += 14
-      doc.setFont('helvetica', 'normal')
-      const pickupTxt = `${bookingData.startDate || 'N/A'}${bookingData.startTime ? ' at ' + bookingData.startTime : ''}`
-      const dropTxt = `${bookingData.endDate || 'N/A'}${bookingData.endTime ? ' at ' + bookingData.endTime : ''}`
-      doc.text(`Pick-up: ${pickupTxt}`, left + 8, y)
-      y += 12
-      doc.text(`Drop-off: ${dropTxt}`, left + 8, y)
-      y += 12
-      const durDays = bookingData.startDate && bookingData.endDate ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime) : null
-      const durHours = bookingData.startDate && bookingData.endDate ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime))) : null
-      doc.text(`Duration: ${durDays !== null ? `${durDays} days` : 'N/A'} ${durHours !== null ? `(${durHours} hrs)` : ''}`, left + 8, y)
-      y += 12
-      doc.text(`Pick-up Location: ${bookingData.pickupLocation || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Drop-off Location: ${bookingData.dropoffLocation || 'N/A'}`, left + 8, y)
-      y += 12
-      doc.text(`Driver Option: ${bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}`, left + 8, y)
-      y += 12
-      doc.text(`Special Requests: ${bookingData.specialRequests || 'None'}`, left + 8, y)
-      y += 16
-
-      // Payment Summary
-      doc.setFont('helvetica', 'bold')
-      doc.text('PAYMENT SUMMARY', left, y)
-      y += 14
-      doc.setFont('helvetica', 'normal')
-      const unitPrice = basePrice || 0
-      doc.text(`Unit Price: ${unitPrice ? formatCurrencyWithConversion(unitPrice, service.currency) : `UGXNaN`}`, left + 8, y)
-      y += 12
-      doc.text(`Quantity: ${bookingData.passengers || 1}`, left + 8, y)
-      y += 12
-      doc.setFont('helvetica', 'bold')
-      doc.text(
-        `TOTAL: ${formatCurrencyWithConversion(customerTotalFromAggregatePricingCalc(pricingCalc, totalPrice), service.currency)}`,
-        left + 8,
-        y
-      )
-      y += 20
-
-      doc.setFont('helvetica', 'normal')
-      doc.text('Thank you for choosing Dirt Trails!', left, y)
-      y += 18
-
-      doc.setFontSize(10)
-      doc.text(`Booking Reference: ${result.id || ''}`, left, y)
-
-      doc.save(`receipt-${result.id || 'booking'}.pdf`)
-    } catch (e) {
-      console.error('Failed to generate PDF receipt:', e)
-      alert('Failed to download PDF receipt.')
     }
   }
 
@@ -1754,355 +767,28 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               </div>
             )}
 
-            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Journey Design</label>
-              <div className="mb-3">
-                <div className="flex items-center gap-3 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setJourneyStep('setoff')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'setoff' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                    Set-off
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setJourneyStep('stopovers')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'stopovers' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                    Stop-overs
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setJourneyStep('destination')}
-                    className={`px-3 py-1 rounded-md ${journeyStep === 'destination' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
-                    Destination
-                  </button>
-                </div>
-
-                <div className="p-3 border border-gray-200 rounded-lg bg-white">
-                  {journeyStep === 'setoff' && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Set-off</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Enter start point and time (e.g., Kampala, 08:00)"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          value={(bookingData as any).tripSetoff}
-                          onFocus={() => { setActiveSearchTarget('setoff'); setSearchQuery((bookingData as any).tripSetoff || '') }}
-                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
-                          onChange={(e) => { handleInputChange('tripSetoff', e.target.value); setSearchQuery(e.target.value) }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => openMapFor('setoff')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                        >
-                          Map
-                        </button>
-
-                        {activeSearchTarget === 'setoff' && searchResults && searchResults.length > 0 && (
-                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
-                            {searchResults.map(r => (
-                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('setoff', r)}>
-                                {r.display_name}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      {setoffLocation && <p className="text-xs text-gray-500 mt-2">Picked: {setoffLocation.label}</p>}
-                    </div>
-                  )}
-
-                  {journeyStep === 'stopovers' && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Stop-overs</label>
-                      <div className="space-y-2">
-                        {stopovers.length === 0 && <p className="text-xs text-gray-400">No stop-overs added yet.</p>}
-                        <div className="mt-2">
-                          <label className="sr-only">Add stop-over by typing</label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              placeholder="Type to search stop-over..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                              onFocus={() => { setActiveSearchTarget('stopover'); setSearchQuery('') }}
-                              onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
-                              value={activeSearchTarget === 'stopover' ? searchQuery : ''}
-                              onChange={(e) => { setSearchQuery(e.target.value) }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => openMapFor('stopover')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                            >
-                              Map
-                            </button>
-
-                            {activeSearchTarget === 'stopover' && searchResults && searchResults.length > 0 && (
-                              <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
-                                {searchResults.map(r => (
-                                  <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('stopover', r)}>
-                                    {r.display_name}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        </div>
-                        {stopovers.map(s => (
-                          <div key={s.id} className="flex items-center gap-2">
-                            <div className="flex-1 text-sm">
-                              <div className="font-medium">{s.label}</div>
-                              <div className="text-xs text-gray-500">{s.lat.toFixed(5)}, {s.lng.toFixed(5)}</div>
-                            </div>
-                            <div className="w-28">
-                              <label className="text-xs text-gray-500">Duration (hrs)</label>
-                              <input type="number" min={0} step={0.5} value={s.durationHours} onChange={(e) => updateStopoverDuration(s.id, Number(e.target.value || 0))} className="w-full px-2 py-1 border border-gray-200 rounded text-sm" />
-                            </div>
-                            <button type="button" onClick={() => removeStopover(s.id)} className="text-red-600 text-sm">Remove</button>
-                          </div>
-                        ))}
-
-                        
-                      </div>
-                    </div>
-                  )}
-
-                  {journeyStep === 'destination' && !journeySaved && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Destination</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Final drop-off destination"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          value={(bookingData as any).tripDestination}
-                          onFocus={() => { setActiveSearchTarget('destination'); setSearchQuery((bookingData as any).tripDestination || '') }}
-                          onBlur={() => { setTimeout(() => setActiveSearchTarget(null), 150) }}
-                          onChange={(e) => { handleInputChange('tripDestination', e.target.value); setSearchQuery(e.target.value) }}
-                        />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openMapFor('destination')}
-                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                          >
-                            Map
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsCityModalOpen(true)}
-                            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                          >
-                            List
-                          </button>
-                        </div>
-
-                        {activeSearchTarget === 'destination' && searchResults && searchResults.length > 0 && (
-                          <ul className="absolute left-0 right-0 mt-12 z-50 bg-white border border-gray-200 rounded shadow max-h-56 overflow-auto text-sm">
-                            {searchResults.map(r => (
-                              <li key={r.place_id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={() => selectSuggestion('destination', r)}>
-                                {r.display_name}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <div className="mt-3">
-                        <label className="block text-xs font-medium text-gray-700 mb-2">Return option</label>
-                        <div className="flex gap-3 items-center">
-                          <label className="inline-flex items-center text-sm">
-                            <input
-                              type="radio"
-                              name="tripReturnOption"
-                              value="return"
-                              checked={(bookingData as any).tripReturnOption === 'return'}
-                              onChange={() => handleReturnOptionChange('return')}
-                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
-                              className="mr-2"
-                            />
-                            Return back to set-off point
-                          </label>
-                          <label className="inline-flex items-center text-sm">
-                            <input
-                              type="radio"
-                              name="tripReturnOption"
-                              value="drop"
-                              checked={(bookingData as any).tripReturnOption === 'drop'}
-                              onChange={() => handleReturnOptionChange('drop')}
-                              disabled={isCalculatingReturn || !((bookingData as any).tripDestination && (bookingData as any).tripDestination.toString().trim())}
-                              className="mr-2"
-                            />
-                            Drop and leave
-                          </label>
-
-                        {/* Require a destination before allowing return-option selection */}
-                        {!(bookingData as any).tripDestination || !(bookingData as any).tripDestination.toString().trim() ? (
-                          <p className="text-xs text-gray-500 mt-2">Enter or select a destination first to enable return options.</p>
-                        ) : null}
-                        </div>
-
-                        {/** Show estimation inputs and results only after user explicitly selects a return option and a destination exists */}
-                        {hasDestination ? (
-                          (bookingData as any).tripReturnOption ? (
-                            isCalculatingReturn ? (
-                              <div className="mt-3 flex items-center gap-3 text-sm text-gray-700">
-                                <svg className="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                                </svg>
-                                <span>Calculating journey estimates…</span>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Average speed (km/h)</label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                      value={(bookingData as any).avgSpeedKmph}
-                                      onChange={(e) => handleInputChange('avgSpeedKmph', Number(e.target.value || 0))}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Fuel efficiency (km / L)</label>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      step={0.1}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                      value={(bookingData as any).fuel_km_per_liter ?? (bookingData as any).fuelKmPerL ?? ((bookingData as any).fuelConsumptionPer100Km ? Number((100 / (bookingData as any).fuelConsumptionPer100Km).toFixed(2)) : '')}
-                                      onChange={(e) => {
-                                        const kmPerL = e.target.value ? Number(e.target.value) : undefined
-                                        const per100km = kmPerL ? Number((100 / kmPerL).toFixed(2)) : undefined
-                                        handleInputChange('fuel_km_per_liter', kmPerL)
-                                        // keep legacy field in sync for any code paths relying on it
-                                        handleInputChange('fuelConsumptionPer100Km', per100km ?? 0)
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="mt-3 text-sm text-gray-700">
-                                  {(() => {
-                                    // Prefer coordinate-based estimates when coordinates are available
-                                    const coordDistance = computeTotalDistanceKm()
-                                    if (coordDistance > 0) {
-                                      const { hours, liters } = computeEstimatesFromDistance(
-                                        coordDistance,
-                                        Number((bookingData as any).avgSpeedKmph || 60),
-                                        Number((bookingData as any).fuelConsumptionPer100Km || 10),
-                                        Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-                                      )
-                                      return (
-                                          <div className="space-y-1">
-                                            <div>Estimated hours: <span className="font-medium">{hours > 0 ? `${hours.toFixed(1)} hrs` : '—'}</span></div>
-                                            <div>Estimated distance: <span className="font-medium">{coordDistance > 0 ? `${coordDistance.toFixed(1)} km` : '—'}</span></div>
-                                            <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
-                                            {(() => {
-                                              const rc = detectAbnormalRoute()
-                                              if (rc.abnormal) return (<div className="mt-2 text-xs text-red-700">Route warning: {rc.reasons.join(' ; ')}</div>)
-                                              return null
-                                            })()}
-                                          </div>
-                                        )
-                                    }
-                                    const estHours = calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-                                    const { distanceKm, liters } = estimateFuel(
-                                      estHours,
-                                      Number((bookingData as any).avgSpeedKmph || 60),
-                                      Number((bookingData as any).fuelConsumptionPer100Km || 10),
-                                      Number((bookingData as any).fuel_km_per_liter || (bookingData as any).fuelKmPerL || 0)
-                                    )
-                                    return (
-                                      <div className="space-y-1">
-                                        <div>Estimated hours: <span className="font-medium">{estHours > 0 ? `${estHours.toFixed(1)} hrs` : '—'}</span></div>
-                                        <div>Estimated distance: <span className="font-medium">{distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '—'}</span></div>
-                                        <div>Estimated fuel: <span className="font-medium">{liters > 0 ? `${liters.toFixed(1)} L` : '—'}</span></div>
-                                      </div>
-                                    )
-                                  })()}
-                                </div>
-                              </>
-                            )
-                          ) : (
-                            <div className="mt-3 text-sm text-gray-500">Select a return option to run journey estimates.</div>
-                          )
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-
-                  
-
-                  {journeySaved ? (
-                    <div className="mt-4 p-4 border rounded-md bg-gray-50">
-                      <div className="text-sm whitespace-pre-line text-gray-800">{(bookingData as any).journeySummary || buildJourneySummary()}</div>
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={() => { setJourneySaved(false); setJourneyStep('destination') }}
-                          className="px-3 py-2 bg-yellow-500 text-white rounded-md"
-                        >
-                          Edit trip
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between mt-3">
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (journeyStep === 'setoff') setJourneyStep('setoff')
-                            else if (journeyStep === 'stopovers') setJourneyStep('setoff')
-                            else setJourneyStep('stopovers')
-                          }}
-                          className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md mr-2"
-                        >
-                          Back
-                        </button>
-                      </div>
-                      <div>
-                        {/** Disable Next on Destination until a return option is selected */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (journeyStep === 'setoff') setJourneyStep('stopovers')
-                            else if (journeyStep === 'stopovers') setJourneyStep('destination')
-                            else saveJourney()
-                          }}
-                          disabled={journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)}
-                          className={`px-3 py-2 rounded-md ${(journeyStep === 'destination' && ((!(bookingData as any).tripReturnOption) || !hasDestination)) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white'}`}
-                        >
-                          {journeyStep === 'destination' ? 'Save my trip' : 'Next'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
-                  rows={2}
-                  placeholder="Any special requirements..."
-                  value={bookingData.specialRequests}
-                  onChange={(e) => handleInputChange('specialRequests', e.target.value)}
-                />
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
+                rows={2}
+                placeholder="Any special requirements, route notes, or stop-over requests..."
+                value={bookingData.specialRequests}
+                onChange={(e) => handleInputChange('specialRequests', e.target.value)}
+              />
             </div>
 
             {/* Contact Information Section */}
             <div className="border-t pt-4 sm:pt-6">
               <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3 sm:mb-4">Your Contact Information</h3>
+              {loggedInReady && (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+                  Signed in as {bookingData.contactEmail}. Your saved details will be used.
+                </p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                {!loggedInReady && (
+                  <>
                 <input
                   type="text"
                   placeholder="Full name *"
@@ -2119,6 +805,8 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                   required
                 />
+                  </>
+                )}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-gray-600 mb-1">Phone (Optional)</label>
                   <div className="flex gap-2">
@@ -2129,7 +817,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                         onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                       >
                         <span className="truncate text-xs">
-                          {countries.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
+                          {COUNTRIES.find(c => c.code === bookingData.countryCode)?.flag || '🌍'} {bookingData.countryCode}
                         </span>
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -2199,34 +887,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
                   {pricingCalc ? (
                     <>
-                      <div className="flex justify-between text-gray-600">
-                        <span>Platform fee</span>
-                        <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.platform_fee, service.currency)}</span>
-                      </div>
-
-                      {pricingCalc.fee_payer === 'shared' ? (
-                        <>
-                          <div className="flex justify-between text-gray-600">
-                            <span>Tourist pays ({Math.round((pricingCalc.tourist_fee / (pricingCalc.platform_fee || 1)) * 100) || 0}%)</span>
-                            <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.tourist_fee, service.currency)}</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>Vendor pays ({Math.round((pricingCalc.vendor_fee / (pricingCalc.platform_fee || 1)) * 100) || 0}%)</span>
-                            <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.vendor_fee, service.currency)}</span>
-                          </div>
-                        </>
-                      ) : pricingCalc.fee_payer === 'tourist' ? (
+                      {Number(pricingCalc.tourist_fee || 0) > 0 && (
                         <div className="flex justify-between text-gray-600">
-                          <span>Tourist pays</span>
+                          <span>Includes booking fee</span>
                           <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.tourist_fee, service.currency)}</span>
                         </div>
-                      ) : (
-                        <div className="flex justify-between text-gray-600">
-                          <span>Vendor pays (deducted)</span>
-                          <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.vendor_fee, service.currency)}</span>
-                        </div>
                       )}
-
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                         <span>Total</span>
                         <span>{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
@@ -2244,37 +910,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 </div>
               </div>
 
-              {/* Payment Method */}
+              {/* Payment Method — Mobile Money only */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method *</label>
-                <div className="space-y-3">
-                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={bookingData.paymentMethod === 'card'}
-                      onChange={() => handlePaymentMethodChange('card')}
-                      className="w-4 h-4"
-                      disabled
-                    />
-                    <span className="ml-2 text-sm opacity-50">Card (Coming soon)</span>
-                  </label>
-                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="mobile"
-                      checked={bookingData.paymentMethod === 'mobile'}
-                      onChange={() => handlePaymentMethodChange('mobile')}
-                      className="w-4 h-4"
-                    />
-                    <span className="ml-2 text-sm">Mobile Money</span>
-                  </label>
+                <div className="p-3 border border-blue-200 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-900">Mobile Money</span>
+                  <p className="text-xs text-gray-600 mt-1">MTN Mobile Money or Airtel Money</p>
                 </div>
-                {cardNoticeVisible && (
-                  <p className="text-xs text-red-600 mt-2">Card payments not available yet</p>
-                )}
               </div>
 
               {/* Mobile Money Phone + Provider */}
@@ -2285,7 +927,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     <input
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.trimStart())}
+                      onChange={(e) => {
+                        const val = e.target.value.trimStart()
+                        setPhoneNumber(val)
+                        const digits = val.replace(/\D/g, '')
+                        const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
+                        if (local.length >= 2) {
+                          const p = local.slice(0, 2)
+                          if (['76', '77', '78', '39', '46', '31'].includes(p)) handleInputChange('mobileProvider', 'MTN')
+                          else if (['70', '74', '75', '20', '50'].includes(p)) handleInputChange('mobileProvider', 'Airtel')
+                        }
+                      }}
                       placeholder="0712345678 or +256712345678"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
@@ -2334,205 +986,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           </div>
         )
 
-      case 2:
-        return (
-          <div className="space-y-4 sm:space-y-6 -mt-20 sm:-mt-24">
-            {/* Success Header */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Booking Confirmed!</h3>
-              <p className="text-gray-600 text-sm sm:text-base">
-                Your transportation booking has been successfully confirmed. You will receive a confirmation email shortly.
-              </p>
-
-              {/* Booking reference & quick actions */}
-              {bookingResult?.id && (
-                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <div className="bg-gray-100 px-3 py-2 rounded-lg text-sm flex items-center gap-3">
-                    <span className="font-semibold">Reference:</span>
-                    <span className="break-all">{bookingResult.id}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={async () => { try { await navigator.clipboard.writeText(bookingResult.id); alert('Booking reference copied'); } catch { /* ignore */ } }}
-                      className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
-                    >
-                      Copy reference
-                    </button>
-                    <button
-                      onClick={() => downloadReceiptPDF(bookingResult || {})}
-                      className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm"
-                    >
-                      Download receipt (PDF)
-                    </button>
-                    <button
-                      onClick={handleMessageProvider}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm"
-                    >
-                      {messageProviderLabel}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Service Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Details</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Service:</span>
-                  <span className="font-medium text-right">{service.title}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Location:</span>
-                  <span className="font-medium text-right">{service.location}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Category:</span>
-                  <span className="font-medium text-right">{service.service_categories.name}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Service Provider */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Service Provider</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Provider:</span>
-                  <span className="font-medium text-right">{service.vendors?.business_name || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-right break-all">{service.vendors?.business_email || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium text-right">{service.vendors?.business_phone || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Trip Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Trip Details</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Pick-up Date & Time:</span>
-                  <span className="font-medium text-right">{bookingData.startDate || 'Not set'} {bookingData.startTime ? `at ${bookingData.startTime}` : ''}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Drop-off Date & Time:</span>
-                  <span className="font-medium text-right">{bookingData.endDate || 'Not set'} {bookingData.endTime ? `at ${bookingData.endTime}` : ''}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Duration:</span>
-                  <span className="font-medium text-right">
-                    {bookingData.startDate && bookingData.endDate 
-                      ? `${calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)} days`
-                      : 'N/A'
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Pick-up Location:</span>
-                  <span className="font-medium text-right max-w-xs">{bookingData.pickupLocation || 'N/A'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Drop-off Location:</span>
-                  <span className="font-medium text-right max-w-xs">{bookingData.dropoffLocation || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Passenger & Payment Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Booking Information</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Passengers:</span>
-                  <span className="font-medium">{bookingData.passengers}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Driver Option:</span>
-                  <span className="font-medium">{bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Special Requests:</span>
-                  <span className="font-medium text-right max-w-xs">{bookingData.specialRequests || 'None'}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Payment Method:</span>
-                  <span className="font-medium capitalize">{bookingData.paymentMethod === 'mobile' ? 'Mobile Money' : bookingData.paymentMethod}</span>
-                </div>
-                {bookingData.paymentMethod === 'mobile' && (
-                  <div className="flex justify-between items-start">
-                    <span className="text-gray-600">Provider:</span>
-                    <span className="font-medium">{bookingData.mobileProvider}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Contact Details */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Your Contact Information</h4>
-              <div className="space-y-3 text-xs sm:text-sm">
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Name:</span>
-                  <span className="font-medium text-right">{bookingData.contactName}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium text-right break-all">{bookingData.contactEmail}</span>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">Phone:</span>
-                  <span className="font-medium text-right">{bookingData.countryCode} {bookingData.contactPhone}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Price Summary */}
-            <div className="pt-4 sm:pt-6 border-t border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 sm:gap-3 justify-center pt-6 sm:pt-8">
-              <button
-                onClick={handleMessageProvider}
-                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                {messageProviderLabel}
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="flex-1 sm:flex-none bg-gray-600 hover:bg-gray-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
-              >
-                Home
-              </button>
-            </div>
-
-            {/* Similar Services Carousel */}
-            {service.category_id && (
-              <div className="pt-6">
-                <h3 className="text-sm font-semibold mb-3">Other services you may like</h3>
-                <SimilarServicesCarousel
-                  categoryId={service.category_id}
-                  excludeServiceId={service.id}
-                  limit={8}
-                />
-              </div>
-            )}
-          </div>
-        )
 
       default:
         return null
@@ -2541,256 +994,18 @@ export default function TransportBooking({ service }: TransportBookingProps) {
 
   // Show booking confirmation screen only if booking is confirmed in Supabase
   if (bookingConfirmed) {
-    // NOTE: Keep this confirmation receipt manually in sync with
-    // supabase/functions/send-booking-emails/index.ts (tourist receipt design).
-    // ── Design tokens — identical to send-booking-emails PDF ──
-    const T = {
-      green:   '#1B3A2D',
-      amber:   '#C9873A',
-      ivory:   '#FAF6EE',
-      dark:    '#1C1917',
-      sage:    '#8FAF9B',
-      cream:   '#F2EDE4',
-      paid:    '#2D6A4F',
-      pending: '#C9873A',
-    }
-    const SH = ({ children }: { children: React.ReactNode }) => (
-      <div style={{ marginBottom: '12px', marginTop: '4px' }}>
-        <div style={{ height: '1px', background: '#EEE9DF', marginBottom: '8px' }} />
-        <p style={{ margin: 0, fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif', fontWeight: 600 }}>{children}</p>
-      </div>
-    )
-    const RR = ({ label, value }: { label: string; value: React.ReactNode }) => (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '7px' }}>
-        <span style={{ color: T.sage, fontSize: '12px', flexShrink: 0, width: '38%', fontFamily: 'Arial, sans-serif' }}>{label}</span>
-        <span style={{ color: T.dark, fontSize: '13px', fontWeight: 600, textAlign: 'right' as const, wordBreak: 'break-word' as const, maxWidth: '58%', fontFamily: 'Arial, sans-serif' }}>{value}</span>
-      </div>
-    )
-
-    const payColor  = (bookingResult?.payment_status || 'pending') === 'paid' ? T.paid : T.pending
-    const fullPhone = (bookingData.countryCode || '') + (bookingData.contactPhone || '')
-    const durDays  = bookingData.startDate && bookingData.endDate
-      ? calculateDays(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)
-      : null
-    const durHrs   = durDays !== null
-      ? Math.max(0, Math.floor(calculateHours(bookingData.startDate, bookingData.startTime, bookingData.endDate, bookingData.endTime)))
-      : null
-    const durationStr = durDays !== null ? `${durDays} day${durDays !== 1 ? 's' : ''} (${durHrs} hrs)` : 'N/A'
-
     return (
-      <>
-      <div style={{ maxWidth: '560px', margin: '0 auto', fontFamily: 'Arial, Helvetica, sans-serif', padding: '24px 16px' }}>
-
-        {/* ── TOP SCALLOPED EDGE ── */}
-        <div style={{
-          height: '14px',
-          background: T.ivory,
-          backgroundImage: `radial-gradient(circle at 10px 14px, #E8E0D0 10px, transparent 11px)`,
-          backgroundSize: '20px 14px',
-          backgroundRepeat: 'repeat-x',
-          borderLeft: '1px solid #D4C9B8',
-          borderRight: '1px solid #D4C9B8',
-        }} />
-
-        {/* ── RECEIPT BODY ── */}
-        <div style={{
-          background: T.ivory,
-          border: '1px solid #D4C9B8',
-          borderTop: 'none',
-          borderBottom: 'none',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 48px rgba(27,58,45,.14)',
-        }}>
-
-          {/* Faint CONFIRMED watermark */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-            <span style={{ fontSize: '64px', fontWeight: 900, letterSpacing: '4px', color: T.green, opacity: 0.03, transform: 'rotate(-22deg)', whiteSpace: 'nowrap', userSelect: 'none' as const, fontFamily: 'Georgia, serif', textTransform: 'uppercase' as const }}>
-              CONFIRMED
-            </span>
-          </div>
-
-          <div style={{ position: 'relative', zIndex: 1 }}>
-
-            {/* ── HEADER — matches PDF: amber rules, DIRT TRAILS centred ── */}
-            <div style={{ background: T.green, padding: '32px 44px', textAlign: 'center' }}>
-              <div style={{ display: 'inline-block', borderTop: `1px solid rgba(201,135,58,0.55)`, borderBottom: `1px solid rgba(201,135,58,0.55)`, padding: '7px 28px' }}>
-                <h1 style={{ margin: '0 0 4px', color: T.ivory, fontSize: '26px', letterSpacing: '8px', fontFamily: 'Georgia, serif', textTransform: 'uppercase', fontWeight: 700, lineHeight: 1.1 }}>
-                  DIRT TRAILS
-                </h1>
-                <p style={{ margin: 0, color: T.amber, fontSize: '9px', letterSpacing: '5px', textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
-                  ADVENTURE BOOKING RECEIPT
-                </p>
-              </div>
-            </div>
-
-            {/* ── STATUS STRIPE ── */}
-            <div style={{ background: T.amber, padding: '13px 44px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}>
-                <CheckCircle size={11} color={T.green} />
-                <span style={{ color: T.green, fontSize: '11px', letterSpacing: '4px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Arial, sans-serif' }}>
-                  BOOKING CONFIRMED
-                </span>
-              </div>
-            </div>
-
-            {/* ── CONTENT ── */}
-            <div style={{ padding: '32px 44px' }}>
-
-              {/* Reference box: cream bg + amber left border — matches PDF */}
-              <div style={{ background: T.cream, borderLeft: `3px solid ${T.amber}`, padding: '16px 20px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>BOOKING REFERENCE</p>
-                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '13px', fontWeight: 700, letterSpacing: '2px', color: T.green, wordBreak: 'break-all' as const }}>
-                    {(bookingResult?.id || '').toUpperCase() || 'N/A'}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: T.sage, fontFamily: 'Arial, sans-serif' }}>DATE BOOKED</p>
-                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: T.dark, fontFamily: 'Arial, sans-serif' }}>
-                    {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
-              </div>
-
-              {/* ── GUEST ── */}
-              <SH>Guest</SH>
-              <RR label="Name"  value={bookingData.contactName  || 'N/A'} />
-              <RR label="Email" value={bookingData.contactEmail || '—'} />
-              <RR label="Phone" value={fullPhone || '—'} />
-
-              {/* ── SERVICE DETAILS ── */}
-              <SH>Service Details</SH>
-              <RR label="Service"  value={service.title} />
-              <RR label="Provider" value={service.vendors?.business_name || 'N/A'} />
-              <RR label="Location" value={service.location || 'N/A'} />
-              <RR label="Experience Date" value={bookingData.startDate || 'N/A'} />
-              <RR label="Guests"   value={`${bookingData.passengers || 1} guest${(bookingData.passengers || 1) !== 1 ? 's' : ''}`} />
-
-              {/* ── SERVICE PROVIDER ── */}
-              <SH>Service Provider</SH>
-              <RR label="Business" value={service.vendors?.business_name  || 'N/A'} />
-              <RR label="Email"    value={service.vendors?.business_email || 'N/A'} />
-              {service.vendors?.business_phone && <RR label="Phone" value={service.vendors.business_phone} />}
-
-              {/* ── TRIP DETAILS ── */}
-              <SH>Trip Details</SH>
-              <RR label="Pick-up"  value={`${bookingData.startDate || 'N/A'}${bookingData.startTime ? ` at ${bookingData.startTime}` : ''}`} />
-              <RR label="Drop-off" value={`${bookingData.endDate   || 'N/A'}${bookingData.endTime   ? ` at ${bookingData.endTime}`   : ''}`} />
-              <RR label="Duration" value={durationStr} />
-              {bookingData.pickupLocation  && <RR label="Pick-up Loc"  value={bookingData.pickupLocation} />}
-              {bookingData.dropoffLocation && <RR label="Drop-off Loc" value={bookingData.dropoffLocation} />}
-              <RR label="Driver" value={bookingData.driverOption === 'with-driver' ? 'With Driver' : 'Without Driver'} />
-              {bookingData.paymentMethod === 'mobile' && bookingData.mobileProvider && (
-                <RR label="Payment Provider" value={bookingData.mobileProvider} />
-              )}
-
-              {/* ── PAYMENT SUMMARY — cream box, large amount + status — matches PDF ── */}
-              <SH>Payment Summary</SH>
-              <RR label="Subtotal (trip)" value={formatCurrencyWithConversion(totalPrice, service.currency)} />
-              {pricingCalc && typeof pricingCalc.platform_fee === 'number' && pricingCalc.platform_fee > 0 && (
-                <RR
-                  label="Platform fee (tier)"
-                  value={formatCurrencyWithConversion(pricingCalc.platform_fee, service.currency)}
-                />
-              )}
-              <RR label="Quantity"       value={String(bookingData.passengers || 1)} />
-
-              <div style={{ background: '#F0F7F4', borderLeft: '3px solid #2D6A4F', padding: '16px 20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>TOTAL AMOUNT</p>
-                  <p style={{ margin: 0, fontFamily: '"Courier New", Courier, monospace', fontSize: '20px', fontWeight: 700, color: T.green }}>
-                    {formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '9px', letterSpacing: '3px', textTransform: 'uppercase' as const, color: '#6B6560', fontFamily: 'Arial, sans-serif' }}>STATUS</p>
-                  <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: payColor, fontFamily: 'Arial, sans-serif' }}>
-                    {(bookingResult?.payment_status || 'pending').toUpperCase()}
-                  </p>
-                </div>
-              </div>
-
-              {/* SPECIAL REQUESTS */}
-              {bookingData.specialRequests && (
-                <div style={{ marginTop: '12px' }}>
-                  <SH>Special Requests</SH>
-                  <p style={{ margin: 0, color: T.dark, fontSize: '13px', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.6 }}>
-                    "{bookingData.specialRequests}"
-                  </p>
-                </div>
-              )}
-
-            </div>
-
-            {/* ── GREEN FOOTER BAND — matches PDF footer exactly ── */}
-            <div style={{ background: T.green, padding: '28px 44px', textAlign: 'center' }}>
-              <div style={{ borderTop: `1px solid rgba(201,135,58,0.4)`, paddingTop: '10px', paddingBottom: '10px' }}>
-                <div style={{ borderBottom: `1px solid rgba(201,135,58,0.4)`, paddingBottom: '10px' }}>
-                  <p style={{ margin: '0 0 8px', color: T.amber, fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif' }}>
-                    DIRTTRAILS ADVENTURES
-                  </p>
-                  <p style={{ margin: 0, color: '#5D8070', fontSize: '12px', fontFamily: 'Arial, sans-serif', lineHeight: 1.7 }}>
-                    Questions? Contact your service provider or visit our platform.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* ── BOTTOM SCALLOPED EDGE ── */}
-        <div style={{
-          height: '14px',
-          background: T.ivory,
-          backgroundImage: `radial-gradient(circle at 10px 0px, #E8E0D0 10px, transparent 11px)`,
-          backgroundSize: '20px 14px',
-          backgroundRepeat: 'repeat-x',
-          borderLeft: '1px solid #D4C9B8',
-          borderRight: '1px solid #D4C9B8',
-          borderBottom: '1px solid #D4C9B8',
-        }} />
-
-        {/* ── ACTION BUTTONS ── */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-          <button
-            onClick={handleMessageProvider}
-            style={{ flex: 1, background: T.green, color: T.ivory, border: 'none', padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
-          >
-            {messageProviderLabel}
-          </button>
-          <button
-            onClick={() => downloadReceiptPDF(bookingResult || {})}
-            style={{ background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            title="Download receipt PDF"
-          >
-            <CreditCard size={14} color={T.green} />
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            style={{ flex: 1, background: 'transparent', color: T.green, border: `1.5px solid ${T.green}`, padding: '12px 8px', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase' as const, fontFamily: 'Arial, sans-serif', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Home
-          </button>
-        </div>
-
-        {/* ── SIMILAR SERVICES ── */}
-        {service.category_id && (
-          <div style={{ marginTop: '28px' }}>
-            <h3 style={{ textAlign: 'center', fontSize: '9px', letterSpacing: '4px', textTransform: 'uppercase' as const, color: T.green, fontFamily: 'Arial, sans-serif', marginBottom: '14px', fontWeight: 700 }}>
-              You may also like
-            </h3>
-            <SimilarServicesCarousel
-              categoryId={service.category_id}
-              excludeServiceId={service.id}
-              limit={8}
-            />
-          </div>
-        )}
-
-      </div>
-      </>
+      <TransportBookingReceipt
+        service={service}
+        bookingData={bookingData}
+        bookingResult={bookingResult}
+        totalPrice={totalPrice}
+        pricingCalc={pricingCalc}
+        transportCustomerPaysTotal={transportCustomerPaysTotal}
+        onMessageProvider={handleMessageProvider}
+        messageProviderLabel={messageProviderLabel}
+        onNavigateHome={() => navigate('/')}
+      />
     )
   }
 
@@ -2807,7 +1022,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             <p className="text-gray-600">{bookingError}</p>
           </div>
           <button
-            onClick={() => setCurrentStep(1)}
+            onClick={() => { setBookingError(null); setCurrentStep(1) }}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
           >
             Try Again
@@ -2818,7 +1033,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   }
 
   // Filter countries based on search
-  const filteredCountries = countries.filter(country =>
+  const filteredCountries = COUNTRIES.filter(country =>
     country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
     country.code.includes(countrySearch)
   )
@@ -2839,106 +1054,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
       </div>
 
       {/* Progress Steps removed as requested */}
-      {/* City Picker Modal */}
-      <CityPickerModal
-        isOpen={isCityModalOpen}
-        onClose={() => setIsCityModalOpen(false)}
-        onSelect={handleCitySelect}
-        selectedCity={(bookingData as any).tripDestination || ''}
-      />
 
-      {/* Map Modal (used for set-off / stopovers / destination) */}
-      <MapModal
-        isOpen={isMapModalOpen}
-        onClose={() => { setIsMapModalOpen(false); setMapModalMode(null) }}
-        onSelect={handleMapSelect}
-        initialMarker={mapInitialMarker}
-      />
-
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pt-28 sm:pt-32 pb-28 sm:pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 -mt-32">
           {/* Images on top for web: use order classes */}
           <div className="order-1 lg:order-1 lg:col-span-7">
             {/* Professional image gallery with sliding effect */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="w-full max-w-4xl mx-auto flex flex-col lg:grid lg:grid-cols-3 gap-6 items-center">
-                {/* Main image and arrows - left 2/3 */}
-                <div className="relative flex items-center justify-center w-full col-span-2">
-                  {/* Left arrow */}
-                  {service.images && service.images.length > 1 && (
-                    <button
-                      onClick={() => {
-                        const prevIndex = currentImageIndex === 0 ? service.images.length - 1 : currentImageIndex - 1;
-                        setCurrentImageIndex(prevIndex);
-                        setSelectedImage(service.images[prevIndex]);
-                      }}
-                      className="absolute left-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
-                      style={{ top: '50%', transform: 'translateY(-50%)' }}
-                      aria-label="Previous image"
-                    >
-                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                  )}
-                  {/* Main image - bigger, cleaner */}
-                  <img
-                    src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                    alt={service.title}
-                    className="rounded-xl object-cover mx-auto border border-gray-100 shadow-sm"
-                    style={{ width: '100%', maxWidth: 720, height: 420, objectFit: 'cover', background: '#f8fafc' }}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                  />
-                  {/* Right arrow */}
-                  {service.images && service.images.length > 1 && (
-                    <button
-                      onClick={() => {
-                        const nextIndex = (currentImageIndex + 1) % service.images.length;
-                        setCurrentImageIndex(nextIndex);
-                        setSelectedImage(service.images[nextIndex]);
-                      }}
-                      className="absolute right-2 z-10 bg-white bg-opacity-70 hover:bg-opacity-90 rounded-full p-2 transition-colors border border-gray-200 shadow-sm"
-                      style={{ top: '50%', transform: 'translateY(-50%)' }}
-                      aria-label="Next image"
-                    >
-                      <svg className="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  )}
-                  {/* Image count indicator */}
-                  {service.images && service.images.length > 0 && (
-                    <div className="absolute bottom-3 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wide shadow">
-                      {currentImageIndex + 1} / {service.images.length}
-                    </div>
-                  )}
-                </div>
-                {/* Thumbnails - right 1/3, vertically centered */}
-                {service.images && service.images.length > 1 && (
-                  <div className="w-full flex lg:block overflow-x-auto pb-1 lg:pb-0 col-span-1 flex-col justify-center items-center h-full">
-                    <div className="flex lg:grid lg:grid-cols-2 lg:grid-rows-3 gap-3 lg:gap-4 w-full lg:h-[420px] items-center content-center">
-                      {service.images.map((img, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setCurrentImageIndex(index);
-                            setSelectedImage(img);
-                          }}
-                          className={`w-20 h-20 lg:w-[104px] lg:h-[128px] rounded-xl border-2 transition-all ${
-                            currentImageIndex === index ? 'border-blue-600' : 'border-gray-200 hover:border-blue-400'
-                          } flex-shrink-0 overflow-hidden bg-white shadow-sm`}
-                          style={{ outline: currentImageIndex === index ? '2px solid #059669' : 'none' }}
-                          aria-label={`Show image ${index + 1}`}
-                        >
-                          <img
-                            src={img}
-                            alt={`Thumbnail ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <TransportImageGallery images={service.images} title={service.title} />
           </div>
           {/* Details below images for web, but stacked for mobile */}
           <div className="order-2 lg:order-2 lg:col-span-7 space-y-6 pt-2 sm:pt-4">
@@ -2982,13 +1104,39 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 <p className="text-xs text-emerald-700">Select whether this trip is within town or upcountry to see the correct price.</p>
               </div>
             )}
+            {/* Step progress */}
+            {currentStep < 2 && (
+              <div className="flex items-center gap-2 mb-4 px-1 overflow-x-auto">
+                {[
+                  { n: 1, label: 'Details' },
+                  { n: 2, label: 'Pay' },
+                ].map(({ n, label }) => (
+                  <div key={n} className="flex items-center gap-2 flex-shrink-0">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                      currentStep > n ? 'bg-emerald-600 text-white' :
+                      currentStep === n ? 'border-2 border-emerald-600 text-emerald-600 bg-white' :
+                      'bg-gray-200 text-gray-500'
+                    }`}>
+                      {currentStep > n ? '✓' : n}
+                    </div>
+                    <span className={`text-sm ${currentStep === n ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>{label}</span>
+                    {n < 2 && <span className="text-gray-300 mx-1">›</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             {/* Step Content */}
             <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 shadow-sm">
               {renderStepContent()}
             </div>
-            {/* Navigation */}
+            {/* Navigation — sticky on mobile */}
             {currentStep < 2 && (
-              <div className="mt-6 flex flex-col md:flex-row gap-3 justify-end">
+              <div className="fixed sm:relative bottom-0 left-0 right-0 z-30 sm:z-auto mt-6 border-t sm:border-0 bg-white/95 sm:bg-transparent backdrop-blur-sm px-4 sm:px-0 py-3 sm:py-0">
+                {(stepError) && (
+                  <div className="w-full mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {stepError}
+                  </div>
+                )}
                 <button
                   onClick={handleNext}
                   disabled={
@@ -2997,31 +1145,16 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     !bookingData.endDate ||
                     (service.service_categories?.name?.toLowerCase() === 'transport' && ((service as any).price_within_town || (service as any).price_upcountry) && !transportZone) ||
                     (bookingData.driverOption === 'with-driver' && (!bookingData.pickupLocation || !bookingData.dropoffLocation)) ||
-                    !bookingData.contactName ||
-                    !bookingData.contactEmail ||
+                    (!loggedInReady && (!bookingData.contactName || !bookingData.contactEmail)) ||
                     bookingData.paymentMethod === 'card' ||
                     (bookingData.paymentMethod === 'mobile' && (!phoneNumber.trim() || !bookingData.mobileProvider))
                   }
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
+                  className="w-full sm:w-auto sm:ml-auto sm:flex px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-semibold shadow"
                 >
                   {isPaymentProcessing
                     ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage ? 'Waiting for payment…' : 'Processing...'))
                     : 'Pay with Mobile Money'}
                 </button>
-                {/* Up Arrow Icon below button on all screens, scrolls to top */}
-                <div className="w-full flex justify-center mt-4">
-                  <button
-                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                    aria-label="Back to top"
-                    title="Back to top"
-                    className="bg-gradient-to-b from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-full shadow-xl border-2 border-white p-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all duration-200"
-                    style={{ boxShadow: '0 6px 32px 0 rgba(0,0,0,0.18)' }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                    </svg>
-                  </button>
-                </div>
               </div>
             )}
           </div>

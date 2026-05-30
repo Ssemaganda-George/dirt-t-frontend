@@ -19,7 +19,6 @@ export default function PaymentPage() {
   const [processing, setProcessing] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('mobile_money')
   const [mobileProvider, setMobileProvider] = useState('')
-  const [cardNoticeVisible, setCardNoticeVisible] = useState(false)
   const [ticketEmail, setTicketEmail] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const queryClient = useOrderQueryClient()
@@ -63,7 +62,7 @@ export default function PaymentPage() {
       await queryClient.invalidateQueries({ queryKey: orderQueryKey(orderId) })
     } catch (err) {
       console.error('Failed to update ticket quantity (payment page):', err)
-      alert('Failed to update ticket quantity. Please try again.')
+      setPaymentError('Failed to update ticket quantity. Please try again.')
     }
   }
   
@@ -107,6 +106,7 @@ export default function PaymentPage() {
       }, 0)
     : subtotalAmount
   // summary toggle removed — details always visible
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
@@ -118,6 +118,13 @@ export default function PaymentPage() {
 
   const refFromQuery = searchParams.get('reference')
   const [donationPayment, setDonationPayment] = useState<any | null>(null)
+
+  // Order ticket checkout is one page — redirect legacy /payment URL
+  useEffect(() => {
+    if (orderId && order && !refFromQuery && !isLoading) {
+      navigate(`/checkout/${orderId}`, { replace: true })
+    }
+  }, [orderId, order, refFromQuery, isLoading, navigate])
 
   useEffect(() => {
     if (!refFromQuery) return
@@ -233,7 +240,7 @@ export default function PaymentPage() {
       setPollingMessage('')
       setPaymentReference(null)
       setProcessing(false)
-      alert('Payment was not completed or was declined. Please try again.')
+      setPaymentError('Payment was not completed or was declined. Please try again.')
     }
 
     // ── 1. Realtime subscription — primary delivery path ──────────────────
@@ -305,8 +312,15 @@ export default function PaymentPage() {
   // Prefill phone from order when order data is ready
   useEffect(() => {
     if (!order?.guest_phone) return
-    const p = String(order.guest_phone).replace(/^\+256/, '')
-    setPhoneNumber(p.startsWith('+') ? p : p)
+    const raw = String(order.guest_phone).replace(/^\+256/, '')
+    setPhoneNumber(raw.startsWith('+') ? raw : raw)
+    const digits = String(order.guest_phone).replace(/\D/g, '')
+    const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
+    if (local.length >= 2) {
+      const p = local.slice(0, 2)
+      if (['76', '77', '78', '39', '46', '31'].includes(p)) setMobileProvider('MTN')
+      else if (['70', '74', '75', '20', '50'].includes(p)) setMobileProvider('Airtel')
+    }
   }, [order?.guest_phone])
 
   // Compute per-ticket pricing calculations (mirrors Checkout/TransportBooking logic)
@@ -346,8 +360,9 @@ export default function PaymentPage() {
 
   const handlePayment = useCallback(async () => {
   if (!orderId || !order) return
+  setPaymentError(null)
   if (!ticketPricingReady) {
-    alert('Pricing is still loading. Please wait a moment and try again.')
+    setPaymentError('Pricing is still loading. Please wait a moment and try again.')
     return
   }
   // Use derived totals from items (keeps payment amount in sync with edits)
@@ -356,7 +371,7 @@ export default function PaymentPage() {
     const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
 
     if (!phone || phone.length < 10) {
-      alert('Please enter a valid mobile money phone number (e.g. 0712345678 or +256712345678).')
+      setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
       return
     }
 
@@ -379,7 +394,7 @@ export default function PaymentPage() {
         const qty = Number(it.quantity ?? 0)
         const calc = ticketCalculations[it.ticket_type_id]
         if (!calc || calc.success === false) {
-          alert('Pricing is incomplete for one or more tickets. Please wait a moment or refresh the page.')
+          setPaymentError('Pricing is still loading for one or more tickets. Please wait a moment and try again.')
           return
         }
         platformFeeSum += Number(calc.platform_fee || 0) * qty
@@ -404,7 +419,7 @@ export default function PaymentPage() {
     const { error: orderUpdateErr } = await supabase.from('orders').update(orderPatch).eq('id', orderId)
     if (orderUpdateErr) {
       console.error('[Payment] failed to persist order pricing', orderUpdateErr)
-      alert('Could not save order totals before payment. Please try again.')
+      setPaymentError('Could not save order totals before payment. Please try again.')
       return
     }
 
@@ -452,7 +467,7 @@ export default function PaymentPage() {
       setPollingMessage('')
       setPaymentReference(null)
       setProcessing(false)
-      alert((err as Error).message || 'Payment failed. Please try again.')
+      setPaymentError((err as Error).message || 'Payment failed. Please try again.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startWatchingReference is stable enough for UX; expanding deps rebinds every render
   }, [orderId, order, phoneNumber, navigate, ticketPricingReady, totalAmount, ticketEmail, items, ticketCalculations])
@@ -460,7 +475,16 @@ export default function PaymentPage() {
   if (isLoading) return <PageSkeleton type="payment" />
   if (error || !order) {
     // If there's no order but we have a payment reference (donation flow), render the donation watcher UI below
-    if (!refFromQuery) return <div className="p-6">Order not found</div>
+    if (!refFromQuery) return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="text-5xl mb-4">🔍</div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Order not found</h2>
+          <p className="text-gray-500 text-sm mb-6">This payment link may have expired or doesn't exist. Check your email for the correct link.</p>
+          <button onClick={() => window.history.back()} className="text-sm text-blue-600 underline hover:text-blue-700">Go back</button>
+        </div>
+      </div>
+    )
   }
 
   // Donation-only flow: no order but reference provided
@@ -515,6 +539,30 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      {/* Success Dialog — rendered at page root so it always overlays correctly */}
+      {paymentSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40"></div>
+          <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 z-10">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Payment successful</h2>
+            <p className="text-sm text-gray-700 mb-4">
+              Your receipt is ready. We&apos;ve also sent your ticket(s) to your email—check your inbox. Click OK to view your receipt.
+            </p>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentSuccess(false)
+                  navigate(`/tickets/${orderId}`)
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-2xl">
         {/* Back arrow at the top */}
         <div className="w-full flex items-start mb-2">
@@ -543,8 +591,8 @@ export default function PaymentPage() {
                 <div className="hidden md:block font-light text-blue-600">Details</div>
               </div>
               <div className="flex items-center gap-2 text-xs md:text-sm">
-                <div className="w-6 h-6 rounded-full bg-gray-400 text-white flex items-center justify-center font-semibold">3</div>
-                <div className="hidden md:block font-light">Payment</div>
+                <div className="w-6 h-6 rounded-full border-2 border-blue-600 bg-white text-blue-600 flex items-center justify-center font-semibold">3</div>
+                <div className="hidden md:block font-light text-blue-600">Payment</div>
               </div>
             </div>
           </div>
@@ -599,78 +647,15 @@ export default function PaymentPage() {
 
                 <div className="border-t pt-2">
           {!ticketPricingReady && items.some((it: any) => Number(it.quantity ?? 0) > 0) && (
-            <p className="text-xs text-amber-700 mb-2">Loading platform fees from your vendor tier…</p>
+            <p className="text-xs text-amber-600 mb-2">Calculating total…</p>
           )}
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600 text-sm">Service Fee</span>
-            <span className="text-sm font-medium text-gray-900">{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
-
-                        {/* Detailed breakdown per ticket type when available */}
-                        {items.length > 0 && (
-                          <div className="mt-2 text-xs text-gray-600">
-                            {items.map((it: any) => {
-                              const tt = (data?.allTicketTypes || []).find((t: any) => t.id === it.ticket_type_id)
-                              const calc = ticketCalculations[it.ticket_type_id]
-                              const qty = Number(it.quantity || 0)
-                              if (!tt) return null
-                              const label = tt.title || tt.id
-                              if (!calc) {
-                                return (
-                                  <div key={it.ticket_type_id} className="flex justify-between mb-1">
-                                    <div>{label} × {qty}</div>
-                                    <div>{formatCurrencyWithConversion(0, order.currency)}</div>
-                                  </div>
-                                )
-                              }
-
-                              const unitPlatform = Number(calc.platform_fee || 0)
-                              const totalPlatform = unitPlatform * qty
-
-                              return (
-                                <div key={it.ticket_type_id} className="mb-1">
-                                  <div className="flex justify-between">
-                                    <div>{label} × {qty} — platform fee</div>
-                                    <div>{formatCurrencyWithConversion(totalPlatform, order.currency)}</div>
-                                  </div>
-                                  {calc.fee_payer === 'shared' && (
-                                    <div className="mt-1 ml-3 text-xs text-gray-500">
-                                      <div>Tourist pays {formatCurrencyWithConversion(Number(calc.tourist_fee || 0) * qty, order.currency)}</div>
-                                      <div>Vendor pays {formatCurrencyWithConversion(Number(calc.vendor_fee || 0) * qty, order.currency)}</div>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                {/* Success Dialog */}
-                {paymentSuccess && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black opacity-40"></div>
-                    <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 z-10">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-2">Payment successful</h2>
-                      <p className="text-sm text-gray-700 mb-4">
-                        Your receipt is ready. We&apos;ve also sent your ticket(s) to your email—check your inbox. Click OK to view your receipt.
-                      </p>
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPaymentSuccess(false)
-                            navigate(`/tickets/${orderId}`)
-                          }}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
-                        >
-                          OK
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                  </div>
-
-                  {/* Total shown below service fee for clarity */}
-                  <div className="mt-3 flex justify-between items-center border-t pt-3">
+          {effectiveServiceFees > 0 && (
+            <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
+              <span>Includes booking fee</span>
+              <span>{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
+            </div>
+          )}
+                  <div className="flex justify-between items-center border-t pt-3">
                     <span className="text-gray-700 text-sm font-medium">Total</span>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrencyWithConversion(totalAmount, order.currency)}</span>
                   </div>
@@ -692,10 +677,7 @@ export default function PaymentPage() {
                     name="paymentMethod"
                     value="mobile_money"
                     checked={paymentMethod === 'mobile_money'}
-                    onChange={(e) => {
-                      setPaymentMethod(e.target.value)
-                      setCardNoticeVisible(false)
-                    }}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-4 h-4"
                   />
                   <div className="text-sm font-medium">Mobile Money</div>
@@ -707,7 +689,13 @@ export default function PaymentPage() {
               {paymentMethod === 'mobile_money' && (
                 <div className="mt-2 grid grid-cols-1 gap-2">
                   <div>
-                    <div className="text-sm text-gray-600 mb-1">Select provider to continue</div>
+                    <div className="text-sm text-gray-600 mb-1">
+                      {mobileProvider ? (
+                        <span>Provider: <span className="font-medium text-gray-800">{mobileProvider}</span> <span className="text-gray-400 text-xs">(auto-detected — tap to change)</span></span>
+                      ) : (
+                        'Select provider or enter your number below to auto-detect'
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setMobileProvider('MTN')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                         <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -728,79 +716,60 @@ export default function PaymentPage() {
                   <input
                     type="tel"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setPhoneNumber(val)
+                      const digits = val.replace(/\D/g, '')
+                      const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
+                      if (local.length >= 2) {
+                        const p = local.slice(0, 2)
+                        if (['76', '77', '78', '39', '46', '31'].includes(p)) setMobileProvider('MTN')
+                        else if (['70', '74', '75', '20', '50'].includes(p)) setMobileProvider('Airtel')
+                      }
+                    }}
                     placeholder="0712345678 or +256712345678"
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
                   />
                 </div>
               )}
 
-              {/* Credit/Debit Card - now visible on mobile as requested */}
-              <div className="opacity-90">
-                <div className="p-2 border border-gray-200 rounded text-sm text-gray-700">Credit/Debit Card (coming soon)</div>
-
-                <div className="mt-3 flex items-center gap-1">
-                  {/* Visa (stylized) */}
-                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
-                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <rect width="28" height="18" rx="3" fill="#1A66FF" />
-                      <text x="14" y="12" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">VISA</text>
-                    </svg>
-                  </div>
-
-                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
-                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <rect width="28" height="18" rx="3" fill="#fff" />
-                      <circle cx="11" cy="9" r="4" fill="#FF5F00" />
-                      <circle cx="17" cy="9" r="4" fill="#EB001B" />
-                    </svg>
-                  </div>
-
-                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
-                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <rect width="28" height="18" rx="3" fill="#2E77BC" />
-                      <text x="14" y="12" fill="#fff" fontSize="5" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">AMEX</text>
-                    </svg>
-                  </div>
-
-                  <div className="flex items-center gap-1 px-1 py-0.5 border rounded bg-white">
-                    <svg width="20" height="12" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <rect width="28" height="18" rx="3" fill="#F76C1B" />
-                      <text x="14" y="12" fill="#fff" fontSize="5" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">DISC</text>
-                    </svg>
-                  </div>
-
-                  {/* MTN and Airtel icons intentionally removed from card icons row; they remain on the mobile provider buttons above */}
-                </div>
-              </div>
             </div>
-
-            {cardNoticeVisible && paymentMethod === 'card' && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800 font-light">
-                  Card payments are not available yet. Please select Mobile Money to proceed.
-                </p>
-              </div>
-            )}
-            {/* Removed the explicit phone confirmation notification and reference from the UI.
-                The internal payment reference is still recorded for debugging, but it's not
-                displayed to the user during processing to avoid cluttering the payment UI. */}
           </div>
 
-          {/* Email for Tickets */}
-          <div className="px-6 py-6 border-b">
-            <label className="block text-sm font-light text-gray-900 mb-2">Email to receive tickets</label>
-            <input
-              type="email"
-              value={ticketEmail}
-              onChange={(e) => setTicketEmail(e.target.value)}
-              placeholder="Enter your email address"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 font-light text-sm"
-            />
-          </div>
+          {/* Email for Tickets — only if not already captured at checkout */}
+          {order?.guest_email ? (
+            <div className="px-6 py-4 border-b bg-gray-50">
+              <p className="text-sm text-gray-700">
+                Tickets will be sent to <span className="font-medium text-gray-900">{order.guest_email}</span>
+              </p>
+            </div>
+          ) : (
+            <div className="px-6 py-6 border-b">
+              <label className="block text-sm font-light text-gray-900 mb-2">Email to receive tickets</label>
+              <input
+                type="email"
+                value={ticketEmail}
+                onChange={(e) => setTicketEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 font-light text-sm"
+              />
+            </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="px-6 py-4 border-t bg-gray-50 flex gap-2">
+          <div className="px-6 py-4 border-t bg-gray-50 flex flex-col gap-2">
+            <div className="flex items-start gap-2 text-xs text-gray-500 bg-white border border-gray-200 rounded px-3 py-2">
+              <svg className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.657 1.343-3 3-3s3 1.343 3 3v2H9v-2c0-1.657 1.343-3 3-3zm-7 9V10a7 7 0 1114 0v10H5z" />
+              </svg>
+              <div>
+                <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Free cancellation up to 24 hours before your booking — contact{' '}
+                <a href="mailto:safaris.dirttrails@gmail.com" className="underline hover:text-gray-700">safaris.dirttrails@gmail.com</a>.
+              </div>
+            </div>
+            {paymentError && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{paymentError}</div>
+            )}
             <button
               type="button"
               onClick={handlePayment}
@@ -825,7 +794,7 @@ export default function PaymentPage() {
               {processing ? (
                 <span className="flex items-center justify-center gap-2">
                   {/* Larger spinner on mobile, slightly smaller on md+ screens */}
-                  <svg className="animate-spin h-10 w-10 md:h-4 md:w-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                   </svg>
