@@ -40,7 +40,7 @@ export function formatTierCommission(tier: {
   return `${pct}% commission`;
 }
 
-// Convert between currencies using live rates fetched from Frankfurter (with static fallback).
+// Convert between currencies using live rates (open.er-api.com, with static fallback).
 // Rates are cached in currencyRates.ts and refreshed once per session.
 export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string) {
   if (fromCurrency === toCurrency) return amount

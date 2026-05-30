@@ -1,8 +1,10 @@
-// Live exchange rates from Frankfurter (https://www.frankfurter.app)
-// All rates are stored relative to UGX: 1 UGX = X foreign currency
+// Live exchange rates (USD base via open.er-api.com — browser CORS allowed, includes UGX).
+// Frankfurter does not support UGX as base or target, which caused 404/CORS errors in production.
+// All rates are stored relative to UGX: 1 UGX = X foreign currency.
 // Rates are fetched once per session and cached for 4 hours.
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000
+const RATES_URL = 'https://open.er-api.com/v6/latest/USD'
 
 const SUPPORTED = [
   'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'INR', 'CNY', 'JPY',
@@ -10,7 +12,7 @@ const SUPPORTED = [
   'MAD', 'TRY', 'THB', 'KRW', 'SEK', 'NOK', 'DKK', 'PLN',
 ]
 
-// Static fallback rates — used when Frankfurter is unreachable
+// Static fallback rates — used when the API is unreachable or a currency is missing
 export const FALLBACK_RATES: Record<string, number> = {
   UGX: 1,
   USD: 0.00027, EUR: 0.00025, GBP: 0.00021,
@@ -27,19 +29,37 @@ export const FALLBACK_RATES: Record<string, number> = {
 let cachedRates: Record<string, number> = { ...FALLBACK_RATES }
 let fetchedAt = 0
 
+/** Convert USD-per-1-unit rates to "1 UGX = X foreign". */
+function deriveUgxRates(usdRates: Record<string, number>): Record<string, number> | null {
+  const ugxPerUsd = usdRates.UGX
+  if (typeof ugxPerUsd !== 'number' || ugxPerUsd <= 0) return null
+
+  const derived: Record<string, number> = { UGX: 1, USD: 1 / ugxPerUsd }
+  for (const code of SUPPORTED) {
+    if (code === 'USD') continue
+    const perUsd = usdRates[code]
+    if (typeof perUsd === 'number' && perUsd > 0) {
+      derived[code] = perUsd / ugxPerUsd
+    }
+  }
+  return derived
+}
+
 export async function initCurrencyRates(): Promise<void> {
   if (Date.now() - fetchedAt < CACHE_TTL_MS) return
   try {
-    const url = `https://api.frankfurter.app/latest?from=UGX&to=${SUPPORTED.join(',')}`
-    const res = await fetch(url)
+    const res = await fetch(RATES_URL)
     if (!res.ok) return
-    const json: { rates?: Record<string, number> } = await res.json()
-    if (json.rates && typeof json.rates === 'object') {
-      cachedRates = { UGX: 1, ...json.rates }
-      fetchedAt = Date.now()
-    }
+    const json: { result?: string; rates?: Record<string, number> } = await res.json()
+    if (json.result !== 'success' || !json.rates) return
+
+    const derived = deriveUgxRates(json.rates)
+    if (!derived) return
+
+    cachedRates = { ...FALLBACK_RATES, ...derived }
+    fetchedAt = Date.now()
   } catch {
-    // API unreachable — keep using fallback, try again next render cycle
+    // API unreachable — keep using fallback, try again next session
   }
 }
 
