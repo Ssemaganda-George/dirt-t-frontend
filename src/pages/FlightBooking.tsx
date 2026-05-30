@@ -148,7 +148,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
       }
       const onFail = () => {
         if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-        supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
+        supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
         setPollingMessage(''); setIsSubmitting(false)
         setPaymentError('Payment was not completed or was declined. Please try again.')
       }
@@ -171,7 +171,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
       }, 4000)
       setTimeout(() => { if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null } }, 120000)
     } catch (err) {
-      supabase.from('bookings').update({ status: 'cancelled', payment_status: 'failed' }).eq('id', pendingBooking.id).then(() => {})
+      supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
       setPollingMessage(''); setIsSubmitting(false)
       setPaymentError((err as Error).message || 'Payment failed. Please try again.')
     }

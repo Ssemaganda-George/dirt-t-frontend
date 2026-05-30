@@ -3,6 +3,34 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+const APP_URL = Deno.env.get("APP_URL") || Deno.env.get("FRONTEND_URL") || "http://localhost:3000"
+const EXTRA_CORS_ORIGINS = Deno.env.get("EXTRA_CORS_ORIGINS") || ""
+const DEFAULT_CORS_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://bookings.dirt-trails.com",
+  "https://dirt-trails.com",
+  "https://www.dirt-trails.com",
+]
+
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const allowed = [
+    ...new Set(
+      [...APP_URL.split(","), ...EXTRA_CORS_ORIGINS.split(","), ...DEFAULT_CORS_ORIGINS]
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ]
+  const requestOrigin = req.headers.get("origin") || ""
+  const allowedOrigin = allowed.includes(requestOrigin) ? requestOrigin : allowed[0]
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control, pragma",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
+  }
+}
 
 // ── In-memory status cache ────────────────────────────────────────────────────
 // Scoped to the Deno isolate lifetime. Dramatically reduces Postgres load at
@@ -50,14 +78,7 @@ function evictExpired(): void {
 }
 
 serve(async (req) => {
-  const requestOrigin = req.headers.get("origin") || "*"
-  const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": requestOrigin,
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, cache-control, pragma",
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Max-Age": "86400",
-  }
+  const CORS_HEADERS = buildCorsHeaders(req)
   const NO_CACHE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
     Pragma: "no-cache",

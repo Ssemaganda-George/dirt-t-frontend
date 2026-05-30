@@ -2995,37 +2995,41 @@ export async function createBooking(
 
   let finalBooking: any = data
 
-  // Always force all bookings to be confirmed/paid after creation
+  // Respect caller status (SO4 pending bookings). Do NOT force paid before mobile money completes.
   try {
-    const requestedStatus = 'confirmed';
-    const requestedPaymentStatus = 'paid';
-    const requestedPaymentReference = (bookingData as any).payment_reference || (bookingData as any).paymentReference;
+    const requestedStatus = (bookingData as any).status ?? (data as any).status ?? 'pending'
+    const requestedPaymentStatus =
+      (bookingData as any).payment_status ?? (data as any).payment_status ?? 'pending'
+    const requestedPaymentReference =
+      (bookingData as any).payment_reference || (bookingData as any).paymentReference
 
-    if (
-      (requestedStatus && requestedStatus !== (data as any).status) ||
-      (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) ||
-      (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference)
-    ) {
+    const patch: Record<string, unknown> = {}
+    if (requestedStatus && requestedStatus !== (data as any).status) {
+      patch.status = requestedStatus
+    }
+    if (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) {
+      patch.payment_status = requestedPaymentStatus
+    }
+    if (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference) {
+      patch.payment_reference = requestedPaymentReference
+    }
+
+    if (Object.keys(patch).length > 0) {
       const { data: updated, error: updateError } = await supabase
         .from('bookings')
-        .update({
-          status: requestedStatus,
-          payment_status: requestedPaymentStatus,
-          ...(requestedPaymentReference ? { payment_reference: requestedPaymentReference } : {})
-        })
+        .update(patch)
         .eq('id', data.id)
         .select()
-        .single();
+        .single()
 
       if (updateError) {
-        console.warn('Failed to update booking status/payment_status after createBooking:', updateError);
+        console.warn('Failed to update booking status/payment_status after createBooking:', updateError)
       } else if (updated) {
-        // Preserve previously loaded relations on the returned object
-        finalBooking = { ...finalBooking, ...updated };
+        finalBooking = { ...finalBooking, ...updated }
       }
     }
   } catch (err) {
-    console.warn('Error updating booking status/payment_status after createBooking:', err);
+    console.warn('Error updating booking status/payment_status after createBooking:', err)
   }
 
   // Critical payment processing must complete before returning to avoid lost updates
@@ -3096,10 +3100,16 @@ export async function createBooking(
     console.error('Error creating payment transaction after createBooking:', err)
   }
 
-  // Non-critical side effect: keep email sending fire-and-forget for UX speed
-  sendBookingEmails(finalBooking.id).catch(error => {
-    console.error('Failed to send booking emails:', error)
-  })
+  // Only send confirmation emails after payment is actually paid (webhook/queue also sends on success).
+  const shouldSendBookingEmails =
+    finalBooking.payment_status === 'paid' &&
+    ['confirmed', 'completed'].includes(String(finalBooking.status || ''))
+
+  if (shouldSendBookingEmails) {
+    sendBookingEmails(finalBooking.id).catch(error => {
+      console.error('Failed to send booking emails:', error)
+    })
+  }
 
   return finalBooking as Booking
 }

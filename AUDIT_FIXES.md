@@ -508,6 +508,18 @@ The full booking pages (ActivityBooking, HotelBooking, etc.) remain accessible v
 
 ---
 
+## PAYMENT / EMAIL / CORS — SESSION 17 (2026-05-30) ✅
+
+| Issue | Root cause | Fix |
+|-------|------------|-----|
+| Emails say **PAID** before USSD completes | `createBooking()` forced `status: confirmed` + `payment_status: paid` on every insert, then called `send-booking-emails` | Respect caller `status` / `payment_status`; emails only when `paid` + `confirmed` |
+| `marzpay-collect` CORS / Failed to fetch | `APP_URL` on Supabase did not include `https://bookings.dirt-trails.com` | Allowlist includes production hosts + `EXTRA_CORS_ORIGINS`; redeploy edge functions |
+| Bookings PATCH **400** on payment cancel | `payment_status: 'failed'` is not a valid bookings enum | Cancel with `status: cancelled`, `payment_status: pending` |
+
+**Deploy:** `supabase functions deploy marzpay-collect marzpay-payment-status` and set secret `APP_URL=https://bookings.dirt-trails.com` (comma-separate multiple origins if needed).
+
+---
+
 ## HYBRID BOOKING — SESSION 16 (2026-05-30) ✅
 
 Drawer vs full-page checkout split by category complexity.

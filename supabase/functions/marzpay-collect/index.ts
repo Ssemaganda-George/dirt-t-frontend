@@ -4,6 +4,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 const MARZPAY_API_URL = Deno.env.get("MARZPAY_API_URL") || "https://wallet.wearemarz.com/api/v1"
 const MARZPAY_API_CREDENTIALS = Deno.env.get("MARZPAY_API_CREDENTIALS") || ""
 const APP_URL = Deno.env.get("APP_URL") || Deno.env.get("FRONTEND_URL") || "http://localhost:3000"
+const EXTRA_CORS_ORIGINS = Deno.env.get("EXTRA_CORS_ORIGINS") || ""
+/** Production booking host — include in APP_URL on Supabase; listed here as fallback. */
+const DEFAULT_CORS_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://bookings.dirt-trails.com",
+  "https://dirt-trails.com",
+  "https://www.dirt-trails.com",
+]
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
@@ -24,7 +33,17 @@ function generateReference(): string {
 // CRITICAL-3: Build CORS headers from an explicit allowlist — never reflect the request Origin.
 // APP_URL may be a comma-separated list for multi-domain setups.
 function buildCorsHeaders(req: Request): Record<string, string> {
-  const allowed = APP_URL.split(",").map((s) => s.trim()).filter(Boolean)
+  const allowed = [
+    ...new Set(
+      [
+        ...APP_URL.split(","),
+        ...EXTRA_CORS_ORIGINS.split(","),
+        ...DEFAULT_CORS_ORIGINS,
+      ]
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ]
   const requestOrigin = req.headers.get("origin") || ""
   const allowedOrigin = allowed.includes(requestOrigin) ? requestOrigin : allowed[0]
   return {
