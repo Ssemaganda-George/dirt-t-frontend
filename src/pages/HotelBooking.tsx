@@ -22,6 +22,7 @@ import {
   type PaymentCalculation
 } from '../lib/pricingService'
 import { supabase } from '../lib/supabaseClient'
+import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 
 interface ServiceDetail {
   id: string
@@ -406,7 +407,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               } else if (row.status === 'failed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+                cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
                 setPollingMessage('')
                 setIsSubmitting(false)
                 setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -421,7 +422,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
           return
         } else if (immediate === 'failed') {
           channel.unsubscribe()
-          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
           setPollingMessage('')
           setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -437,7 +438,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
           } else if (status === 'failed') {
             channel.unsubscribe()
             if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+            cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
             setPollingMessage('')
             setIsSubmitting(false)
             setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -450,7 +451,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       } catch (err) {
         console.error('Payment error:', err)
         if (pendingBooking?.id) {
-          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
         }
         setPollingMessage('')
         setIsSubmitting(false)

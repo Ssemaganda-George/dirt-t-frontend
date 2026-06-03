@@ -11,6 +11,7 @@ import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import BookingReceipt from '../components/BookingReceipt'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -380,7 +381,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               } else if (row.status === 'failed') {
                 channel.unsubscribe()
                 if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+                cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
                 setPollingMessage('')
                 setIsSubmitting(false)
                 setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -395,7 +396,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           return
         } else if (immediate === 'failed') {
           channel.unsubscribe()
-          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
           setPollingMessage('')
           setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -411,7 +412,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           } else if (status === 'failed') {
             channel.unsubscribe()
             if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+            cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
             setPollingMessage('')
             setIsSubmitting(false)
             setPaymentError('Payment was not completed or was declined. Please try again.')
@@ -424,7 +425,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       } catch (err) {
         console.error('Payment error:', err)
         if (pendingBooking?.id) {
-          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
         }
         setPollingMessage('')
         setIsSubmitting(false)

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import {
   calculatePaymentForAmount,
   customerTotalFromAggregatePricingCalc,
@@ -546,7 +547,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           } catch (err: any) {
             console.error('Payment error:', err)
             if (pendingTransportBooking?.id) {
-              supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingTransportBooking.id).then(() => {})
+              cancelBookingOnPaymentFailure(pendingTransportBooking.id).catch(console.error)
             }
             setPollingMessage('')
             setIsPaymentProcessing(false)

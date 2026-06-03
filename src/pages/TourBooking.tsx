@@ -6,6 +6,7 @@ import { formatCurrencyWithConversion } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import BookingReceipt from '../components/BookingReceipt'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -162,7 +163,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
         }
         const onFail = () => {
           if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-          supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
           setPollingMessage(''); setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
         }
@@ -185,7 +186,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
         }, 4000)
         setTimeout(() => { if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null } }, 120000)
       } catch (err) {
-        supabase.from('bookings').update({ status: 'cancelled', payment_status: 'pending' }).eq('id', pendingBooking.id).then(() => {})
+        cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
         setPollingMessage(''); setIsSubmitting(false)
         setPaymentError((err as Error).message || 'Payment failed. Please try again.')
       }

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { getServiceClient } from '../lib/serviceClient'
 import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
 import { updateUserPublicKey, getUserPublicKey, markMessagesAsDelivered } from '../lib/database'
+import type { Profile, Vendor } from '../types'
 
 /** -------------------- Types -------------------- */
 interface VendorSignupEmailPayload {
@@ -11,57 +11,14 @@ interface VendorSignupEmailPayload {
   fullName: string
 }
 
-interface User {
+interface AuthUser {
   id: string
   email: string
   created_at: string
-}
-
-interface Profile {
-  id: string
-  email: string
-  full_name: string
-  first_name?: string
-  last_name?: string
-  phone?: string
-  phone_country_code?: string
-  avatar_url?: string
-  role: 'admin' | 'vendor' | 'tourist'
-  status?: 'active' | 'pending' | 'approved' | 'rejected' | 'suspended'
-  home_city?: string
-  home_country?: string
-  created_at: string
-  updated_at: string
-}
-
-interface Vendor {
-  id: string
-  user_id: string
-  business_name: string
-  status: 'pending' | 'approved' | 'rejected' | 'suspended'
-  created_at: string
-  updated_at: string
-  // Optional payout fields
-  bank_details?: {
-    name?: string
-    account_name?: string
-    account_number?: string
-    branch?: string
-    swift?: string
-    [key: string]: any
-  }
-  mobile_money_accounts?: Array<{
-    provider?: string
-    phone?: string
-    country_code?: string
-    name?: string
-    [key: string]: any
-  }>
-  preferred_payout?: string
 }
 
 interface AuthContextType {
-  user: User | null
+  user: AuthUser | null
   profile: Profile | null
   vendor: Vendor | null
   loading: boolean
@@ -173,7 +130,7 @@ async function setupEncryptionKeys(userId: string): Promise<void> {
 
 /** -------------------- Auth Provider -------------------- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
@@ -354,7 +311,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Please verify your email before logging in. Check your inbox for a verification link.')
     }
 
-    const normalizedUser: User = { id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() }
+    const normalizedUser: AuthUser = { id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() }
     setUser(normalizedUser)
 
     // Load profile immediately
@@ -395,10 +352,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Do not treat the user as logged in yet; they must verify their email first.
     await delay(100) // ensure user is created before service operations
 
-    const serviceClient = getServiceClient()
+    // RPCs are SECURITY DEFINER — they bypass RLS regardless of which key is used
     try {
-      // Use atomic function to create/update profile
-      const profileResult = await serviceClient.rpc('create_user_profile_atomic', {
+      const profileResult = await supabase.rpc('create_user_profile_atomic', {
         p_user_id: u.id,
         p_email: email,
         p_first_name: firstName,
@@ -406,28 +362,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         p_role: role,
         p_home_city: homeCity || null,
         p_home_country: homeCountry || null
-      });
-
+      })
       if (!profileResult.data?.success) {
-        console.error('Error creating profile during sign up:', profileResult.data?.error);
+        console.error('Error creating profile during sign up:', profileResult.data?.error)
       }
     } catch (err) {
-      console.error('Unexpected error creating profile during sign up:', err);
+      console.error('Unexpected error creating profile during sign up:', err)
     }
 
     if (role === 'tourist') {
       try {
-        // Tourist record will be created automatically by database trigger
-        // No need to manually create it here
-        console.log('Tourist record will be created by database trigger');
-      } catch (err) {
-        console.error('Unexpected error during tourist signup:', err);
-      }
-    }
-
-    if (role === 'tourist') {
-      try {
-        const { error: touristError } = await serviceClient
+        const { error: touristError } = await supabase
           .from('tourists')
           .upsert({ user_id: u.id, first_name: fullName }, { onConflict: 'user_id' })
         if (touristError) {
@@ -436,24 +381,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Unexpected error creating tourist during sign up:', err)
       }
-      // Notify admin of new tourist registration
       notifyAdminNewAccount({ userId: u.id, email, fullName: `${firstName} ${lastName}`, role: 'tourist' }).catch(console.error)
     }
 
     if (role === 'vendor') {
       try {
-        // Use atomic function to create vendor profile
-        const vendorResult = await serviceClient.rpc('create_vendor_profile_atomic', {
+        const vendorResult = await supabase.rpc('create_vendor_profile_atomic', {
           p_user_id: u.id,
           p_business_name: '',
           p_status: 'pending'
-        });
-
+        })
         if (!vendorResult.data?.success) {
-          console.error('Error creating vendor during sign up:', vendorResult.data?.error);
+          console.error('Error creating vendor during sign up:', vendorResult.data?.error)
         }
       } catch (err) {
-        console.error('Unexpected error creating vendor during sign up:', err);
+        console.error('Unexpected error creating vendor during sign up:', err)
       }
       // Welcome email and admin notification deferred to handleVendorPostVerify
       // so they only fire after the vendor confirms their email address.

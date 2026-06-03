@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
 import { getActivePartners, Partner } from '../lib/database';
+import { submitPartnerRequest } from '../repositories/PartnerRepository';
 import { Handshake } from 'lucide-react';
 
 const PartnerWithUs: React.FC = () => {
@@ -65,23 +65,9 @@ const PartnerWithUs: React.FC = () => {
     }
 
     try {
-      console.log('Starting form submission...');
-      console.log('Form data:', { name, email, phone, company, website, message });
-
-      console.log('Attempting direct insert to partner_requests...');
-      const { data, error } = await supabase.from('partner_requests').insert([
-        { name, email, phone, company, website, message }
-      ]);
-      console.log('Insert response:', { data, error });
-
-      if (error) {
-        console.error('Insert error:', error);
-        setError(`Failed to submit: ${error.message}`);
-      } else {
-        console.log('Submission successful!');
-        setSuccess(true);
-        setForm({ name: '', email: '', phone: '', company: '', website: '', message: '' });
-      }
+      await submitPartnerRequest({ name, email, phone, company, website, message });
+      setSuccess(true);
+      setForm({ name: '', email: '', phone: '', company: '', website: '', message: '' });
     } catch (err: any) {
       console.error('Exception during submission:', err);
       setError(`Failed to submit: ${err.message || 'Unknown error'}`);

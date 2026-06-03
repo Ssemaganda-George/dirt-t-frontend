@@ -2,7 +2,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { getServiceClient } from '../lib/serviceClient'
 import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import { COUNTRIES } from '../lib/countries'
@@ -255,8 +254,7 @@ export default function VendorLogin() {
         }
 
         // Update or create the vendor record with business details
-        const serviceClient = getServiceClient()
-        const { error: vendorError } = await serviceClient
+        const { error: vendorError } = await supabase
           .from('vendors')
           .upsert({
             user_id: user.user.id,

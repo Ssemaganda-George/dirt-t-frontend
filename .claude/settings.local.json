@@ -39,7 +39,11 @@
       "Bash(Get-ChildItem -Path \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\" -Recurse -Include \"*Navbar*\",\"*navbar*\",\"*NavBar*\" -File)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(npx eslint *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Remove-Item *)",
+      "Bash(npx vitest *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   },
   "enableAllProjectMcpServers": true,
