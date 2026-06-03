@@ -244,6 +244,10 @@ export default function ServiceDetail() {
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+  const overviewRef = useRef<HTMLDivElement>(null)
+  const detailsRef = useRef<HTMLDivElement>(null)
+  const reviewsRef = useRef<HTMLDivElement>(null)
   // Transport unit price (kept as top-level hook to preserve hook order)
   const [unitPrice, setUnitPrice] = useState<number>(0)
   useEffect(() => {
@@ -1516,7 +1520,7 @@ export default function ServiceDetail() {
   const renderInfoSections = (isMobile = false) => (
     <>
       {/* Centered Info Block Near Image */}
-      <div className={isMobile ? 'bg-white border-b px-3 py-3' : 'bg-white border-b mb-8 px-4 py-6'}>
+      <div className={isMobile ? 'bg-white border-b px-3 py-3' : 'hidden'}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-base sm:text-2xl font-semibold text-gray-900 leading-tight truncate">{formatServiceTitle(service, !isMobile)}</h1>
@@ -1627,7 +1631,7 @@ export default function ServiceDetail() {
         </div>
 
         {/* Reviews Summary & List */}
-        <div className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
+        <div ref={reviewsRef} className="bg-white rounded-lg p-3 border-t-4 border-yellow-400">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-gray-900">Guest Reviews</p>
             <button onClick={() => setShowReviewForm(!showReviewForm)} className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] rounded-md hover:bg-emerald-700 transition-colors font-medium">Write a Review</button>
@@ -2041,176 +2045,172 @@ export default function ServiceDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Image Gallery - Desktop */}
-            <div className="mb-8 hidden md:block">
-              {/* Main Image Display (desktop) - horizontally scrollable so users can browse without opening preview */}
-              <div className="relative mb-4">
-                <div className="relative">
-                  {/* Desktop image gallery with left/right arrows */}
-                  <button
-                    type="button"
-                    aria-label="Previous image"
-                    className="hidden md:flex absolute left-2 top-1/2 z-20 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg border border-gray-200 transition-all"
-                    onClick={() => {
-                      if (!scrollContainerRef.current) return;
-                      scrollContainerRef.current.scrollBy({ left: -scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
-                    }}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-900">
-                      <line x1="16" y1="6" x2="8" y2="12" />
-                      <line x1="16" y1="18" x2="8" y2="12" />
-                    </svg>
-                  </button>
-                  <div
-                    ref={scrollContainerRef}
-                    className="w-full h-[520px] overflow-x-auto snap-x snap-mandatory scroll-smooth hidden md:block"
-                    style={{ scrollBehavior: 'smooth' }}
-                  >
-                    <div className="flex w-full h-full">
-                      {service.images && service.images.length > 0 ? (
-                        service.images.map((image, index) => (
-                          <div key={index} className="flex-shrink-0 w-full snap-center">
-                            <img
-                              loading="lazy"
-                              decoding="async"
-                              src={image}
-                              alt={`${service.title} ${index + 1}`}
-                              className="w-full h-full object-cover cursor-pointer rounded-lg shadow-lg"
-                              onClick={() => { setLightboxIndex(index); setLightboxOpen(true) }}
-                            />
-                          </div>
-                        ))
-                      ) : (
-                        <div className="flex-shrink-0 w-full snap-center">
-                          <img
-                            loading="lazy"
-                            decoding="async"
-                            src={selectedImage || service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
-                            alt={service.title}
-                            className="w-full h-full object-cover rounded-lg shadow-lg"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="Next image"
-                    className="hidden md:flex absolute right-2 top-1/2 z-20 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg border border-gray-200 transition-all"
-                    onClick={() => {
-                      if (!scrollContainerRef.current) return;
-                      scrollContainerRef.current.scrollBy({ left: scrollContainerRef.current.offsetWidth, behavior: 'smooth' });
-                    }}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-900">
-                      <line x1="8" y1="6" x2="16" y2="12" />
-                      <line x1="8" y1="18" x2="16" y2="12" />
-                    </svg>
-                  </button>
-                </div>
+            {/* Desktop: breadcrumb + title + photo grid + tabs */}
+          <div className="hidden md:block mb-8">
 
-                {/* Desktop Header Overlay – inside image */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-                  <Link to="/" aria-label="Back" className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <button className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
-                      <Heart className="h-4 w-4" />
-                    </button>
-                    <button className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
-                      <Share2 className="h-4 w-4" />
-                    </button>
-                    <button onClick={handleSaveToCart} className="w-8 h-8 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-sm transition-colors">
-                      <ShoppingCart className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-2 text-xs text-gray-500 mb-4 overflow-hidden" aria-label="Breadcrumb">
+              <Link to="/" className="hover:text-gray-800 transition-colors flex-shrink-0">Home</Link>
+              <span className="flex-shrink-0 text-gray-300">/</span>
+              <span className="capitalize text-gray-600 flex-shrink-0">
+                {service.service_categories?.name || 'Services'}
+              </span>
+              <span className="flex-shrink-0 text-gray-300">/</span>
+              <span className="text-gray-800 truncate">{service.title}</span>
+            </nav>
 
-                {/* Event hero overlay for Activities to mimic Quicket-style layout */}
-                {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') && (
-                  <div className="absolute left-6 bottom-6 max-w-2xl bg-gradient-to-r from-black/70 via-black/40 to-transparent text-white p-6 rounded-lg">
-                    <div className="text-sm uppercase tracking-wide text-gray-200 mb-2">{service.service_categories?.name || 'Event'}</div>
-                    <h2 className="text-3xl md:text-4xl font-bold leading-tight">{service.title}</h2>
-                    <div className="mt-3 flex items-center text-sm text-gray-200 space-x-4">
-                      {service.duration_hours && (
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 mr-2" />
-                          <span>{service.duration_hours} hours</span>
-                        </div>
-                      )}
-                      {service.location && (
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>{service.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-4">
-                      <div className="text-sm text-gray-300">From</div>
-                      <div className="text-2xl font-semibold inline-flex items-baseline">
-                        {formatCurrencyWithConversion(getDisplayPrice(service, ticketTypes), service.currency)}
-                        <span className="text-sm font-normal text-gray-200 ml-3 whitespace-nowrap align-middle">{getUnitLabel(service.service_categories?.name || '')}</span>
-                      </div>
-                    </div>
+            {/* Service title + meta */}
+            <div className="mb-5">
+              <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">
+                {formatServiceTitle(service, true)}
+              </h1>
+              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                {averageRating > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold text-gray-900">{averageRating.toFixed(1)}</span>
+                    <button
+                      className="underline hover:text-gray-900 transition-colors"
+                      onClick={() => { setActiveTab('reviews'); reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+                    >
+                      {reviewCount} review{reviewCount !== 1 ? 's' : ''}
+                    </button>
                   </div>
                 )}
-                {service.images && service.images.length > 1 && (
-                  <div className="absolute bottom-4 right-4 bg-white text-gray-900 px-3 py-1 rounded-full text-sm border border-gray-200 shadow-sm">
-                    {(service.images.indexOf(selectedImage || service.images[0]) + 1) || 1}/{service.images.length}
+                {service.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{service.location}</span>
                   </div>
                 )}
-              </div>
-
-              {/* Thumbnail Gallery - Desktop */}
-              {service.images && service.images.length > 1 && (
-                <div className="flex space-x-2 overflow-x-auto pb-2">
-                  {service.images.map((image, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => {
-                            setSelectedImage(image)
-                            setLightboxIndex(index)
-                            setLightboxOpen(true)
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              setSelectedImage(image)
-                              setLightboxIndex(index)
-                              setLightboxOpen(true)
-                            }
-                          }}
-                          aria-label={`View image ${index + 1}`}
-                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                            selectedImage === image ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <img
-                            loading="lazy"
-                            decoding="async"
-                            src={image}
-                            alt={`${service.title} ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                  ))}
+                <div className="flex items-center gap-2 ml-auto">
+                  <button className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                    <Share2 className="h-3.5 w-3.5" />
+                    Share
+                  </button>
+                  <button onClick={handleSaveToCart} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                    <Heart className="h-3.5 w-3.5" />
+                    Save
+                  </button>
                 </div>
-              )}
-
-              <div className="hidden md:block">
-                {renderInfoSections(false)}
               </div>
             </div>
 
+            {/* Booking.com photo grid */}
+            <div
+              className="relative rounded-xl overflow-hidden h-[420px]"
+              style={{ display: 'grid', gridTemplateColumns: service.images && service.images.length > 1 ? '3fr 2fr' : '1fr', gap: '4px' }}
+            >
+              {/* Main large photo */}
+              <div
+                className="relative overflow-hidden cursor-pointer group"
+                onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}
+              >
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  src={service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'}
+                  alt={service.title}
+                  className="w-full h-full object-cover group-hover:brightness-95 transition-[filter] duration-300"
+                />
+              </div>
+
+              {/* Right 2x2 grid — only when there are extra images */}
+              {service.images && service.images.length > 1 && (
+                <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '4px' }}>
+                  <div
+                    className="overflow-hidden cursor-pointer group"
+                    onClick={() => { setLightboxIndex(1); setLightboxOpen(true) }}
+                  >
+                    <img
+                      loading="lazy"
+                      src={service.images[1]}
+                      alt={`${service.title} 2`}
+                      className="w-full h-full object-cover group-hover:brightness-95 transition-[filter] duration-300"
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                    <div
+                      className="overflow-hidden cursor-pointer group"
+                      onClick={() => { setLightboxIndex(Math.min(2, service.images.length - 1)); setLightboxOpen(true) }}
+                    >
+                      <img
+                        loading="lazy"
+                        src={service.images[2] || service.images[0]}
+                        alt={`${service.title} 3`}
+                        className="w-full h-full object-cover group-hover:brightness-95 transition-[filter] duration-300"
+                      />
+                    </div>
+                    <div
+                      className="relative overflow-hidden cursor-pointer group"
+                      onClick={() => { setLightboxIndex(Math.min(3, service.images.length - 1)); setLightboxOpen(true) }}
+                    >
+                      <img
+                        loading="lazy"
+                        src={service.images[3] || service.images[0]}
+                        alt={`${service.title} 4`}
+                        className="w-full h-full object-cover group-hover:brightness-95 transition-[filter] duration-300"
+                      />
+                      {service.images.length > 4 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                          <span className="text-white font-semibold text-sm">+{service.images.length - 4} photos</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View all photos button */}
+              <button
+                onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}
+                className="absolute bottom-3 right-3 bg-white border border-gray-200 text-gray-800 text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm hover:shadow-md transition-all z-10 flex items-center gap-1.5"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                View all {service.images?.length || 0} photos
+              </button>
+            </div>
+
+            {/* In-page tab navigation */}
+            <div className="border-b border-gray-200 mt-6 sticky top-[120px] bg-white z-20">
+              <div className="flex gap-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                {[
+                  { id: 'overview', label: 'Overview', ref: overviewRef },
+                  { id: 'details', label: service.service_categories?.name ? `${service.service_categories.name} details` : 'Details', ref: detailsRef },
+                  { id: 'reviews', label: reviewCount > 0 ? `Reviews (${reviewCount})` : 'Reviews', ref: reviewsRef },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id)
+                      tab.ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }}
+                    className={`pb-3 pt-1 text-sm font-medium whitespace-nowrap border-b-2 transition-colors capitalize ${
+                      activeTab === tab.id
+                        ? 'border-gray-900 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div ref={overviewRef} className="mt-4">
+              {renderInfoSections(false)}
+            </div>
+          </div>
+
             {/* Category-Specific Information */}
-            {renderCategorySpecificInfo(service)}
+            <div ref={detailsRef}>
+              {renderCategorySpecificInfo(service)}
+            </div>
           </div>
 
           {/* Booking Sidebar */}
           <div className="lg:col-span-1">
-            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-8 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''} md:overflow-visible`}>
+            <div ref={bookingRef} className={`bg-white rounded-lg shadow-lg p-6 sticky top-24 ${mobileBookingOpen ? 'ring-4 ring-blue-200' : ''} md:overflow-visible`}>
               {(service.service_categories?.name?.toLowerCase() === 'activities' || service.service_categories?.name?.toLowerCase() === 'events') ? (
                   <div data-tickets-section>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Tickets</h3>

@@ -8,6 +8,14 @@ interface CitySearchInputProps {
   placeholder?: string
   /** Compact mode for mobile (smaller text & padding) */
   compact?: boolean
+  /**
+   * Inline mode — renders the input without border/padding/background so it can
+   * be embedded inside a pre-styled container (e.g. the hero search bar).
+   * The autocomplete dropdown still works normally.
+   */
+  inline?: boolean
+  /** id forwarded to the underlying <input> for external focus control */
+  id?: string
 }
 
 export default function CitySearchInput({
@@ -15,6 +23,8 @@ export default function CitySearchInput({
   onSelect,
   placeholder = 'Search your city...',
   compact = false,
+  inline = false,
+  id,
 }: CitySearchInputProps) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
@@ -84,12 +94,17 @@ export default function CitySearchInput({
   const padding = compact ? 'px-2.5 py-1.5' : 'px-3 py-2'
   const dropdownText = compact ? 'text-[11px]' : 'text-sm'
 
+  const inputClassName = inline
+    ? `w-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent${city ? ' pr-6' : ''}`
+    : `w-full ${padding} ${textSize} border border-gray-300 rounded-${compact ? 'md' : 'lg'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors${city ? ' pr-8' : ''}`
+
   return (
     <div ref={wrapperRef} className="relative">
       {/* Input field */}
       <div className="relative">
         <input
           ref={inputRef}
+          id={id}
           type="text"
           value={isOpen ? query : city}
           onChange={(e) => setQuery(e.target.value)}
@@ -97,13 +112,13 @@ export default function CitySearchInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full ${padding} ${textSize} border border-gray-300 rounded-${compact ? 'md' : 'lg'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${city ? 'pr-8' : ''}`}
+          className={inputClassName}
         />
         {city && !isOpen && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className={`absolute top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors ${inline ? 'right-0' : 'right-2'}`}
           >
             <X className="w-3 h-3" />
           </button>
@@ -112,7 +127,7 @@ export default function CitySearchInput({
 
       {/* Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+        <div className={`absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden max-h-52 overflow-y-auto ${inline ? 'z-[200]' : 'z-50'}`}>
           {results.map((entry, idx) => (
             <button
               key={`${entry.city}-${entry.country}`}
@@ -130,7 +145,7 @@ export default function CitySearchInput({
       )}
 
       {isOpen && query && results.length === 0 && (
-        <div className={`absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg ${padding}`}>
+        <div className={`absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl ${padding} ${inline ? 'z-[200]' : 'z-50'}`}>
           <p className={`${dropdownText} text-gray-400 text-center`}>No cities found</p>
         </div>
       )}

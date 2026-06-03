@@ -54,11 +54,18 @@ export default function PublicLayout() {
   const [partnersError, setPartnersError] = useState<string | null>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false)
   const partnersRowRef = useRef<HTMLDivElement>(null)
-  // Removed unused scrolled state
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
 
-  // Removed unused scroll effect
   const navigate = useNavigate()
+
+  const isHomePage = location.pathname === '/'
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const userDropdownRef = useRef<HTMLDivElement>(null)
   const guestDropdownRef = useRef<HTMLDivElement>(null)
   // const { categories } = useServiceCategories() // Temporarily commented out
@@ -140,6 +147,26 @@ export default function PublicLayout() {
     }
   }, [partners])
 
+  /**
+   * Task 9: Single search funnel.
+   * On the home page, focus the hero "Where" input (the primary booking search).
+   * On all other pages, open the global site-search modal.
+   * This avoids two competing entry points without merging fundamentally different
+   * search experiences (booking-context vs site-wide content search).
+   */
+  const handleSearchClick = () => {
+    if (isHomePage) {
+      const heroInput = document.getElementById('hero-search-where') as HTMLInputElement | null
+      if (heroInput) {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        // Small delay to let the scroll settle before focusing
+        setTimeout(() => heroInput.focus(), 250)
+        return
+      }
+    }
+    setShowGlobalSearch(true)
+  }
+
   const handleSignOut = async () => {
     setShowLogoutConfirm(true)
   }
@@ -158,108 +185,127 @@ export default function PublicLayout() {
     setShowLogoutConfirm(false)
   }
 
+  const isTransparent = isHomePage && !scrolled
+  const iconCls = isTransparent ? 'text-white' : 'text-gray-600'
+  const iconHover = isTransparent ? 'hover:bg-white/15' : 'hover:bg-gray-100'
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {/* Use fixed header so it remains visible even if some ancestor creates a scrolling context */}
-      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300 bg-transparent${typeof window !== 'undefined' && document.body.classList.contains('hide-main-navbar') ? ' hidden' : ''}` }>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
-          <div className="flex justify-between items-center h-16 md:h-[72px] rounded-2xl mt-2 mx-1 md:mx-4 bg-transparent shadow-lg overflow-visible" style={{boxShadow: '0 2px 16px 0 rgba(0,0,0,0.04)'}}>
-            {/* Logo */}
-            <Link to="/" className="flex flex-col items-end justify-center transition-colors duration-300 text-gray-900 border border-white/80 bg-white rounded-xl px-2 py-1 shadow-sm">
-              <span className="text-lg font-bold tracking-tight">DirtTrails<span className="text-emerald-500 ml-0.5">.</span></span>
-              <span className="self-end text-[7px] font-semibold uppercase tracking-[0.16em] text-slate-500 mt-0.5">Safari intel</span>
-              {location.pathname.includes('/scan/') && (
-                <span className="mt-2 text-sm font-semibold text-white/90 drop-shadow-lg">
-                  Event Verification
+      <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300${typeof window !== 'undefined' && document.body.classList.contains('hide-main-navbar') ? ' hidden' : ''}`}>
+        <div className={`transition-all duration-300 overflow-visible ${isTransparent ? '' : 'bg-white border-b border-gray-200 shadow-sm'}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
+            <div className="flex items-center justify-between h-16 md:h-[72px] overflow-visible">
+
+              {/* Logo */}
+              <Link to="/" className={`flex flex-col items-end justify-center transition-all duration-300 rounded-xl px-2 py-1 ${isTransparent ? 'bg-white/10 backdrop-blur-sm' : 'bg-white border border-gray-200'} shadow-sm`}>
+                <span className={`text-lg font-bold tracking-tight transition-colors ${isTransparent ? 'text-white' : 'text-gray-900'}`}>
+                  DirtTrails<span className="text-emerald-500 ml-0.5">.</span>
                 </span>
+                <span className={`self-end text-[7px] font-semibold uppercase tracking-[0.16em] mt-0.5 transition-colors ${isTransparent ? 'text-white/70' : 'text-slate-500'}`}>
+                  Safari intel
+                </span>
+                {location.pathname.includes('/scan/') && (
+                  <span className="mt-2 text-sm font-semibold text-white/90 drop-shadow-lg">
+                    Event Verification
+                  </span>
+                )}
+              </Link>
+
+              {/* Desktop Navigation — clean text links, no pill borders */}
+              {!location.pathname.includes('/scan/') && (
+                <nav className="hidden md:flex items-center gap-1">
+                  {navigation.map((item) => {
+                    const isActive = item.name.toLowerCase() === 'home'
+                      ? location.pathname === '/'
+                      : location.pathname === item.href
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
+                          isActive
+                            ? isTransparent
+                              ? 'text-white bg-white/15'
+                              : 'text-gray-900 bg-gray-100'
+                            : isTransparent
+                              ? 'text-white/80 hover:text-white hover:bg-white/10'
+                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
+                      >
+                        {t(item.name)}
+                      </Link>
+                    )
+                  })}
+                </nav>
               )}
-            </Link>
 
-            {/* Desktop Navigation */}
-            {!location.pathname.includes('/scan/') && (
-              <nav className="hidden md:flex items-center space-x-4">
-                {navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`text-sm font-medium transition-colors px-3 py-1 rounded-xl border border-white/80 bg-white/10 shadow ${
-                      item.name.toLowerCase() === 'home'
-                        ? 'text-emerald-600 border-emerald-600'
-                        : location.pathname === item.href
-                          ? 'text-emerald-600 border-emerald-600'
-                          : 'text-white hover:text-emerald-300'
-                    }`}
+              {/* Right side actions — borderless icon buttons */}
+              {!location.pathname.includes('/scan/') && (
+                <div className="flex items-center gap-1 overflow-visible">
+
+                  {/* Search — focuses hero on home, opens modal elsewhere (Task 9) */}
+                  <button
+                    onClick={handleSearchClick}
+                    className={`hidden md:flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
+                    title={t('search')}
                   >
-                    {t(item.name)}
-                  </Link>
-                ))}
-                {/* Desktop messages text link removed — icon lives beside Search */}
-              </nav>
-            )}
+                    <Search className={`h-5 w-5 ${iconCls}`} />
+                  </button>
 
-            {/* Right side actions */}
-            {!location.pathname.includes('/scan/') && (
-              <div className="flex items-center space-x-2 md:space-x-4">
-                {/* Search Button - Hidden on mobile, only in bottom nav */}
-                <button
-                  onClick={() => setShowGlobalSearch(true)}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                  title={t('search')}
-                >
-                  <Search className="h-5 w-5 text-emerald-600" />
-                </button>
-
-                {/* Messages icon for desktop - visible only to authenticated users */}
-                {user && (
-                  <Link
-                    to="/messages"
-                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600 relative"
-                    title={t('messages')}
-                  >
-                    <MessageSquare className="h-5 w-5 text-emerald-600" />
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
+                  {/* Messages — authenticated only */}
+                  {user && (
+                    <Link
+                      to="/messages"
+                      className={`hidden md:flex items-center justify-center w-9 h-9 rounded-full transition-colors relative ${iconHover}`}
+                      title={t('messages')}
+                    >
+                      <MessageSquare className={`h-5 w-5 ${iconCls}`} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full flex items-center justify-center ring-2 ring-white">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
+                      )}
+                    </Link>
+                  )}
+
+                  {/* Globe / preferences */}
+                  <button
+                    onClick={() => setShowPreferences(true)}
+                    className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
+                    title={t('preferences')}
+                  >
+                    <Globe className={`h-4 w-4 ${iconCls}`} />
+                    <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
+                  </button>
+
+                  {/* Cart / saved */}
+                  <Link
+                    to="/saved"
+                    className={`relative flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
+                  >
+                    <ShoppingBag className={`h-5 w-5 ${iconCls}`} />
+                    {getCartCount() > 0 && (
+                      <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 text-[10px] font-bold leading-none text-white bg-red-500 rounded-full flex items-center justify-center ring-2 ring-white">
+                        {getCartCount()}
+                      </span>
                     )}
                   </Link>
-                )}
 
-                <button
-                  onClick={() => setShowPreferences(true)}
-                  className="flex items-center space-x-2 px-3 py-2 border border-white/80 bg-transparent rounded-full shadow hover:bg-gray-50 transition-colors"
-                  title={t('preferences')}
-                >
-                  <Globe className="h-3 w-3 md:h-4 md:w-4 text-emerald-600" />
-                  {/* Show only the icon in the navbar; keep an sr-only label for accessibility */}
-                  <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
-                </button>
-
-                {/* Cart / Saved icon - visible to all users so guests can save items in-session */}
-                <Link to="/saved" className="flex items-center text-gray-700 hover:text-emerald-600 relative p-1.5 rounded-full border border-white/80 bg-transparent shadow hover:bg-gray-100 transition-colors">
-                  <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
-                  {getCartCount() > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {getCartCount()}
-                    </span>
-                  )}
-                </Link>
-
-                {/* Sign In Button or User Account Dropdown */}
-                {user && profile?.role === 'tourist' ? (
-                  <div className="relative z-[1002]" ref={userDropdownRef}>
-                    <button
-                      onClick={() => setShowUserDropdown(!showUserDropdown)}
-                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    >
-                      <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center shadow-md">
-                        <span className="text-sm font-bold text-white">
-                          {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                      <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showUserDropdown ? 'rotate-180' : ''}`} />
-                    </button>
+                  {/* User account / sign-in */}
+                  {user && profile?.role === 'tourist' ? (
+                    <div className="relative z-[1002]" ref={userDropdownRef}>
+                      <button
+                        onClick={() => setShowUserDropdown(!showUserDropdown)}
+                        className={`flex items-center gap-1 pl-1 pr-2 py-1 rounded-full transition-colors ${iconHover}`}
+                      >
+                        <div className="h-7 w-7 rounded-full bg-emerald-600 flex items-center justify-center shadow-sm">
+                          <span className="text-xs font-bold text-white">
+                            {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <ChevronDown className={`h-3 w-3 transition-transform ${isTransparent ? 'text-white/70' : 'text-gray-500'} ${showUserDropdown ? 'rotate-180' : ''}`} />
+                      </button>
 
                     {/* User Dropdown Menu */}
                     {showUserDropdown && (
@@ -343,15 +389,15 @@ export default function PublicLayout() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="relative z-[1002]" ref={guestDropdownRef}>
-                    <button
-                      onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                      className="flex items-center p-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    >
-                      <User className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
-                      <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-gray-500 transition-transform ml-1 ${showGuestDropdown ? 'rotate-180' : ''}`} />
-                    </button>
+                  ) : (
+                    <div className="relative z-[1002]" ref={guestDropdownRef}>
+                      <button
+                        onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                        className={`flex items-center gap-1 px-2 py-1.5 rounded-full transition-colors ${iconHover}`}
+                      >
+                        <User className={`h-4 w-4 ${iconCls}`} />
+                        <ChevronDown className={`h-3 w-3 transition-transform ${isTransparent ? 'text-white/70' : 'text-gray-500'} ${showGuestDropdown ? 'rotate-180' : ''}`} />
+                      </button>
 
                     {/* Guest Dropdown Menu */}
                     {showGuestDropdown && (
@@ -431,6 +477,7 @@ export default function PublicLayout() {
             )}
           </div>
         </div>
+      </div>
       </header>
 
       {/* Preferences Modal */}

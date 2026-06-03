@@ -913,18 +913,22 @@ export async function getServices(vendorId?: string) {
     // Vendor wants to see their own services (including pending)
     query = query.eq('vendor_id', vendorId)
   } else {
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check if current user is admin — wrapped defensively so a stale auth
+    // session never prevents the public listing from loading.
     let isAdmin = false;
-    
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      
-      isAdmin = profile?.role === 'admin';
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user ?? null;
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        isAdmin = profile?.role === 'admin';
+      }
+    } catch {
+      // auth check failed — treat as public user
     }
 
     if (!isAdmin) {

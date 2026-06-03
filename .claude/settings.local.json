@@ -33,7 +33,13 @@
       "Bash(git stash *)",
       "Bash(dir \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\" /a /b)",
       "Bash(Get-ChildItem -Path \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\\\\src\\\\pages\" -File)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Skill(impeccable)",
+      "Bash(node *)",
+      "Bash(Get-ChildItem -Path \"E:\\\\frontend dirttrails\\\\dirt-t-frontend\" -Recurse -Include \"*Navbar*\",\"*navbar*\",\"*NavBar*\" -File)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)"
     ]
   },
   "enableAllProjectMcpServers": true,

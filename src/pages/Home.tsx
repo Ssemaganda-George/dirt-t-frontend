@@ -12,16 +12,16 @@ function getCategorySlug(categoryId: string): string {
   }
 }
 import { useState, useEffect, useRef } from 'react'
-import ReactDOM from 'react-dom'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, MapPin, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronDown, ChevronRight, Check, Filter } from 'lucide-react'
+import { Search, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronRight, Calendar, Users } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import { usePreferences } from '../contexts/PreferencesContext'
-import { formatCurrencyWithConversion, getDisplayPrice } from '../lib/utils'
+import { getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
+import CitySearchInput from '../components/CitySearchInput'
 import type { Service } from '../types'
 
 // Playful titles per category. The UI will pick one title per category per day,
@@ -291,31 +291,49 @@ export default function Home() {
   const [categories, setCategories] = useState<Array<{id: string, name: string, icon?: React.ComponentType<any>}>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all'])
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   // When the user refreshes the page multiple times, we may swap the column order.
-  // Track a simple refresh counter in localStorage; when it reaches 5 we set
-  // swapColumnsOnRefresh=true for that load and reset the counter.
   const [swapColumnsOnRefresh, setSwapColumnsOnRefresh] = useState(false)
+  const [searchDate, setSearchDate] = useState('')
+  const [checkOutDate, setCheckOutDate] = useState('')
+  const [guestCount, setGuestCount] = useState(1)
 
   const navigate = useNavigate()
+
+  const isHotelsActive = selectedCategories.includes('cat_hotels') && !selectedCategories.includes('all')
+
+  // Fix #1: wire the Search button
+  const handleSearch = () => {
+    const activeCategory = selectedCategories.includes('all') ? null : selectedCategories[0]
+    const slug = activeCategory ? getCategorySlug(activeCategory) : 'services'
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) params.set('q', searchQuery.trim())
+    if (searchDate) params.set('checkIn', searchDate)
+    if (checkOutDate && isHotelsActive) params.set('checkOut', checkOutDate)
+    if (guestCount > 1) params.set('guests', String(guestCount))
+    navigate(`/category/${slug}${params.toString() ? '?' + params.toString() : ''}`)
+  }
+
+  // Fix #6: tab click navigates to category page for non-explore tabs
+  const handleTabClick = (id: string) => {
+    if (id === 'all') {
+      handleCategorySelect('all')
+      return
+    }
+    handleCategorySelect(id)
+    const slug = getCategorySlug(id)
+    const params = new URLSearchParams()
+    if (searchQuery.trim()) params.set('q', searchQuery.trim())
+    if (searchDate) params.set('checkIn', searchDate)
+    if (checkOutDate && id === 'cat_hotels') params.set('checkOut', checkOutDate)
+    if (guestCount > 1) params.set('guests', String(guestCount))
+    navigate(`/category/${slug}${params.toString() ? '?' + params.toString() : ''}`)
+  }
 
   // Use the reactive useServices hook
   const { services: allServices, loading: servicesLoading } = useServices(undefined, { includeExpired: false })
 
   const { t } = usePreferences()
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (isDropdownOpen && !(event.target as Element).closest('.category-dropdown')) {
-        setIsDropdownOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isDropdownOpen])
 
   // Combined loading state
   const isLoading = servicesLoading
@@ -656,15 +674,6 @@ export default function Home() {
     return <PageSkeleton type="home" />
   }
 
-  if (selectedService) {
-    return (
-      <ServiceDetail 
-        service={selectedService} 
-        onBack={() => setSelectedService(null)}
-      />
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -719,158 +728,177 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Search bar embedded in hero */}
-          <div className="w-full max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-2 flex items-center gap-1">
-              <div className="flex-1 flex items-center px-3">
-                <Search className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                <input
-                  type="text"
-                  placeholder={t('search_placeholder')}
-                  className="w-full py-2 text-gray-900 placeholder-gray-400 focus:outline-none text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="ml-1 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                    aria-label="Clear search"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+          {/* Multi-field search widget — two rows on all screens */}
+          <div className="w-full max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+              {/* Row 1: Destination — CitySearchInput inline (Task 5) */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+                <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Where</div>
+                  <CitySearchInput
+                    id="hero-search-where"
+                    city={searchQuery}
+                    onSelect={(city) => setSearchQuery(city)}
+                    placeholder="Destinations, activities..."
+                    inline
+                  />
+                </div>
               </div>
-              {/* Filter Dropdown Trigger */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="category-dropdown flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 text-white px-3 md:px-5 py-2.5 rounded-xl font-medium transition-colors text-sm"
-                  title="Filter services by category"
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">
-                    {selectedCategories.includes('all')
-                      ? 'All'
-                      : selectedCategories.length === 1
-                        ? categories.find(cat => cat.id === selectedCategories[0])?.name || 'Filter'
-                        : `${selectedCategories.length} Selected`}
-                  </span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
 
-                {/* Dropdown Menu */}
-                {isDropdownOpen && ReactDOM.createPortal(
-                  <div className="category-dropdown fixed top-32 right-8 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[99999]">
-                    {/* Header */}
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-900 text-sm">{t('choose_travel_needs')}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{t('select_one_or_more')}</p>
+              {/* Row 2: Dates + Guests + Search button */}
+              <div className="flex items-stretch divide-x divide-gray-100">
+
+                {/* Check-in / When */}
+                <div className="flex-1 flex items-center gap-2 px-3 py-2.5">
+                  <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">
+                      {isHotelsActive ? 'Check-in' : 'When'}
                     </div>
+                    <input
+                      type="date"
+                      className="text-xs text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                      value={searchDate}
+                      onChange={(e) => setSearchDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      style={{ colorScheme: 'light' }}
+                    />
+                  </div>
+                </div>
 
-                    {/* Categories List */}
-                    <div className="max-h-60 overflow-y-auto">
-                      {/* All Categories Option */}
-                      <button
-                        onClick={() => {
-                          setSelectedCategories(['all'])
-                          setIsDropdownOpen(false)
-                        }}
-                        className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 ${
-                          selectedCategories.includes('all') ? 'bg-emerald-50' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            selectedCategories.includes('all')
-                              ? 'bg-emerald-600 border-emerald-600'
-                              : 'border-gray-300'
-                          }`}>
-                            {selectedCategories.includes('all') && (
-                              <Check className="w-2.5 h-2.5 text-white" />
-                            )}
-                          </div>
-                          <span className={`text-sm ${selectedCategories.includes('all') ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
-                            {t('show_all_travel_needs')}
-                          </span>
-                        </div>
-                      </button>
-
-                      {/* Individual Categories */}
-                      {categories.slice(1).map((category) => (
-                        <button
-                          key={category.id}
-                          onClick={() => handleCategorySelect(category.id)}
-                          className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors ${
-                            selectedCategories.includes(category.id) ? 'bg-emerald-50' : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                              selectedCategories.includes(category.id)
-                                ? 'bg-emerald-600 border-emerald-600'
-                                : 'border-gray-300'
-                            }`}>
-                              {selectedCategories.includes(category.id) && (
-                                <Check className="w-2.5 h-2.5 text-white" />
-                              )}
-                            </div>
-                            <span className={`text-sm ${selectedCategories.includes(category.id) ? 'text-emerald-700 font-medium' : 'text-gray-700'}`}>
-                              {category.name}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
+                {/* Check-out — only when Stays/Hotels active (Fix #3) */}
+                {isHotelsActive && (
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2.5">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Check-out</div>
+                      <input
+                        type="date"
+                        className="text-xs text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                        value={checkOutDate}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        min={searchDate || new Date().toISOString().split('T')[0]}
+                        style={{ colorScheme: 'light' }}
+                      />
                     </div>
-
-                    {/* Footer */}
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
-                          {selectedCategories.includes('all') ? t('all_listings') : `${selectedCategories.length} selected`}
-                        </span>
-                        <button
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="text-xs text-emerald-700 font-semibold hover:text-emerald-900"
-                        >
-                          {t('done')}
-                        </button>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body
+                  </div>
                 )}
+
+                {/* Guests */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <Users className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                  <div>
+                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Guests</div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
+                        className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-700 text-xs font-medium transition-colors"
+                        aria-label="Fewer guests"
+                      >−</button>
+                      <span className="text-sm font-medium text-gray-900 w-5 text-center tabular-nums">{guestCount}</span>
+                      <button
+                        onClick={() => setGuestCount(guestCount + 1)}
+                        className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-700 text-xs font-medium transition-colors"
+                        aria-label="More guests"
+                      >+</button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search button — Fix #1 */}
+                <button
+                  onClick={handleSearch}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2.5 flex items-center justify-center gap-2 font-semibold text-sm transition-colors flex-shrink-0"
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="hidden sm:inline">Search</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Category filter pills */}
-      {!searchQuery && (
-        <div className="border-b border-gray-100 bg-white">
+      {/* Booking.com-style category tab bar */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {[
+              { id: 'all',              name: 'Explore',     Icon: Map        },
+              { id: 'cat_hotels',       name: 'Stays',       Icon: Hotel      },
+              { id: 'cat_transport',    name: 'Transport',   Icon: Car        },
+              { id: 'cat_tour_packages',name: 'Tours',       Icon: Map        },
+              { id: 'cat_activities',   name: 'Events',      Icon: Target     },
+              { id: 'cat_restaurants',  name: 'Restaurants', Icon: Utensils   },
+              { id: 'cat_shops',        name: 'Shops',       Icon: ShoppingBag},
+            ].map(({ id, name, Icon }) => {
+              const isActive = id === 'all'
+                ? selectedCategories.includes('all')
+                : selectedCategories.includes(id) && !selectedCategories.includes('all')
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleTabClick(id)}
+                  className={`flex flex-col items-center gap-1.5 px-4 sm:px-5 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    isActive
+                      ? 'border-gray-900 text-gray-900'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Popular destinations — shown only on the default "Explore all" view */}
+      {!searchQuery && selectedCategories.includes('all') && (
+        <div className="bg-white border-b border-gray-100 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-4">
-              {categories.map((category) => {
-                const isActive = category.id === 'all'
-                  ? selectedCategories.includes('all')
-                  : selectedCategories.includes(category.id) && !selectedCategories.includes('all')
-                const Icon = category.icon
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-gray-900">Popular destinations</h2>
+              <Link
+                to="/category/tours"
+                className="text-sm text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1"
+              >
+                View all <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {[
+                { name: 'Kampala', slug: 'hotels', img: 'https://images.pexels.com/photos/3601425/pexels-photo-3601425.jpeg' },
+                { name: 'Jinja', slug: 'activities', img: 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg' },
+                { name: 'Entebbe', slug: 'hotels', img: 'https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg' },
+                { name: 'Murchison', slug: 'tours', img: 'https://images.pexels.com/photos/3183183/pexels-photo-3183183.jpeg' },
+                { name: 'Bwindi', slug: 'tours', img: 'https://images.pexels.com/photos/5735290/pexels-photo-5735290.jpeg' },
+                { name: 'Kidepo', slug: 'tours', img: 'https://images.pexels.com/photos/3150638/pexels-photo-3150638.jpeg' },
+              ].map(dest => {
+                // Fix #8: carry search context into destination links
+                const destParams = new URLSearchParams()
+                destParams.set('q', dest.name)
+                if (searchDate) destParams.set('checkIn', searchDate)
+                if (checkOutDate && dest.slug === 'hotels') destParams.set('checkOut', checkOutDate)
+                if (guestCount > 1) destParams.set('guests', String(guestCount))
                 return (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gray-900 text-white shadow-sm'
-                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900'
-                    }`}
-                  >
-                    {Icon && <Icon className="h-3.5 w-3.5" />}
-                    {category.name}
-                  </button>
+                <Link key={dest.name} to={`/category/${dest.slug}?${destParams.toString()}`} className="group">
+                  <div className="aspect-square rounded-xl overflow-hidden relative bg-gray-200">
+                    <img
+                      src={dest.img}
+                      alt={dest.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                    <p className="absolute bottom-2.5 left-2.5 right-2.5 text-white text-xs font-semibold truncate drop-shadow-sm">
+                      {dest.name}
+                    </p>
+                  </div>
+                </Link>
                 )
               })}
             </div>
@@ -1185,266 +1213,3 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
     </div>
   )
 }
-
-interface ServiceDetailProps {
-  service: Service
-  onBack: () => void
-}
-function ServiceDetail({ service, onBack }: ServiceDetailProps) {
-  const [isSaved, setIsSaved] = useState(false)
-  // Preferences for currency/language
-  const { selectedCurrency, selectedLanguage, t } = usePreferences()
-
-  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Back Button */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={onBack}
-            className="flex items-center text-gray-600 hover:text-gray-900 font-medium"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            {t('back_to_search')}
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Image */}
-      <div className="relative h-96 bg-gray-900">
-        <img
-          loading="lazy"
-          decoding="async"
-          src={imageUrl}
-          alt={service.title}
-          className="w-full h-full object-cover opacity-90"
-        />
-        <button
-          onClick={() => setIsSaved(!isSaved)}
-          className="absolute top-6 right-6 p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        >
-          <Heart 
-            className={`h-6 w-6 ${
-              isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-            }`}
-          />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm p-8">
-              {/* Title & Rating */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">
-                    {service.service_categories?.name || service.category_id}
-                  </span>
-                  <div className="flex items-center gap-1 bg-emerald-50 px-3 py-1 rounded-full">
-                    <Star className="h-4 w-4 text-emerald-600 fill-current" />
-                    <span className="text-sm font-bold text-emerald-700">4.5</span>
-                    <span className="text-sm text-gray-600">(0 reviews)</span>
-                  </div>
-                </div>
-                <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                  {service.title}
-                </h1>
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  <span className="text-lg">{service.location}</span>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">About this experience</h2>
-                <p className="text-gray-700 text-lg leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
-
-              {/* Flight Details */}
-              {service.category_id === 'cat_flights' && (
-                <div className="mb-8 pb-8 border-b border-gray-200">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Flight Details</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Departure</h3>
-                      <div className="space-y-1">
-                        <p className="text-gray-700">{service.departure_city} {service.departure_airport ? `(${service.departure_airport})` : ''}</p>
-                        <p className="text-gray-600">{service.departure_time ? new Date(service.departure_time).toLocaleString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'TBD'}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Arrival</h3>
-                      <div className="space-y-1">
-                        <p className="text-gray-700">{service.arrival_city} {service.arrival_airport ? `(${service.arrival_airport})` : ''}</p>
-                        <p className="text-gray-600">{service.arrival_time ? new Date(service.arrival_time).toLocaleString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'TBD'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                    {service.flight_number && (
-                      <div>
-                        <span className="text-sm text-gray-500">Flight Number</span>
-                        <p className="font-semibold">{service.flight_number}</p>
-                      </div>
-                    )}
-                    {service.airline && (
-                      <div>
-                        <span className="text-sm text-gray-500">Airline</span>
-                        <p className="font-semibold">{service.airline}</p>
-                      </div>
-                    )}
-                    {service.aircraft_type && (
-                      <div>
-                        <span className="text-sm text-gray-500">Aircraft</span>
-                        <p className="font-semibold">{service.aircraft_type}</p>
-                      </div>
-                    )}
-                    {service.duration_minutes && (
-                      <div>
-                        <span className="text-sm text-gray-500">Duration</span>
-                        <p className="font-semibold">{Math.floor(service.duration_minutes / 60)}h {service.duration_minutes % 60}m</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Vendor Info */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Provided by</h2>
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
-                    <span className="text-2xl font-bold text-emerald-700">
-                      {service.vendors?.business_name?.charAt(0) || 'V'}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">{service.vendors?.business_name || 'Vendor'}</h3>
-                    <p className="text-gray-600">Professional tour operator</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Highlights */}
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Highlights</h2>
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-emerald-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Professional guided experience</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-emerald-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Free cancellation up to 24 hours before</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-emerald-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">All equipment and materials included</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-emerald-600 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Small group size for personalized attention</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Booking Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
-              <div className="mb-6">
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-sm text-gray-600">{t('from')}</span>
-                    <span className="text-3xl font-bold text-gray-900">
-                      {(() => {
-                        if ((service as any)?.service_categories?.name?.toLowerCase() === 'transport') {
-                          const within = Number((service as any).price_within_town ?? NaN)
-                          const upcountry = Number((service as any).price_upcountry ?? NaN)
-                          const candidates: number[] = []
-                          if (Number.isFinite(within) && within > 0) candidates.push(within)
-                          if (Number.isFinite(upcountry) && upcountry > 0) candidates.push(upcountry)
-                          if (candidates.length > 0) {
-                            return formatCurrencyWithConversion(Math.min(...candidates), service.currency, selectedCurrency, selectedLanguage)
-                          }
-                        }
-                        return formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)
-                      })()}
-                    </span>
-                </div>
-                <p className="text-sm text-gray-600">{t('per_person')}</p>
-              </div>
-
-              <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-semibold text-lg transition-colors mb-4">
-                {t('check_availability')}
-              </button>
-
-              <button className="w-full border-2 border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold transition-colors mb-6">
-                {t('contact_vendor')}
-              </button>
-
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="font-bold text-gray-900 mb-4">{t('whats_included')}</h3>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-emerald-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    {t('professional_guide')}
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-emerald-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    All fees and taxes
-                  </li>
-                  <li className="flex items-center">
-                    <svg className="w-5 h-5 text-emerald-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Insurance coverage
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-
