@@ -5,6 +5,7 @@ import { getDisplayPrice } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import Money from '../Money'
 import type { Service } from '../../types'
+import { DEFAULT_DESTINATION_IMAGE } from '../../lib/destinationImages'
 
 interface HomeListingCardProps {
   service: Service
@@ -83,7 +84,7 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
     return () => { mounted = false }
   }, [service.id, service.ticket_types])
 
-  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+  const imageUrl = service.images?.[0] || DEFAULT_DESTINATION_IMAGE
   const locationLine = getLocationLine(service)
   const unitLabel = getUnitLabel(service.service_categories?.name)
 

@@ -23,6 +23,11 @@ import { getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
 import CitySearchInput from '../components/CitySearchInput'
 import HomeListingCard from '../components/home/HomeListingCard'
+import {
+  DEFAULT_DESTINATION_IMAGE,
+  destinationImageUrl,
+  POPULAR_DESTINATIONS,
+} from '../lib/destinationImages'
 import type { Service } from '../types'
 
 function getHomesCarouselTitle(categoryId: string, fallback: string): string {
@@ -876,15 +881,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {[
-                { name: 'Kampala', slug: 'hotels', img: 'https://images.pexels.com/photos/3601425/pexels-photo-3601425.jpeg' },
-                { name: 'Jinja', slug: 'activities', img: 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg' },
-                { name: 'Entebbe', slug: 'hotels', img: 'https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg' },
-                { name: 'Murchison', slug: 'tours', img: 'https://images.pexels.com/photos/3183183/pexels-photo-3183183.jpeg' },
-                { name: 'Bwindi', slug: 'tours', img: 'https://images.pexels.com/photos/5735290/pexels-photo-5735290.jpeg' },
-                { name: 'Kidepo', slug: 'tours', img: 'https://images.pexels.com/photos/3150638/pexels-photo-3150638.jpeg' },
-              ].map(dest => {
-                // Fix #8: carry search context into destination links
+              {POPULAR_DESTINATIONS.map(dest => {
                 const destParams = new URLSearchParams()
                 destParams.set('q', dest.name)
                 if (searchDate) destParams.set('checkIn', searchDate)
@@ -894,10 +891,14 @@ export default function Home() {
                 <Link key={dest.name} to={`/category/${dest.slug}?${destParams.toString()}`} className="group">
                   <div className="aspect-square rounded-xl overflow-hidden relative bg-gray-200">
                     <img
-                      src={dest.img}
-                      alt={dest.name}
+                      src={destinationImageUrl(dest.imageId)}
+                      alt={`${dest.name}, Uganda`}
                       loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null
+                        e.currentTarget.src = DEFAULT_DESTINATION_IMAGE
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
                     <p className="absolute bottom-2.5 left-2.5 right-2.5 text-white text-xs font-semibold truncate drop-shadow-sm">
@@ -1069,7 +1070,7 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
     fetchRating()
   }, [service.id])
 
-  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+  const imageUrl = service.images?.[0] || DEFAULT_DESTINATION_IMAGE
 
   
 
