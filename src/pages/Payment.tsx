@@ -1,14 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { calculatePaymentForAmount } from '../lib/pricingService'
-import type { RealtimeChannel } from '@supabase/supabase-js'
+import { initiateMarzpayCollect } from '../lib/marzpayApi'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
+import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from '../hooks/useMarzpayPaymentWatch'
 import { PageSkeleton } from '../components/SkeletonLoader'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -111,10 +109,11 @@ export default function PaymentPage() {
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
   const [paymentSuccess, setPaymentSuccess] = useState(false)
-  const paymentChannelRef = useRef<RealtimeChannel | null>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const completionHandledRef = useRef(false)
   const [searchParams] = useSearchParams()
+  const { startWatch, stopWatch } = useMarzpayPaymentWatch({
+    ...orderMarzpayWatchConfig,
+    channelPrefix: 'payment',
+  })
 
   const refFromQuery = searchParams.get('reference')
   const [donationPayment, setDonationPayment] = useState<any | null>(null)
@@ -143,171 +142,59 @@ export default function PaymentPage() {
     }
   }, [refFromQuery])
 
-  const checkStatus = async (ref: string): Promise<'completed' | 'failed' | null> => {
-    try {
-      const url = `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`
-      console.log('[Payment] checkStatus: fetching', { ref, url: url.replace(supabaseUrl, '...') })
-      const res = await fetch(url, {
-        cache: 'no-store',
-      })
-      const raw = await res.text()
-      console.log('[Payment] checkStatus: response', {
-        ok: res.ok,
-        status: res.status,
-        body: raw?.slice(0, 300),
-      })
-      const data = (JSON.parse(raw || '{}') as { status?: string; error?: string })
-      const result = data?.status === 'completed' ? 'completed' : data?.status === 'failed' ? 'failed' : null
-      console.log('[Payment] checkStatus: parsed', { 'data.status': data?.status, result })
-      if (data?.status === 'completed') return 'completed'
-      if (data?.status === 'failed') return 'failed'
-      return null
-    } catch (e) {
-      console.error('[Payment] checkStatus: error', e)
-      return null
-    }
-  }
+  const startWatchingReference = useCallback(
+    async (ref: string) => {
+      setPaymentReference(ref)
+      startWatch(ref, {
+        onPollingMessage: setPollingMessage,
+        onCompleted: () => {
+          setProcessing(false)
+          setPollingMessage('Payment confirmed! Finalizing your tickets in background…')
+          setPaymentSuccess(true)
 
-  // Exponential backoff delays: 500ms → 1s → 2s → 4s → 8s → 16s → 32s
-  // Max 7 polls over 90s vs the previous ~87 polls over 120s (94% reduction)
-  const BACKOFF_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 16000, 32000]
-  const POLL_TIMEOUT_MS = 90_000
-
-  const startWatchingReference = async (ref: string): Promise<void> => {
-    completionHandledRef.current = false
-    setPaymentReference(ref)
-    setPollingMessage('Check your phone — a USSD prompt should appear shortly.')
-
-    // Cancel any prior watch session
-    abortControllerRef.current?.abort()
-    const abort = new AbortController()
-    abortControllerRef.current = abort
-
-    // Progressive status messages — sets realistic expectations for 30–90s USSD flow
-    const messages: [number, string][] = [
-      [8000,  'Enter your PIN on the USSD prompt to confirm payment.'],
-      [20000, 'Still waiting… Airtel payments can take up to 60 seconds.'],
-      [40000, 'Almost there — waiting for network confirmation.'],
-      [65000, 'Taking longer than usual. If no prompt appeared, you can go back and retry.'],
-    ]
-    for (const [delay, msg] of messages) {
-      setTimeout(() => {
-        if (!abort.signal.aborted && !completionHandledRef.current) setPollingMessage(msg)
-      }, delay)
-    }
-
-    const cleanup = () => {
-      abort.abort()
-      if (paymentChannelRef.current) {
-        paymentChannelRef.current.unsubscribe()
-        paymentChannelRef.current = null
-      }
-    }
-
-    const handleCompleted = async () => {
-      if (completionHandledRef.current) return
-      completionHandledRef.current = true
-      cleanup()
-      setProcessing(false)
-      setPollingMessage('Payment confirmed! Finalizing your tickets in background…')
-      setPaymentSuccess(true)
-
-      if (orderId) {
-        ;(async () => {
-          for (let attempt = 0; attempt < 6; attempt++) {
-            const { data: ticketCheck } = await supabase
-              .from('tickets')
-              .select('id')
-              .eq('order_id', orderId)
-              .limit(1)
-            if (ticketCheck && ticketCheck.length > 0) {
-              setPollingMessage('Payment confirmed! Tickets are ready.')
-              return
-            }
-            if (attempt < 5) await new Promise<void>(r => setTimeout(r, 1000))
+          if (orderId) {
+            void (async () => {
+              for (let attempt = 0; attempt < 6; attempt++) {
+                const { data: ticketCheck } = await supabase
+                  .from('tickets')
+                  .select('id')
+                  .eq('order_id', orderId)
+                  .limit(1)
+                if (ticketCheck && ticketCheck.length > 0) {
+                  setPollingMessage('Payment confirmed! Tickets are ready.')
+                  return
+                }
+                if (attempt < 5) await new Promise<void>(r => setTimeout(r, 1000))
+              }
+              setPollingMessage('Payment confirmed! Tickets may take a moment to appear.')
+            })().catch((e) => console.warn('[Payment] post-success ticket check failed', e))
+          } else {
+            setPollingMessage('Payment confirmed!')
           }
-          setPollingMessage('Payment confirmed! Tickets may take a moment to appear.')
-        })().catch((e) => console.warn('[Payment] post-success ticket check failed', e))
-      } else {
-        setPollingMessage('Payment confirmed!')
-      }
-    }
-
-    const handleFailed = () => {
-      if (completionHandledRef.current) return
-      completionHandledRef.current = true
-      cleanup()
-      setPollingMessage('')
-      setPaymentReference(null)
-      setProcessing(false)
-      setPaymentError('Payment was not completed or was declined. Please try again.')
-    }
-
-    // ── 1. Realtime subscription — primary delivery path ──────────────────
-    // postgres_changes fires after WAL commit: status="completed" here is final.
-    // This resolves the payment instantly for the majority of users.
-    const channel = supabase
-      .channel(`payment_${ref}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
-        (payload) => {
-          const row = payload.new as { status: string }
-          if (row.status === 'completed') handleCompleted()
-          else if (row.status === 'failed') handleFailed()
-        }
-      )
-      .subscribe((channelState) => {
-        if (channelState === 'CHANNEL_ERROR' || channelState === 'TIMED_OUT') {
-          console.warn('[Payment] Realtime channel degraded, exponential backoff poll active', channelState)
-        }
+        },
+        onFailed: () => {
+          setPollingMessage('')
+          setPaymentReference(null)
+          setProcessing(false)
+          setPaymentError('Payment was not completed or was declined. Please try again.')
+        },
       })
-    paymentChannelRef.current = channel
-
-    // ── 2. Exponential backoff polling — sparse safety net ────────────────
-    // Fires only if Realtime doesn't deliver (network issues, silent WS drops).
-    // 7 polls over 90s vs 87 polls over 120s previously: 94% Postgres load reduction.
-    ;(async () => {
-      const deadline = Date.now() + POLL_TIMEOUT_MS
-      for (let i = 0; i < BACKOFF_DELAYS_MS.length; i++) {
-        await new Promise<void>(r => setTimeout(r, BACKOFF_DELAYS_MS[i]))
-        if (abort.signal.aborted) return
-        if (completionHandledRef.current) return
-        if (Date.now() > deadline) return
-
-        const status = await checkStatus(ref)
-        if (abort.signal.aborted) return
-        if (status === 'completed') { handleCompleted(); return }
-        if (status === 'failed') { handleFailed(); return }
-      }
-      // All backoff slots exhausted — Realtime subscription remains active
-    })()
-  }
+    },
+    [startWatch, orderId]
+  )
 
   // Ensure the paymentReference is observed so linters/TS don't flag it as unused.
   useEffect(() => {
     if (paymentReference) console.debug('[Payment] internal reference set', paymentReference)
   }, [paymentReference])
 
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort()
-      if (paymentChannelRef.current) {
-        paymentChannelRef.current.unsubscribe()
-        paymentChannelRef.current = null
-      }
-    }
-  }, [])
-
   // If a reference is provided in the URL (e.g. from Donate flow), start watching it
   useEffect(() => {
     const ref = searchParams.get('reference')
     if (ref) {
-      // kick off watcher for provided reference
       startWatchingReference(ref).catch((e) => console.error('[Payment] startWatchingReference error', e))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [searchParams, startWatchingReference])
 
   // Prefill phone from order when order data is ready
   useEffect(() => {
@@ -428,49 +315,34 @@ export default function PaymentPage() {
     setPaymentReference(null)
     try {
       const { data: session } = await supabase.auth.getSession()
-                const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-                  amount: Math.round(totalWithFee),
-          phone_number: phone,
-          order_id: orderId,
-          description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
-          user_id: session?.session?.user?.id || undefined,
-        }),
+      const ref = await initiateMarzpayCollect({
+        amount: Math.round(totalWithFee),
+        phone_number: phone,
+        order_id: orderId,
+        description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
+        user_id: session?.session?.user?.id || undefined,
       })
-
-      const result = (await collectRes.json().catch(() => ({}))) as {
-        success?: boolean
-        error?: string
-        details?: unknown
-        data?: { reference: string; status: string }
-      }
-
-      if (!collectRes.ok) {
-        const msg = result?.error || `Payment initiation failed (${collectRes.status})`
-        if (result?.details) console.warn('Payment error details:', result.details)
-        throw new Error(msg)
-      }
-      if (!result?.success || !result?.data?.reference) {
-        throw new Error(result?.error || 'Payment initiation failed')
-      }
-
-      const ref = result.data.reference
-      // reuse watcher logic to start polling/subscription for the returned reference
       await startWatchingReference(ref)
     } catch (err) {
+      stopWatch()
       console.error('Payment error:', err)
       setPollingMessage('')
       setPaymentReference(null)
       setProcessing(false)
       setPaymentError((err as Error).message || 'Payment failed. Please try again.')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startWatchingReference is stable enough for UX; expanding deps rebinds every render
-  }, [orderId, order, phoneNumber, navigate, ticketPricingReady, totalAmount, ticketEmail, items, ticketCalculations])
+  }, [
+    orderId,
+    order,
+    phoneNumber,
+    ticketPricingReady,
+    totalAmount,
+    ticketEmail,
+    items,
+    ticketCalculations,
+    startWatchingReference,
+    stopWatch,
+  ])
 
   if (isLoading) return <PageSkeleton type="payment" />
   if (error || !order) {

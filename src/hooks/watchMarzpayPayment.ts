@@ -11,6 +11,11 @@ export type MarzpayWatchOptions = {
   timeoutMs?: number
   /** Optional rapid polls right after collect (e.g. transport booking). */
   burstChecks?: { count: number; intervalMs: number }
+  /**
+   * Sparse exponential backoff polls (order/checkout). When set, fixed-interval polling is skipped.
+   * Realtime remains active after backoff slots are exhausted.
+   */
+  backoffDelaysMs?: number[]
 }
 
 export type MarzpayWatchHandles = {
@@ -32,6 +37,7 @@ export function watchMarzpayPayment(
     pollIntervalMs = 4000,
     timeoutMs = 120_000,
     burstChecks,
+    backoffDelaysMs,
   } = options
 
   let settled = false
@@ -92,6 +98,19 @@ export function watchMarzpayPayment(
       }
     }
     if (settled) return
+
+    if (backoffDelaysMs?.length) {
+      const deadline = Date.now() + timeoutMs
+      for (const delay of backoffDelaysMs) {
+        if (settled) return
+        await new Promise<void>(r => setTimeout(r, delay))
+        if (settled || Date.now() > deadline) return
+        await checkOnce()
+        if (settled) return
+      }
+      return
+    }
+
     pollTimer = setInterval(() => {
       void checkOnce()
     }, pollIntervalMs)

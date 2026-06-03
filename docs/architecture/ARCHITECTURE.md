@@ -29,8 +29,10 @@ import { supabase } from '../lib/supabaseClient'
 
 ## Payments (MarzPay)
 
+- Collect: `initiateMarzpayCollect` in `lib/marzpayApi.ts`
 - Status polling: `fetchMarzpayPaymentStatus` in `lib/marzpayApi.ts`
-- Realtime + poll loop: `watchMarzpayPayment` in `hooks/watchMarzpayPayment.ts`
+- Booking flows: `watchMarzpayPayment` in `hooks/watchMarzpayPayment.ts` (fixed interval + optional burst)
+- Order/checkout: `useMarzpayPaymentWatch` + exponential backoff (`lib/marzpayPollMessages.ts`) — used by `Checkout`, `useOrderPaymentFlow`, legacy `Payment` donation URL
 - Booking cancel on failed payment: `BookingService` → `BookingRepository`
 
 ## Adding features
