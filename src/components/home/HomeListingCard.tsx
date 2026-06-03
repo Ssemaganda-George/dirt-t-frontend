@@ -1,0 +1,170 @@
+import { useState, useEffect } from 'react'
+import { Heart } from 'lucide-react'
+import { getServiceAverageRating, getTicketTypes } from '../../lib/database'
+import { getDisplayPrice } from '../../lib/utils'
+import { usePreferences } from '../../contexts/PreferencesContext'
+import Money from '../Money'
+import type { Service } from '../../types'
+
+interface HomeListingCardProps {
+  service: Service
+  onClick: () => void
+}
+
+function getRatingLabel(score: number): string {
+  if (score >= 9) return 'Wonderful'
+  if (score >= 8) return 'Excellent'
+  if (score >= 7) return 'Very good'
+  if (score >= 6) return 'Pleasant'
+  return 'Review score'
+}
+
+function getLocationLine(service: Service): string {
+  const categoryName = service.service_categories?.name?.toLowerCase()
+  const isEventOrActivity = categoryName === 'activities' || categoryName === 'events'
+  const isTour = categoryName === 'tour_packages' || categoryName === 'tours'
+
+  if (isEventOrActivity) {
+    return service.event_location || service.location || 'Location TBA'
+  }
+  if (isTour) {
+    return service.meeting_point || service.location || 'Location TBA'
+  }
+  return service.location || 'Location TBA'
+}
+
+function getUnitLabel(categoryName?: string): string {
+  const name = (categoryName || '').toLowerCase()
+  if (name === 'transport') return 'per day'
+  if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
+  if (name === 'shops') return 'per item'
+  if (name === 'restaurants') return 'per meal'
+  if (name === 'events' || name === 'activities') return 'per ticket'
+  if (name === 'tour_packages' || name === 'tours') return 'per guest'
+  return 'per person'
+}
+
+export default function HomeListingCard({ service, onClick }: HomeListingCardProps) {
+  const [isSaved, setIsSaved] = useState(false)
+  const [rating, setRating] = useState(0)
+  const [reviewCount, setReviewCount] = useState(0)
+  const [localTicketTypes, setLocalTicketTypes] = useState<any[]>(service.ticket_types || [])
+  const { selectedCurrency, selectedLanguage } = usePreferences()
+
+  useEffect(() => {
+    let mounted = true
+    void (async () => {
+      try {
+        const ratingData = await getServiceAverageRating(service.id)
+        if (!mounted) return
+        setRating(ratingData.average || 0)
+        setReviewCount(ratingData.count || 0)
+      } catch {
+        if (!mounted) return
+        setRating(0)
+        setReviewCount(0)
+      }
+    })()
+    return () => { mounted = false }
+  }, [service.id])
+
+  useEffect(() => {
+    let mounted = true
+    if ((!service.ticket_types || service.ticket_types.length === 0) && service.id) {
+      void (async () => {
+        try {
+          const types = await getTicketTypes(service.id)
+          if (mounted && Array.isArray(types) && types.length > 0) setLocalTicketTypes(types)
+        } catch {
+          // ignore
+        }
+      })()
+    }
+    return () => { mounted = false }
+  }, [service.id, service.ticket_types])
+
+  const imageUrl = service.images?.[0] || 'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg'
+  const locationLine = getLocationLine(service)
+  const unitLabel = getUnitLabel(service.service_categories?.name)
+
+  return (
+    <article
+      onClick={onClick}
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+        <img
+          loading="lazy"
+          decoding="async"
+          src={imageUrl}
+          alt={service.title}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsSaved(!isSaved)
+          }}
+          className="absolute right-2.5 top-2.5 rounded-full border border-white/80 bg-white/95 p-2 shadow-sm transition-colors hover:bg-white"
+          aria-label={isSaved ? 'Unsave' : 'Save'}
+        >
+          <Heart
+            className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
+          />
+        </button>
+      </div>
+
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 text-sm font-bold leading-snug text-gray-900">
+          {service.title}
+          {service.category_id === 'cat_transport' && service.vehicle_capacity != null && (
+            <span className="font-normal text-gray-600">
+              {' '}({service.vehicle_capacity} {service.vehicle_capacity === 1 ? 'seat' : 'seats'})
+            </span>
+          )}
+        </h3>
+        <p className="mt-1 line-clamp-1 text-xs text-gray-600">{locationLine}</p>
+
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            {rating > 0 ? (
+              <div className="flex items-start gap-2">
+                <span className="flex-shrink-0 rounded-sm bg-emerald-700 px-1.5 py-1 text-xs font-bold leading-none text-white">
+                  {rating.toFixed(1)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900">{getRatingLabel(rating)}</p>
+                  <p className="text-xs text-gray-500">
+                    {reviewCount.toLocaleString()} {reviewCount === 1 ? 'review' : 'reviews'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">No reviews yet</p>
+            )}
+          </div>
+
+          <div className="flex-shrink-0 text-right">
+            <p className="text-[10px] leading-none text-gray-500">Starting from</p>
+            <div className="mt-0.5 text-sm font-bold leading-none text-gray-900">
+              <Money
+                amount={getDisplayPrice(
+                  service,
+                  localTicketTypes.length > 0 ? localTicketTypes : undefined
+                )}
+                serviceCurrency={service.currency}
+                targetCurrency={selectedCurrency || 'UGX'}
+                locale={selectedLanguage || 'en-US'}
+                className="inline text-sm font-bold text-gray-900"
+                currencyClassName="text-[10px] font-normal text-gray-600 mr-0.5"
+                amountClassName="text-sm font-bold text-gray-900"
+              />
+            </div>
+            <p className="mt-0.5 text-[10px] text-gray-500">{unitLabel}</p>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}

@@ -22,7 +22,13 @@ import { usePreferences } from '../contexts/PreferencesContext'
 import { getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
 import CitySearchInput from '../components/CitySearchInput'
+import HomeListingCard from '../components/home/HomeListingCard'
 import type { Service } from '../types'
+
+function getHomesCarouselTitle(categoryId: string, fallback: string): string {
+  if (categoryId === 'cat_hotels') return 'Homes guests love'
+  return fallback
+}
 
 // Playful titles per category. The UI will pick one title per category per day,
 // seeded by a per-device random value stored in localStorage so different devices
@@ -728,15 +734,15 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Multi-field search widget — two rows on all screens */}
+          {/* Multi-field search widget */}
           <div className="w-full max-w-3xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,80,40,0.18)] overflow-hidden">
 
-              {/* Row 1: Destination — CitySearchInput inline (Task 5) */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-                <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              {/* Row 1: Destination */}
+              <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100">
+                <Search className="h-5 w-5 text-gray-300 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Where</div>
+                  <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Where</div>
                   <CitySearchInput
                     id="hero-search-where"
                     city={searchQuery}
@@ -748,18 +754,18 @@ export default function Home() {
               </div>
 
               {/* Row 2: Dates + Guests + Search button */}
-              <div className="flex items-stretch divide-x divide-gray-100">
+              <div className="flex items-stretch">
 
                 {/* Check-in / When */}
-                <div className="flex-1 flex items-center gap-2 px-3 py-2.5">
-                  <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                <div className="flex-1 flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer">
+                  <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">
+                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">
                       {isHotelsActive ? 'Check-in' : 'When'}
                     </div>
                     <input
                       type="date"
-                      className="text-xs text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                      className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
                       value={searchDate}
                       onChange={(e) => setSearchDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
@@ -768,15 +774,15 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Check-out — only when Stays/Hotels active (Fix #3) */}
+                {/* Check-out — only when Stays/Hotels active */}
                 {isHotelsActive && (
-                  <div className="flex-1 flex items-center gap-2 px-3 py-2.5">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                  <div className="flex-1 flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer">
+                    <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
                     <div className="min-w-0">
-                      <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Check-out</div>
+                      <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Check-out</div>
                       <input
                         type="date"
-                        className="text-xs text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                        className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
                         value={checkOutDate}
                         onChange={(e) => setCheckOutDate(e.target.value)}
                         min={searchDate || new Date().toISOString().split('T')[0]}
@@ -787,30 +793,30 @@ export default function Home() {
                 )}
 
                 {/* Guests */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <Users className="h-3.5 w-3.5 text-gray-400 flex-shrink-0 hidden xs:block" />
+                <div className="flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors">
+                  <Users className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
                   <div>
-                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-none mb-1">Guests</div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Guests</div>
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
-                        className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-700 text-xs font-medium transition-colors"
+                        className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
                         aria-label="Fewer guests"
                       >−</button>
-                      <span className="text-sm font-medium text-gray-900 w-5 text-center tabular-nums">{guestCount}</span>
+                      <span className="text-sm font-semibold text-gray-800 w-5 text-center tabular-nums">{guestCount}</span>
                       <button
                         onClick={() => setGuestCount(guestCount + 1)}
-                        className="w-4 h-4 flex items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-700 text-xs font-medium transition-colors"
+                        className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
                         aria-label="More guests"
                       >+</button>
                     </div>
                   </div>
                 </div>
 
-                {/* Search button — Fix #1 */}
+                {/* Search button */}
                 <button
                   onClick={handleSearch}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2.5 flex items-center justify-center gap-2 font-semibold text-sm transition-colors flex-shrink-0"
+                  className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 active:scale-[0.98] text-white px-6 sm:px-8 flex items-center justify-center gap-2.5 font-semibold text-sm transition-all flex-shrink-0"
                 >
                   <Search className="h-4 w-4" />
                   <span className="hidden sm:inline">Search</span>
@@ -821,10 +827,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Booking.com-style category tab bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
+      {/* Category tab bar */}
+      <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex items-end justify-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {[
               { id: 'all',              name: 'Explore',     Icon: Map        },
               { id: 'cat_hotels',       name: 'Stays',       Icon: Hotel      },
@@ -841,13 +847,13 @@ export default function Home() {
                 <button
                   key={id}
                   onClick={() => handleTabClick(id)}
-                  className={`flex flex-col items-center gap-1.5 px-4 sm:px-5 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                  className={`flex flex-col items-center gap-1.5 px-5 sm:px-6 py-4 text-xs font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
                     isActive
-                      ? 'border-gray-900 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-emerald-600 text-emerald-700'
+                      : 'border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-200'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className={`h-5 w-5 transition-colors ${isActive ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
                   <span>{name}</span>
                 </button>
               )
@@ -955,26 +961,41 @@ export default function Home() {
                   (!s.vendors || s.vendors.status !== 'suspended')
                 )
                 if (!servicesForCat || servicesForCat.length === 0) return null
-                const servicesForCatToRender = swapColumnsOnRefresh ? servicesForCat.slice().reverse() : servicesForCat
+                const sortedForCat =
+                  category.id === 'cat_hotels'
+                    ? [...servicesForCat].sort(
+                        (a, b) => (b.star_rating || 0) - (a.star_rating || 0)
+                      )
+                    : servicesForCat
+                const servicesForCatToRender = swapColumnsOnRefresh
+                  ? sortedForCat.slice().reverse()
+                  : sortedForCat
                 return (
                   <div key={category.id}>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">
-                        {getDailyTitleForCategory(category.id, category.name)}
+                        {getHomesCarouselTitle(
+                          category.id,
+                          getDailyTitleForCategory(category.id, category.name)
+                        )}
                       </h3>
                       <Link
                         to={`/category/${getCategorySlug(category.id)}`}
                         className="flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors whitespace-nowrap"
                       >
-                        View all <ChevronRight className="h-4 w-4" />
+                        {category.id === 'cat_hotels' ? 'Discover homes' : 'View all'}{' '}
+                        <ChevronRight className="h-4 w-4" />
                       </Link>
                     </div>
 
                     <div className="relative">
-                      <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+                      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
                         {servicesForCatToRender.map((service: Service) => (
-                          <div key={service.id} className="snap-start flex-shrink-0 w-[68%] sm:w-[46%] md:w-[32%] lg:w-[23%] xl:w-[19%]">
-                            <ServiceCard
+                          <div
+                            key={service.id}
+                            className="snap-start flex-shrink-0 w-[82%] sm:w-[300px] md:w-[280px]"
+                          >
+                            <HomeListingCard
                               service={service}
                               onClick={() => navigate(`/service/${service.slug || service.id}`)}
                             />
