@@ -14,7 +14,7 @@ function getCategorySlug(categoryId: string): string {
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { Search, Star, Heart, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronRight, Calendar, Users } from 'lucide-react'
+import { Search, Star, MapPin as MapPinIcon, Hotel, Map, Car, Utensils, Target, ShoppingBag, ChevronRight, Calendar, Users } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating, getTicketTypes } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -23,6 +23,7 @@ import { getDisplayPrice } from '../lib/utils'
 import Money from '../components/Money'
 import CitySearchInput from '../components/CitySearchInput'
 import HomeListingCard from '../components/home/HomeListingCard'
+import SaveToCartHeartButton from '../components/SaveToCartHeartButton'
 import {
   DEFAULT_DESTINATION_IMAGE,
   destinationImageUrl,
@@ -1046,7 +1047,6 @@ interface ServiceCardProps {
 }
 
 function ServiceCard({ service, onClick }: ServiceCardProps) {
-  const [isSaved, setIsSaved] = useState(false)
   const [rating, setRating] = useState<number>(0)
   const [reviewCount, setReviewCount] = useState<number>(0)
   const [localTicketTypes, setLocalTicketTypes] = useState<any[]>(service.ticket_types || [])
@@ -1175,13 +1175,11 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
           />
 
           {/* Save Button (kept) */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved) }}
+          <SaveToCartHeartButton
+            service={service}
+            ticketTypes={localTicketTypes}
             className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
-            aria-label={isSaved ? 'Unsave' : 'Save'}
-          >
-            <Heart className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
-          </button>
+          />
         </div>
 
         {/* Compact info block below the image (Airbnb-like) */}

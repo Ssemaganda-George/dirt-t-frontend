@@ -20,7 +20,6 @@ import {
 import { createServiceReview, createOrder } from '../lib/database'
 import { getDisplayPrice } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib/reviewKpis'
 import type { KpiRatings } from '../lib/reviewKpis'
@@ -28,12 +27,14 @@ import CitySearchInput from '../components/CitySearchInput'
 import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import BookingDrawer from '../components/BookingDrawer'
+import SaveToCartHeartButton from '../components/SaveToCartHeartButton'
+import { useServiceCartSave } from '../hooks/useServiceCartSave'
 import {
   buildBookingNavigateState,
   mapCategoryToBookingFlow,
   usesInlineBookingDrawer,
 } from '../lib/bookingFlow'
-// import PricingBreakdown from '../components/PricingBreakdown'
+import type { Service } from '../types'
 
 interface ServiceDetail {
   id: string
@@ -199,6 +200,10 @@ export default function ServiceDetail() {
   const reviewCount = data?.ratingData?.count ?? 0
   const kpiAverages = data?.ratingData?.kpiAverages ?? {}
   const ticketTypes = data?.ticketTypes ?? []
+  const { isSaved: isInCart, toggleSave: toggleCartSave } = useServiceCartSave(
+    service ? (service as unknown as Service) : ({ id: '' } as Service),
+    ticketTypes
+  )
 
   const [selectedDate, setSelectedDate] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -246,7 +251,6 @@ export default function ServiceDetail() {
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [cartToast, setCartToast] = useState<{ message: string; isError?: boolean } | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const overviewRef = useRef<HTMLDivElement>(null)
   const detailsRef = useRef<HTMLDivElement>(null)
@@ -267,7 +271,6 @@ export default function ServiceDetail() {
     setUnitPrice(Number(service.price) || 0)
   }, [transportZone, service])
   const { user, profile } = useAuth()
-  const { addToCart } = useCart()
   const { selectedLanguage } = usePreferences()
 
   // Currency conversion functions
@@ -497,24 +500,6 @@ export default function ServiceDetail() {
     }
   }
 
-  const showCartToast = (message: string, isError = false) => {
-    setCartToast({ message, isError })
-    window.setTimeout(() => setCartToast(null), isError ? 3500 : 2500)
-  }
-
-  const getCartDateRequirementMessage = (): string | null => {
-    if (!service || bookingPrefillReady()) return null
-    const cat = service.service_categories?.name?.toLowerCase() || ''
-    if (cat === 'transport') {
-      if (!transportZone) return 'Choose within town or upcountry before saving to cart'
-      return 'Select pick-up and drop-off dates before saving to cart'
-    }
-    if (['hotels', 'hotel', 'accommodation'].includes(cat)) {
-      return 'Select check-in and check-out dates before saving to cart'
-    }
-    return 'Select a date before saving to cart'
-  }
-
   const handleBooking = () => {
     if (!service?.slug) return
     if (!bookingPrefillReady()) {
@@ -595,52 +580,7 @@ export default function ServiceDetail() {
   }
 
   const handleSaveToCart = () => {
-    if (!service) return
-
-    const requirementMessage = getCartDateRequirementMessage()
-    if (requirementMessage) {
-      scrollToBookingPanel()
-      showCartToast(requirementMessage, true)
-      return
-    }
-
-    const isAccommodation = ['hotels', 'hotel', 'accommodation'].includes(
-      service.service_categories?.name?.toLowerCase() || ''
-    )
-    const isTransport = service.service_categories?.name?.toLowerCase() === 'transport'
-
-    const bookingData = {
-      date: isTransport ? startDate : isAccommodation ? checkInDate : selectedDate,
-      checkInDate: isAccommodation ? checkInDate : '',
-      checkOutDate: isAccommodation ? checkOutDate : '',
-      startDate: isTransport ? startDate : '',
-      endDate: isTransport ? endDate : '',
-      startTime: isTransport ? startTime : '',
-      endTime: isTransport ? endTime : '',
-      transportZone: isTransport ? transportZone : '',
-      guests,
-      rooms: 1,
-      roomType: '',
-      pickupLocation: '',
-      dropoffLocation: '',
-      returnTrip: false,
-      specialRequests: '',
-      contactName: '',
-      contactEmail: '',
-      contactPhone: '',
-      paymentMethod: 'mobile',
-    }
-
-    addToCart({
-      serviceId: service.id,
-      service,
-      bookingData,
-      category: service.service_categories?.name?.toLowerCase() || 'activities',
-      totalPrice,
-      currency: service.currency,
-    })
-
-    showCartToast('Saved to cart')
+    toggleCartSave()
   }
 
   const openMobileBooking = () => {
@@ -1998,15 +1938,23 @@ export default function ServiceDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center space-x-2">
-              <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
-                <Heart className="h-5 w-5" />
-              </button>
+              <SaveToCartHeartButton
+                service={service as unknown as Service}
+                ticketTypes={ticketTypes}
+                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all"
+                iconClassName="h-5 w-5"
+              />
               <button className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all">
                 <Share2 className="h-5 w-5" />
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={handleSaveToCart}
-                className="w-9 h-9 flex items-center justify-center text-gray-900 bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all"
+                className={`w-9 h-9 flex items-center justify-center bg-white bg-opacity-95 hover:bg-opacity-100 rounded-full shadow-md transition-all ${
+                  isInCart ? 'text-emerald-600' : 'text-gray-900'
+                }`}
+                aria-label={isInCart ? 'Remove from cart' : 'Save to cart'}
+                aria-pressed={isInCart}
               >
                 <ShoppingCart className="h-5 w-5" />
               </button>
@@ -2120,8 +2068,12 @@ export default function ServiceDetail() {
                     <Share2 className="h-3.5 w-3.5" />
                     Share
                   </button>
-                  <button onClick={handleSaveToCart} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                    <Heart className="h-3.5 w-3.5" />
+                  <button
+                    type="button"
+                    onClick={toggleCartSave}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${isInCart ? 'fill-red-500 text-red-500' : ''}`} />
                     Save
                   </button>
                 </div>
@@ -2574,24 +2526,6 @@ export default function ServiceDetail() {
                 <line x1="8" y1="18" x2="16" y2="12" />
               </svg>
             </button>
-          )}
-        </div>
-      )}
-
-      {cartToast && (
-        <div
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] px-4 py-2.5 text-sm font-medium rounded-full shadow-lg flex items-center gap-2 max-w-[min(100vw-2rem,28rem)] ${
-            cartToast.isError
-              ? 'bg-amber-600 text-white'
-              : 'bg-gray-900 text-white'
-          }`}
-        >
-          <ShoppingCart className="h-4 w-4 flex-shrink-0" />
-          <span className="truncate">{cartToast.message}</span>
-          {!cartToast.isError && (
-            <Link to="/saved" className="underline text-emerald-300 hover:text-emerald-200 ml-1 flex-shrink-0">
-              View cart
-            </Link>
           )}
         </div>
       )}

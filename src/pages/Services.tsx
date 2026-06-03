@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Hotel, Map, Utensils, Car, Target, Plane, Search, Heart, MapPin, Star, ShoppingBag } from 'lucide-react'
+import { Hotel, Map, Utensils, Car, Target, Plane, Search, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating } from '../lib/database'
 import { useServices } from '../hooks/hook'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { formatCurrencyWithConversion } from '../lib/utils'
+import SaveToCartHeartButton from '../components/SaveToCartHeartButton'
 import type { Service } from '../types'
 
 const categories = [
@@ -286,7 +287,6 @@ interface ServiceCardProps {
   onClick: () => void
 }
 function ServiceCard({ service, onClick }: ServiceCardProps) {
-  const [isSaved, setIsSaved] = useState(false)
   const [rating, setRating] = useState<number>(0)
   const [reviewCount, setReviewCount] = useState<number>(0)
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -328,20 +328,11 @@ function ServiceCard({ service, onClick }: ServiceCardProps) {
             className="w-full h-44 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
           />
           
-          {/* Save Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setIsSaved(!isSaved)
-            }}
+          <SaveToCartHeartButton
+            service={service}
             className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
-          >
-            <Heart 
-              className={`h-5 w-5 transition-colors ${
-                isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-              }`}
-            />
-          </button>
+            iconClassName="h-5 w-5 transition-colors"
+          />
 
           {/* Category Badge */}
           <div className="absolute bottom-3 left-3">
@@ -416,7 +407,6 @@ interface ServiceDetailProps {
   onBack: () => void
 }
 function ServiceDetail({ service, onBack }: ServiceDetailProps) {
-  const [isSaved, setIsSaved] = useState(false)
   const { selectedCurrency, selectedLanguage } = usePreferences()
 
   // Provide fallback image if no images exist
@@ -450,16 +440,11 @@ function ServiceDetail({ service, onBack }: ServiceDetailProps) {
           alt={service.title}
           className="w-full h-full object-cover opacity-90"
         />
-        <button
-          onClick={() => setIsSaved(!isSaved)}
+        <SaveToCartHeartButton
+          service={service}
           className="absolute top-6 right-6 p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        >
-          <Heart 
-            className={`h-6 w-6 ${
-              isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'
-            }`}
-          />
-        </button>
+          iconClassName="h-6 w-6 transition-colors"
+        />
       </div>
 
       {/* Content */}

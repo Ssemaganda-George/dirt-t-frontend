@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Heart } from 'lucide-react'
 import { getServiceAverageRating, getTicketTypes } from '../../lib/database'
 import { getDisplayPrice } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
+import SaveToCartHeartButton from '../SaveToCartHeartButton'
 import Money from '../Money'
 import type { Service } from '../../types'
 import { DEFAULT_DESTINATION_IMAGE } from '../../lib/destinationImages'
@@ -46,7 +46,6 @@ function getUnitLabel(categoryName?: string): string {
 }
 
 export default function HomeListingCard({ service, onClick }: HomeListingCardProps) {
-  const [isSaved, setIsSaved] = useState(false)
   const [rating, setRating] = useState(0)
   const [reviewCount, setReviewCount] = useState(0)
   const [localTicketTypes, setLocalTicketTypes] = useState<any[]>(service.ticket_types || [])
@@ -101,19 +100,7 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
           alt={service.title}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            setIsSaved(!isSaved)
-          }}
-          className="absolute right-2.5 top-2.5 rounded-full border border-white/80 bg-white/95 p-2 shadow-sm transition-colors hover:bg-white"
-          aria-label={isSaved ? 'Unsave' : 'Save'}
-        >
-          <Heart
-            className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`}
-          />
-        </button>
+        <SaveToCartHeartButton service={service} ticketTypes={localTicketTypes} />
       </div>
 
       <div className="flex flex-1 flex-col p-3">

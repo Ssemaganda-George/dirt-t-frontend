@@ -8,6 +8,7 @@ import { formatCurrency, getDisplayPrice } from '../lib/utils'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { useServices } from '../hooks/hook'
 import { getServiceAverageRating } from '../lib/database'
+import SaveToCartHeartButton from '../components/SaveToCartHeartButton'
 import type { Service } from '../types'
 
 export default function CategoryPage() {
@@ -620,6 +621,11 @@ function HorizontalServiceCard({ service }: ServiceCardProps) {
           <Icon className="h-3 w-3 text-gray-600" />
           <span className="text-[10px] font-semibold text-gray-700">{label}</span>
         </div>
+        <SaveToCartHeartButton
+          service={service}
+          ticketTypes={service.ticket_types}
+          className="absolute top-2 right-2 p-2 bg-white/95 hover:bg-white rounded-full shadow-sm transition-colors"
+        />
       </div>
 
       {/* Content */}
