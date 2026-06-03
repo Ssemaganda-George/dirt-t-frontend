@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 import type { Vendor } from '../types'
 
 // Re-export the type alias used in database.ts
@@ -135,7 +136,7 @@ export async function getVendorByUserId(userId: string): Promise<Vendor | null> 
 export async function updateVendorStatus(vendorId: string, status: VendorStatus): Promise<Vendor> {
   try {
     // Get current user for approved_by field
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
 
     // Use atomic function to prevent race conditions
     const { data, error } = await supabase.rpc('update_vendor_status_atomic', {

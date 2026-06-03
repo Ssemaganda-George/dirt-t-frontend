@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import { supabase } from '../lib/supabaseClient'
+import { getSession, updateAuthUser, signOut } from '../services/AuthService'
 import { useNavigate } from 'react-router-dom'
 
 export default function ResetPassword() {
@@ -20,9 +20,9 @@ export default function ResetPassword() {
     let mounted = true
     ;(async () => {
       try {
-        const { data } = await supabase.auth.getSession()
+        const session = await getSession()
         if (!mounted) return
-        if (data?.session?.user) {
+        if (session?.user) {
           setReady(true)
         } else {
           setReady(false)
@@ -43,12 +43,11 @@ export default function ResetPassword() {
     if (newPassword !== confirmPassword) return setMessage('Passwords do not match')
     setLoading(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      const { error } = await updateAuthUser({ password: newPassword })
       if (error) throw error
       setMessage('Password updated. You can now sign in with your new password.')
       setSuccess(true)
-      // Sign out to clear any recovery session
-      try { await supabase.auth.signOut() } catch {}
+      try { await signOut() } catch {}
     } catch (err: any) {
       console.error('reset password submit error', err)
       const msg = err?.message || ''

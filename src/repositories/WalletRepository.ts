@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 import { formatCurrency } from '../lib/utils'
 import type { Transaction, Wallet } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
@@ -466,8 +467,8 @@ export async function getAllTransactions(): Promise<Transaction[]> {
 export async function getAllTransactionsForAdmin(): Promise<(Transaction & { vendors?: any })[]> {
   try {
     // First check if user is admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const user = await getCurrentUser()
+    if (!user) {
       throw new Error('User not authenticated')
     }
 

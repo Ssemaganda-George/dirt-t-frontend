@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
+import {
+  signInWithPassword,
+  updateAuthUser,
+  signInWithOtpEmail,
+  signInWithOtpPhone,
+} from '../../services/AuthService'
 
 export default function Settings() {
   const { profile, updateProfile } = useAuth()
@@ -247,13 +253,13 @@ export default function Settings() {
     setPasswordLoading(true)
     try {
       // Re-authenticate to verify current password
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email: profile.email, password: currentPassword })
+      const { error: signInError } = await signInWithPassword(profile.email, currentPassword)
       if (signInError) {
         setPasswordMessage('Current password is incorrect')
         return
       }
 
-      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword })
+      const { error: updateErr } = await updateAuthUser({ password: newPassword })
       if (updateErr) {
         setPasswordMessage('Could not update password')
       } else {
@@ -305,7 +311,7 @@ export default function Settings() {
     setMfaLoading(true)
     try {
       if (method === 'email') {
-        const { error } = await supabase.auth.signInWithOtp({ email: profile.email }) as any
+        const { error } = await signInWithOtpEmail(profile.email)
         if ((error as any)) throw error
         setMfaMessage('OTP/email sent to your email address')
       } else {
@@ -318,7 +324,7 @@ export default function Settings() {
         const phone = `${country}${digits}`
         if (!/^[+][0-9]{6,15}$/.test(phone)) throw new Error('Phone must be in international format, e.g. +256712345678')
 
-        const { error } = await supabase.auth.signInWithOtp({ phone }) as any
+        const { error } = await signInWithOtpPhone(phone)
         if ((error as any)) {
           // detect common provider misconfiguration
           const msg = (error as any).message || (error as any).error_description || JSON.stringify(error)

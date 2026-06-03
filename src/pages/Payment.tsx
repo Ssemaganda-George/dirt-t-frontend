@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { calculatePaymentForAmount } from '../lib/pricingService'
 import { initiateMarzpayCollect } from '../lib/marzpayApi'
+import { getOptionalUserId } from '../services/AuthService'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from '../hooks/useMarzpayPaymentWatch'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -314,13 +315,12 @@ export default function PaymentPage() {
     setPollingMessage('')
     setPaymentReference(null)
     try {
-      const { data: session } = await supabase.auth.getSession()
       const ref = await initiateMarzpayCollect({
         amount: Math.round(totalWithFee),
         phone_number: phone,
         order_id: orderId,
         description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
-        user_id: session?.session?.user?.id || undefined,
+        user_id: await getOptionalUserId(),
       })
       await startWatchingReference(ref)
     } catch (err) {

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 
 export async function getServices(vendorId?: string) {
   let query = supabase
@@ -38,8 +39,7 @@ export async function getServices(vendorId?: string) {
     // session never prevents the public listing from loading.
     let isAdmin = false;
     try {
-      const { data } = await supabase.auth.getUser();
-      const user = data?.user ?? null;
+      const user = await getCurrentUser();
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
@@ -101,7 +101,7 @@ export async function getServicesByCategory(categoryId: string, excludeServiceId
     .eq('category_id', categoryId)
 
   // Check if current user is admin
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   let isAdmin = false;
 
   if (user) {
@@ -639,7 +639,7 @@ export async function deleteService(serviceId: string, vendorId?: string) {
     // Determine if user is admin
     let isAdmin = false;
     if (!vendorId) {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getCurrentUser();
       if (!user) {
         throw new Error('Unauthorized: User not authenticated');
       }

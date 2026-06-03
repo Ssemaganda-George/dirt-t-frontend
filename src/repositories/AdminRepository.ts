@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 
 export async function getDashboardStats() {
   // Get pending vendors (with profile full_name)
@@ -28,10 +29,10 @@ export async function getDashboardStats() {
     console.log('getDashboardStats: Starting dashboard stats fetch...');
 
     // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    console.log('getDashboardStats: Auth check - User:', user?.id, 'Error:', authError);
+    const user = await getCurrentUser();
+    console.log('getDashboardStats: Auth check - User:', user?.id);
 
-    if (authError || !user) {
+    if (!user) {
       console.error('getDashboardStats: User not authenticated');
       throw new Error('User not authenticated');
     }

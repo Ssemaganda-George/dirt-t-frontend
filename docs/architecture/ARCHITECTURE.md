@@ -6,7 +6,7 @@ Stay on Supabase until the API migration in `audit-2026-06-03.md`. These rules k
 
 | Layer | Path | May import | Must not |
 |-------|------|------------|----------|
-| **UI** | `pages/`, `components/`, `contexts/` | `services/`, `repositories/`, `hooks/`, `types/` | `supabase` directly (except auth session in `AuthContext` until ported) |
+| **UI** | `pages/`, `components/`, `contexts/` | `services/`, `repositories/`, `hooks/`, `types/` | `supabase` directly |
 | **Hooks** | `hooks/` | `services/`, `repositories/`, `lib/` utilities | Raw `supabase.from` / `.rpc` |
 | **Services** | `services/` | `repositories/`, `types/`, pure `lib/` | `supabase` — orchestrate only |
 | **Repositories** | `repositories/` | `supabaseClient`, `types/`, pure helpers | React |
@@ -26,6 +26,14 @@ import { getServices } from '../lib/database'
 // Avoid in pages/components
 import { supabase } from '../lib/supabaseClient'
 ```
+
+## Auth (Supabase)
+
+- **Single entry:** `services/AuthService.ts` — session, user id, sign-in/out, OTP, password reset, profile/vendor reads used by `AuthContext`
+- **Context:** `AuthContext` imports `AuthService` only (no `supabase.auth` in context)
+- **Pages/hooks:** use `getOptionalUserId()` for MarzPay collect; `getSession()` / `getCurrentUser()` when you need the full session/user
+- **Repositories:** use `getAccessToken()`, `getCurrentUser()`, or `getCurrentUserId()` — not `supabase.auth` directly
+- **Exception:** `AuthService` is the only module that calls `supabase.auth.*`
 
 ## Payments (MarzPay)
 

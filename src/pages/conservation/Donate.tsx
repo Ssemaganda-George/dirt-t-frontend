@@ -4,6 +4,7 @@ import { Heart, DollarSign, Mail, User } from 'lucide-react';
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { convertCurrency } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
+import { getOptionalUserId } from '../../services/AuthService'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -169,7 +170,7 @@ const DonatePage = () => {
 
                       const orderId = `donate-${Date.now()}`
                       try {
-                        const { data: session } = await supabase.auth.getSession()
+                        const userId = await getOptionalUserId()
                         // amount is provided by user in their selected currency; convert to UGX for MarzPay which uses UGX
                         const userCurrency = selectedCurrency || 'UGX'
                         const numericAmount = Number(amount || 0)
@@ -186,7 +187,7 @@ const DonatePage = () => {
                             phone_number: phone,
                             order_id: orderId,
                             description: `Donation to ${project || 'conservation'}`,
-                            user_id: session?.session?.user?.id || undefined,
+                            user_id: userId,
                           }),
                         })
 
@@ -202,12 +203,12 @@ const DonatePage = () => {
                         const ref = result.data.reference
                         // Register a pending donation transaction so it appears in the Conservation Wallet.
                         try {
-                          const { data: session } = await supabase.auth.getSession()
+                          const touristId = await getOptionalUserId()
                           // amountInUGX already computed above
                           await supabase.rpc('create_transaction_with_meta_atomic', {
                             p_booking_id: null,
                             p_vendor_id: null,
-                            p_tourist_id: session?.session?.user?.id || null,
+                            p_tourist_id: touristId ?? null,
                             p_amount: amountInUGX,
                             p_currency: 'UGX',
                             p_transaction_type: 'donation',

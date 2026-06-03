@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 import { uploadServiceImage, addServiceImage } from '../lib/imageUpload'
 
 export default function DebugImageUpload() {
@@ -24,7 +25,7 @@ export default function DebugImageUpload() {
   }
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getCurrentUser()
     setUser(user)
     addDebug(`User: ${user ? user.email : 'Not authenticated'}`)
   }

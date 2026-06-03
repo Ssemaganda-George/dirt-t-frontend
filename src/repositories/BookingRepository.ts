@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getAccessToken } from '../services/AuthService'
 import { buildCreateBookingAtomicRpcPayload } from '../lib/createBookingAtomicRpc'
 import { normalizeServiceCurrency } from '../lib/utils'
 import type { Booking } from '../types'
@@ -24,8 +25,7 @@ async function sendBookingEmails(bookingId: string): Promise<void> {
     console.log('📧 Calling send-booking-emails edge function for booking:', bookingId)
 
     // Get current session token for authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    const authToken = session?.access_token
+    const authToken = await getAccessToken()
 
     // Call the edge function directly with fetch, with retry/backoff for 429 rate limits
     const maxAttempts = 4

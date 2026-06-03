@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUserId } from '../services/AuthService'
 import type { VisitorSession, ServiceLike, VisitorActivity } from '../types'
 
 export interface AppVisit {
@@ -995,7 +996,7 @@ export async function createScanSession(serviceId: string, durationHours: number
       .from('scan_sessions')
       .insert([{
         service_id: serviceId,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
+        created_by: await getCurrentUserId(),
         duration_hours: durationHours,
         end_time: new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
         status: 'active'

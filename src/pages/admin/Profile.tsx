@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
+import { updateAuthUser } from '../../services/AuthService'
 import { User, Mail, Phone, MapPin, Save, X, Edit } from 'lucide-react'
 import CityPickerModal from '../../components/CityPickerModal'
 import PhoneModal from '../../components/PhoneModal'
@@ -65,7 +66,7 @@ export default function Profile() {
 
       // Update email if changed (requires auth update)
       if (formData.email !== profile?.email) {
-        const { error: authError } = await supabase.auth.updateUser({
+        const { error: authError } = await updateAuthUser({
           email: formData.email
         })
 

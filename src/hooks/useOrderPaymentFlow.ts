@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { initiateMarzpayCollect } from '../lib/marzpayApi'
+import { getOptionalUserId } from '../services/AuthService'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from './useMarzpayPaymentWatch'
 
 export function useOrderPaymentFlow(orderId: string | undefined) {
@@ -110,13 +111,12 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
       setProcessing(true)
       setPollingMessage('')
       try {
-        const { data: session } = await supabase.auth.getSession()
         const reference = await initiateMarzpayCollect({
           amount: totalWithFee,
           phone_number: phone,
           order_id: orderId,
           description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
-          user_id: session?.session?.user?.id || undefined,
+          user_id: await getOptionalUserId(),
         })
         await startWatchingReference(reference)
       } catch (err) {

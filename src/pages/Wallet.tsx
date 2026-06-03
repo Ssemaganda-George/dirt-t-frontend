@@ -4,6 +4,7 @@ import { ArrowLeft, PlusCircle, TrendingDown, PiggyBank, Wallet as WalletIcon, A
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { Booking } from '../lib/database'
 import { convertCurrency, formatCurrencyWithConversion } from '../lib/utils'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -401,7 +402,7 @@ export default function Wallet() {
       }
 
       // Call marzpay-collect API
-      const { data: session } = await supabase.auth.getSession()
+      const userId = await getOptionalUserId()
       const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
         method: 'POST',
         headers: {
@@ -412,7 +413,7 @@ export default function Wallet() {
           amount: Math.round(amount),
           phone_number: phone,
           description: `Wallet top-up - ${reference}`,
-          user_id: session?.session?.user?.id || undefined,
+          user_id: userId,
           metadata: { type: 'wallet_topup', reference }
         }),
       })

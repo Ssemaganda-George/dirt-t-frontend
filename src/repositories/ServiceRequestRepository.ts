@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUserId } from '../services/AuthService'
 import type { ServiceDeleteRequest } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
 import { sendMessage } from './MessageRepository'
@@ -119,7 +120,7 @@ export async function updateServiceDeleteRequestStatus(
       status: status,
       admin_notes: adminNotes,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: (await supabase.auth.getUser()).data.user?.id
+      reviewed_by: await getCurrentUserId()
     })
     .eq('id', requestId)
     .select(`

@@ -2,6 +2,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import { COUNTRIES } from '../lib/countries'
@@ -239,11 +240,11 @@ export default function VendorLogin() {
       await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined)
 
       // Get the current user
-      const { data: user } = await supabase.auth.getUser()
-      if (user.user) {
+      const user = await getCurrentUser()
+      if (user) {
         // Ensure profile exists
         const { error: profileCheckError } = await supabase.from('profiles').upsert({
-          id: user.user.id,
+          id: user.id,
           email: email,
           full_name: fullName,
           role: 'vendor',
@@ -257,7 +258,7 @@ export default function VendorLogin() {
         const { error: vendorError } = await supabase
           .from('vendors')
           .upsert({
-            user_id: user.user.id,
+            user_id: user.id,
             business_name: businessName,
             business_description: businessDescription,
             business_email: businessEmail || email,

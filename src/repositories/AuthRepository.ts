@@ -1,14 +1,10 @@
 import { supabase } from '../lib/supabaseClient'
+import { getSession } from '../services/AuthService'
 import type { UserPreferences } from '../types'
 
 export async function getUserPreferences(): Promise<UserPreferences | null> {
   try {
-    // Check if user is authenticated
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError) {
-      console.error('Session error:', sessionError)
-      return null
-    }
+    const session = await getSession()
     if (!session) {
       console.warn('No active session for user preferences query')
       return null

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import { resetPasswordForEmail, signInWithOtpPhone } from '../services/AuthService'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -10,7 +10,7 @@ export default function ForgotPassword() {
   const [method, setMethod] = useState<'email' | 'sms'>('email')
   const [phoneCountry] = useState('+256')
   const [phone] = useState('')
-  
+
   const [resendCountdown, setResendCountdown] = useState<number>(0)
 
   useEffect(() => {
@@ -34,35 +34,35 @@ export default function ForgotPassword() {
     try {
       const redirectTo = `${window.location.origin}/reset-password`
       if (method === 'email') {
-        const res = await (supabase.auth as any).resetPasswordForEmail(email, { redirectTo })
-        if (res?.error) throw res.error
+        const { error } = await resetPasswordForEmail(email, redirectTo)
+        if (error) throw error
         setMessage('We sent a reset link — check your inbox.')
         setResendCountdown(60)
-            // keep user on the same page for email flow
       } else {
-        // SMS path: send OTP to phone to allow the user to verify identity
         let country = (phoneCountry || '').trim()
         if (country && !country.startsWith('+')) country = `+${country}`
         const digits = (phone || '').replace(/[^0-9]/g, '')
         const phoneE164 = `${country}${digits}`
-        if (!/^[+][0-9]{6,15}$/.test(phoneE164)) throw new Error('Phone must be in international format, e.g. +256712345678')
-        const { error } = await (supabase.auth as any).signInWithOtp({ phone: phoneE164 })
+        if (!/^[+][0-9]{6,15}$/.test(phoneE164)) {
+          throw new Error('Phone must be in international format, e.g. +256712345678')
+        }
+        const { error } = await signInWithOtpPhone(phoneE164)
         if (error) {
-          const msg = (error as any).message || JSON.stringify(error)
+          const msg = (error as Error).message || JSON.stringify(error)
           if (/provider|unsupported|not configured/i.test(msg)) {
-            throw new Error('SMS provider not configured for this project. Configure an SMS provider in Supabase Auth settings.')
+            throw new Error(
+              'SMS provider not configured for this project. Configure an SMS provider in Supabase Auth settings.'
+            )
           }
           throw error
         }
         setMessage('OTP sent to your phone — check your messages.')
         setResendCountdown(60)
-        // navigate to OTP verification screen with phone in location state
-        const phoneE164ToUse = phoneE164
-        navigate('/verify-otp', { state: { phone: phoneE164ToUse } })
+        navigate('/verify-otp', { state: { phone: phoneE164 } })
       }
-    } catch (err: any) {
-      console.error('reset password error', err)
-      setMessage(err?.message || 'Could not send reset email')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Request failed'
+      setMessage(msg)
     } finally {
       setLoading(false)
     }

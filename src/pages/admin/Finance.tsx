@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { usePreferences } from '../../contexts/PreferencesContext'
 import type { Transaction } from '../../lib/database';
 import { supabase } from '../../lib/supabaseClient';
+import { getCurrentUserId } from '../../services/AuthService';
 
 export function Finance() {
   const { transactions, loading, error, refetch } = useAdminTransactions();
@@ -168,7 +169,7 @@ export function Finance() {
         .update({
           receipt_url: publicUrl,
           payment_notes: paymentNotes[transactionId] || '',
-          processed_by: (await supabase.auth.getUser()).data.user?.id,
+          processed_by: await getCurrentUserId(),
           processed_at: new Date().toISOString()
           // Status remains 'approved' until explicitly completed
         })

@@ -22,6 +22,7 @@ import {
   type PaymentCalculation
 } from '../lib/pricingService'
 import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 
@@ -351,7 +352,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
       setPollingMessage('Initiating payment…')
 
       try {
-        const { data: session } = await supabase.auth.getSession()
+        const userId = await getOptionalUserId()
 
         const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
           method: 'POST',
@@ -364,7 +365,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             phone_number: phone,
             booking_id: pendingBooking.id,
             description: `${service.title} hotel booking — ${nights} night${nights > 1 ? 's' : ''}`,
-            user_id: session?.session?.user?.id || undefined,
+            user_id: userId,
           }),
         })
 

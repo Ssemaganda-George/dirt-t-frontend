@@ -1,7 +1,23 @@
+import type { User } from '@supabase/supabase-js'
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
 import { updateUserPublicKey, getUserPublicKey, markMessagesAsDelivered } from '../lib/database'
+import {
+  clearLocalAuthStorage,
+  createUserProfileAtomic,
+  createVendorProfileAtomic,
+  fetchProfileByUserId,
+  fetchVendorByUserId,
+  fetchVendorByUserIdForPostVerify,
+  getSession,
+  isEmailConfirmed,
+  onAuthStateChange,
+  signInWithPassword,
+  signOut as authSignOut,
+  signUpWithPassword,
+  updateProfileByUserId,
+  upsertTouristOnSignup,
+} from '../services/AuthService'
 import type { Profile, Vendor } from '../types'
 
 /** -------------------- Types -------------------- */
@@ -72,8 +88,8 @@ async function notifyAdminNewAccount(payload: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabaseAnonKey}`,
-      'apikey': supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      apikey: supabaseAnonKey,
     },
     body: JSON.stringify(payload),
   })
@@ -87,43 +103,26 @@ async function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-/**
- * Setup E2E encryption keys for a user
- * - Check if user has existing keys
- * - If not, generate new key pair
- * - Store public key in database, private key in IndexedDB
- */
 async function setupEncryptionKeys(userId: string): Promise<void> {
   try {
-    // Check if user already has encryption keys locally
     const hasLocalKeys = await hasEncryptionKeys(userId)
-    
-    // Check if user has public key in database
     const existingPublicKey = await getUserPublicKey(userId)
-    
+
     if (hasLocalKeys && existingPublicKey) {
-      // User already has keys setup, nothing to do
       console.log('E2E encryption already setup for user')
       return
     }
-    
-    // Generate new key pair
+
     console.log('Generating E2E encryption keys...')
     const { publicKey, privateKey } = await generateKeyPair()
-    
-    // Store private key locally in IndexedDB
     await storePrivateKey(userId, privateKey)
-    
-    // Store public key in database
     const success = await updateUserPublicKey(userId, publicKey)
-    
     if (success) {
       console.log('E2E encryption setup complete')
     } else {
       console.warn('Failed to store public key in database')
     }
   } catch (error) {
-    // Don't block login/signup if encryption setup fails
     console.error('Error setting up E2E encryption:', error)
   }
 }
@@ -136,32 +135,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [profileLoaded, setProfileLoaded] = useState(false)
 
-  /** -------------------- Fetch Vendor -------------------- */
   const fetchVendor = async (userId: string) => {
-    try {
-      const { data, error } = await supabase.from('vendors').select('*').eq('user_id', userId).single()
-      if (!error && data) setVendor(data as Vendor)
-    } catch (err) {
-      console.error('Error fetching vendor:', err)
-      setVendor(null)
-    }
+    const data = await fetchVendorByUserId(userId)
+    setVendor(data)
   }
 
-  /** -------------------- Fetch Profile -------------------- */
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
-      if (error || !data) throw error || new Error('Profile not found')
-      setProfile(data as Profile)
-
-      // If vendor, fetch vendor asynchronously
+      const data = await fetchProfileByUserId(userId)
+      if (!data) throw new Error('Profile not found')
+      setProfile(data)
       if (data.role === 'vendor') {
         fetchVendor(userId).catch(console.error)
       } else {
         setVendor(null)
       }
-
-      return data as Profile
+      return data
     } catch (err) {
       console.error('Error fetching profile:', err)
       setProfile(null)
@@ -170,7 +159,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  /** -------------------- Lazy Load Profile -------------------- */
   const loadProfileData = async (): Promise<Profile | null> => {
     if (!user?.id || profileLoaded) return profile
     const p = await fetchProfile(user.id)
@@ -178,19 +166,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return p
   }
 
-  /** -------------------- Vendor Post Verify (fires once after email confirmed) -------------------- */
-  const handleVendorPostVerify = async (u: any, p: Profile) => {
+  const handleVendorPostVerify = async (u: User, p: Profile) => {
     if (p.role !== 'vendor') return
     try {
-      const { data: vendorData, error: vErr } = await supabase.from('vendors').select('*').eq('user_id', u.id).single()
-      if (!vErr && vendorData?.status === 'pending') {
-        const confirmedAt = u.email_confirmed_at || u.confirmed_at
+      const vendorData = await fetchVendorByUserIdForPostVerify(u.id)
+      if (vendorData?.status === 'pending') {
         const flagKey = `vendorPostVerifySent:${u.id}`
-        if (confirmedAt && !localStorage.getItem(flagKey)) {
-          // Send welcome email and notify admin only after email is verified
+        if (isEmailConfirmed(u) && !localStorage.getItem(flagKey)) {
           sendVendorSignupEmail({ userId: u.id, email: u.email ?? '', fullName: p.full_name }).catch(console.error)
-          notifyAdminNewAccount({ userId: u.id, email: u.email ?? '', fullName: p.full_name, role: 'vendor', businessName: vendorData.business_name }).catch(console.error)
-          try { localStorage.setItem(flagKey, '1') } catch {}
+          notifyAdminNewAccount({
+            userId: u.id,
+            email: u.email ?? '',
+            fullName: p.full_name,
+            role: 'vendor',
+            businessName: vendorData.business_name,
+          }).catch(console.error)
+          try {
+            localStorage.setItem(flagKey, '1')
+          } catch {
+            // ignore
+          }
         }
       }
     } catch (e) {
@@ -198,36 +193,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  /** -------------------- Auth State Change -------------------- */
+  const rejectUnverifiedSession = async () => {
+    try {
+      await authSignOut()
+    } catch (e) {
+      console.error('Error signing out unverified session:', e)
+    }
+    setUser(null)
+    setProfile(null)
+    setVendor(null)
+    setProfileLoaded(false)
+  }
+
   useEffect(() => {
     const init = async () => {
       try {
-        const { data } = await supabase.auth.getSession()
-        const session = data.session
-        if (session?.user) {
-          const u = session.user
-          const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
-
-          // If email is not verified, immediately sign out and treat as logged out
-          if (!confirmedAt) {
-            try {
-              await supabase.auth.signOut()
-            } catch (e) {
-              console.error('Error signing out unverified session on init:', e)
-            }
-            setUser(null)
-            setProfile(null)
-            setVendor(null)
-            setProfileLoaded(false)
+        const session = await getSession()
+        const u = session?.user
+        if (u) {
+          if (!isEmailConfirmed(u)) {
+            await rejectUnverifiedSession()
           } else {
             setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
-            // Load profile data on initialization to avoid stuck loader on refresh
             try {
               await fetchProfile(u.id)
               setProfileLoaded(true)
             } catch (e) {
               console.error('Error loading profile on init:', e)
-              setProfileLoaded(true) // Mark as loaded even on error to prevent infinite loading
+              setProfileLoaded(true)
             }
           }
         }
@@ -242,45 +235,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const u = session.user
-        const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
-
-        // Block unverified users from ever being treated as logged in via session events
-        if (!confirmedAt) {
-          try {
-            await supabase.auth.signOut()
-          } catch (e) {
-            console.error('Error signing out unverified session on change:', e)
-          }
-          setUser(null)
-          setProfile(null)
-          setVendor(null)
-          setProfileLoaded(false)
+        if (!isEmailConfirmed(u)) {
+          await rejectUnverifiedSession()
           return
         }
 
         setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
 
-        // Only reload profile if it's not already loaded for this user
-        // This prevents unnecessary reloads on page refresh when init() already loaded it
         setProfile(currentProfile => {
           if (!currentProfile || currentProfile.id !== u.id) {
-            setProfileLoaded(false) // Reset profile loaded state
-            // Load profile data and mark as loaded
+            setProfileLoaded(false)
             fetchProfile(u.id)
               .then(userProfile => {
-                setProfileLoaded(true) // Mark as loaded after fetching
-                // Handle vendor post verify if profile loaded successfully
+                setProfileLoaded(true)
                 if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)
               })
               .catch(e => {
                 console.error('Error loading profile:', e)
-                setProfileLoaded(true) // Mark as loaded even on error
+                setProfileLoaded(true)
               })
           }
-          return currentProfile // Return current, will be updated by fetchProfile
+          return currentProfile
         })
       } else {
         setUser(null)
@@ -293,43 +271,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  /** -------------------- Sign In -------------------- */
   const signIn = async (email: string, password: string): Promise<Profile | null> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await signInWithPassword(email, password)
     if (error) throw error
 
     const u = data.user
     if (!u) return null
 
-    // Require email verification before allowing login
-    const confirmedAt = (u as any).email_confirmed_at || (u as any).confirmed_at
-    if (!confirmedAt) {
-      await supabase.auth.signOut()
+    if (!isEmailConfirmed(u)) {
+      await authSignOut()
       setUser(null)
       setProfile(null)
       setVendor(null)
       throw new Error('Please verify your email before logging in. Check your inbox for a verification link.')
     }
 
-    const normalizedUser: AuthUser = { id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() }
-    setUser(normalizedUser)
+    setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
 
-    // Load profile immediately
     const userProfile = await fetchProfile(u.id)
-    setProfileLoaded(true) // Mark as loaded after fetching
+    setProfileLoaded(true)
 
-    // Setup E2E encryption keys (runs async, doesn't block login)
     setupEncryptionKeys(u.id).catch(e => console.error('E2E key setup error:', e))
-
-    // Mark pending messages as delivered (double grey ticks)
     markMessagesAsDelivered(u.id).catch(e => console.error('Mark delivered error:', e))
 
-    // Vendor post verify runs async (does not block dashboard)
     if (userProfile) handleVendorPostVerify(u, userProfile).catch(console.error)
 
-    // Check for suspension
     if (userProfile?.status === 'suspended') {
-      await supabase.auth.signOut()
+      await authSignOut()
       setUser(null)
       setProfile(null)
       setVendor(null)
@@ -339,29 +307,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return userProfile
   }
 
-  /** -------------------- Sign Up -------------------- */
-  const signUp = async (email: string, password: string, firstName: string, lastName: string, role: string = 'tourist', homeCity?: string, homeCountry?: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    role: string = 'tourist',
+    homeCity?: string,
+    homeCountry?: string
+  ) => {
+    const { data, error } = await signUpWithPassword(email, password)
     if (error) throw error
 
     const u = data.user
     if (!u) return
 
-    const fullName = `${firstName} ${lastName}`.trim()
+    await delay(100)
 
-    // Do not treat the user as logged in yet; they must verify their email first.
-    await delay(100) // ensure user is created before service operations
-
-    // RPCs are SECURITY DEFINER — they bypass RLS regardless of which key is used
     try {
-      const profileResult = await supabase.rpc('create_user_profile_atomic', {
-        p_user_id: u.id,
-        p_email: email,
-        p_first_name: firstName,
-        p_last_name: lastName,
-        p_role: role,
-        p_home_city: homeCity || null,
-        p_home_country: homeCountry || null
+      const profileResult = await createUserProfileAtomic({
+        userId: u.id,
+        email,
+        firstName,
+        lastName,
+        role,
+        homeCity,
+        homeCountry,
       })
       if (!profileResult.data?.success) {
         console.error('Error creating profile during sign up:', profileResult.data?.error)
@@ -372,54 +343,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (role === 'tourist') {
       try {
-        const { error: touristError } = await supabase
-          .from('tourists')
-          .upsert({ user_id: u.id, first_name: fullName }, { onConflict: 'user_id' })
+        const { error: touristError } = await upsertTouristOnSignup(u.id, `${firstName} ${lastName}`.trim())
         if (touristError) {
           console.error('Error creating tourist during sign up:', touristError)
         }
       } catch (err) {
         console.error('Unexpected error creating tourist during sign up:', err)
       }
-      notifyAdminNewAccount({ userId: u.id, email, fullName: `${firstName} ${lastName}`, role: 'tourist' }).catch(console.error)
+      notifyAdminNewAccount({
+        userId: u.id,
+        email,
+        fullName: `${firstName} ${lastName}`,
+        role: 'tourist',
+      }).catch(console.error)
     }
 
     if (role === 'vendor') {
       try {
-        const vendorResult = await supabase.rpc('create_vendor_profile_atomic', {
-          p_user_id: u.id,
-          p_business_name: '',
-          p_status: 'pending'
-        })
+        const vendorResult = await createVendorProfileAtomic(u.id)
         if (!vendorResult.data?.success) {
           console.error('Error creating vendor during sign up:', vendorResult.data?.error)
         }
       } catch (err) {
         console.error('Unexpected error creating vendor during sign up:', err)
       }
-      // Welcome email and admin notification deferred to handleVendorPostVerify
-      // so they only fire after the vendor confirms their email address.
     }
-
-    // Do not fetch profile into context yet; user will load it after verified sign-in.
   }
 
-  /** -------------------- Sign Out -------------------- */
   const signOut = async () => {
     try {
-      // Kill session
-      await supabase.auth.signOut()
-
-      // Hard remove leftover token
-      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL + '-auth-token')
-
-      // Reset state
+      await authSignOut()
+      clearLocalAuthStorage()
       setUser(null)
       setProfile(null)
       setVendor(null)
       setProfileLoaded(false)
-
-      // Force reload
       window.location.href = '/'
     } catch (err) {
       console.error('Error signing out:', err)
@@ -427,22 +385,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  /** -------------------- Update Profile -------------------- */
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) throw new Error('No user logged in')
-
-    // For profile updates, we can use the standard Supabase update since profiles
-    // are typically updated by the owner and race conditions are less likely.
-    // However, we ensure atomicity by using a transaction-like approach.
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
-      .select()
-      .single()
-
-    if (error) throw error
-    setProfile(data as Profile)
+    const data = await updateProfileByUserId(user.id, updates)
+    setProfile(data)
   }
 
   const value: AuthContextType = {
@@ -455,7 +401,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     updateProfile,
-    confirmSignOut: signOut, // alias for convenience
+    confirmSignOut: signOut,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

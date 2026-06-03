@@ -5,7 +5,7 @@ import { calculatePaymentForAmount } from '../lib/pricingService'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
-import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import BookingReceipt from '../components/BookingReceipt'
@@ -156,10 +156,10 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
 
     setPollingMessage('Initiating payment…')
     try {
-      const { data: session } = await supabase.auth.getSession()
+      const userId = await getOptionalUserId()
       const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
-        body: JSON.stringify({ amount: Math.round(grandTotal), phone_number: phone, booking_id: pendingBooking.id, description: `${service.title} — ${formData.departureFrom} to ${formData.destination}`, user_id: session?.session?.user?.id }),
+        body: JSON.stringify({ amount: Math.round(grandTotal), phone_number: phone, booking_id: pendingBooking.id, description: `${service.title} — ${formData.departureFrom} to ${formData.destination}`, user_id: userId }),
       })
       const result = await collectRes.json().catch(() => ({})) as { success?: boolean; error?: string; data?: { reference: string } }
       if (!collectRes.ok || !result?.success || !result?.data?.reference) throw new Error(result?.error || 'Payment initiation failed')

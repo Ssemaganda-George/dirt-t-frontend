@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { X, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
-import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import {
@@ -278,7 +278,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
     setPollingMessage('Initiating payment…')
     try {
-      const { data: session } = await supabase.auth.getSession()
+      const userId = await getOptionalUserId()
       const res = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
@@ -287,7 +287,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           phone_number: phone,
           booking_id: pending.id,
           description: `${service.title} booking`,
-          user_id: session?.session?.user?.id,
+          user_id: userId,
         }),
       })
       const result = await res.json().catch(() => ({})) as { success?: boolean; error?: string; data?: { reference: string } }

@@ -4,6 +4,7 @@ import { useAuth } from '../../../src/contexts/AuthContext'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { convertCurrency, formatCurrency } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
+import { getOptionalUserId } from '../../services/AuthService'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -58,7 +59,7 @@ export default function OffsetCheckout() {
           return
         }
 
-        const { data: session } = await supabase.auth.getSession()
+        const userId = await getOptionalUserId()
         const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
           method: 'POST',
           headers: {
@@ -70,7 +71,7 @@ export default function OffsetCheckout() {
             phone_number: phoneFormatted,
             order_id: orderId,
             description: `Offset donation — ${trees} trees / ${kg}kg`,
-            user_id: session?.session?.user?.id || undefined,
+            user_id: userId,
           }),
         })
 
@@ -86,11 +87,10 @@ export default function OffsetCheckout() {
         const ref = result.data.reference
         // Register a pending offset transaction in the DB so it appears in Conservation Wallet
         try {
-          const { data: session } = await supabase.auth.getSession()
           await supabase.rpc('create_transaction_with_meta_atomic', {
             p_booking_id: null,
             p_vendor_id: null,
-            p_tourist_id: session?.session?.user?.id || null,
+            p_tourist_id: userId ?? null,
             p_amount: amountInUGX,
             p_currency: 'UGX',
             p_transaction_type: 'offset',
@@ -135,11 +135,11 @@ export default function OffsetCheckout() {
         localStorage.setItem('dirttrails_offsets', JSON.stringify(arr))
         // Also try to persist a pending transaction record to the DB (best-effort)
         try {
-          const { data: session } = await supabase.auth.getSession()
+          const touristId = await getOptionalUserId()
           await supabase.rpc('create_transaction_with_meta_atomic', {
             p_booking_id: null,
             p_vendor_id: null,
-            p_tourist_id: session?.session?.user?.id || null,
+            p_tourist_id: touristId ?? null,
             p_amount: Math.round(convertCurrency(Number(amount || 0), selectedCurrency || 'UGX', 'UGX')),
             p_currency: 'UGX',
             p_transaction_type: 'offset',

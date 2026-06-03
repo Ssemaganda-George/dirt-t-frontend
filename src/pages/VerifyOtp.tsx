@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
+import { signInWithOtpPhone, verifyPhoneOtp } from '../services/AuthService'
 
 export default function VerifyOtpPage() {
   const { state } = useLocation()
@@ -32,7 +32,7 @@ export default function VerifyOtpPage() {
     try {
       setMessage(null)
       setLoading(true)
-      const { error } = await (supabase.auth as any).signInWithOtp({ phone })
+      const { error } = await signInWithOtpPhone(phone)
       if (error) throw error
       setMessage('OTP resent')
       setResendCountdown(60)
@@ -51,7 +51,7 @@ export default function VerifyOtpPage() {
     try {
       setLoading(true)
       setMessage(null)
-      const { error } = await (supabase.auth as any).verifyOtp({ phone, token: otp.trim(), type: 'sms' })
+      const { error } = await verifyPhoneOtp(phone, otp.trim())
       if (error) throw error
       // On success a session should be created; navigate to set password
       navigate('/reset-password')

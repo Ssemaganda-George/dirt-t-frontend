@@ -11,6 +11,7 @@ import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import BookingReceipt from '../components/BookingReceipt'
@@ -323,7 +324,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
       setPollingMessage('Initiating payment…')
 
       try {
-        const { data: session } = await supabase.auth.getSession()
+        const userId = await getOptionalUserId()
 
         const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
           method: 'POST',
@@ -336,7 +337,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             phone_number: phone,
             booking_id: pendingBooking.id,
             description: `${service.title} booking — ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`,
-            user_id: session?.session?.user?.id || undefined,
+            user_id: userId,
           }),
         })
 

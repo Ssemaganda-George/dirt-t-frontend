@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { getSession } from '../../services/AuthService';
 import { TreePine, Smartphone, QrCode } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -791,8 +792,8 @@ const GeotaggingPage = () => {
                     // attempt to persist to Supabase
                     try {
                       // ensure user is signed in before attempting storage/insert
-                      const session = await supabase.auth.getSession();
-                      if (!session?.data?.session?.user) {
+                      const session = await getSession();
+                      if (!session?.user) {
                         setErrorMsg('Please sign in to submit a tree.');
                         setTimeout(() => setErrorMsg(''), 6000);
                         return;

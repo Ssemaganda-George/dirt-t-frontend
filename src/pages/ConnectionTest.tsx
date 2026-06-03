@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { getSession } from '../services/AuthService';
 
 const ConnectionTest: React.FC = () => {
   const [result, setResult] = useState<string>('');
@@ -11,8 +12,7 @@ const ConnectionTest: React.FC = () => {
 
     try {
       // Test 1: Basic auth session
-      const { error: authError } = await supabase.auth.getSession();
-      if (authError) throw new Error(`Auth failed: ${authError.message}`);
+      await getSession();
 
       setResult('✅ Auth session works\nTesting table access...');
 

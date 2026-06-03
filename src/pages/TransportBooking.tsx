@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
+import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import {
@@ -408,7 +409,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           }
 
           try {
-            const { data: session } = await supabase.auth.getSession()
+            const userId = await getOptionalUserId()
 
             const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
               method: 'POST',
@@ -421,7 +422,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 phone_number: phone,
                 booking_id: pendingTransportBooking.id,
                 description: `${service.title} transport booking`,
-                user_id: session?.session?.user?.id || undefined,
+                user_id: userId,
               }),
             })
 

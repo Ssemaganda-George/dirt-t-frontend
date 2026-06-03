@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { getCurrentUser } from '../services/AuthService'
 import { Clock, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function VendorPending() {
@@ -23,12 +24,12 @@ export default function VendorPending() {
   const handleRefreshStatus = async () => {
     setRefreshing(true)
     try {
-      const { data: userData } = await supabase.auth.getUser()
-      if (!userData.user) return
+      const user = await getCurrentUser()
+      if (!user) return
       const { data: vendorData } = await supabase
         .from('vendors')
         .select('status')
-        .eq('user_id', userData.user.id)
+        .eq('user_id', user.id)
         .single()
       if (vendorData?.status) {
         setRefreshedStatus(vendorData.status)
