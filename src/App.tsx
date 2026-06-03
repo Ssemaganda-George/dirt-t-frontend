@@ -202,6 +202,7 @@ function App() {
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
             <Route path="vendor-login" element={<VendorLogin />} />
+            <Route path="saved" element={<Saved />} />
           </Route>
           
           {/* Auth Routes */}
@@ -221,16 +222,6 @@ function App() {
             }
           >
             <Route index element={<TouristBookings />} />
-          </Route>
-          <Route
-            path="/saved"
-            element={
-              <ProtectedRoute requiredRole="tourist">
-                <PublicLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Saved />} />
           </Route>
           <Route
             path="/wallet"

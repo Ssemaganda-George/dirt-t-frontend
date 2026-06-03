@@ -279,9 +279,10 @@ export default function PublicLayout() {
                     <span className="sr-only">{getRegionName(selectedRegion)} • {selectedCurrency}</span>
                   </button>
 
-                  {/* Cart / saved */}
+                  {/* Cart — public for guests (localStorage) */}
                   <Link
                     to="/saved"
+                    title="Your cart"
                     className={`relative flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
                   >
                     <ShoppingBag className={`h-5 w-5 ${iconCls}`} />
@@ -414,6 +415,19 @@ export default function PublicLayout() {
                           >
                             <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
+                          </Link>
+                          <Link
+                            to="/saved"
+                            onClick={() => setShowGuestDropdown(false)}
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                          >
+                            <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
+                            Your cart
+                            {getCartCount() > 0 && (
+                              <span className="ml-auto text-[10px] font-bold text-emerald-700">
+                                {getCartCount()}
+                              </span>
+                            )}
                           </Link>
                           <button
                             type="button"

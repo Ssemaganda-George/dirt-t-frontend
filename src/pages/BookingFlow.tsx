@@ -1,24 +1,29 @@
+import { lazy, Suspense } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import HotelBooking from './HotelBooking.tsx'
-import TransportBooking from './TransportBooking.tsx'
-import TourBooking from './TourBooking.tsx'
-import RestaurantBooking from './RestaurantBooking.tsx'
-import ActivityBooking from './ActivityBooking.tsx'
-import FlightBooking from './FlightBooking.tsx'
 import { useServiceDetailQuery } from '../hooks/useServiceDetailQuery'
+
+const HotelBooking = lazy(() => import('./HotelBooking'))
+const TransportBooking = lazy(() => import('./TransportBooking'))
+const TourBooking = lazy(() => import('./TourBooking'))
+const RestaurantBooking = lazy(() => import('./RestaurantBooking'))
+const ActivityBooking = lazy(() => import('./ActivityBooking'))
+const FlightBooking = lazy(() => import('./FlightBooking'))
+
+function BookingLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+    </div>
+  )
+}
 
 export default function BookingFlow() {
   const { slug } = useParams<{ slug: string }>()
-  // Uses the same React Query key as ServiceDetail so the fetch is served from cache
   const { data, isLoading } = useServiceDetailQuery(slug)
   const service = data?.service ?? null
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+    return <BookingLoading />
   }
 
   if (!service) {
@@ -27,20 +32,29 @@ export default function BookingFlow() {
 
   const categoryName = (service as any).service_categories?.name?.toLowerCase() ?? ''
 
+  let bookingPage: JSX.Element
   switch (categoryName) {
     case 'hotels':
-      return <HotelBooking service={service as any} />
+      bookingPage = <HotelBooking service={service as any} />
+      break
     case 'tours':
-      return <TourBooking service={service as any} />
+      bookingPage = <TourBooking service={service as any} />
+      break
     case 'transport':
-      return <TransportBooking service={service as any} />
+      bookingPage = <TransportBooking service={service as any} />
+      break
     case 'restaurants':
-      return <RestaurantBooking service={service as any} />
+      bookingPage = <RestaurantBooking service={service as any} />
+      break
     case 'activities':
-      return <ActivityBooking service={service as any} />
+      bookingPage = <ActivityBooking service={service as any} />
+      break
     case 'flights':
-      return <FlightBooking service={service as any} />
+      bookingPage = <FlightBooking service={service as any} />
+      break
     default:
-      return <ActivityBooking service={service as any} />
+      bookingPage = <ActivityBooking service={service as any} />
   }
+
+  return <Suspense fallback={<BookingLoading />}>{bookingPage}</Suspense>
 }

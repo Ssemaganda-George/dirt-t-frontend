@@ -2,7 +2,7 @@
 // Hide nav bar when lightbox is open
 // (must be inside the component, after imports)
 import { useState, useEffect, useRef } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { 
   MapPin, 
   Star, 
@@ -30,6 +30,7 @@ import { PageSkeleton } from '../components/SkeletonLoader'
 import BookingDrawer from '../components/BookingDrawer'
 import {
   buildBookingNavigateState,
+  mapCategoryToBookingFlow,
   usesInlineBookingDrawer,
 } from '../lib/bookingFlow'
 // import PricingBreakdown from '../components/PricingBreakdown'
@@ -188,6 +189,7 @@ export default function ServiceDetail() {
 
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useServiceDetailQueryClient()
   const { data, isLoading } = useServiceDetailQuery(slug)
 
@@ -244,6 +246,7 @@ export default function ServiceDetail() {
   const [mobileBookingOpen, setMobileBookingOpen] = useState(false)
   const [showMobileBookButton, setShowMobileBookButton] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [cartToast, setCartToast] = useState<{ message: string; isError?: boolean } | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const overviewRef = useRef<HTMLDivElement>(null)
   const detailsRef = useRef<HTMLDivElement>(null)
@@ -450,34 +453,28 @@ export default function ServiceDetail() {
     }
   }
 
-  // Map service category names to booking flow categories
-  const mapCategoryToBookingFlow = (categoryName: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      'hotels': 'hotels',
-      'hotel': 'hotels',
-      'accommodation': 'hotels',
-      'transport': 'transport',
-      'transportation': 'transport',
-      'car rental': 'transport',
-      'tours': 'tours',
-      'tour': 'tours',
-      'guided tour': 'tours',
-      'restaurants': 'restaurants',
-      'restaurant': 'restaurants',
-      'dining': 'restaurants',
-  'activities': 'activities',
-  'activity': 'activities',
-  'experience': 'activities',
-  // Accept public-facing 'events' and 'event' names and normalize to internal 'activities'
-  'events': 'activities',
-  'event': 'activities',
-      'flights': 'flights',
-      'flight': 'flights',
-      'air travel': 'flights'
+  // Open booking drawer when returning from cart (activities / restaurants)
+  useEffect(() => {
+    const state = location.state as Record<string, unknown> | null
+    if (!state?.openBookingDrawer) return
+
+    if (state.checkInDate) setCheckInDate(String(state.checkInDate))
+    if (state.checkOutDate) setCheckOutDate(String(state.checkOutDate))
+    if (state.selectedDate) setSelectedDate(String(state.selectedDate))
+    if (state.guests) setGuests(Number(state.guests))
+    if (state.startDate) setStartDate(String(state.startDate))
+    if (state.endDate) setEndDate(String(state.endDate))
+    if (state.startTime) setStartTime(String(state.startTime))
+    if (state.endTime) setEndTime(String(state.endTime))
+    if (state.transportZone === 'within' || state.transportZone === 'upcountry') {
+      setTransportZone(state.transportZone)
     }
-    
-    return categoryMap[categoryName.toLowerCase()] || 'activities' // Default to activities
-  }
+
+    setDrawerOpen(true)
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [location.pathname, location.state, navigate])
+
+  // Map service category names to booking flow categories — see bookingFlow.ts
 
   /** Sidebar + drawer require dates (and transport zone) before booking opens. */
   const bookingPrefillReady = (): boolean => {
@@ -490,16 +487,38 @@ export default function ServiceDetail() {
     return Boolean(selectedDate)
   }
 
+  const scrollToBookingPanel = () => {
+    try {
+      bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setMobileBookingOpen(true)
+      setTimeout(() => setMobileBookingOpen(false), 2200)
+    } catch {
+      // ignore
+    }
+  }
+
+  const showCartToast = (message: string, isError = false) => {
+    setCartToast({ message, isError })
+    window.setTimeout(() => setCartToast(null), isError ? 3500 : 2500)
+  }
+
+  const getCartDateRequirementMessage = (): string | null => {
+    if (!service || bookingPrefillReady()) return null
+    const cat = service.service_categories?.name?.toLowerCase() || ''
+    if (cat === 'transport') {
+      if (!transportZone) return 'Choose within town or upcountry before saving to cart'
+      return 'Select pick-up and drop-off dates before saving to cart'
+    }
+    if (['hotels', 'hotel', 'accommodation'].includes(cat)) {
+      return 'Select check-in and check-out dates before saving to cart'
+    }
+    return 'Select a date before saving to cart'
+  }
+
   const handleBooking = () => {
     if (!service?.slug) return
     if (!bookingPrefillReady()) {
-      try {
-        bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        setMobileBookingOpen(true)
-        setTimeout(() => setMobileBookingOpen(false), 2200)
-      } catch {
-        // ignore
-      }
+      scrollToBookingPanel()
       return
     }
 
@@ -577,16 +596,29 @@ export default function ServiceDetail() {
 
   const handleSaveToCart = () => {
     if (!service) return
-    
-    // Determine booking data based on service category
-    const isAccommodation = ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+
+    const requirementMessage = getCartDateRequirementMessage()
+    if (requirementMessage) {
+      scrollToBookingPanel()
+      showCartToast(requirementMessage, true)
+      return
+    }
+
+    const isAccommodation = ['hotels', 'hotel', 'accommodation'].includes(
+      service.service_categories?.name?.toLowerCase() || ''
+    )
     const isTransport = service.service_categories?.name?.toLowerCase() === 'transport'
-    
+
     const bookingData = {
       date: isTransport ? startDate : isAccommodation ? checkInDate : selectedDate,
       checkInDate: isAccommodation ? checkInDate : '',
       checkOutDate: isAccommodation ? checkOutDate : '',
-      guests: guests,
+      startDate: isTransport ? startDate : '',
+      endDate: isTransport ? endDate : '',
+      startTime: isTransport ? startTime : '',
+      endTime: isTransport ? endTime : '',
+      transportZone: isTransport ? transportZone : '',
+      guests,
       rooms: 1,
       roomType: '',
       pickupLocation: '',
@@ -596,19 +628,19 @@ export default function ServiceDetail() {
       contactName: '',
       contactEmail: '',
       contactPhone: '',
-      paymentMethod: 'mobile'
+      paymentMethod: 'mobile',
     }
-    
-    // Add to cart with basic service info
+
     addToCart({
       serviceId: service.id,
       service,
       bookingData,
-      category: service.service_categories.name.toLowerCase(),
-      totalPrice: totalPrice,
-      currency: service.currency
+      category: service.service_categories?.name?.toLowerCase() || 'activities',
+      totalPrice,
+      currency: service.currency,
     })
-    // Could add a toast notification here
+
+    showCartToast('Saved to cart')
   }
 
   const openMobileBooking = () => {
@@ -2542,6 +2574,24 @@ export default function ServiceDetail() {
                 <line x1="8" y1="18" x2="16" y2="12" />
               </svg>
             </button>
+          )}
+        </div>
+      )}
+
+      {cartToast && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] px-4 py-2.5 text-sm font-medium rounded-full shadow-lg flex items-center gap-2 max-w-[min(100vw-2rem,28rem)] ${
+            cartToast.isError
+              ? 'bg-amber-600 text-white'
+              : 'bg-gray-900 text-white'
+          }`}
+        >
+          <ShoppingCart className="h-4 w-4 flex-shrink-0" />
+          <span className="truncate">{cartToast.message}</span>
+          {!cartToast.isError && (
+            <Link to="/saved" className="underline text-emerald-300 hover:text-emerald-200 ml-1 flex-shrink-0">
+              View cart
+            </Link>
           )}
         </div>
       )}

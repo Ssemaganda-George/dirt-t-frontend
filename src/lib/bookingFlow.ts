@@ -24,6 +24,57 @@ export interface ServiceDetailBookingPrefill {
   transportZone: 'within' | 'upcountry' | ''
 }
 
+/** Map service category labels to booking route segment */
+export function mapCategoryToBookingFlow(categoryName: string): string {
+  const categoryMap: Record<string, string> = {
+    hotels: 'hotels',
+    hotel: 'hotels',
+    accommodation: 'hotels',
+    transport: 'transport',
+    transportation: 'transport',
+    'car rental': 'transport',
+    tours: 'tours',
+    tour: 'tours',
+    'guided tour': 'tours',
+    restaurants: 'restaurants',
+    restaurant: 'restaurants',
+    dining: 'restaurants',
+    activities: 'activities',
+    activity: 'activities',
+    experience: 'activities',
+    events: 'activities',
+    event: 'activities',
+    flights: 'flights',
+    flight: 'flights',
+    'air travel': 'flights',
+  }
+  return categoryMap[categoryName.toLowerCase()] || 'activities'
+}
+
+/** Build router state for continuing a saved cart item into checkout */
+export function buildBookingStateFromCartItem(
+  category: string,
+  bookingData: Record<string, unknown>
+): Record<string, unknown> | undefined {
+  const mappedCategory = mapCategoryToBookingFlow(category)
+  return buildBookingNavigateState(mappedCategory, {
+    selectedDate: String(bookingData.date || bookingData.selectedDate || ''),
+    checkInDate: String(bookingData.checkInDate || ''),
+    checkOutDate: String(bookingData.checkOutDate || ''),
+    startDate: String(bookingData.startDate || bookingData.date || ''),
+    endDate: String(bookingData.endDate || ''),
+    startTime: String(bookingData.startTime || ''),
+    endTime: String(bookingData.endTime || ''),
+    guests: Number(bookingData.guests || 1),
+    transportZone: (bookingData.transportZone as 'within' | 'upcountry' | '') || '',
+  })
+}
+
+export function getCartBookingPath(serviceSlug: string, category: string): string {
+  const mappedCategory = mapCategoryToBookingFlow(category)
+  return `/service/${serviceSlug}/book/${mappedCategory}`
+}
+
 /** Pass sidebar selections into full-page booking flows via react-router location.state */
 export function buildBookingNavigateState(
   mappedCategory: string,
@@ -43,6 +94,7 @@ export function buildBookingNavigateState(
         startTime: prefill.startTime,
         endTime: prefill.endTime,
         transportZone: prefill.transportZone || undefined,
+        passengers: prefill.guests,
       }
     case 'tours':
       return {

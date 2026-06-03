@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react'
 
-interface CartItem {
+export interface CartItem {
   id: string
   serviceId: string
   service: any
@@ -54,17 +54,31 @@ const initialState: CartState = {
 
 function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
-    case 'ADD_TO_CART':
+    case 'ADD_TO_CART': {
+      const existingIndex = state.items.findIndex(
+        item => item.serviceId === action.payload.serviceId
+      )
+      if (existingIndex >= 0) {
+        const updated = [...state.items]
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          ...action.payload,
+          savedAt: new Date().toISOString(),
+          status: 'saved',
+        }
+        return { ...state, items: updated }
+      }
       const newItem: CartItem = {
         ...action.payload,
         id: Date.now().toString(),
         savedAt: new Date().toISOString(),
-        status: 'saved'
+        status: 'saved',
       }
       return {
         ...state,
-        items: [...state.items, newItem]
+        items: [...state.items, newItem],
       }
+    }
 
     case 'REMOVE_FROM_CART':
       return {
@@ -108,6 +122,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 interface CartContextType {
   state: CartState
+  hydrated: boolean
   dispatch: React.Dispatch<CartAction>
   addToCart: (item: Omit<CartItem, 'id' | 'savedAt' | 'status'>) => void
   removeFromCart: (id: string) => void
@@ -121,18 +136,22 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState)
+  const [hydrated, setHydrated] = useState(false)
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount (works for guest and signed-in users)
   useEffect(() => {
     const savedCart = localStorage.getItem('dirtTrails_cart')
     if (savedCart) {
       try {
         const cartItems = JSON.parse(savedCart)
-        dispatch({ type: 'LOAD_CART', payload: cartItems })
+        if (Array.isArray(cartItems)) {
+          dispatch({ type: 'LOAD_CART', payload: cartItems })
+        }
       } catch (error) {
         console.error('Error loading cart from localStorage:', error)
       }
     }
+    setHydrated(true)
   }, [])
 
   // Save cart to localStorage whenever it changes
@@ -166,13 +185,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = {
     state,
+    hydrated,
     dispatch,
     addToCart,
     removeFromCart,
     updateCartItem,
     clearCart,
     getCartCount,
-    getCartTotal
+    getCartTotal,
   }
 
   return (

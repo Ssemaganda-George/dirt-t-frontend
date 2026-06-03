@@ -176,8 +176,17 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   // Pre-fill dates from navigation state if available
   useEffect(() => {
     if (location.state) {
-      const { startDate, endDate, selectedDate, startTime, endTime, transportZone: incomingZone } =
-        location.state as any
+      const {
+        startDate,
+        endDate,
+        selectedDate,
+        startTime,
+        endTime,
+        transportZone: incomingZone,
+        passengers,
+        guests,
+      } = location.state as any
+      const passengerCount = Number(passengers || guests)
       if (startDate && endDate) {
         setBookingData(prev => ({
           ...prev,
@@ -185,6 +194,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
           endDate,
           ...(startTime ? { startTime } : {}),
           ...(endTime ? { endTime } : {}),
+          ...(passengerCount > 0 ? { passengers: passengerCount } : {}),
         }))
         if (incomingZone) setTransportZone(incomingZone)
       } else if (selectedDate) {
