@@ -35,6 +35,12 @@ import { supabase } from '../lib/supabaseClient'
 - **Repositories:** use `getAccessToken()`, `getCurrentUser()`, or `getCurrentUserId()` — not `supabase.auth` directly
 - **Exception:** `AuthService` is the only module that calls `supabase.auth.*`
 
+## Wallet / transactions
+
+- **Platform fee math (pure):** `domain/walletFees.ts`
+- **Scan sessions:** `repositories/ScanSessionRepository.ts` (event QR flows)
+- **Balances + withdrawals:** `repositories/WalletRepository.ts` (still hosts transaction I/O until further split)
+
 ## Payments (MarzPay)
 
 - Collect: `initiateMarzpayCollect` in `lib/marzpayApi.ts`

@@ -4,27 +4,13 @@ import { formatCurrency } from '../lib/utils'
 import type { Transaction, Wallet } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
 
-// Re-export the type used by other modules
 export type { Transaction, Wallet }
-
-/** Booking columns joined for admin finance (platform fee + commission). */
-export interface BookingFeeSnapshot {
-  id: string
-  total_amount?: number | string | null
-  platform_fee?: number | string | null
-  commission_amount?: number | string | null
-  fee_payer?: string | null
-}
-
-/** Platform earnings for one booking row (fee + commission fields are mutually exclusive in practice). */
-export function platformTakeFromBooking(booking: BookingFeeSnapshot | null | undefined): number {
-  if (!booking) return 0
-  return (Number(booking.platform_fee) || 0) + (Number(booking.commission_amount) || 0)
-}
-
-export function platformTakeFromTransaction(transaction: { bookings?: BookingFeeSnapshot | null }): number {
-  return platformTakeFromBooking(transaction.bookings)
-}
+import type { BookingFeeSnapshot } from '../domain/walletFees'
+export type { BookingFeeSnapshot } from '../domain/walletFees'
+export {
+  platformTakeFromBooking,
+  platformTakeFromTransaction,
+} from '../domain/walletFees'
 
 /** Credit a vendor (or platform) wallet via atomic RPC. */
 export async function creditWallet(vendorId: string, amount: number, currency: string) {
