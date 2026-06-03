@@ -23,6 +23,7 @@ import {
 } from '../lib/pricingService'
 import { supabase } from '../lib/supabaseClient'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
+import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 
 interface ServiceDetail {
   id: string
@@ -68,7 +69,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
-  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
   const finaliseInFlightRef = useRef(false)
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -380,73 +381,24 @@ export default function HotelBooking({ service }: HotelBookingProps) {
         const ref = result.data.reference
         setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
-        const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
-          try {
-            const res = await fetch(
-              `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`,
-              { headers: { Authorization: `Bearer ${supabaseAnonKey}` } }
-            )
-            const data = await res.json().catch(() => ({})) as { status?: string }
-            if (data?.status === 'completed') return 'completed'
-            if (data?.status === 'failed') return 'failed'
-            return null
-          } catch {
-            return null
-          }
+        const onSuccess = () => {
+          paymentWatchRef.current?.cleanup()
+          void finaliseHotelBooking('paid', pendingBooking)
         }
-
-        const channel = supabase
-          .channel(`payment_htl_${ref}`)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
-            async (payload) => {
-              const row = payload.new as { status: string }
-              if (row.status === 'completed') {
-                channel.unsubscribe()
-                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                await finaliseHotelBooking('paid', pendingBooking)
-              } else if (row.status === 'failed') {
-                channel.unsubscribe()
-                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
-                setPollingMessage('')
-                setIsSubmitting(false)
-                setPaymentError('Payment was not completed or was declined. Please try again.')
-              }
-            })
-          .subscribe()
-
-        const immediate = await checkStatus()
-        if (immediate === 'completed') {
-          channel.unsubscribe()
-          await finaliseHotelBooking('paid', pendingBooking)
-          return
-        } else if (immediate === 'failed') {
-          channel.unsubscribe()
+        const onFail = () => {
+          paymentWatchRef.current?.cleanup()
           cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
           setPollingMessage('')
           setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
-          return
         }
 
-        backupPollRef.current = setInterval(async () => {
-          const status = await checkStatus()
-          if (status === 'completed') {
-            channel.unsubscribe()
-            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            await finaliseHotelBooking('paid', pendingBooking)
-          } else if (status === 'failed') {
-            channel.unsubscribe()
-            if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
-            setPollingMessage('')
-            setIsSubmitting(false)
-            setPaymentError('Payment was not completed or was declined. Please try again.')
-          }
-        }, 4000)
-        setTimeout(() => {
-          if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-        }, 120000)
+        paymentWatchRef.current?.cleanup()
+        paymentWatchRef.current = watchMarzpayPayment(ref, {
+          channelPrefix: 'payment_htl',
+          onCompleted: onSuccess,
+          onFailed: onFail,
+        })
 
       } catch (err) {
         console.error('Payment error:', err)

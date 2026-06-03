@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { X, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
-import { fetchMarzpayPaymentStatus } from '../lib/marzpayApi'
 import { supabase } from '../lib/supabaseClient'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
+import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import {
   calculatePaymentForAmount,
   customerTotalFromUnitPricingCalc,
@@ -89,7 +89,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const [processing, setProcessing] = useState(false)
   const [completedBooking, setCompletedBooking] = useState<any>(null)
   const [pricingCalc, setPricingCalc] = useState<any>(null)
-  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
   const finaliseRef = useRef(false)
 
   const categoryName = (service?.service_categories?.name ?? '').toLowerCase()
@@ -295,12 +295,10 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       const ref = result.data.reference
       setPollingMessage('Check your phone for the USSD prompt…')
 
-      const checkStatus = async () => fetchMarzpayPaymentStatus(ref)
-
       const onSuccess = () => {
         if (finaliseRef.current) return
         finaliseRef.current = true
-        if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+        paymentWatchRef.current?.cleanup()
         setCompletedBooking({ ...pending, status: 'confirmed', payment_status: 'paid' })
         setPollingMessage('')
         setProcessing(false)
@@ -308,30 +306,19 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       }
 
       const onFail = () => {
-        if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+        paymentWatchRef.current?.cleanup()
         cancelBookingOnPaymentFailure(pending.id).catch(console.error)
         setPollingMessage('')
         setProcessing(false)
         setError('Payment was not completed. Please try again.')
       }
 
-      const channel = supabase.channel(`drawer_${ref}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` }, (payload) => {
-          const row = payload.new as { status: string }
-          if (row.status === 'completed') { channel.unsubscribe(); onSuccess() }
-          else if (row.status === 'failed') { channel.unsubscribe(); onFail() }
-        }).subscribe()
-
-      const imm = await checkStatus()
-      if (imm === 'completed') { channel.unsubscribe(); onSuccess(); return }
-      if (imm === 'failed') { channel.unsubscribe(); onFail(); return }
-
-      backupPollRef.current = setInterval(async () => {
-        const s = await checkStatus()
-        if (s === 'completed') { channel.unsubscribe(); onSuccess() }
-        else if (s === 'failed') { channel.unsubscribe(); onFail() }
-      }, 4000)
-      setTimeout(() => { if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null } }, 120000)
+      paymentWatchRef.current?.cleanup()
+      paymentWatchRef.current = watchMarzpayPayment(ref, {
+        channelPrefix: 'drawer',
+        onCompleted: onSuccess,
+        onFailed: onFail,
+      })
     } catch (err) {
       cancelBookingOnPaymentFailure(pending.id).catch(console.error)
       setProcessing(false)

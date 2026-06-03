@@ -6,6 +6,7 @@ import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
+import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import {
   calculatePaymentForAmount,
   customerTotalFromAggregatePricingCalc,
@@ -122,7 +123,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
   const [pollingMessage, setPollingMessage] = useState('')
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false)
   const [isReceiptFinalizing, setIsReceiptFinalizing] = useState(false)
-  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
   const finaliseInFlightRef = useRef(false)
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -452,97 +453,30 @@ export default function TransportBooking({ service }: TransportBookingProps) {
             }
             setPollingMessage('Confirm the payment on your phone. Waiting for confirmation…')
 
-            const checkStatus = async (): Promise<'completed' | 'failed' | null> => {
-              try {
-                const res = await fetch(
-                  `${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}&_ts=${Date.now()}`,
-                  { cache: 'no-store' }
-                )
-                const data = await res.json().catch(() => ({})) as { status?: string }
-                if (data?.status === 'completed') return 'completed'
-                if (data?.status === 'failed') return 'failed'
-                return null
-              } catch { return null }
-            }
-
-            const finalise = () => {
-              // SO4: booking already pre-created; webhook confirms it. Show receipt immediately.
+            const onSuccess = () => {
+              paymentWatchRef.current?.cleanup()
               setIsReceiptFinalizing(true)
               setPollingMessage('Payment confirmed! Loading your receipt…')
               void createTransportBooking('paid', ref, pendingTransportBooking).catch((e) => {
                 console.warn('Background booking finalization failed:', e)
               })
             }
-
-            const channel = supabase
-              .channel(`payment_trp_${ref}`)
-              .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` },
-                async (payload) => {
-                  const row = payload.new as { status: string }
-                  if (row.status === 'completed') {
-                    channel.unsubscribe()
-                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                    await finalise()
-                  } else if (row.status === 'failed') {
-                    channel.unsubscribe()
-                    if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                    setPollingMessage('')
-                    setIsPaymentProcessing(false)
-                    setIsReceiptFinalizing(false)
-                    setStepError('Payment was not completed or was declined. Please try again.')
-                  }
-                })
-              .subscribe()
-
-            const immediate = await checkStatus()
-            if (immediate === 'completed') {
-              channel.unsubscribe()
-              finalise()
-              return
-            } else if (immediate === 'failed') {
-              channel.unsubscribe()
+            const onFail = () => {
+              paymentWatchRef.current?.cleanup()
               setPollingMessage('')
               setIsPaymentProcessing(false)
               setIsReceiptFinalizing(false)
               setStepError('Payment was not completed or was declined. Please try again.')
-              return
             }
 
-            // Fast-start polling burst to reduce latency after user confirms on phone.
-            for (let i = 0; i < 6; i++) {
-              const status = await checkStatus()
-              if (status === 'completed') {
-                channel.unsubscribe()
-                finalise()
-                return
-              } else if (status === 'failed') {
-                channel.unsubscribe()
-                setPollingMessage('')
-                setIsPaymentProcessing(false)
-                setStepError('Payment was not completed or was declined. Please try again.')
-                return
-              }
-              await new Promise<void>(r => setTimeout(r, 800))
-            }
-
-            backupPollRef.current = setInterval(async () => {
-              const status = await checkStatus()
-              if (status === 'completed') {
-                channel.unsubscribe()
-                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                finalise()
-              } else if (status === 'failed') {
-                channel.unsubscribe()
-                if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-                setPollingMessage('')
-                setIsPaymentProcessing(false)
-                setIsReceiptFinalizing(false)
-                setStepError('Payment was not completed or was declined. Please try again.')
-              }
-            }, 1500)
-            setTimeout(() => {
-              if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
-            }, 120000)
+            paymentWatchRef.current?.cleanup()
+            paymentWatchRef.current = watchMarzpayPayment(ref, {
+              channelPrefix: 'payment_trp',
+              onCompleted: onSuccess,
+              onFailed: onFail,
+              pollIntervalMs: 1500,
+              burstChecks: { count: 6, intervalMs: 800 },
+            })
 
           } catch (err: any) {
             console.error('Payment error:', err)

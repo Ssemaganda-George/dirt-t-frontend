@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { isEligibleForTier } from '../domain/tierRules';
 import { VendorTier } from '../types';
 import { getVendorWithTier, getAutomaticTierForVendor } from './commissionService';
 import { updateVendorTierWithServiceImpact } from './pricingService';
@@ -200,27 +201,7 @@ export async function calculateVendorMetrics(vendorId: string): Promise<{
   };
 }
 
-/**
- * Checks if vendor is eligible for a specific tier
- */
-export function isEligibleForTier(
-  metrics: { monthlyBookings: number; averageRating?: number },
-  tier: VendorTier
-): boolean {
-  // Check monthly bookings requirement
-  if (metrics.monthlyBookings < tier.min_monthly_bookings) {
-    return false;
-  }
-
-  // Check rating requirement (if specified)
-  if (tier.min_rating !== null && tier.min_rating !== undefined) {
-    if (!metrics.averageRating || metrics.averageRating < tier.min_rating) {
-      return false;
-    }
-  }
-
-  return true;
-}
+export { isEligibleForTier } from '../domain/tierRules'
 
 /**
  * Gets next tier information for a vendor (for dashboard display)

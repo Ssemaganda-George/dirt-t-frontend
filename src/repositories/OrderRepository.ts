@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import { executeWithCircuitBreaker } from '../lib/concurrency'
-import { creditWallet } from '../lib/creditWallet'
+import { creditWallet } from './WalletRepository'
 import { getAdminProfileId } from './PartnerRepository'
 import { addTransaction } from './WalletRepository'
 import { createBooking } from './BookingRepository'

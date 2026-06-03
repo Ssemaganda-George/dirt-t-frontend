@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
+import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
 import BookingReceipt from '../components/BookingReceipt'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -34,7 +35,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [pollingMessage, setPollingMessage] = useState('')
   const [completedBooking, setCompletedBooking] = useState<any | null>(null)
-  const backupPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
   const finaliseInFlightRef = useRef(false)
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -149,42 +150,23 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
         const ref = result.data.reference
         setPollingMessage('Check your phone for the USSD prompt…')
 
-        const checkStatus = async () => {
-          try {
-            const res = await fetch(`${supabaseUrl}/functions/v1/marzpay-payment-status?reference=${encodeURIComponent(ref)}`, { headers: { Authorization: `Bearer ${supabaseAnonKey}` } })
-            const d = await res.json().catch(() => ({})) as { status?: string }
-            return d?.status === 'completed' ? 'completed' : d?.status === 'failed' ? 'failed' : null
-          } catch { return null }
-        }
-
         const onSuccess = () => {
-          if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+          paymentWatchRef.current?.cleanup()
           finaliseBooking(pendingBooking)
         }
         const onFail = () => {
-          if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null }
+          paymentWatchRef.current?.cleanup()
           cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
           setPollingMessage(''); setIsSubmitting(false)
           setPaymentError('Payment was not completed or was declined. Please try again.')
         }
 
-        const channel = supabase.channel(`payment_tour_${ref}`)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments', filter: `reference=eq.${ref}` }, (payload) => {
-            const row = payload.new as { status: string }
-            if (row.status === 'completed') { channel.unsubscribe(); onSuccess() }
-            else if (row.status === 'failed') { channel.unsubscribe(); onFail() }
-          }).subscribe()
-
-        const immediate = await checkStatus()
-        if (immediate === 'completed') { channel.unsubscribe(); onSuccess(); return }
-        if (immediate === 'failed') { channel.unsubscribe(); onFail(); return }
-
-        backupPollRef.current = setInterval(async () => {
-          const s = await checkStatus()
-          if (s === 'completed') { channel.unsubscribe(); onSuccess() }
-          else if (s === 'failed') { channel.unsubscribe(); onFail() }
-        }, 4000)
-        setTimeout(() => { if (backupPollRef.current) { clearInterval(backupPollRef.current); backupPollRef.current = null } }, 120000)
+        paymentWatchRef.current?.cleanup()
+        paymentWatchRef.current = watchMarzpayPayment(ref, {
+          channelPrefix: 'payment_tour',
+          onCompleted: onSuccess,
+          onFailed: onFail,
+        })
       } catch (err) {
         cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
         setPollingMessage(''); setIsSubmitting(false)

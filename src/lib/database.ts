@@ -1,5 +1,5 @@
 // Backwards-compat barrel — all implementations live in src/repositories/
-// Import directly from src/repositories/ in new code.
+// See docs/architecture/ARCHITECTURE.md. Prefer repositories/ or services/ in new code.
 export * from '../repositories'
 
 // Re-export canonical types so existing `import { Vendor } from '../lib/database'` keeps working

@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabaseClient'
-import { creditWallet } from '../lib/creditWallet'
 import { formatCurrency } from '../lib/utils'
 import type { Transaction, Wallet } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
@@ -24,6 +23,23 @@ export function platformTakeFromBooking(booking: BookingFeeSnapshot | null | und
 
 export function platformTakeFromTransaction(transaction: { bookings?: BookingFeeSnapshot | null }): number {
   return platformTakeFromBooking(transaction.bookings)
+}
+
+/** Credit a vendor (or platform) wallet via atomic RPC. */
+export async function creditWallet(vendorId: string, amount: number, currency: string) {
+  const { data, error } = await supabase.rpc('update_wallet_balance_atomic', {
+    p_vendor_id: vendorId,
+    p_amount: amount,
+    p_currency: currency,
+    p_operation: 'credit',
+  })
+
+  if (error) throw error
+  if (!data?.success) {
+    throw new Error(data?.error || 'Failed to credit wallet')
+  }
+
+  return data
 }
 
 export async function getTransactions(vendorId: string) {

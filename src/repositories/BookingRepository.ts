@@ -880,3 +880,19 @@ export async function getActiveBookings(vendorId?: string): Promise<Booking[]> {
 export async function cancelBooking(bookingId: string): Promise<Booking> {
   return updateBooking(bookingId, { status: 'cancelled' })
 }
+
+/** Keeps payment_status pending so the customer can retry after a failed MarzPay attempt. */
+export async function cancelBookingOnPaymentFailure(bookingId: string): Promise<Booking> {
+  return updateBooking(bookingId, { status: 'cancelled', payment_status: 'pending' })
+}
+
+/** Only cancels when still pending (safe before payment completes). */
+export async function cancelPendingBooking(bookingId: string): Promise<void> {
+  const { error } = await supabase
+    .from('bookings')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .eq('status', 'pending')
+
+  if (error) throw error
+}
