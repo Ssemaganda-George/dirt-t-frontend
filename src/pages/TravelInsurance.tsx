@@ -128,7 +128,7 @@ export default function TravelInsurance() {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Phone className="h-6 w-6 text-black mr-4" />
-                  <span className="text-gray-700 font-medium">+256 414 320 000 (24/7)</span>
+                  <span className="text-gray-700 font-medium">+256  759 918649 (24/7)</span>
                 </div>
                 <div className="flex items-center">
                   <Mail className="h-6 w-6 text-black mr-4" />
