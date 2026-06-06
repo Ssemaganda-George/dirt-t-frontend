@@ -49,7 +49,7 @@ export default function VisaProcessing() {
                 <li>• Validity: Up to 90 days</li>
                 <li>• Multi-country travel</li>
               </ul>
-              <p className="text-3xl font-black text-black">$140<span className="text-lg font-normal text-gray-600">/visa</span></p>
+              <p className="text-3xl font-black text-black">$150<span className="text-lg font-normal text-gray-600">/visa</span></p>
             </div>
 
             <div className="border border-gray-200 p-8">
@@ -63,7 +63,7 @@ export default function VisaProcessing() {
                 <li>• Investment opportunity visas</li>
                 <li>• Extended processing time</li>
               </ul>
-              <p className="text-3xl font-black text-black">$160<span className="text-lg font-normal text-gray-600">/visa</span></p>
+              <p className="text-3xl font-black text-black">$200<span className="text-lg font-normal text-gray-600">/visa</span></p>
             </div>
 
             <div className="border border-gray-200 p-8">
