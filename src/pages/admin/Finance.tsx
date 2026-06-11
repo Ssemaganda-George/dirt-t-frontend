@@ -494,7 +494,7 @@ export function Finance() {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Total Revenue</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">
+          <p className="text-1xl font-semibold text-gray-900 mt-2">
             {formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
@@ -506,7 +506,7 @@ export function Finance() {
 
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Net Revenue</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">
+          <p className="text-1xl font-semibold text-gray-900 mt-2">
             {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
           <p className="text-xs text-gray-400 mt-1">After withdrawals & refunds</p>
@@ -514,7 +514,7 @@ export function Finance() {
 
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-orange-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Platform Fees & Commission</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">
+          <p className="text-1xl font-semibold text-gray-900 mt-2">
             {formatCurrencyWithConversion(stats.platformFeesAndCommissions, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
           <p className="text-xs text-gray-400 mt-1">From linked bookings</p>
@@ -522,7 +522,7 @@ export function Finance() {
 
         <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all">
           <p className="text-xs font-medium text-gray-500">Pending Withdrawals</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pendingWithdrawals}</p>
+          <p className="text-1xl font-semibold text-gray-900 mt-2">{stats.pendingWithdrawals}</p>
           <p className="text-xs text-gray-400 mt-1">
             {formatCurrencyWithConversion(stats.pendingAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
