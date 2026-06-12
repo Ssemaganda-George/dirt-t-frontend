@@ -12,6 +12,7 @@ import {
   getSession,
   isEmailConfirmed,
   onAuthStateChange,
+  formatSignInError,
   signInWithPassword,
   signOut as authSignOut,
   signUpWithPassword,
@@ -41,7 +42,7 @@ interface AuthContextType {
   loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
   signUp: (email: string, password: string, firstName: string, lastName: string, role?: string, homeCity?: string, homeCountry?: string) => Promise<void>
-  signOut: () => Promise<void>
+  signOut: (options?: { redirect?: boolean }) => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   confirmSignOut: () => Promise<void>
 }
@@ -196,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const rejectUnverifiedSession = async () => {
     try {
       await authSignOut()
+      clearLocalAuthStorage()
     } catch (e) {
       console.error('Error signing out unverified session:', e)
     }
@@ -273,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string): Promise<Profile | null> => {
     const { data, error } = await signInWithPassword(email, password)
-    if (error) throw error
+    if (error) throw formatSignInError(error)
 
     const u = data.user
     if (!u) return null
@@ -370,7 +372,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signOut = async () => {
+  const signOut = async (options?: { redirect?: boolean }) => {
+    const shouldRedirect = options?.redirect !== false
     try {
       await authSignOut()
       clearLocalAuthStorage()
@@ -378,10 +381,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null)
       setVendor(null)
       setProfileLoaded(false)
-      window.location.href = '/'
+      if (shouldRedirect) {
+        window.location.href = '/'
+      }
     } catch (err) {
       console.error('Error signing out:', err)
-      window.location.reload()
+      if (shouldRedirect) {
+        window.location.reload()
+      }
     }
   }
 

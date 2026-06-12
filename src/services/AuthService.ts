@@ -15,6 +15,27 @@ export function isEmailConfirmed(user: User): boolean {
     || (user as { confirmed_at?: string }).confirmed_at)
 }
 
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+export function formatSignInError(error: { message?: string; code?: string }): Error {
+  const code = (error.code ?? '').toLowerCase()
+  const message = (error.message ?? '').toLowerCase()
+
+  if (code === 'email_not_confirmed' || message.includes('email not confirmed')) {
+    return new Error('Please verify your email before logging in. Check your inbox for a verification link.')
+  }
+
+  if (code === 'invalid_credentials' || message.includes('invalid login credentials')) {
+    return new Error(
+      'Incorrect email or password. If you just created an account, verify your email first — check your inbox (and spam folder).'
+    )
+  }
+
+  return new Error(error.message || 'Failed to sign in')
+}
+
 export async function getSession(): Promise<Session | null> {
   const { data, error } = await supabase.auth.getSession()
   if (error) throw error
@@ -44,11 +65,18 @@ export async function getAccessToken(): Promise<string | undefined> {
 }
 
 export async function signInWithPassword(email: string, password: string) {
-  return supabase.auth.signInWithPassword({ email, password })
+  return supabase.auth.signInWithPassword({ email: normalizeEmail(email), password })
 }
 
 export async function signUpWithPassword(email: string, password: string) {
-  return supabase.auth.signUp({ email, password })
+  const emailRedirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
+
+  return supabase.auth.signUp({
+    email: normalizeEmail(email),
+    password,
+    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+  })
 }
 
 export async function signOut(): Promise<void> {

@@ -2,7 +2,12 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { getCurrentUser } from '../services/AuthService'
+import {
+  clearLocalAuthStorage,
+  getCurrentUser,
+  isEmailConfirmed,
+  signOut as authSignOut,
+} from '../services/AuthService'
 import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import { COUNTRIES } from '../lib/countries'
@@ -277,7 +282,16 @@ export default function VendorLogin() {
       }
 
       try { localStorage.removeItem(VENDOR_DRAFT_KEY) } catch { /* ignore */ }
-      setSuccessMessage('Business account created successfully. Review the information below while your account is being prepared.')
+
+      const currentUser = await getCurrentUser()
+      if (currentUser && !isEmailConfirmed(currentUser)) {
+        await authSignOut()
+        clearLocalAuthStorage()
+      }
+
+      setSuccessMessage(
+        'Business account created! Check your email to verify your account before signing in. Review the information below while your account is being prepared.'
+      )
       setShowPostSignupBenefits(true)
       setIsSignUp(false)
       setCurrentStep(1)

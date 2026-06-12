@@ -15,6 +15,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -41,6 +42,7 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccessMessage('')
 
     try {
       await signIn(email, password)
@@ -73,9 +75,16 @@ export default function Login() {
     }
 
     try {
-      await signUp(email, password, fullName, 'tourist')
-      // After creating the account, sign the user out so they must verify email before logging in
-      await signOut()
+      const nameParts = fullName.trim().split(/\s+/)
+      const firstName = nameParts[0] || ''
+      const lastName = nameParts.slice(1).join(' ') || ''
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined)
+      await signOut({ redirect: false })
+      setIsSignUp(false)
+      setPassword('')
+      setConfirmPassword('')
+      setError('')
+      setSuccessMessage('Account created! Check your email to verify your account, then sign in below.')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
@@ -209,6 +218,10 @@ export default function Login() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
               </button>
+
+              {successMessage && (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-2.5 text-sm">{successMessage}</div>
+              )}
 
               {error && (
                 <div className="rounded-lg bg-red-50 border border-red-100 text-red-600 px-4 py-2.5 text-sm">{error}</div>

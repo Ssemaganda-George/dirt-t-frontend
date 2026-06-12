@@ -26,15 +26,17 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [homeCountry, setHomeCountry] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
 
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
 
   const resetAuthFields = () => {
     setError('')
+    setSuccessMessage('')
     setEmail('')
     setPassword('')
     setConfirmPassword('')
@@ -49,6 +51,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccessMessage('')
 
     try {
       const userProfile = await signIn(email, password)
@@ -117,10 +120,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
 
     try {
       await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined)
-      navigate('/')
-      onClose()
+      await signOut({ redirect: false })
+      setIsSignUp(false)
+      setPassword('')
+      setConfirmPassword('')
+      setSuccessMessage('Account created! Check your email to verify your account, then sign in below.')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
+    } finally {
       setLoading(false)
     }
   }
@@ -196,6 +203,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
         <>
         {/* Form */}
         <form className="space-y-4 sm:space-y-5" onSubmit={isSignUp ? handleSignUpSubmit : handleSubmit}>
+          {successMessage && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-sm">
+              {successMessage}
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
               {error}
