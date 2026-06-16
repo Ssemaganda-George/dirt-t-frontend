@@ -129,6 +129,57 @@ function resolveBookingCommission(booking: {
   return { total, commission: Math.max(0, commission) }
 }
 
+const SETTLEABLE_BOOKING_STATUSES = new Set(["confirmed", "completed"])
+
+function assertBookingPaidForSettlement(
+  booking: { status?: string; payment_status?: string },
+  bookingId: string
+): void {
+  if (booking.payment_status !== "paid") {
+    throw new Error(
+      `booking-not-paid:${bookingId}:payment_status=${booking.payment_status || "unknown"}`
+    )
+  }
+  if (!SETTLEABLE_BOOKING_STATUSES.has(String(booking.status || ""))) {
+    throw new Error(`booking-not-confirmed:${bookingId}:status=${booking.status || "unknown"}`)
+  }
+}
+
+function assertOrderPaidForSettlement(order: { status?: string }, orderId: string): void {
+  if (order.status !== "paid") {
+    throw new Error(`order-not-paid:${orderId}:status=${order.status || "unknown"}`)
+  }
+}
+
+/** When a MarzPay payments row exists, it must be completed before settlement. */
+async function assertMarzpayPaymentCompleted(
+  supabase: any,
+  opts: { bookingId?: string; orderId?: string; reference: string }
+): Promise<void> {
+  if (!opts.reference) return
+
+  const { data: payment, error } = await supabase
+    .from("payments")
+    .select("id, status, booking_id, order_id")
+    .eq("reference", opts.reference)
+    .maybeSingle()
+
+  if (error) throw new Error(`payment-lookup-failed:${error.message}`)
+  if (!payment) return
+
+  const status = String(payment.status || "").toLowerCase()
+  if (status !== "completed") {
+    throw new Error(`payment-not-completed:reference=${opts.reference}:status=${status}`)
+  }
+
+  if (opts.bookingId && payment.booking_id && payment.booking_id !== opts.bookingId) {
+    throw new Error(`payment-booking-mismatch:${opts.reference}`)
+  }
+  if (opts.orderId && payment.order_id && payment.order_id !== opts.orderId) {
+    throw new Error(`payment-order-mismatch:${opts.reference}`)
+  }
+}
+
 async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<void> {
   const bookingId = job.source_id
   const reference = job.payload?.reference || `PMT_${bookingId.slice(0, 8)}_${Date.now()}`
@@ -136,12 +187,16 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   const { data: booking, error: bookingFetchErr } = await supabase
     .from("bookings")
     .select(
-      "id, vendor_id, tourist_id, currency, total_amount, service_id, commission_amount, platform_fee, commission_rate_at_booking, vendor_payout_amount"
+      "id, vendor_id, tourist_id, currency, total_amount, service_id, status, payment_status, payment_reference, commission_amount, platform_fee, commission_rate_at_booking, vendor_payout_amount"
     )
     .eq("id", bookingId)
     .single()
 
   if (bookingFetchErr || !booking) throw new Error(`booking-not-found:${bookingId}`)
+
+  assertBookingPaidForSettlement(booking, bookingId)
+  const paymentRef = job.payload?.reference || booking.payment_reference || reference
+  await assertMarzpayPaymentCompleted(supabase, { bookingId, reference: paymentRef })
 
   const { data: existingTx, error: txCheckErr } = await supabase
     .from("transactions")
@@ -174,7 +229,7 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
       bookingId,
       touristId: booking.tourist_id || null,
       currency: booking.currency || "UGX",
-      reference,
+      reference: paymentRef,
     })
   }
 
@@ -209,17 +264,21 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   const { data: order, error: orderFetchErr } = await supabase
     .from("orders")
     .select(
-      "id, vendor_id, user_id, currency, total_amount, platform_fee, vendor_payout, guest_name, guest_email, guest_phone"
+      "id, vendor_id, user_id, currency, total_amount, platform_fee, vendor_payout, status, reference, guest_name, guest_email, guest_phone"
     )
     .eq("id", orderId)
     .single()
 
   if (orderFetchErr || !order) throw new Error(`order-not-found:${orderId}`)
 
+  assertOrderPaidForSettlement(order, orderId)
+  const paymentRef = job.payload?.reference || order.reference || reference
+  await assertMarzpayPaymentCompleted(supabase, { orderId, reference: paymentRef })
+
   const { data: existingOrderTx, error: orderTxCheckErr } = await supabase
     .from("transactions")
     .select("id")
-    .eq("reference", reference)
+    .eq("reference", paymentRef)
     .eq("transaction_type", "payment")
     .maybeSingle()
 
@@ -245,7 +304,7 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
       bookingId: null,
       touristId: order.user_id || null,
       currency: order.currency || "UGX",
-      reference,
+      reference: paymentRef,
     })
   }
 

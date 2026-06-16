@@ -886,7 +886,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
     // Build base query for confirmed or completed paid bookings
     let query = supabase
       .from('bookings')
-      .select('id, vendor_id, tourist_id, total_amount, vendor_payout_amount, currency, commission_amount, commission_rate_at_booking')
+      .select('id, vendor_id, tourist_id, total_amount, vendor_payout_amount, currency, commission_amount, commission_rate_at_booking, payment_reference')
       .in('status', ['confirmed', 'completed'])
       .eq('payment_status', 'paid')
 
@@ -907,6 +907,24 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
 
     for (const b of bookings) {
       try {
+        if (b.payment_reference) {
+          const { data: marzpayRow, error: marzpayErr } = await supabase
+            .from('payments')
+            .select('status')
+            .eq('reference', b.payment_reference)
+            .maybeSingle()
+
+          if (marzpayErr && marzpayErr.code !== 'PGRST116') {
+            console.warn('Error checking MarzPay payment for booking', b.id, marzpayErr)
+            continue
+          }
+
+          if (marzpayRow && marzpayRow.status !== 'completed') {
+            console.warn('Skipping reconciliation: booking has non-completed MarzPay payment', b.id)
+            continue
+          }
+        }
+
         // Check existing completed payment transaction for this booking
         const { data: existingTx, error: txCheckError } = await supabase
           .from('transactions')
