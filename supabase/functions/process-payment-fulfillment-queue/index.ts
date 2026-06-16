@@ -198,9 +198,11 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   const paymentRef = job.payload?.reference || booking.payment_reference || reference
   await assertMarzpayPaymentCompleted(supabase, { bookingId, reference: paymentRef })
 
+  const adminId = await getAdminProfileId(supabase)
+
   const { data: existingTx, error: txCheckErr } = await supabase
     .from("transactions")
-    .select("id")
+    .select("id, payout_meta")
     .eq("booking_id", bookingId)
     .eq("transaction_type", "payment")
     .eq("status", "completed")
@@ -208,7 +210,20 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
 
   if (txCheckErr) throw new Error(`tx-check-failed:${txCheckErr.message}`)
 
-  if (!existingTx) {
+  const walletAlreadySettled = Boolean((existingTx as any)?.payout_meta?.wallet_settlement)
+
+  if (existingTx && !walletAlreadySettled) {
+    const { data: backfillResult, error: backfillErr } = await supabase.rpc(
+      "backfill_wallet_credits_for_booking",
+      { p_booking_id: bookingId, p_admin_id: adminId },
+    )
+    if (backfillErr) throw new Error(`wallet-backfill-failed:${backfillErr.message}`)
+    if (!(backfillResult as any)?.success) {
+      throw new Error(
+        `wallet-backfill-failed:${(backfillResult as any)?.error || "unknown"}`,
+      )
+    }
+  } else if (!existingTx) {
     const { data: serviceData, error: serviceErr } = await supabase
       .from("services")
       .select("category_id")
@@ -219,7 +234,6 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
 
     const isTransport = (serviceData as any)?.category_id === "cat_transport"
     const { total, commission } = resolveBookingCommission(booking, isTransport)
-    const adminId = await getAdminProfileId(supabase)
 
     await settlePaymentWithCommission(supabase, {
       vendorId: booking.vendor_id,
@@ -275,16 +289,31 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   const paymentRef = job.payload?.reference || order.reference || reference
   await assertMarzpayPaymentCompleted(supabase, { orderId, reference: paymentRef })
 
+  const adminId = await getAdminProfileId(supabase)
+
   const { data: existingOrderTx, error: orderTxCheckErr } = await supabase
     .from("transactions")
-    .select("id")
+    .select("id, payout_meta")
     .eq("reference", paymentRef)
     .eq("transaction_type", "payment")
     .maybeSingle()
 
   if (orderTxCheckErr) throw new Error(`order-tx-check-failed:${orderTxCheckErr.message}`)
 
-  if (!existingOrderTx) {
+  const orderWalletSettled = Boolean((existingOrderTx as any)?.payout_meta?.wallet_settlement)
+
+  if (existingOrderTx && !orderWalletSettled) {
+    const { data: backfillResult, error: backfillErr } = await supabase.rpc(
+      "backfill_wallet_credits_for_order",
+      { p_order_id: orderId, p_admin_id: adminId },
+    )
+    if (backfillErr) throw new Error(`order-wallet-backfill-failed:${backfillErr.message}`)
+    if (!(backfillResult as any)?.success) {
+      throw new Error(
+        `order-wallet-backfill-failed:${(backfillResult as any)?.error || "unknown"}`,
+      )
+    }
+  } else if (!existingOrderTx) {
     const total = Number(job.payload?.amount ?? order.total_amount ?? 0)
     const platformFee = Number(order.platform_fee ?? 0)
     const vendorPayout = order.vendor_payout != null ? Number(order.vendor_payout) : null
@@ -293,8 +322,6 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
       : vendorPayout != null
         ? Math.max(0, total - vendorPayout)
         : 0
-
-    const adminId = await getAdminProfileId(supabase)
 
     await settlePaymentWithCommission(supabase, {
       vendorId: order.vendor_id,

@@ -928,7 +928,7 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
         // Check existing completed payment transaction for this booking
         const { data: existingTx, error: txCheckError } = await supabase
           .from('transactions')
-          .select('id')
+          .select('id, payout_meta')
           .eq('booking_id', b.id)
           .eq('transaction_type', 'payment')
           .eq('status', 'completed')
@@ -940,7 +940,25 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
         }
 
         if (existingTx && existingTx.length > 0) {
-          // already has payment
+          const walletSettled = Boolean((existingTx[0] as any)?.payout_meta?.wallet_settlement)
+          if (walletSettled) {
+            continue
+          }
+
+          const { data: backfillResult, error: backfillError } = await supabase.rpc(
+            'backfill_wallet_credits_for_booking',
+            { p_booking_id: b.id, p_admin_id: adminId }
+          )
+
+          if (backfillError) {
+            console.warn('Wallet backfill failed for booking', b.id, backfillError)
+            continue
+          }
+
+          if ((backfillResult as any)?.success && !(backfillResult as any)?.skipped) {
+            created++
+            console.log('Wallet backfill credited booking', b.id)
+          }
           continue
         }
 

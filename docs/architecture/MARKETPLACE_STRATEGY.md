@@ -462,7 +462,7 @@ Track fixes one feature at a time. Update this table as each ships.
 | # | Feature | Status | Notes |
 |---|---|---|---|
 | **1** | **MarzPay settlement on happy path** | Shipped | Migration `20260612120000_deploy_process_payment_with_commission.sql` + worker `process-payment-fulfillment-queue` deployed |
-| 2 | Historical wallet backfill | Pending | Paid bookings with ledger but no wallet credit |
+| 2 | Historical wallet backfill | Shipped | Migration `20260612140000_wallet_credit_backfill.sql`: `backfill_wallet_credits_*` RPCs, `payout_meta.wallet_settlement` idempotency, worker + reconcile paths |
 | 3 | Failed fulfillment job alerts | Pending | Ops alert when `payment_fulfillment_jobs` → `failed` |
 | 4 | Pending vs available wallet buckets | Pending | Phase 1 trust layer |
 | 5 | Restaurant → reservation status | Pending | Clean financial signals |
