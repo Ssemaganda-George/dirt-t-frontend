@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Transaction } from '../../types'
-import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet, reconcileMissingPaymentTransactions } from '../../lib/database'
+import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet, reconcileMissingPaymentTransactions, getVendorPendingHolds, getVendorBalanceReleaseRequests, submitBalanceReleaseRequest, type VendorPendingHold, type BalanceReleaseRequest } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { supabase } from '../../lib/supabaseClient'
@@ -37,6 +37,12 @@ export default function VendorTransactions() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'recommendations'>('overview')
+  const [pendingHolds, setPendingHolds] = useState<VendorPendingHold[]>([])
+  const [releaseRequests, setReleaseRequests] = useState<BalanceReleaseRequest[]>([])
+  const [releaseModalHold, setReleaseModalHold] = useState<VendorPendingHold | null>(null)
+  const [releaseReason, setReleaseReason] = useState('')
+  const [releaseSubmitting, setReleaseSubmitting] = useState(false)
+  const [releaseMessage, setReleaseMessage] = useState<string | null>(null)
 
   // Daily quote — changes every day, unique per vendor
   const dailyQuote = useMemo(() => getDailyQuote(vendorId), [vendorId])
@@ -93,15 +99,19 @@ export default function VendorTransactions() {
       // This ensures completed earnings reflect bookings that were paid but never got a transaction row.
       await reconcileMissingPaymentTransactions(vendorId)
 
-      const [transactions, stats, walletObj] = await Promise.all([
+      const [transactions, stats, walletObj, holds, releaseReqs] = await Promise.all([
         getTransactions(vendorId),
         getWalletStats(vendorId),
-        getVendorWallet(vendorId)
+        getVendorWallet(vendorId),
+        getVendorPendingHolds(vendorId).catch(() => []),
+        getVendorBalanceReleaseRequests(vendorId).catch(() => []),
       ])
 
       setTxs(transactions)
       setWalletStats(stats)
       setWallet(walletObj)
+      setPendingHolds(holds)
+      setReleaseRequests(releaseReqs)
       setCurrency(walletObj?.currency || stats.currency)
 
       // Apply initial filters
@@ -313,6 +323,52 @@ export default function VendorTransactions() {
     }
   }
 
+  const formatHoldLabel = (hold: VendorPendingHold) => {
+    if (hold.booking) {
+      const date = hold.booking.service_date || hold.booking.booking_date
+      return `Booking · ${hold.booking.status || 'confirmed'}${date ? ` · ${date}` : ''}`
+    }
+    if (hold.order?.reference) {
+      return `Order · ${hold.order.reference}`
+    }
+    return hold.booking_id ? `Booking ${hold.booking_id.slice(0, 8)}…` : 'Payment hold'
+  }
+
+  const getHoldRequestStatus = (holdId: string) => {
+    const pending = releaseRequests.find((r) => r.hold_id === holdId && r.status === 'pending')
+    if (pending) return 'pending' as const
+    const rejected = releaseRequests.find((r) => r.hold_id === holdId && r.status === 'rejected')
+    if (rejected) return 'rejected' as const
+    return null
+  }
+
+  const handleSubmitReleaseRequest = async () => {
+    if (!releaseModalHold) return
+    const trimmed = releaseReason.trim()
+    if (trimmed.length < 10) {
+      setReleaseMessage('Please explain why you need early access (at least 10 characters).')
+      return
+    }
+    setReleaseSubmitting(true)
+    setReleaseMessage(null)
+    try {
+      await submitBalanceReleaseRequest(
+        releaseModalHold.id,
+        vendorId,
+        trimmed,
+        profile?.id || null,
+      )
+      setReleaseModalHold(null)
+      setReleaseReason('')
+      setReleaseMessage('Request submitted. An admin will review it shortly.')
+      await refresh()
+    } catch (err: any) {
+      setReleaseMessage(err?.message || 'Failed to submit request.')
+    } finally {
+      setReleaseSubmitting(false)
+    }
+  }
+
   // Export functions
   const exportToCSV = () => {
     const headers = ['Date', 'Type', 'Reference', 'Amount', 'Currency', 'Status']
@@ -511,6 +567,72 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           <p className="text-xs text-gray-600 mt-2">{walletStats.completedWithdrawals || 0} completed</p>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {releaseMessage && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                    {releaseMessage}
+                  </div>
+                )}
+
+                {pendingHolds.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                    <div className="mb-4">
+                      <h3 className="text-base font-semibold text-gray-900">Pending earnings by booking</h3>
+                      <p className="text-xs text-gray-600 mt-1">
+                        These amounts are held until the service date or completion. Need funds sooner (e.g. event setup deposit)? Request an early release — an admin will review your reason.
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {pendingHolds.map((hold) => {
+                        const requestStatus = getHoldRequestStatus(hold.id)
+                        return (
+                          <div
+                            key={hold.id}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                          >
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {formatCurrencyWithConversion(
+                                  Number(hold.amount),
+                                  hold.currency || currency,
+                                  selectedCurrency,
+                                  selectedLanguage,
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-600">{formatHoldLabel(hold)}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Auto-release: {formatDateTime(hold.release_after)}
+                              </p>
+                            </div>
+                            <div className="shrink-0">
+                              {requestStatus === 'pending' ? (
+                                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                                  Release request pending
+                                </span>
+                              ) : requestStatus === 'rejected' ? (
+                                <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
+                                  Request rejected — contact support
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReleaseModalHold(hold)
+                                    setReleaseReason('')
+                                    setReleaseMessage(null)
+                                  }}
+                                  className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                >
+                                  Request early release
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -1094,6 +1216,71 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0) || payoutOptions.length === 0 || !selectedPayoutId}
                     className="flex-1 min-h-[40px] px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >{loading ? 'Submitting...' : 'Withdraw'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {releaseModalHold && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-base font-semibold text-gray-900">Request early release</h3>
+                <button
+                  type="button"
+                  onClick={() => setReleaseModalHold(null)}
+                  className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+                  <p className="font-medium text-gray-900">
+                    {formatCurrencyWithConversion(
+                      Number(releaseModalHold.amount),
+                      releaseModalHold.currency || currency,
+                      selectedCurrency,
+                      selectedLanguage,
+                    )}
+                  </p>
+                  <p className="mt-1">{formatHoldLabel(releaseModalHold)}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Normally releases on {formatDateTime(releaseModalHold.release_after)}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Why do you need these funds early?
+                  </label>
+                  <textarea
+                    className="w-full min-h-[100px] border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    placeholder="e.g. Need deposit for venue setup, equipment rental, or staff mobilization before the event date."
+                    value={releaseReason}
+                    onChange={(e) => setReleaseReason(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum 10 characters. Be specific — admins review each request.</p>
+                </div>
+                {releaseMessage && (
+                  <p className="text-sm text-red-600">{releaseMessage}</p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setReleaseModalHold(null)}
+                    className="flex-1 min-h-[40px] rounded-lg border border-gray-200 text-sm font-medium text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitReleaseRequest}
+                    disabled={releaseSubmitting || releaseReason.trim().length < 10}
+                    className="flex-1 min-h-[40px] rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {releaseSubmitting ? 'Submitting…' : 'Submit request'}
+                  </button>
                 </div>
               </div>
             </div>

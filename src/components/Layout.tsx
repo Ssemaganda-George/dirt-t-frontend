@@ -80,6 +80,7 @@ const navigation = [
         { labelKey: 'conservation_wallet', href: '/admin/conservation-wallet', icon: CreditCard },
       { labelKey: 'business_wallets', href: '/admin/wallets', icon: CreditCard },
       { labelKey: 'finance', href: '/admin/finance', icon: DollarSign },
+      { labelKey: 'early_release_requests', href: '/admin/balance-release-requests', icon: DollarSign },
       { labelKey: 'vendor_tiers', href: '/admin/vendor-tiers', icon: BarChart3 }
     ]
   },

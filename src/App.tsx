@@ -53,6 +53,7 @@ const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module =>
 const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
 const DirtTrailsWallet = lazy(() => import('./pages/admin/DirtTrailsWallet').then(module => ({ default: module.DirtTrailsWallet })))
 const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
+const BalanceReleaseRequests = lazy(() => import('./pages/admin/BalanceReleaseRequests'))
 const ConservationWallet = lazy(() => import('./pages/admin/ConservationWallet').then(module => ({ default: module.default })))
 const TouristWallets = lazy(() => import('./pages/admin/TouristWallets').then(module => ({ default: module.default })))
 const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
@@ -330,6 +331,7 @@ function App() {
             <Route path="conservation-wallet" element={<ConservationWallet />} />
             <Route path="tourist-wallets" element={<TouristWallets />} />
             <Route path="finance" element={<Finance />} />
+            <Route path="balance-release-requests" element={<BalanceReleaseRequests />} />
             <Route path="vendor-messages" element={
               <ProtectedRoute requiredRole="admin">
                 <AdminVendorMessages />

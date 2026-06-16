@@ -1091,3 +1091,151 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
     throw error
   }
 }
+
+export type VendorPendingHold = {
+  id: string
+  vendor_id: string
+  amount: number
+  currency: string
+  release_after: string
+  status: string
+  booking_id?: string | null
+  order_id?: string | null
+  booking?: {
+    id: string
+    service_date?: string | null
+    booking_date?: string | null
+    status?: string
+  } | null
+  order?: {
+    id: string
+    reference?: string | null
+    status?: string
+    created_at?: string
+  } | null
+}
+
+export type BalanceReleaseRequest = {
+  id: string
+  vendor_id: string
+  hold_id: string
+  amount: number
+  currency: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+  requested_by?: string | null
+  reviewed_by?: string | null
+  admin_notes?: string | null
+  requested_at: string
+  reviewed_at?: string | null
+  vendor?: { id: string; business_name?: string } | null
+  hold?: VendorPendingHold | null
+}
+
+export async function getVendorPendingHolds(vendorId: string): Promise<VendorPendingHold[]> {
+  const { data, error } = await supabase
+    .from('vendor_balance_holds')
+    .select(`
+      id,
+      vendor_id,
+      amount,
+      currency,
+      release_after,
+      status,
+      booking_id,
+      order_id,
+      booking:bookings(id, service_date, booking_date, status),
+      order:orders(id, reference, status, created_at)
+    `)
+    .eq('vendor_id', vendorId)
+    .eq('status', 'pending')
+    .order('release_after', { ascending: true })
+
+  if (error) {
+    console.error('getVendorPendingHolds:', error)
+    throw error
+  }
+
+  return (data || []) as VendorPendingHold[]
+}
+
+export async function getVendorBalanceReleaseRequests(vendorId: string): Promise<BalanceReleaseRequest[]> {
+  const { data, error } = await supabase
+    .from('vendor_balance_release_requests')
+    .select('*')
+    .eq('vendor_id', vendorId)
+    .order('requested_at', { ascending: false })
+
+  if (error) {
+    console.error('getVendorBalanceReleaseRequests:', error)
+    throw error
+  }
+
+  return (data || []) as BalanceReleaseRequest[]
+}
+
+export async function submitBalanceReleaseRequest(
+  holdId: string,
+  vendorId: string,
+  reason: string,
+  requestedBy?: string | null,
+): Promise<{ success: boolean; error?: string; request_id?: string }> {
+  const { data, error } = await supabase.rpc('submit_vendor_balance_release_request', {
+    p_hold_id: holdId,
+    p_vendor_id: vendorId,
+    p_reason: reason,
+    p_requested_by: requestedBy || null,
+  })
+
+  if (error) throw error
+  if (!data?.success) {
+    throw new Error(data?.error || 'Failed to submit release request')
+  }
+
+  return data
+}
+
+export async function getPendingBalanceReleaseRequests(): Promise<BalanceReleaseRequest[]> {
+  const { data, error } = await supabase
+    .from('vendor_balance_release_requests')
+    .select(`
+      *,
+      vendor:vendors(id, business_name),
+      hold:vendor_balance_holds(
+        id,
+        release_after,
+        booking_id,
+        order_id,
+        booking:bookings(id, service_date, booking_date, status),
+        order:orders(id, reference, status)
+      )
+    `)
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: true })
+
+  if (error) {
+    console.error('getPendingBalanceReleaseRequests:', error)
+    throw error
+  }
+
+  return (data || []) as BalanceReleaseRequest[]
+}
+
+export async function reviewBalanceReleaseRequest(
+  requestId: string,
+  approve: boolean,
+  adminId: string,
+  adminNotes?: string,
+): Promise<void> {
+  const { data, error } = await supabase.rpc('review_vendor_balance_release_request', {
+    p_request_id: requestId,
+    p_approve: approve,
+    p_admin_id: adminId,
+    p_admin_notes: adminNotes || null,
+  })
+
+  if (error) throw error
+  if (!data?.success) {
+    throw new Error(data?.error || 'Failed to review release request')
+  }
+}

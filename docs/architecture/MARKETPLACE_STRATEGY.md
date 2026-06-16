@@ -464,7 +464,7 @@ Track fixes one feature at a time. Update this table as each ships.
 | **1** | **MarzPay settlement on happy path** | Shipped | Migration `20260612120000_deploy_process_payment_with_commission.sql` + worker `process-payment-fulfillment-queue` deployed |
 | 2 | Historical wallet backfill | Shipped | Migration `20260612140000_wallet_credit_backfill.sql`: `backfill_wallet_credits_*` RPCs, `payout_meta.wallet_settlement` idempotency, worker + reconcile paths |
 | 3 | Failed fulfillment job alerts | Shipped | `failure_alerted_at` column + `notify-fulfillment-job-failed` edge function; worker emails admins when job exhausts retries |
-| 4 | Pending vs available wallet buckets | Shipped | `pending_balance` / `available_balance`, `vendor_balance_holds`, settlement → pending, withdrawals → available, `release-pending-wallet-funds` cron |
+| 4 | Pending vs available wallet buckets | Shipped | Buckets + holds + cron release; vendors can request early release with reason, admin approves via `/admin/balance-release-requests` |
 | 5 | Restaurant → reservation status | Pending | Clean financial signals |
 | 6 | Consolidate / remove dead settlement paths | Pending | `confirmOrderAndIssueTickets`, lazy reconcile only as backfill |
 
