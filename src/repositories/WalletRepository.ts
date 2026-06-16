@@ -13,12 +13,18 @@ export {
 } from '../domain/walletFees'
 
 /** Credit a vendor (or platform) wallet via atomic RPC. */
-export async function creditWallet(vendorId: string, amount: number, currency: string) {
+export async function creditWallet(
+  vendorId: string,
+  amount: number,
+  currency: string,
+  bucket: 'pending' | 'available' = 'available',
+) {
   const { data, error } = await supabase.rpc('update_wallet_balance_atomic', {
     p_vendor_id: vendorId,
     p_amount: amount,
     p_currency: currency,
     p_operation: 'credit',
+    p_bucket: bucket,
   })
 
   if (error) throw error
@@ -359,10 +365,12 @@ export async function getWallet(vendorId: string): Promise<Wallet | null> {
         id: `wallet_${vendorId}`,
         vendor_id: vendorId,
         balance: 0,
+        pending_balance: 0,
+        available_balance: 0,
         currency: 'UGX',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      } as any
+      } as Wallet
     }
     console.error('Error fetching vendor wallet:', error)
     throw error
@@ -377,7 +385,7 @@ export async function getVendorWallet(vendorId: string): Promise<Wallet | null> 
 
 export async function getWalletBalance(vendorId: string): Promise<number> {
   const wallet = await getWallet(vendorId)
-  return wallet?.balance ?? 0
+  return wallet?.available_balance ?? wallet?.balance ?? 0
 }
 
 export async function createTransactionWithMeta(transaction: {
@@ -732,11 +740,15 @@ export async function getWalletStats(vendorId: string) {
 
     // If no transactions (table doesn't exist or no data), return default stats
     if (!transactions || transactions.length === 0) {
+      const pendingEarnings = Number(wallet?.pending_balance ?? 0)
+      const availableBalance = Number(wallet?.available_balance ?? wallet?.balance ?? 0)
       return {
-        totalEarned: 0,
+        totalEarned: pendingEarnings + availableBalance,
         totalWithdrawn: 0,
         pendingWithdrawals: 0,
-        currentBalance: wallet?.balance ?? 0,
+        currentBalance: availableBalance,
+        availableBalance,
+        pendingBalance: pendingEarnings,
         currency: wallet?.currency || 'UGX',
         totalTransactions: 0,
         completedPayments: 0,
@@ -791,17 +803,20 @@ export async function getWalletStats(vendorId: string) {
     const withdrawals = transactions.filter((t: Transaction) => t.transaction_type === 'withdrawal')
     const totalWithdrawn = withdrawals.filter((t: Transaction) => t.status === 'completed').reduce((s: number, t: Transaction) => s + t.amount, 0)
     const pendingWithdrawals = withdrawals.filter((t: Transaction) => t.status === 'pending').reduce((s: number, t: Transaction) => s + t.amount, 0)
-    const currentBalance = (wallet?.balance ?? 0) - pendingWithdrawals
+    const pendingEarnings = Number(wallet?.pending_balance ?? 0)
+    const availableBalance = Number(wallet?.available_balance ?? wallet?.balance ?? 0)
+    const currentBalance = availableBalance - pendingWithdrawals
     const currency = wallet?.currency || transactions[0]?.currency || 'UGX'
-    const totalEarned = currentBalance + totalWithdrawn + pendingWithdrawals
-    const completedBalance = currentBalance + pendingWithdrawals
-    const pendingBalance = pendingWithdrawals
+    const totalEarned = pendingEarnings + availableBalance + totalWithdrawn + pendingWithdrawals
+    const completedBalance = availableBalance
+    const pendingBalance = pendingEarnings
 
     return {
       totalEarned,
       totalWithdrawn,
       pendingWithdrawals,
       currentBalance,
+      availableBalance,
       completedBalance,
       pendingBalance,
       currency,
@@ -1018,8 +1033,8 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
                 const vendorAmount = b.vendor_payout_amount != null
                   ? Number(b.vendor_payout_amount)
                   : Number(b.total_amount) - commissionAmount
-                await creditWallet(b.vendor_id, vendorAmount, b.currency || 'UGX')
-                await creditWallet(adminId, commissionAmount, b.currency || 'UGX')
+                await creditWallet(b.vendor_id, vendorAmount, b.currency || 'UGX', 'pending')
+                await creditWallet(adminId, commissionAmount, b.currency || 'UGX', 'available')
                 console.log('Reconciliation fallback processed with commission split for booking', b.id)
               } catch (fallbackErr) {
                 console.error('Reconciliation fallback failed for booking', b.id, fallbackErr)

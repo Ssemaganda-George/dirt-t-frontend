@@ -468,7 +468,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Completed Earnings</p>
                           <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.completedBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">From completed bookings</p>
+                          <p className="text-xs text-gray-600 mt-2">Released and ready to withdraw</p>
                         </div>
                       </div>
                     </div>
@@ -478,7 +478,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-600">Pending Earnings</p>
                           <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.pendingBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">Awaiting completion</p>
+                          <p className="text-xs text-gray-600 mt-2">Awaiting service date / completion</p>
                         </div>
                       </div>
                     </div>

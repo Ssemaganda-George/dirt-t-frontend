@@ -37,6 +37,8 @@ export interface Wallet {
   id: string;
   vendor_id: string;
   balance: number;
+  pending_balance?: number;
+  available_balance?: number;
   currency: string;
   created_at: string;
   updated_at: string;
