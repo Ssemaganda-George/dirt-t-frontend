@@ -12,6 +12,22 @@ export {
   platformTakeFromTransaction,
 } from '../domain/walletFees'
 
+type VendorSummary = {
+  id: string
+  business_name?: string | null
+  business_email?: string | null
+  status?: string | null
+  created_at?: string | null
+  profiles?: { id: string; full_name?: string; email?: string } | null
+}
+
+type OrderFeeRow = {
+  id: string
+  total_amount?: number | string | null
+  platform_fee?: number | string | null
+  fee_payer?: string | null
+}
+
 /** Credit a vendor (or platform) wallet via atomic RPC. */
 export async function creditWallet(
   vendorId: string,
@@ -51,7 +67,10 @@ export async function getTransactions(vendorId: string) {
       console.log('getTransactions: Direct query result - data length:', data?.length, 'error:', error)
 
       if (!error && data) {
-        const bookingIds = Array.from(new Set(data.filter(tx => tx.booking_id).map(tx => tx.booking_id)))
+        const txRows = data as Transaction[]
+        const bookingIds = Array.from(
+          new Set(txRows.filter((tx) => tx.booking_id).map((tx) => tx.booking_id as string)),
+        )
         let bookingMap: Record<string, any> = {}
 
         if (bookingIds.length > 0) {
@@ -424,11 +443,13 @@ export async function getAllTransactions(): Promise<Transaction[]> {
       return []
     }
 
+    const txRows = transactions as Transaction[]
+
     // Get vendor IDs from transactions
-    const vendorIds = transactions.map(t => t.vendor_id).filter(id => id)
+    const vendorIds = txRows.map((t) => t.vendor_id).filter((id): id is string => Boolean(id))
 
     if (vendorIds.length === 0) {
-      return transactions
+      return txRows
     }
 
     // Fetch vendor information separately
@@ -440,15 +461,19 @@ export async function getAllTransactions(): Promise<Transaction[]> {
     if (vendorsError) {
       console.error('Error fetching vendors for transactions:', vendorsError)
       // Return transactions without vendor info rather than failing
-      return transactions
+      return txRows
     }
 
     // Map vendor information to transactions
-    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+    const vendorMap = new Map<string, VendorSummary>(
+      vendors?.map((v: VendorSummary) => [v.id, v]) || [],
+    )
 
-    const transactionsWithVendors = transactions.map(transaction => ({
+    const transactionsWithVendors = txRows.map((transaction) => ({
       ...transaction,
-      vendors: vendorMap.get(transaction.vendor_id) || null
+      vendors: transaction.vendor_id
+        ? (vendorMap.get(transaction.vendor_id) as Transaction['vendors'])
+        : undefined,
     }))
 
     return transactionsWithVendors
@@ -491,11 +516,13 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
       return []
     }
 
+    const txRows = transactions as Transaction[]
+
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     const looksLikeBookingUuid = (s: unknown): s is string =>
       typeof s === 'string' && UUID_RE.test(s.trim())
 
-    const bookingIds = [...new Set(transactions.map(t => t.booking_id).filter(Boolean).map(String))] as string[]
+    const bookingIds = [...new Set(txRows.map((t) => t.booking_id).filter(Boolean).map(String))] as string[]
     let bookingMap = new Map<string, BookingFeeSnapshot>()
     const mergeBookingRows = (rows: any[] | null) => {
       for (const b of rows || []) {
@@ -517,10 +544,10 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
     // Some legacy rows store the booking id only in `reference`, not `booking_id`.
     const refOnlyIds = [
       ...new Set(
-        transactions
-          .filter(t => !t.booking_id && looksLikeBookingUuid(t.reference))
-          .map(t => String(t.reference).trim())
-          .filter(id => !bookingMap.has(id))
+        txRows
+          .filter((t) => !t.booking_id && looksLikeBookingUuid(t.reference))
+          .map((t) => String(t.reference).trim())
+          .filter((id) => !bookingMap.has(id))
       )
     ]
     if (refOnlyIds.length > 0) {
@@ -538,8 +565,8 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
     /** Ticket/order payments: MarzPay reference is on payments + transactions but booking_id is null. */
     const txRefs = [
       ...new Set(
-        transactions
-          .map(t => (typeof t.reference === 'string' ? t.reference.trim() : ''))
+        txRows
+          .map((t) => (typeof t.reference === 'string' ? t.reference.trim() : ''))
           .filter(Boolean)
       )
     ]
@@ -562,7 +589,9 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
           if (ordErr) {
             console.error('Error fetching orders for payment-linked transactions:', ordErr)
           } else {
-            const orderById = new Map((orderRows || []).map((o: any) => [String(o.id), o]))
+            const orderById = new Map<string, OrderFeeRow>(
+              (orderRows || []).map((o: OrderFeeRow) => [String(o.id), o]),
+            )
             for (const p of payRows || []) {
               const ref = typeof p.reference === 'string' ? p.reference.trim() : ''
               const oid = p.order_id ? String(p.order_id) : ''
@@ -603,10 +632,10 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
         bookings: resolveBookingRow(t)
       }))
 
-    const vendorIds = transactions.map(t => t.vendor_id).filter(id => id)
+    const vendorIds = txRows.map((t) => t.vendor_id).filter((id): id is string => Boolean(id))
 
     if (vendorIds.length === 0) {
-      return attachBookings(transactions.map(t => ({ ...t, vendors: null })))
+      return attachBookings(txRows)
     }
 
     const { data: vendors, error: vendorsError } = await supabase
@@ -616,14 +645,18 @@ export async function getAllTransactionsForAdmin(): Promise<(Transaction & { ven
 
     if (vendorsError) {
       console.error('Error fetching vendors for admin transactions:', vendorsError)
-      return attachBookings(transactions.map(t => ({ ...t, vendors: null })))
+      return attachBookings(txRows)
     }
 
-    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+    const vendorMap = new Map<string, VendorSummary>(
+      vendors?.map((v: VendorSummary) => [v.id, v]) || [],
+    )
 
-    const transactionsWithVendors = transactions.map(transaction => ({
+    const transactionsWithVendors = txRows.map((transaction) => ({
       ...transaction,
-      vendors: vendorMap.get(transaction.vendor_id) || null
+      vendors: transaction.vendor_id
+        ? (vendorMap.get(transaction.vendor_id) as Transaction['vendors'])
+        : undefined,
     }))
 
     return attachBookings(transactionsWithVendors)
@@ -668,11 +701,13 @@ export async function getAllVendorWallets(): Promise<any[]> {
       return []
     }
 
+    const walletRows = wallets as Wallet[]
+
     // Get vendor IDs from wallets
-    const vendorIds = wallets.map(w => w.vendor_id).filter(id => id)
+    const vendorIds = walletRows.map((w) => w.vendor_id).filter((id): id is string => Boolean(id))
 
     if (vendorIds.length === 0) {
-      return wallets
+      return walletRows
     }
 
     // Fetch vendor information separately
@@ -684,13 +719,13 @@ export async function getAllVendorWallets(): Promise<any[]> {
     if (vendorsError) {
       console.error('Error fetching vendors:', vendorsError)
       // Return wallets without vendor info rather than failing
-      return wallets
+      return walletRows
     }
 
     // Map vendor information to wallets
-    const vendorMap = new Map(vendors?.map(v => [v.id, v]) || [])
+    const vendorMap = new Map(vendors?.map((v: VendorSummary) => [v.id, v]) || [])
 
-    const walletsWithVendors = wallets.map(wallet => ({
+    const walletsWithVendors = walletRows.map((wallet) => ({
       ...wallet,
       vendors: vendorMap.get(wallet.vendor_id) || null
     }))
@@ -834,9 +869,13 @@ export async function getWalletStats(vendorId: string) {
       totalWithdrawn: 0,
       pendingWithdrawals: 0,
       currentBalance: 0,
+      availableBalance: 0,
+      completedBalance: 0,
+      pendingBalance: 0,
       currency: 'UGX',
       totalTransactions: 0,
       completedPayments: 0,
+      pendingPayments: 0,
       completedWithdrawals: 0,
       pendingWithdrawalsCount: 0
     }
