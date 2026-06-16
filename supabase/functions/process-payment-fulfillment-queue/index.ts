@@ -33,13 +33,111 @@ function nextRetryDelayMinutes(attempt: number): number {
   return Math.max(1, Math.min(60, Math.pow(2, Math.max(0, attempt - 1))))
 }
 
+async function getAdminProfileId(supabase: any): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin")
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    console.warn("Worker: admin profile lookup failed", error.message)
+    return null
+  }
+  return data?.id ?? null
+}
+
+type SettlementParams = {
+  vendorId: string
+  totalAmount: number
+  commissionAmount: number
+  adminId: string | null
+  bookingId: string | null
+  touristId: string | null
+  currency: string
+  reference: string
+}
+
+/** Ledger + vendor wallet (+ platform wallet when admin exists). Replaces bare create_transaction_atomic_v2. */
+async function settlePaymentWithCommission(supabase: any, params: SettlementParams): Promise<void> {
+  const commission = Math.max(0, Number(params.commissionAmount) || 0)
+  const total = Number(params.totalAmount) || 0
+  const vendorNet = Math.max(0, total - commission)
+
+  if (params.adminId) {
+    const { data, error } = await supabase.rpc("process_payment_with_commission", {
+      p_vendor_id: params.vendorId,
+      p_total_amount: total,
+      p_commission_amount: commission,
+      p_admin_id: params.adminId,
+      p_booking_id: params.bookingId,
+      p_tourist_id: params.touristId,
+      p_currency: params.currency,
+      p_payment_method: "mobile_money",
+      p_reference: params.reference,
+    })
+
+    if (error) throw new Error(`settle-with-commission-failed:${error.message}`)
+    if (!data?.success && !data?.skipped) {
+      throw new Error(`settle-with-commission-failed:${data?.error || "unknown"}`)
+    }
+    return
+  }
+
+  console.warn("Worker: no admin profile — settling vendor net only via process_payment_atomic")
+  const { data, error } = await supabase.rpc("process_payment_atomic", {
+    p_vendor_id: params.vendorId,
+    p_amount: vendorNet,
+    p_booking_id: params.bookingId,
+    p_tourist_id: params.touristId,
+    p_currency: params.currency,
+    p_payment_method: "mobile_money",
+    p_reference: params.reference,
+  })
+
+  if (error) throw new Error(`settle-atomic-failed:${error.message}`)
+  if (!data?.success) throw new Error(`settle-atomic-failed:${data?.error || "unknown"}`)
+}
+
+function resolveBookingCommission(booking: {
+  total_amount?: number | string | null
+  commission_amount?: number | string | null
+  platform_fee?: number | string | null
+  commission_rate_at_booking?: number | string | null
+  vendor_payout_amount?: number | string | null
+}, isTransport: boolean): { total: number; commission: number } {
+  const total = Number(booking.total_amount || 0)
+
+  if (isTransport) {
+    const subtotal = total / (1 + HIRER_TRANSPORT_FEE_RATE)
+    const vendorNet = subtotal * (1 - PROVIDER_TRANSPORT_FEE_RATE)
+    return { total, commission: Math.max(0, total - vendorNet) }
+  }
+
+  let commission = Number(booking.commission_amount ?? booking.platform_fee ?? 0)
+  if (!commission && booking.commission_rate_at_booking) {
+    commission = Math.round(total * Number(booking.commission_rate_at_booking) * 100) / 100
+  }
+
+  const vendorPayout = booking.vendor_payout_amount != null
+    ? Number(booking.vendor_payout_amount)
+    : null
+  if (vendorPayout != null && total > 0) {
+    commission = Math.max(0, total - vendorPayout)
+  }
+
+  return { total, commission: Math.max(0, commission) }
+}
+
 async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<void> {
   const bookingId = job.source_id
   const reference = job.payload?.reference || `PMT_${bookingId.slice(0, 8)}_${Date.now()}`
 
   const { data: booking, error: bookingFetchErr } = await supabase
     .from("bookings")
-    .select("id, vendor_id, tourist_id, currency, total_amount, service_id")
+    .select(
+      "id, vendor_id, tourist_id, currency, total_amount, service_id, commission_amount, platform_fee, commission_rate_at_booking, vendor_payout_amount"
+    )
     .eq("id", bookingId)
     .single()
 
@@ -56,7 +154,6 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   if (txCheckErr) throw new Error(`tx-check-failed:${txCheckErr.message}`)
 
   if (!existingTx) {
-    let providerCreditAmount = Number(booking.total_amount || 0)
     const { data: serviceData, error: serviceErr } = await supabase
       .from("services")
       .select("category_id")
@@ -66,25 +163,19 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
     if (serviceErr) throw new Error(`service-fetch-failed:${serviceErr.message}`)
 
     const isTransport = (serviceData as any)?.category_id === "cat_transport"
-    if (isTransport) {
-      const paidTotal = Number(booking.total_amount || 0)
-      const subtotal = paidTotal / (1 + HIRER_TRANSPORT_FEE_RATE)
-      providerCreditAmount = subtotal * (1 - PROVIDER_TRANSPORT_FEE_RATE)
-    }
+    const { total, commission } = resolveBookingCommission(booking, isTransport)
+    const adminId = await getAdminProfileId(supabase)
 
-    const { error: txErr } = await supabase.rpc("create_transaction_atomic_v2", {
-      p_vendor_id: booking.vendor_id,
-      p_amount: providerCreditAmount,
-      p_transaction_type: "payment",
-      p_booking_id: bookingId,
-      p_tourist_id: booking.tourist_id || null,
-      p_currency: booking.currency || "UGX",
-      p_status: "completed",
-      p_payment_method: "mobile_money",
-      p_reference: reference,
+    await settlePaymentWithCommission(supabase, {
+      vendorId: booking.vendor_id,
+      totalAmount: total,
+      commissionAmount: commission,
+      adminId,
+      bookingId,
+      touristId: booking.tourist_id || null,
+      currency: booking.currency || "UGX",
+      reference,
     })
-
-    if (txErr) throw new Error(`create-transaction-failed:${txErr.message}`)
   }
 
   const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
@@ -117,7 +208,9 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
 
   const { data: order, error: orderFetchErr } = await supabase
     .from("orders")
-    .select("id, vendor_id, user_id, currency, guest_name, guest_email, guest_phone")
+    .select(
+      "id, vendor_id, user_id, currency, total_amount, platform_fee, vendor_payout, guest_name, guest_email, guest_phone"
+    )
     .eq("id", orderId)
     .single()
 
@@ -133,18 +226,27 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   if (orderTxCheckErr) throw new Error(`order-tx-check-failed:${orderTxCheckErr.message}`)
 
   if (!existingOrderTx) {
-    const { error: txErr } = await supabase.rpc("create_transaction_atomic_v2", {
-      p_vendor_id: order.vendor_id,
-      p_amount: Number(job.payload?.amount || 0),
-      p_transaction_type: "payment",
-      p_booking_id: null,
-      p_tourist_id: order.user_id || null,
-      p_currency: order.currency || "UGX",
-      p_status: "completed",
-      p_payment_method: "mobile_money",
-      p_reference: reference,
+    const total = Number(job.payload?.amount ?? order.total_amount ?? 0)
+    const platformFee = Number(order.platform_fee ?? 0)
+    const vendorPayout = order.vendor_payout != null ? Number(order.vendor_payout) : null
+    const commission = platformFee > 0
+      ? platformFee
+      : vendorPayout != null
+        ? Math.max(0, total - vendorPayout)
+        : 0
+
+    const adminId = await getAdminProfileId(supabase)
+
+    await settlePaymentWithCommission(supabase, {
+      vendorId: order.vendor_id,
+      totalAmount: total,
+      commissionAmount: commission,
+      adminId,
+      bookingId: null,
+      touristId: order.user_id || null,
+      currency: order.currency || "UGX",
+      reference,
     })
-    if (txErr) throw new Error(`create-order-transaction-failed:${txErr.message}`)
   }
 
   const { data: items, error: itemsErr } = await supabase
