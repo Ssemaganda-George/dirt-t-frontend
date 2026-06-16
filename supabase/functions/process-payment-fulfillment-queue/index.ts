@@ -33,6 +33,29 @@ function nextRetryDelayMinutes(attempt: number): number {
   return Math.max(1, Math.min(60, Math.pow(2, Math.max(0, attempt - 1))))
 }
 
+async function notifyFulfillmentJobFailed(job: QueueJob, errMsg: string): Promise<void> {
+  const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+  try {
+    const res = await fetch(`${baseUrl}/functions/v1/notify-fulfillment-job-failed`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+      },
+      body: JSON.stringify({
+        job_id: job.id,
+        last_error: errMsg,
+      }),
+    })
+    if (!res.ok) {
+      console.warn("Worker: fulfillment failure alert failed", res.status, await res.text())
+    }
+  } catch (e: any) {
+    console.warn("Worker: fulfillment failure alert error", e?.message || e)
+  }
+}
+
 async function getAdminProfileId(supabase: any): Promise<string | null> {
   const { data, error } = await supabase
     .from("profiles")
@@ -476,6 +499,7 @@ async function runJob(supabase: any, job: QueueJob): Promise<JobOutcome> {
         .from("payment_fulfillment_jobs")
         .update({ status: "failed", last_error: errMsg, updated_at: new Date().toISOString() })
         .eq("id", job.id)
+      await notifyFulfillmentJobFailed(job, errMsg)
       return { id: job.id, outcome: "failed", error: errMsg }
     }
 
