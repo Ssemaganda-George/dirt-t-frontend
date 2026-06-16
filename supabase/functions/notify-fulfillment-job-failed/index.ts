@@ -20,6 +20,132 @@ function formatJobType(jobType: string): string {
   return jobType
 }
 
+async function sendAdminEmail(
+  adminEmails: string[],
+  subject: string,
+  emailHtml: string,
+): Promise<string[]> {
+  if (!RESEND_API_KEY || !FROM_EMAIL) return []
+
+  const fromEmail = FROM_EMAIL.includes("<") ? FROM_EMAIL : `DirtTrails <${FROM_EMAIL}>`
+  const notified: string[] = []
+
+  for (const adminEmail of adminEmails) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [adminEmail],
+          subject,
+          html: emailHtml,
+        }),
+      })
+      if (res.ok) {
+        notified.push(adminEmail)
+      } else {
+        console.error(`Failed to alert ${adminEmail}:`, await res.text())
+      }
+    } catch (e) {
+      console.error(`Error alerting ${adminEmail}:`, e)
+    }
+  }
+
+  return notified
+}
+
+async function backfillStaleFailedJobAlerts(supabase: any): Promise<Response> {
+  const { data: jobs, error: jobsErr } = await supabase
+    .from("payment_fulfillment_jobs")
+    .select("id, job_type, source_id, last_error, attempts, max_attempts, created_at")
+    .eq("status", "failed")
+    .is("failure_alerted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(50)
+
+  if (jobsErr) {
+    return new Response(JSON.stringify({ error: jobsErr.message }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    })
+  }
+
+  if (!jobs || jobs.length === 0) {
+    return new Response(JSON.stringify({ success: true, backfilled: 0 }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    })
+  }
+
+  const { data: adminProfiles } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("role", "admin")
+
+  const adminEmails = (adminProfiles || []).map((a: any) => a.email).filter(Boolean)
+  if (adminEmails.length === 0) {
+    return new Response(JSON.stringify({ success: true, skipped: true, reason: "no_admins" }), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    })
+  }
+
+  const rows = jobs
+    .map((job: any) => `
+      <tr>
+        <td style="padding:8px;border:1px solid #e5e7eb;font-size:13px;">${formatJobType(job.job_type)}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;font-size:13px;word-break:break-all;">${job.source_id}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;font-size:13px;">${job.attempts}/${job.max_attempts}</td>
+        <td style="padding:8px;border:1px solid #e5e7eb;font-size:12px;font-family:monospace;">${(job.last_error || "").slice(0, 120).replace(/</g, "&lt;")}</td>
+      </tr>
+    `)
+    .join("")
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html><body style="font-family:Arial,sans-serif;color:#333;">
+      <h2 style="color:#b91c1c;">Stale payment fulfillment failures (${jobs.length})</h2>
+      <p>These jobs failed before automated ops alerts were enabled. Review and resolve manually.</p>
+      <table style="border-collapse:collapse;width:100%;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Type</th>
+            <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Source ID</th>
+            <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Attempts</th>
+            <th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Error</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>
+  `
+
+  const notified = await sendAdminEmail(
+    adminEmails,
+    `[Backfill] ${jobs.length} stale payment fulfillment failures`,
+    emailHtml,
+  )
+
+  if (notified.length > 0) {
+    const jobIds = jobs.map((j: any) => j.id)
+    await supabase
+      .from("payment_fulfillment_jobs")
+      .update({ failure_alerted_at: new Date().toISOString() })
+      .in("id", jobIds)
+      .eq("status", "failed")
+      .is("failure_alerted_at", null)
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, backfilled: jobs.length, notified }),
+    { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+  )
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS })
@@ -41,6 +167,12 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}))
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    if (body.backfill_stale === true) {
+      return await backfillStaleFailedJobAlerts(supabase)
+    }
+
     const jobId = body.job_id || body.jobId
     if (!jobId) {
       return new Response(JSON.stringify({ error: "Missing job_id" }), {
@@ -48,8 +180,6 @@ serve(async (req) => {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       })
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     const { data: job, error: jobErr } = await supabase
       .from("payment_fulfillment_jobs")
@@ -175,32 +305,7 @@ serve(async (req) => {
 
     const fromEmail = FROM_EMAIL.includes("<") ? FROM_EMAIL : `DirtTrails <${FROM_EMAIL}>`
     const subject = `[Action required] ${jobLabel} failed — ${job.source_id.slice(0, 8)}`
-    const notified: string[] = []
-
-    for (const adminEmail of adminEmails) {
-      try {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [adminEmail],
-            subject,
-            html: emailHtml,
-          }),
-        })
-        if (res.ok) {
-          notified.push(adminEmail)
-        } else {
-          console.error(`Failed to alert ${adminEmail}:`, await res.text())
-        }
-      } catch (e) {
-        console.error(`Error alerting ${adminEmail}:`, e)
-      }
-    }
+    const notified = await sendAdminEmail(adminEmails, subject, emailHtml)
 
     if (notified.length > 0) {
       const { error: markErr } = await supabase
