@@ -29,6 +29,7 @@ const DonatePage = () => {
     { value: 'reforestation', label: 'Reforestation Initiatives' },
     { value: 'community-conservation', label: 'Community Conservation Programs' },
     { value: 'anti-poaching', label: 'Anti-Poaching Efforts' },
+    { value: 'other', label: 'Others' },
   ];
 
   const { selectedCurrency } = usePreferences()
