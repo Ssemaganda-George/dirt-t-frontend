@@ -39,8 +39,8 @@ const mockTiers: VendorTier[] = [
 ]
 
 function getEligibleTier(metrics: { monthlyBookings: number; averageRating?: number }): VendorTier | null {
-  for (const tier of mockTiers) {
-    if (isEligibleForTier(metrics, tier)) return tier
+  for (let i = mockTiers.length - 1; i >= 0; i--) {
+    if (isEligibleForTier(metrics, mockTiers[i])) return mockTiers[i]
   }
   return null
 }
