@@ -1,7 +1,7 @@
 import type { Service } from './service';
 import type { UserProfile } from './auth';
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type BookingStatus = 'pending' | 'confirmed' | 'reserved' | 'cancelled' | 'completed';
 
 export interface Booking {
   id: string;
@@ -13,8 +13,8 @@ export interface Booking {
   guests: number;
   total_amount: number;
   currency: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  payment_status: 'pending' | 'paid' | 'refunded';
+  status: 'pending' | 'confirmed' | 'reserved' | 'cancelled' | 'completed';
+  payment_status: 'pending' | 'paid' | 'refunded' | 'not_required';
   special_requests?: string;
   created_at: string;
   updated_at: string;

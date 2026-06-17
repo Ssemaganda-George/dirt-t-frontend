@@ -217,6 +217,20 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
 
   if (bookingFetchErr || !booking) throw new Error(`booking-not-found:${bookingId}`)
 
+  const { data: serviceRow } = await supabase
+    .from("services")
+    .select("category_id")
+    .eq("id", booking.service_id)
+    .maybeSingle()
+
+  if (
+    booking.status === "reserved" ||
+    booking.payment_status === "not_required" ||
+    serviceRow?.category_id === "cat_restaurants"
+  ) {
+    throw new Error(`booking-skips-settlement:${bookingId}:restaurant-reservation`)
+  }
+
   assertBookingPaidForSettlement(booking, bookingId)
   const paymentRef = job.payload?.reference || booking.payment_reference || reference
   await assertMarzpayPaymentCompleted(supabase, { bookingId, reference: paymentRef })

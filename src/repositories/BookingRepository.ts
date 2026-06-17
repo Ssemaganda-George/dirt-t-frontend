@@ -4,9 +4,13 @@ import { buildCreateBookingAtomicRpcPayload } from '../lib/createBookingAtomicRp
 import { normalizeServiceCurrency } from '../lib/utils'
 import type { Booking } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
+import {
+  isReservationBooking,
+  shouldSendReservationEmails,
+} from '../lib/bookingCategories'
 
 // Re-export the type alias used in database.ts
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
+export type BookingStatus = 'pending' | 'confirmed' | 'reserved' | 'cancelled' | 'completed'
 
 /**
  * Calls the Supabase edge function to send booking confirmation emails
@@ -329,7 +333,8 @@ export async function createBooking(
   try {
     const shouldCreateTransaction =
       ['confirmed', 'completed'].includes(finalBooking.status) &&
-      (finalBooking as any).payment_status === 'paid'
+      (finalBooking as any).payment_status === 'paid' &&
+      !isReservationBooking(finalBooking)
 
     if (shouldCreateTransaction) {
       const { data: existingTx, error: txCheckError } = await supabase
@@ -395,8 +400,9 @@ export async function createBooking(
 
   // Only send confirmation emails after payment is actually paid (webhook/queue also sends on success).
   const shouldSendBookingEmails =
-    finalBooking.payment_status === 'paid' &&
-    ['confirmed', 'completed'].includes(String(finalBooking.status || ''))
+    (finalBooking.payment_status === 'paid' &&
+      ['confirmed', 'completed'].includes(String(finalBooking.status || ''))) ||
+    shouldSendReservationEmails(finalBooking)
 
   if (shouldSendBookingEmails) {
     sendBookingEmails(finalBooking.id).catch(error => {
@@ -627,7 +633,10 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
     // Create transaction and credit wallets when booking is "confirmed AND paid" (after update)
     const finalStatus = data.status;
     const finalPaymentStatus = data.payment_status;
-    const shouldCreateTransaction = ['confirmed', 'completed'].includes(finalStatus) && finalPaymentStatus === 'paid';
+    const shouldCreateTransaction =
+      ['confirmed', 'completed'].includes(finalStatus) &&
+      finalPaymentStatus === 'paid' &&
+      !isReservationBooking(data)
 
     console.log('DB: Transaction check - finalStatus:', finalStatus, 'finalPaymentStatus:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction);
 

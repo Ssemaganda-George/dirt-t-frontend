@@ -21,6 +21,7 @@ import {
   isValidEmail,
   isValidUgMobileMoneyPhone,
 } from '../lib/bookingFormValidation'
+import { isRestaurantCategory } from '../lib/bookingCategories'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,9 +94,10 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const finaliseRef = useRef(false)
 
   const categoryName = (service?.service_categories?.name ?? '').toLowerCase()
+  const categoryId = service?.category_id ?? service?.service_categories?.id
   const isHotel = ['hotels', 'hotel', 'accommodation'].includes(categoryName)
   const isTransport = categoryName === 'transport'
-  const isRestaurant = ['restaurants', 'restaurant'].includes(categoryName)
+  const isRestaurant = isRestaurantCategory(categoryId, categoryName)
   const isFlight = ['flights', 'flight'].includes(categoryName)
   const isTour = ['tours', 'tour'].includes(categoryName)
 
@@ -176,7 +178,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
   // ─── Booking creation ─────────────────────────────────────────────────────────
 
-  const buildBookingPayload = (status: 'pending' | 'confirmed') => {
+  const buildBookingPayload = (status: 'pending' | 'confirmed' | 'reserved') => {
     const guestContact = user
       ? { tourist_id: user.id }
       : { guest_name: contact.name || undefined, guest_email: contact.email || undefined, guest_phone: contact.phone ? formatPhone(contact.phone) : undefined }
@@ -217,7 +219,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
         service_date: prefill.selectedDate,
         start_time: prefill.startTime || undefined,
         total_amount: 0,
-        payment_status: 'pending',
+        platform_fee: 0,
+        status: 'reserved' as const,
+        payment_status: 'not_required' as const,
       }
     }
     return { ...base, service_date: prefill.selectedDate }
@@ -248,6 +252,17 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     }
     if (!contact.phone.trim()) errs.phone = 'Mobile money number is required.'
     else if (!isValidUgMobileMoneyPhone(contact.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+    return applyFieldErrors(errs, setFieldErrors, setFormBanner)
+  }
+
+  const validateRestaurantContact = (): boolean => {
+    const errs: FieldErrors = {}
+    if (!user) {
+      if (!contact.name.trim()) errs.name = 'Full name is required.'
+      if (!contact.email.trim()) errs.email = 'Email is required.'
+      else if (!isValidEmail(contact.email)) errs.email = 'Enter a valid email address.'
+      if (!contact.phone.trim()) errs.phone = 'Contact phone is required so the restaurant can reach you.'
+    }
     return applyFieldErrors(errs, setFieldErrors, setFormBanner)
   }
 
@@ -330,11 +345,12 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   // Restaurant reservations need no payment
   const handleRestaurantReserve = useCallback(async () => {
     if (processing) return
-    if (!user && !validateContact()) return
+    if (!user && !validateRestaurantContact()) return
+    if (user && !validateSummary()) return
     setProcessing(true)
     setError(null)
     try {
-      const booking = await createBooking(buildBookingPayload('confirmed') as any)
+      const booking = await createBooking(buildBookingPayload('reserved') as any)
       try {
         await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
           method: 'POST',
@@ -424,7 +440,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               <h2 className="font-semibold text-gray-900 text-base leading-tight">
                 {step === 'summary' && 'Booking Summary'}
                 {step === 'contact' && 'Your Details'}
-                {step === 'payment' && 'Payment'}
+                {step === 'payment' && (isRestaurant ? 'Confirm Reservation' : 'Payment')}
                 {step === 'done' && 'Booking Confirmed!'}
               </h2>
               <p className="text-xs text-gray-500 leading-tight truncate max-w-[240px]">{service?.title}</p>
@@ -478,8 +494,12 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   </div>
                 )}
                 <div className="border-t pt-2 flex justify-between font-semibold text-gray-900">
-                  <span>Total</span>
-                  <span>{formatCurrencyWithConversion(customerTotal, service.currency)}</span>
+                  <span>{isRestaurant ? 'Payment' : 'Total'}</span>
+                  <span>
+                    {isRestaurant
+                      ? 'At restaurant'
+                      : formatCurrencyWithConversion(customerTotal, service.currency)}
+                  </span>
                 </div>
                 {isRestaurant && (
                   <p className="text-xs text-green-700 font-medium">Free reservation — pay at the restaurant.</p>
@@ -574,16 +594,27 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
-                {provider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{provider}</span> (auto-detected)</p>}
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {isRestaurant ? 'Contact Phone *' : 'Mobile Money Number *'}
+                </label>
+                {!isRestaurant && provider && (
+                  <p className="text-xs text-gray-500 mb-1">
+                    Provider: <span className="font-medium">{provider}</span> (auto-detected)
+                  </p>
+                )}
+                {isRestaurant && (
+                  <p className="text-xs text-gray-500 mb-1">For the restaurant to confirm your table — not charged.</p>
+                )}
                 <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-3 border rounded-xl text-base')}
                   value={contact.phone}
                   onChange={e => {
                     setContact(c => ({ ...c, phone: e.target.value }))
                     setFieldErrors(p => clearFieldError(p, 'phone'))
                     setFormBanner(null)
-                    const detected = detectMobileProvider(e.target.value)
-                    if (detected) setProvider(detected)
+                    if (!isRestaurant) {
+                      const detected = detectMobileProvider(e.target.value)
+                      if (detected) setProvider(detected)
+                    }
                   }}
                   autoComplete="tel"
                   aria-invalid={Boolean(fieldErrors.phone)}
@@ -716,10 +747,19 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           {step === 'contact' && (
             <button
               type="button"
-              onClick={() => { if (validateContact()) setStep('payment') }}
-              className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => {
+                if (isRestaurant) {
+                  if (validateRestaurantContact()) void handleRestaurantReserve()
+                } else if (validateContact()) {
+                  setStep('payment')
+                }
+              }}
+              disabled={processing}
+              className={`w-full py-3 rounded-xl font-semibold text-base transition ${
+                processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              Continue to Payment
+              {isRestaurant ? (processing ? 'Confirming…' : 'Confirm Reservation') : 'Continue to Payment'}
             </button>
           )}
 

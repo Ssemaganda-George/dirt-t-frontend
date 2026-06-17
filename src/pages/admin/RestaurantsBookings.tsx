@@ -613,6 +613,7 @@ export function RestaurantsBookings() {
                           className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="pending">Pending</option>
+                          <option value="reserved">Reserved</option>
                           <option value="confirmed">Confirmed</option>
                           <option value="cancelled">Cancelled</option>
                           <option value="completed">Completed</option>
@@ -622,6 +623,7 @@ export function RestaurantsBookings() {
                           onChange={(e) => handlePaymentStatusUpdate(booking.id, e.target.value)}
                           className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
+                          <option value="not_required">Not required</option>
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
                           <option value="failed">Failed</option>
