@@ -254,13 +254,44 @@ export async function createBooking(
   const bookingId: string = result.data.booking_id
   console.log('Booking created successfully (atomic):', bookingId)
 
-  // Patch platform fee calculated client-side (not accepted by create_booking_atomic overload).
-  if (bookingData.platform_fee != null) {
-    const { error: feePatchError } = await supabase
-      .from('bookings')
-      .update({ platform_fee: Number(bookingData.platform_fee) })
-      .eq('id', bookingId)
-    if (feePatchError) console.warn('Failed to patch booking platform_fee:', feePatchError)
+  const requestedStatus = (bookingData as any).status ?? 'pending'
+  let requestedPaymentStatus =
+    (bookingData as any).payment_status ?? 'pending'
+  const requestedPaymentReference =
+    (bookingData as any).payment_reference || (bookingData as any).paymentReference
+
+  if (requestedPaymentStatus === 'paid') {
+    console.warn('createBooking: ignoring client payment_status=paid for booking', bookingId)
+    requestedPaymentStatus = 'pending'
+  }
+
+  const needsPatch =
+    bookingData.platform_fee != null ||
+    requestedStatus !== 'pending' ||
+    requestedPaymentStatus !== 'pending' ||
+    Boolean(requestedPaymentReference)
+
+  if (needsPatch) {
+    const { data: patchResult, error: patchError } = await supabase.rpc(
+      'patch_booking_after_create',
+      {
+        p_booking_id: bookingId,
+        p_status: requestedStatus !== 'pending' ? requestedStatus : null,
+        p_payment_status: requestedPaymentStatus !== 'pending' ? requestedPaymentStatus : null,
+        p_payment_reference: requestedPaymentReference || null,
+        p_platform_fee:
+          bookingData.platform_fee != null ? Number(bookingData.platform_fee) : null,
+      },
+    )
+
+    if (patchError) {
+      console.warn('patch_booking_after_create failed:', patchError)
+    } else if (!(patchResult as { success?: boolean })?.success) {
+      console.warn(
+        'patch_booking_after_create rejected:',
+        (patchResult as { error?: string })?.error,
+      )
+    }
   }
 
   // Fetch complete booking with relations (used by callers and downstream logic)
@@ -291,47 +322,7 @@ export async function createBooking(
 
   let finalBooking: any = data
 
-  // Respect caller status (SO4 pending bookings). Do NOT force paid before mobile money completes.
-  try {
-    const requestedStatus = (bookingData as any).status ?? (data as any).status ?? 'pending'
-    const requestedPaymentStatus =
-      (bookingData as any).payment_status ?? (data as any).payment_status ?? 'pending'
-    const requestedPaymentReference =
-      (bookingData as any).payment_reference || (bookingData as any).paymentReference
-
-    const patch: Record<string, unknown> = {}
-    if (requestedStatus && requestedStatus !== (data as any).status) {
-      patch.status = requestedStatus
-    }
-    // Never trust client-paid; MarzPay webhook / fulfillment queue sets paid server-side.
-    if (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) {
-      if (requestedPaymentStatus === 'paid') {
-        console.warn('createBooking: ignoring client payment_status=paid for booking', data.id)
-      } else {
-        patch.payment_status = requestedPaymentStatus
-      }
-    }
-    if (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference) {
-      patch.payment_reference = requestedPaymentReference
-    }
-
-    if (Object.keys(patch).length > 0) {
-      const { data: updated, error: updateError } = await supabase
-        .from('bookings')
-        .update(patch)
-        .eq('id', data.id)
-        .select()
-        .single()
-
-      if (updateError) {
-        console.warn('Failed to update booking status/payment_status after createBooking:', updateError)
-      } else if (updated) {
-        finalBooking = { ...finalBooking, ...updated }
-      }
-    }
-  } catch (err) {
-    console.warn('Error updating booking status/payment_status after createBooking:', err)
-  }
+  // Status/payment patches applied via patch_booking_after_create RPC above.
 
   // Settlement is server-only: marzpay-webhook → payment_fulfillment_jobs → process-payment-fulfillment-queue.
 
@@ -753,11 +744,12 @@ export async function cancelBookingOnPaymentFailure(bookingId: string): Promise<
 
 /** Only cancels when still pending (safe before payment completes). */
 export async function cancelPendingBooking(bookingId: string): Promise<void> {
-  const { error } = await supabase
-    .from('bookings')
-    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .eq('id', bookingId)
-    .eq('status', 'pending')
+  const { data, error } = await supabase.rpc('cancel_pending_booking_atomic', {
+    p_booking_id: bookingId,
+  })
 
   if (error) throw error
+  if (!(data as { success?: boolean })?.success) {
+    throw new Error((data as { error?: string })?.error || 'Failed to cancel booking')
+  }
 }

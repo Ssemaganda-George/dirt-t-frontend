@@ -12,7 +12,7 @@ Live audit of Supabase (project `ywxvgfhwmnwzsafwmpil`) + the booking/payment co
 |---|----------|--------|
 | 1 | CRITICAL | **In progress** — client settlement removed from `BookingRepository`; client `payment_status=paid` ignored on create; anon RPC revoke in migration. RLS (#3) still open. |
 | 2 | CRITICAL | **Migration ready** — `20260612200000_security_vendor_rls_settlement_grants.sql` |
-| 3 | CRITICAL | **Open** — 18 tables still without RLS |
+| 3 | CRITICAL | **Phase 1 shipped** — RLS enabled on `bookings`, `profiles`, `transactions`, `wallets`; booking patches via RPC. **Open:** `orders`, `tickets`, OTP tables |
 | 4 | HIGH | **Fixed in code + migration** — worker marks complete when tickets delivered; backfills 12 false failures |
 | 5 | HIGH | **Open** — needs webhook-only paid flip audit |
 | 6 | LOW | **Open** — optional DB constraint |
