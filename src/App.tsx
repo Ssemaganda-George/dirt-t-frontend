@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { Suspense, lazy, useEffect } from 'react'
 import ErrorBoundary from './components/ErrorBoundary'
 import { AuthProvider } from './contexts/AuthContext'
-import { BookingProvider } from './contexts/BookingContext'
 import { CartProvider } from './contexts/CartContext'
 import { PreferencesProvider } from './contexts/PreferencesContext'
 import PublicLayout from './components/PublicLayout'
@@ -153,8 +152,7 @@ function App() {
     <AuthProvider>
       <PreferencesProvider>
         <CartProvider>
-          <BookingProvider>
-            <Router>
+          <Router>
               <AppVisitorTracker />
               <ScrollToTop />
               <ErrorBoundary>
@@ -356,7 +354,6 @@ function App() {
             </Suspense>
             </ErrorBoundary>
           </Router>
-        </BookingProvider>
       </CartProvider>
     </PreferencesProvider>
   </AuthProvider>

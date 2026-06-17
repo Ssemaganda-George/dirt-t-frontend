@@ -44,9 +44,3 @@ export function addPendingService(vendorId: string, svc: Service) {
   }
   save(PENDING_KEY, [rec, ...list])
 }
-
-export function removePendingService(vendorId: string, serviceId: string) {
-  const list = getPendingServices()
-  const next = list.filter(x => !(x.vendor_id === vendorId && x.service_id === serviceId))
-  save(PENDING_KEY, next)
-}
