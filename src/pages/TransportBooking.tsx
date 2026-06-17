@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, CreditCard, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { createBooking as createVendorBooking } from '../store/vendorStore'
 import { createBooking as createDatabaseBooking } from '../lib/database'
 import { supabase } from '../lib/supabaseClient'
 import { getOptionalUserId } from '../services/AuthService'
@@ -520,26 +519,6 @@ export default function TransportBooking({ service }: TransportBookingProps) {
     if (finaliseInFlightRef.current) return
     finaliseInFlightRef.current = true
     try {
-      // Vendor localStorage for demo panel
-      createVendorBooking(service.vendor_id || 'vendor_demo', {
-        service_id: service.id,
-        vendor_id: service.vendor_id || 'vendor_demo',
-        booking_date: new Date().toISOString(),
-        service_date: bookingData.startDate,
-        guests: bookingData.passengers,
-        total_amount: transportCustomerPaysTotal,
-        currency: service.currency,
-        status: 'confirmed' as const,
-        special_requests: bookingData.specialRequests || undefined,
-        pickup_location: bookingData.driverOption === 'with-driver' ? bookingData.pickupLocation : undefined,
-        dropoff_location: bookingData.driverOption === 'with-driver' ? bookingData.dropoffLocation : undefined,
-        driver_option: bookingData.driverOption,
-        return_trip: bookingData.returnTrip,
-        start_time: bookingData.startTime,
-        end_time: bookingData.endTime,
-        end_date: bookingData.endDate,
-      } as any)
-
       // Use the pre-created pending booking if provided; otherwise create now (non-mobile path).
       let result = existingBooking
       if (!result) {
