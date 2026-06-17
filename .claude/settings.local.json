@@ -43,7 +43,8 @@
       "Bash(Remove-Item *)",
       "Bash(npx vitest *)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__supabase__get_advisors"
     ]
   },
   "enableAllProjectMcpServers": true,

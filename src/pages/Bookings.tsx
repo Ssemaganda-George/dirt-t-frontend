@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabaseClient'
-import { Booking } from '../lib/database'
+import { Booking, cancelPendingBooking } from '../lib/database'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { usePreferences } from '../contexts/PreferencesContext'
 
@@ -13,6 +13,23 @@ export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState('')
+
+  const handleCancel = async (bookingId: string) => {
+    if (cancellingId) return
+    if (!window.confirm('Cancel this booking? This cannot be undone.')) return
+    setCancelError('')
+    setCancellingId(bookingId)
+    try {
+      await cancelPendingBooking(bookingId)
+      setBookings(prev => prev.map(b => (b.id === bookingId ? { ...b, status: 'cancelled' } : b)))
+    } catch (err: any) {
+      setCancelError(err.message || 'Failed to cancel booking. Please try again.')
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -124,6 +141,12 @@ export default function Bookings() {
           <p className="text-sm sm:text-base text-gray-600 mt-2">Manage your travel bookings and reservations</p>
         </div>
 
+        {cancelError && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            {cancelError}
+          </div>
+        )}
+
         {/* Bookings List */}
         {bookings.length === 0 ? (
           <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-12 text-center">
@@ -208,8 +231,12 @@ export default function Bookings() {
                         View Details
                       </Link>
                       {booking.status === 'pending' && (
-                        <button className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2">
-                          Cancel
+                        <button
+                          onClick={() => handleCancel(booking.id)}
+                          disabled={cancellingId === booking.id}
+                          className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+                        >
+                          {cancellingId === booking.id ? 'Cancelling…' : 'Cancel'}
                         </button>
                       )}
                     </div>
