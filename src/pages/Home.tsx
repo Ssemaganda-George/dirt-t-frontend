@@ -306,39 +306,29 @@ export default function Home() {
   // When the user refreshes the page multiple times, we may swap the column order.
   const [swapColumnsOnRefresh, setSwapColumnsOnRefresh] = useState(false)
   const [searchDate, setSearchDate] = useState('')
-  const [checkOutDate, setCheckOutDate] = useState('')
+  const [dropOffDate, setDropOffDate] = useState('')
   const [guestCount, setGuestCount] = useState(1)
 
   const navigate = useNavigate()
 
-  const isHotelsActive = selectedCategories.includes('cat_hotels') && !selectedCategories.includes('all')
+  const activeCategory = selectedCategories.includes('all') ? null : selectedCategories[0]
+  const isHotelsActive = activeCategory === 'cat_hotels'
+  const isTransportActive = activeCategory === 'cat_transport'
+  const isToursActive = activeCategory === 'cat_tour_packages'
+  const isEventsActive = activeCategory === 'cat_activities'
+  const isRestaurantsActive = activeCategory === 'cat_restaurants'
+  const showGuests = isHotelsActive || isTransportActive
 
-  // Fix #1: wire the Search button
   const handleSearch = () => {
-    const activeCategory = selectedCategories.includes('all') ? null : selectedCategories[0]
-    const slug = activeCategory ? getCategorySlug(activeCategory) : 'services'
-    const params = new URLSearchParams()
-    if (searchQuery.trim()) params.set('q', searchQuery.trim())
-    if (searchDate) params.set('checkIn', searchDate)
-    if (checkOutDate && isHotelsActive) params.set('checkOut', checkOutDate)
-    if (guestCount > 1) params.set('guests', String(guestCount))
-    navigate(`/category/${slug}${params.toString() ? '?' + params.toString() : ''}`)
+    setSearchQuery(searchQuery)
+    setTimeout(() => {
+      const el = document.getElementById('home-results-header')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
   }
 
-  // Fix #6: tab click navigates to category page for non-explore tabs
   const handleTabClick = (id: string) => {
-    if (id === 'all') {
-      handleCategorySelect('all')
-      return
-    }
     handleCategorySelect(id)
-    const slug = getCategorySlug(id)
-    const params = new URLSearchParams()
-    if (searchQuery.trim()) params.set('q', searchQuery.trim())
-    if (searchDate) params.set('checkIn', searchDate)
-    if (checkOutDate && id === 'cat_hotels') params.set('checkOut', checkOutDate)
-    if (guestCount > 1) params.set('guests', String(guestCount))
-    navigate(`/category/${slug}${params.toString() ? '?' + params.toString() : ''}`)
   }
 
   // Use the reactive useServices hook
@@ -670,8 +660,7 @@ export default function Home() {
     const matchesCategory = selectedCategories.includes('all') ||
                            selectedCategories.includes(service.category_id || '')
 
-    // If there's a search query, ignore category filter; otherwise apply category filter
-    const shouldInclude = isApproved && (searchQuery ? matchesSearch : (matchesSearch && matchesCategory))
+    const shouldInclude = isApproved && matchesSearch && (selectedCategories.includes('all') || matchesCategory)
 
     return shouldInclude;
   })
@@ -759,70 +748,129 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Row 2: Dates + Guests + Search button */}
-              <div className="flex items-stretch">
+              {/* Row 2: Context-aware fields + Search button */}
+              <div className="flex flex-col sm:flex-row items-stretch">
 
-                {/* Check-in / When */}
-                <div className="flex-1 flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer">
-                  <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">
-                      {isHotelsActive ? 'Check-in' : 'When'}
+                {/* Dates container — stacks vertically on mobile, horizontal on sm+ */}
+                <div className="flex flex-col sm:flex-row flex-1">
+                  {/* Hotels/Stays: Check-in */}
+                  {isHotelsActive && (
+                    <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Check-in</div>
+                        <input
+                          type="date"
+                          className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{ colorScheme: 'light' }}
+                        />
+                      </div>
                     </div>
-                    <input
-                      type="date"
-                      className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
-                      value={searchDate}
-                      onChange={(e) => setSearchDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      style={{ colorScheme: 'light' }}
-                    />
-                  </div>
+                  )}
+
+                  {/* Hotels/Stays: Check-out */}
+                  {isHotelsActive && (
+                    <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Check-out</div>
+                        <input
+                          type="date"
+                          className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                          value={dropOffDate}
+                          onChange={(e) => setDropOffDate(e.target.value)}
+                          min={searchDate || new Date().toISOString().split('T')[0]}
+                          style={{ colorScheme: 'light' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transport: Pick-up */}
+                  {isTransportActive && (
+                    <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Pick-up</div>
+                        <input
+                          type="date"
+                          className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{ colorScheme: 'light' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transport: Drop-off */}
+                  {isTransportActive && (
+                    <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Drop-off</div>
+                        <input
+                          type="date"
+                          className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                          value={dropOffDate}
+                          onChange={(e) => setDropOffDate(e.target.value)}
+                          min={searchDate || new Date().toISOString().split('T')[0]}
+                          style={{ colorScheme: 'light' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tours/Events/Restaurants: Single date "When" */}
+                  {(isToursActive || isEventsActive || isRestaurantsActive) && (
+                    <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">When</div>
+                        <input
+                          type="date"
+                          className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{ colorScheme: 'light' }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Check-out — only when Stays/Hotels active */}
-                {isHotelsActive && (
-                  <div className="flex-1 flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors cursor-pointer">
-                    <Calendar className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Check-out</div>
-                      <input
-                        type="date"
-                        className="text-sm text-gray-700 focus:outline-none bg-transparent cursor-pointer w-full"
-                        value={checkOutDate}
-                        onChange={(e) => setCheckOutDate(e.target.value)}
-                        min={searchDate || new Date().toISOString().split('T')[0]}
-                        style={{ colorScheme: 'light' }}
-                      />
+                {/* Guests — Hotels & Transport */}
+                {showGuests && (
+                  <div className="flex items-center gap-3 px-4 py-3 sm:py-4 border-b sm:border-b-0 sm:border-r border-gray-100">
+                    <Users className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
+                    <div className="flex-1">
+                      <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Guests</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
+                          className="w-7 h-7 sm:w-5 sm:h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
+                          aria-label="Fewer guests"
+                        >−</button>
+                        <span className="text-sm font-semibold text-gray-800 w-5 text-center tabular-nums">{guestCount}</span>
+                        <button
+                          onClick={() => setGuestCount(guestCount + 1)}
+                          className="w-7 h-7 sm:w-5 sm:h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
+                          aria-label="More guests"
+                        >+</button>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Guests */}
-                <div className="flex items-center gap-3 px-4 py-4 border-r border-gray-100 hover:bg-gray-50/60 transition-colors">
-                  <Users className="h-4 w-4 text-gray-300 flex-shrink-0 hidden sm:block" />
-                  <div>
-                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1.5">Guests</div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
-                        className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
-                        aria-label="Fewer guests"
-                      >−</button>
-                      <span className="text-sm font-semibold text-gray-800 w-5 text-center tabular-nums">{guestCount}</span>
-                      <button
-                        onClick={() => setGuestCount(guestCount + 1)}
-                        className="w-5 h-5 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:border-emerald-500 hover:text-emerald-600 active:scale-95 text-sm font-medium transition-all"
-                        aria-label="More guests"
-                      >+</button>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Search button */}
                 <button
                   onClick={handleSearch}
-                  className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 active:scale-[0.98] text-white px-6 sm:px-8 flex items-center justify-center gap-2.5 font-semibold text-sm transition-all flex-shrink-0"
+                  className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 active:scale-[0.98] text-white flex items-center justify-center gap-2 font-semibold text-sm transition-all px-6 py-3 sm:py-4 mt-2 sm:mt-0"
                 >
                   <Search className="h-4 w-4" />
                   <span className="hidden sm:inline">Search</span>
@@ -886,7 +934,7 @@ export default function Home() {
                 const destParams = new URLSearchParams()
                 destParams.set('q', dest.name)
                 if (searchDate) destParams.set('checkIn', searchDate)
-                if (checkOutDate && dest.slug === 'hotels') destParams.set('checkOut', checkOutDate)
+                if (dropOffDate && dest.slug === 'hotels') destParams.set('checkOut', dropOffDate)
                 if (guestCount > 1) destParams.set('guests', String(guestCount))
                 return (
                 <Link key={dest.name} to={`/category/${dest.slug}?${destParams.toString()}`} className="group">
@@ -920,15 +968,25 @@ export default function Home() {
 
         {/* Results Header */}
         <div className="mb-4">
-          <div className="mb-3">
+          <div className="flex items-center justify-between mb-3">
               {(searchQuery || !selectedCategories.includes('all')) && (
-                <h2 className="text-2xl font-bold text-black">
-                  {searchQuery
-                    ? `Search results for "${searchQuery}"`
-                    : selectedCategories.length === 1
-                      ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
-                      : `${selectedCategories.length} categories selected`}
-                </h2>
+                <>
+                  <h2 className="text-2xl font-bold text-black">
+                    {searchQuery
+                      ? `Search results for "${searchQuery}"`
+                      : selectedCategories.length === 1
+                        ? categories.find(cat => cat.id === selectedCategories[0])?.name || selectedCategories[0]
+                        : `${selectedCategories.length} categories selected`}
+                  </h2>
+                  {!searchQuery && selectedCategories.length === 1 && (
+                    <Link
+                      to={`/category/${getCategorySlug(selectedCategories[0])}`}
+                      className="flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-900 transition-colors whitespace-nowrap"
+                    >
+                      View all <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  )}
+                </>
               )}
             </div>
 
