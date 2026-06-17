@@ -21,7 +21,7 @@ import {
   isValidEmail,
   isValidUgMobileMoneyPhone,
 } from '../lib/bookingFormValidation'
-import { isRestaurantCategory } from '../lib/bookingCategories'
+import { isRestaurantService } from '../lib/bookingCategories'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,10 +94,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const finaliseRef = useRef(false)
 
   const categoryName = (service?.service_categories?.name ?? '').toLowerCase()
-  const categoryId = service?.category_id ?? service?.service_categories?.id
   const isHotel = ['hotels', 'hotel', 'accommodation'].includes(categoryName)
   const isTransport = categoryName === 'transport'
-  const isRestaurant = isRestaurantCategory(categoryId, categoryName)
+  const isRestaurant = isRestaurantService(service)
   const isFlight = ['flights', 'flight'].includes(categoryName)
   const isTour = ['tours', 'tour'].includes(categoryName)
 
@@ -351,15 +350,6 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     setError(null)
     try {
       const booking = await createBooking(buildBookingPayload('reserved') as any)
-      try {
-        await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
-          body: JSON.stringify({ booking_id: booking.id }),
-        })
-      } catch {
-        /* email failure is non-fatal */
-      }
       setCompletedBooking(booking)
       setStep('done')
     } catch (e) {
@@ -390,8 +380,11 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const goFromSummary = () => {
     if (!validateSummary()) return
     if (isRestaurant) {
-      if (user) setStep('payment')
-      else setStep('contact')
+      if (user) {
+        void handleRestaurantReserve()
+      } else {
+        setStep('contact')
+      }
       return
     }
     setStep(user ? 'payment' : 'contact')
@@ -441,7 +434,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 {step === 'summary' && 'Booking Summary'}
                 {step === 'contact' && 'Your Details'}
                 {step === 'payment' && (isRestaurant ? 'Confirm Reservation' : 'Payment')}
-                {step === 'done' && 'Booking Confirmed!'}
+                {step === 'done' && (isRestaurant ? 'Reservation Confirmed!' : 'Booking Confirmed!')}
               </h2>
               <p className="text-xs text-gray-500 leading-tight truncate max-w-[240px]">{service?.title}</p>
             </div>
@@ -624,8 +617,8 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
             </div>
           )}
 
-          {/* ── Step: Payment ── */}
-          {step === 'payment' && (
+          {/* ── Step: Payment (paid categories only) ── */}
+          {step === 'payment' && !isRestaurant && (
             <div className="p-5 space-y-4">
               <BookingFormBanner message={formBanner || error} />
               {/* Order recap */}
@@ -727,9 +720,16 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <button
                   type="button"
                   onClick={goFromSummary}
-                  className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
+                  disabled={processing}
+                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${
+                    processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
                 >
-                  Reserve Table
+                  {processing
+                    ? 'Confirming…'
+                    : user
+                    ? 'Confirm Reservation'
+                    : 'Reserve Table'}
                 </button>
               ) : (
                 <button
@@ -763,14 +763,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
             </button>
           )}
 
-          {step === 'payment' && (
+          {step === 'payment' && !isRestaurant && (
             <>
-              {isRestaurant ? (
-                <button disabled={processing} onClick={handleRestaurantReserve} className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                  {processing ? 'Confirming…' : 'Confirm Reservation'}
-                </button>
-              ) : (
-                <button
+              <button
                   type="button"
                   disabled={processing}
                   onClick={handlePay}
@@ -780,7 +775,6 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                     ? (pollingMessage || 'Processing…')
                     : `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with Mobile Money`}
                 </button>
-              )}
               {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl">{error}</div>}
             </>
           )}

@@ -86,26 +86,16 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
         guests: formData.partySize,
         total_amount: 0,
         currency: service.currency || 'UGX',
-        status: 'confirmed',
-        payment_status: 'pending',
+        status: 'reserved',
+        payment_status: 'not_required',
         special_requests: specialRequests || undefined,
         tourist_id: user?.id,
         guest_name: user ? undefined : formData.contactName || undefined,
         guest_email: user ? undefined : formData.contactEmail || undefined,
         guest_phone: user ? undefined : formData.contactPhone || undefined,
         start_time: formData.time,
+        platform_fee: 0,
       } as any)
-
-      // Attempt to notify vendor via existing email edge function
-      try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-        await fetch(`${supabaseUrl}/functions/v1/send-booking-emails`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
-          body: JSON.stringify({ booking_id: booking.id }),
-        })
-      } catch { /* email failure is non-fatal */ }
 
       setConfirmed(booking)
       setCurrentStep(3)
