@@ -766,10 +766,6 @@ export async function getVendorTransactions(vendorId: string): Promise<Transacti
 
 export async function getWalletStats(vendorId: string) {
   try {
-    // Ensure any confirmed+paid bookings are reconciled before computing wallet stats.
-    // This guarantees that missing payment transactions get created even if they were missed earlier.
-    await reconcileMissingPaymentTransactions(vendorId)
-
     const transactions = await getTransactions(vendorId)
     const wallet = await getVendorWallet(vendorId)
 
@@ -930,14 +926,11 @@ export async function requestWithdrawal(vendorId: string, amount: number, curren
 }
 
 /**
- * Reconcile bookings: find bookings that are confirmed AND paid but have no
- * corresponding completed payment transaction, and create one.
- * If vendorId is provided, limit to that vendor only.
- * Returns the number of transactions created.
+ * Backfill only: find paid bookings missing wallet settlement and run the canonical RPCs.
+ * Call explicitly (e.g. vendor Transactions page), not from getWalletStats.
  */
 export async function reconcileMissingPaymentTransactions(vendorId?: string): Promise<number> {
   try {
-    // Build base query for confirmed or completed paid bookings
     let query = supabase
       .from('bookings')
       .select('id, vendor_id, tourist_id, total_amount, vendor_payout_amount, currency, commission_amount, commission_rate_at_booking, payment_reference')
@@ -1016,109 +1009,49 @@ export async function reconcileMissingPaymentTransactions(vendorId?: string): Pr
           continue
         }
 
-        const reference = `PMT_${b.id.slice(0, 8)}_${Date.now()}`
-        const commissionAmount = Number(b.commission_amount) || (b.commission_rate_at_booking ? Math.round(Number(b.total_amount || 0) * Number(b.commission_rate_at_booking) * 100) / 100 : 0)
+        const reference = b.payment_reference || `PMT_${b.id.slice(0, 8)}_reconcile_${Date.now()}`
+        const commissionAmount =
+          Number(b.commission_amount) ||
+          (b.commission_rate_at_booking
+            ? Math.round(Number(b.total_amount || 0) * Number(b.commission_rate_at_booking) * 100) / 100
+            : 0)
 
-        if (commissionAmount > 0 && adminId) {
-          let paymentResult: any = null
-          let paymentError: any = null
+        if (!adminId) {
+          console.warn('Reconciliation skipped: no admin profile for booking', b.id)
+          continue
+        }
 
-          try {
-            const rpcRes = await supabase.rpc('process_payment_with_commission', {
-              p_vendor_id: b.vendor_id,
-              p_total_amount: b.total_amount,
-              p_commission_amount: commissionAmount,
-              p_admin_id: adminId,
-              p_booking_id: b.id,
-              p_tourist_id: b.tourist_id || null,
-              p_currency: b.currency || 'UGX',
-              p_payment_method: 'card',
-              p_reference: reference
-            }) as any
-            paymentResult = rpcRes.data
-            paymentError = rpcRes.error
-          } catch (err) {
-            paymentError = err
-          }
-
-          let rpcFailed = false
-          if (paymentError) {
-            const errMsg = String(paymentError?.message || paymentError)
-            if (errMsg.includes('process_payment_with_commission') || errMsg.includes('Could not find the function public.process_payment_with_commission')) {
-              console.warn('process_payment_with_commission missing, falling back to fallback flow:', errMsg)
-              rpcFailed = true
-            } else {
-              throw paymentError
-            }
-          }
-
-          if (paymentResult?.success) {
-            // succeeded with commission-aware RPC
-          } else {
-            if (rpcFailed) {
-              try {
-                await addTransaction({
-                  booking_id: b.id,
-                  vendor_id: b.vendor_id,
-                  tourist_id: b.tourist_id || null,
-                  amount: b.total_amount,
-                  currency: b.currency || 'UGX',
-                  transaction_type: 'payment',
-                  status: 'completed',
-                  payment_method: 'card',
-                  reference
-                })
-
-                const vendorAmount = b.vendor_payout_amount != null
-                  ? Number(b.vendor_payout_amount)
-                  : Number(b.total_amount) - commissionAmount
-                await creditWallet(b.vendor_id, vendorAmount, b.currency || 'UGX', 'pending')
-                await creditWallet(adminId, commissionAmount, b.currency || 'UGX', 'available')
-                console.log('Reconciliation fallback processed with commission split for booking', b.id)
-              } catch (fallbackErr) {
-                console.error('Reconciliation fallback failed for booking', b.id, fallbackErr)
-                throw fallbackErr
-              }
-            } else {
-              const { data: fallbackResult, error: fallbackError } = await supabase.rpc('process_payment_atomic', {
-                p_vendor_id: b.vendor_id,
-                p_amount: b.total_amount,
-                p_booking_id: b.id,
-                p_tourist_id: b.tourist_id || null,
-                p_currency: b.currency || 'UGX',
-                p_payment_method: 'card',
-                p_reference: reference
-              }) as any
-
-              if (fallbackError) {
-                throw fallbackError
-              }
-              if (!fallbackResult?.success) {
-                throw new Error(fallbackResult?.error || 'Failed to process payment during reconciliation fallback')
-              }
-            }
-          }
-        } else {
-          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
+        const { data: paymentResult, error: paymentError } = await supabase.rpc(
+          'process_payment_with_commission',
+          {
             p_vendor_id: b.vendor_id,
-            p_amount: b.total_amount,
+            p_total_amount: b.total_amount,
+            p_commission_amount: commissionAmount,
+            p_admin_id: adminId,
             p_booking_id: b.id,
             p_tourist_id: b.tourist_id || null,
             p_currency: b.currency || 'UGX',
             p_payment_method: 'card',
-            p_reference: reference
-          }) as any
+            p_reference: reference,
+          },
+        )
 
-          if (paymentError) {
-            throw paymentError
-          }
-          if (!paymentResult?.success) {
-            throw new Error(paymentResult?.error || 'Failed to process payment during reconciliation')
-          }
+        if (paymentError) {
+          console.warn('Reconciliation RPC error for booking', b.id, paymentError)
+          continue
         }
 
-        created += 1
-        console.log('Reconciliation: created payment transaction and updated wallet for booking', b.id)
+        if (!(paymentResult as { success?: boolean })?.success) {
+          console.warn(
+            'Reconciliation RPC failed for booking',
+            b.id,
+            (paymentResult as { error?: string })?.error,
+          )
+          continue
+        }
+
+        created++
+        console.log('Reconciliation: settled booking via process_payment_with_commission', b.id)
       } catch (err) {
         console.error('Reconciliation: failed for booking', b.id, err)
       }

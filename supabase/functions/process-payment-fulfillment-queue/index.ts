@@ -444,6 +444,22 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
         : []),
       ...(needsTickets
         ? items.map(async (it: any) => {
+            const { count: existingCount } = await supabase
+              .from("tickets")
+              .select("id", { count: "exact", head: true })
+              .eq("order_id", orderId)
+              .eq("ticket_type_id", it.ticket_type_id)
+
+            if ((existingCount ?? 0) >= it.quantity) {
+              console.log(
+                "Worker: tickets already issued for order",
+                orderId,
+                "type",
+                it.ticket_type_id,
+              )
+              return
+            }
+
             const { data: bookData, error: bookErr } = await supabase.rpc("book_tickets_atomic", {
               p_ticket_type_id: it.ticket_type_id,
               p_quantity: it.quantity,
@@ -452,6 +468,13 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
             if (bookErr || !(bookData as any)?.success) {
               throw new Error(
                 `ticket-book-failed:${it.ticket_type_id}:${bookErr?.message || (bookData as any)?.error || "unknown"}`
+              )
+            }
+            if ((bookData as any)?.idempotent) {
+              console.log(
+                "Worker: book_tickets_atomic idempotent success for",
+                orderId,
+                it.ticket_type_id,
               )
             }
           })

@@ -1,9 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
 import { executeWithCircuitBreaker } from '../lib/concurrency'
-import { creditWallet } from './WalletRepository'
-import { getAdminProfileId } from './PartnerRepository'
-import { addTransaction } from './WalletRepository'
-import { createBooking } from './BookingRepository'
 
 // Ticketing helpers for event management
 export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any; sale_start?: string; sale_end?: string }) {
@@ -85,200 +81,20 @@ export async function createOrder(userId: string | null, vendorId: string | null
   }
 }
 
-export async function confirmOrderAndIssueTickets(orderId: string, payment: { vendor_id: string; tourist_id?: string; amount: number; currency: string; payment_method: string; reference?: string }) {
-  return executeWithCircuitBreaker(async () => {
-    // Mark order as paid
-    const { data: order, error: orderError } = await supabase.from('orders').update({ status: 'paid', reference: payment.reference, updated_at: new Date().toISOString() }).eq('id', orderId).select().single()
-    if (orderError) throw orderError
-
-    // Use vendor_payout and platform_fee from the order (authoritative source)
-    const vendorPayoutAmount = Number(order.vendor_payout || 0) || payment.amount
-    const platformFeeAmount = Number(order.platform_fee || 0)
-    const adminId = await getAdminProfileId();
-    // commission = platform fee from order only (no synthetic % if missing)
-    const commissionAmount = Math.max(0, platformFeeAmount)
-
-    const txRef = payment.reference || `TKT_${orderId.slice(0,8)}_${Date.now()}`
-
-    if (!adminId) {
-      console.warn('Admin profile not found - processing ticket payment without commission');
-      try {
-        await addTransaction({
-          booking_id: undefined as any,
-          vendor_id: payment.vendor_id,
-          tourist_id: payment.tourist_id,
-          amount: vendorPayoutAmount,
-          currency: payment.currency,
-          transaction_type: 'payment',
-          status: 'completed',
-          payment_method: payment.payment_method as any,
-          reference: txRef
-        })
-        await creditWallet(payment.vendor_id, vendorPayoutAmount, payment.currency)
-      } catch (txErr) {
-        console.warn('Failed to add transaction for ticket order:', txErr)
-      }
-    } else {
-      // Use atomic payment processing with commission deduction
-      const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
-        p_vendor_id: payment.vendor_id,
-        p_total_amount: payment.amount,
-        p_commission_amount: commissionAmount,
-        p_admin_id: adminId,
-        p_booking_id: null,
-        p_tourist_id: payment.tourist_id || null,
-        p_currency: payment.currency || 'UGX',
-        p_payment_method: payment.payment_method,
-        p_reference: txRef
-      });
-
-      if (paymentError || !paymentResult?.success) {
-        console.error('Error processing ticket payment with commission:', paymentError || paymentResult?.error);
-        // Fallback: create transaction with vendor net amount, credit wallets correctly
-        try {
-          const transactionId = await addTransaction({
-            booking_id: undefined as any,
-            vendor_id: payment.vendor_id,
-            tourist_id: payment.tourist_id,
-            amount: vendorPayoutAmount,
-            currency: payment.currency,
-            transaction_type: 'payment',
-            status: 'completed',
-            payment_method: payment.payment_method as any,
-            reference: txRef
-          })
-          await creditWallet(payment.vendor_id, vendorPayoutAmount, payment.currency)
-          if (adminId && commissionAmount > 0) {
-            await creditWallet(adminId, commissionAmount, payment.currency)
-          }
-          console.log('Fallback ticket payment processed:', { transactionId, vendorPayoutAmount, commissionAmount })
-        } catch (txErr) {
-          console.warn('Failed to add fallback ticket transaction:', txErr)
-        }
-      } else {
-        console.log('Successfully processed ticket payment with commission:', {
-          total_amount: payment.amount,
-          vendor_payout: vendorPayoutAmount,
-          commission_amount: commissionAmount
-        });
-      }
-    }
-
-    // Load order items with ticket type information
-    const { data: items, error: itemsError } = await supabase.from('order_items').select('*, ticket_types(*)').eq('order_id', orderId)
-    if (itemsError) throw itemsError
-
-    const createdTickets: any[] = []
-
-
-    // This ensures a booking ID exists for ticket purchases
-    const bookingMap: Record<string, string> = {}
-    try {
-      // Group items by service_id to create bookings
-      const groups: Record<string, { qty: number; total: number }> = {}
-      for (const it of items || []) {
-        const sid = it.ticket_types?.service_id
-        if (!sid) continue
-        groups[sid] = groups[sid] || { qty: 0, total: 0 }
-        groups[sid].qty += it.quantity
-        groups[sid].total += (it.unit_price || 0) * it.quantity
-      }
-
-      for (const sid of Object.keys(groups)) {
-        try {
-          const booking = await createBooking({
-            service_id: sid,
-            booking_date: new Date().toISOString(),
-            service_date: new Date().toISOString(),
-            guests: groups[sid].qty,
-            total_amount: groups[sid].total,
-            pricing_base_amount: groups[sid].total,
-            currency: order.currency,
-            status: 'confirmed',
-            payment_status: 'paid',
-            tourist_id: payment.tourist_id || undefined,
-            // For guest bookings, try to get info from order if available, otherwise leave as undefined
-            guest_name: !payment.tourist_id ? (order as any).guest_name || null : undefined,
-            guest_email: !payment.tourist_id ? (order as any).guest_email || null : undefined,
-            guest_phone: !payment.tourist_id ? (order as any).guest_phone || null : undefined
-          })
-          if (booking && booking.id) bookingMap[sid] = booking.id
-        } catch (bkErr) {
-          // Log but don't fail ticket issuance if booking creation fails
-          console.warn('Failed to create booking for ticket order service', sid, bkErr)
-        }
-      }
-    } catch (err) {
-      console.error('Error creating bookings for ticket order:', err)
-    }
-
-    // Use atomic ticket booking function for each ticket type
-    for (const it of items || []) {
-      try {
-        const { data, error } = await supabase.rpc('book_tickets_atomic', {
-          p_ticket_type_id: it.ticket_type_id,
-          p_quantity: it.quantity,
-          p_order_id: orderId
-        })
-
-        if (error) {
-          console.error('Failed to book tickets atomically:', error)
-          throw new Error(`Failed to book tickets: ${error.message}`)
-        }
-
-        if (!data?.success) {
-          throw new Error(data?.error || 'Failed to book tickets')
-        }
-
-        console.log(`Successfully booked ${data.tickets_created} tickets for type ${it.ticket_type_id}`)
-      } catch (atomicError) {
-        console.error('Atomic booking failed, falling back to individual ticket creation:', atomicError)
-
-        // Fallback to individual ticket creation if atomic function fails
-        for (let i = 0; i < it.quantity; i++) {
-          const code = `TKT-${Math.random().toString(36).slice(2,10).toUpperCase()}`
-          try {
-            const { data: ticket, error: ticketError } = await supabase.from('tickets').insert([{
-              order_id: orderId,
-              ticket_type_id: it.ticket_type_id,
-              service_id: it.ticket_types.service_id,
-              owner_id: order.user_id || null,
-              code,
-              qr_data: code,
-              status: 'issued'
-            }]).select().single()
-
-            if (ticketError) {
-              console.error('Failed to create individual ticket:', ticketError)
-              continue
-            }
-            createdTickets.push(ticket)
-          } catch (indError) {
-            console.error('Exception creating individual ticket:', indError)
-          }
-        }
-
-        // increment sold count (non-atomically as fallback)
-        try {
-          await supabase.from('ticket_types').update({ sold: (it.quantity) }).eq('id', it.ticket_type_id)
-        } catch (incErr) {
-          console.warn('Failed to increment sold count:', incErr)
-        }
-      }
-    }
-
-    // Fetch all tickets created for this order
-    const { data: allTickets, error: fetchError } = await supabase
-      .from('tickets')
-      .select('*, ticket_types(*), orders(*)')
-      .eq('order_id', orderId)
-
-    if (!fetchError && allTickets) {
-      createdTickets.push(...allTickets)
-    }
-
-    return { order, tickets: createdTickets }
-  }, 'confirmOrderAndIssueTickets')
+export async function confirmOrderAndIssueTickets(
+  _orderId: string,
+  _payment: {
+    vendor_id: string
+    tourist_id?: string
+    amount: number
+    currency: string
+    payment_method: string
+    reference?: string
+  },
+) {
+  throw new Error(
+    'confirmOrderAndIssueTickets is retired. Paid orders settle via the payment fulfillment queue (order_fulfillment jobs).',
+  )
 }
 
 export async function getAvailableTickets(ticketTypeId: string): Promise<number> {

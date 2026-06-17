@@ -466,7 +466,7 @@ Track fixes one feature at a time. Update this table as each ships.
 | 3 | Failed fulfillment job alerts | Shipped | `failure_alerted_at` column + `notify-fulfillment-job-failed` edge function; worker emails admins when job exhausts retries |
 | 4 | Pending vs available wallet buckets | Shipped | Buckets + holds + cron release; vendors can request early release with reason, admin approves via `/admin/balance-release-requests` |
 | 5 | Restaurant → reservation status | Shipped | `reserved` + `not_required` payment; settlement guards; BookingDrawer reservation flow; pg_cron `release_eligible_vendor_holds` |
-| 6 | Consolidate / remove dead settlement paths | Pending | `confirmOrderAndIssueTickets`, lazy reconcile only as backfill |
+| 6 | Consolidate / remove dead settlement paths | Shipped | Retired `confirmOrderAndIssueTickets`; reconcile uses `process_payment_with_commission` only; idempotent `book_tickets_atomic` |
 
 ---
 

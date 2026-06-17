@@ -95,8 +95,7 @@ export default function VendorTransactions() {
         return
       }
 
-      // Reconcile missing payment transactions for confirmed/completed paid bookings.
-      // This ensures completed earnings reflect bookings that were paid but never got a transaction row.
+      // Explicit backfill: settle any paid bookings that missed the fulfillment queue.
       await reconcileMissingPaymentTransactions(vendorId)
 
       const [transactions, stats, walletObj, holds, releaseReqs] = await Promise.all([
