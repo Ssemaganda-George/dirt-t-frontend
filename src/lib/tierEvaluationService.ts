@@ -120,13 +120,15 @@ async function evaluateSingleVendorTier(
     // Calculate current metrics
     const metrics = await calculateVendorMetrics(vendor.id);
 
-    // Find the highest eligible tier
+    // Find the highest eligible tier. `tiers` is ascending by priority_order (Bronze=1 first),
+    // and Bronze has no requirements, so we must check the best (highest priority_order) tier first.
     let eligibleTier: VendorTier | null = null;
+    const byBestFirst = [...tiers].sort((a, b) => b.priority_order - a.priority_order);
 
-    for (const tier of tiers) {
+    for (const tier of byBestFirst) {
       if (isEligibleForTier(metrics, tier)) {
         eligibleTier = tier;
-        break; // Since tiers are ordered by priority, first eligible is best
+        break;
       }
     }
 

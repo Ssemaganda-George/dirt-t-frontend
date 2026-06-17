@@ -39,7 +39,9 @@ const mockTiers: VendorTier[] = [
 ]
 
 function getEligibleTier(metrics: { monthlyBookings: number; averageRating?: number }): VendorTier | null {
-  for (const tier of mockTiers) {
+  // best tier has the highest priority_order (Gold=3 beats Bronze=1) — check hardest-to-meet tiers first
+  const sortedTiers = [...mockTiers].sort((a, b) => b.priority_order - a.priority_order)
+  for (const tier of sortedTiers) {
     if (isEligibleForTier(metrics, tier)) return tier
   }
   return null
