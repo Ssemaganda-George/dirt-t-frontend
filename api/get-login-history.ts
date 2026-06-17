@@ -12,10 +12,16 @@ export default async function handler(req: any, res: any) {
     })
   }
 
+  const authHeader = req.headers?.authorization || req.headers?.Authorization
+  const token = typeof authHeader === 'string' ? authHeader.replace(/^Bearer\s+/i, '') : null
+  if (!token) return res.status(401).json({ error: 'Missing Authorization header' })
+
   const supabase = createClient(supabaseUrl, serviceKey)
 
-  const { userId } = req.body || {}
-  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+  // ponytail: derive userId from the verified token instead of trusting req.body — closes the IDOR, no userId param needed at all
+  const { data: authData, error: authErr } = await supabase.auth.getUser(token)
+  if (authErr || !authData?.user) return res.status(401).json({ error: 'Invalid or expired session' })
+  const userId = authData.user.id
 
   try {
     try {

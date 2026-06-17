@@ -140,11 +140,15 @@ export default function Settings() {
         // ignore and fall back to server API
       }
 
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token
+      if (!accessToken) throw new Error('Not signed in')
+
       const apiBase = (import.meta.env && (import.meta.env.VITE_API_BASE as string)) || ''
       const res = await fetch(`${apiBase}/api/get-login-history`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: profile.id })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({})
       })
       const json = await res.json()
       if (!res.ok) {
