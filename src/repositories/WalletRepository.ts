@@ -21,6 +21,23 @@ type VendorSummary = {
   profiles?: { id: string; full_name?: string; email?: string } | null
 }
 
+type VendorRowWithProfile = Omit<VendorSummary, 'profiles'> & {
+  profiles?:
+    | { id: string; full_name?: string; email?: string }
+    | { id: string; full_name?: string; email?: string }[]
+    | null
+}
+
+function normalizeVendorSummary(v: VendorRowWithProfile): VendorSummary {
+  const profiles = Array.isArray(v.profiles) ? v.profiles[0] ?? null : v.profiles ?? null
+  return { ...v, profiles }
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null
+  return Array.isArray(value) ? value[0] ?? null : value
+}
+
 type OrderFeeRow = {
   id: string
   total_amount?: number | string | null
@@ -723,7 +740,9 @@ export async function getAllVendorWallets(): Promise<any[]> {
     }
 
     // Map vendor information to wallets
-    const vendorMap = new Map(vendors?.map((v: VendorSummary) => [v.id, v]) || [])
+    const vendorMap = new Map(
+      vendors?.map((v: VendorRowWithProfile) => [v.id, normalizeVendorSummary(v)]) || [],
+    )
 
     const walletsWithVendors = walletRows.map((wallet) => ({
       ...wallet,
@@ -1128,7 +1147,12 @@ export async function getVendorPendingHolds(vendorId: string): Promise<VendorPen
     throw error
   }
 
-  return (data || []) as VendorPendingHold[]
+  return (data || []).map((row: Record<string, unknown>) => ({
+    ...row,
+    amount: Number(row.amount),
+    booking: firstRelation(row.booking as VendorPendingHold['booking'] | VendorPendingHold['booking'][]),
+    order: firstRelation(row.order as VendorPendingHold['order'] | VendorPendingHold['order'][]),
+  })) as VendorPendingHold[]
 }
 
 export async function getVendorBalanceReleaseRequests(vendorId: string): Promise<BalanceReleaseRequest[]> {
