@@ -505,6 +505,42 @@ async function processOrderFulfillment(supabase: any, job: QueueJob): Promise<vo
   }
 }
 
+/** True when every order_item quantity has a matching ticket row (delivery succeeded). */
+async function isOrderFulfillmentDelivered(supabase: any, orderId: string): Promise<boolean> {
+  const { data: items, error: itemsErr } = await supabase
+    .from("order_items")
+    .select("quantity")
+    .eq("order_id", orderId)
+
+  if (itemsErr || !items?.length) return false
+
+  const expectedTickets = items.reduce(
+    (sum: number, it: { quantity?: number }) => sum + Number(it.quantity || 0),
+    0,
+  )
+  if (expectedTickets <= 0) return false
+
+  const { count, error: countErr } = await supabase
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", orderId)
+
+  if (countErr) return false
+  return (count ?? 0) >= expectedTickets
+}
+
+async function markFulfillmentJobCompleted(supabase: any, jobId: string): Promise<void> {
+  await supabase
+    .from("payment_fulfillment_jobs")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      last_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+}
+
 // ── Per-job executor: runs job, writes outcome back to DB ─────────────────────
 async function runJob(supabase: any, job: QueueJob): Promise<JobOutcome> {
   try {
@@ -529,6 +565,20 @@ async function runJob(supabase: any, job: QueueJob): Promise<JobOutcome> {
     return { id: job.id, outcome: "completed" }
   } catch (e: any) {
     const errMsg = e?.message || String(e)
+
+    if (job.job_type === "order_fulfillment") {
+      const delivered = await isOrderFulfillmentDelivered(supabase, job.source_id)
+      if (delivered) {
+        console.warn(
+          "Worker: order_fulfillment threw after tickets delivered — marking completed",
+          job.source_id,
+          errMsg,
+        )
+        await markFulfillmentJobCompleted(supabase, job.id)
+        return { id: job.id, outcome: "completed" }
+      }
+    }
+
     const maxAttempts = Number(job.max_attempts || 6)
 
     if (job.attempts >= maxAttempts) {

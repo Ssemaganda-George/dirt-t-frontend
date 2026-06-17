@@ -5,7 +5,6 @@ import { normalizeServiceCurrency } from '../lib/utils'
 import type { Booking } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
 import {
-  isReservationBooking,
   shouldSendReservationEmails,
 } from '../lib/bookingCategories'
 
@@ -304,8 +303,13 @@ export async function createBooking(
     if (requestedStatus && requestedStatus !== (data as any).status) {
       patch.status = requestedStatus
     }
+    // Never trust client-paid; MarzPay webhook / fulfillment queue sets paid server-side.
     if (requestedPaymentStatus && requestedPaymentStatus !== (data as any).payment_status) {
-      patch.payment_status = requestedPaymentStatus
+      if (requestedPaymentStatus === 'paid') {
+        console.warn('createBooking: ignoring client payment_status=paid for booking', data.id)
+      } else {
+        patch.payment_status = requestedPaymentStatus
+      }
     }
     if (requestedPaymentReference && requestedPaymentReference !== (data as any).payment_reference) {
       patch.payment_reference = requestedPaymentReference
@@ -329,74 +333,7 @@ export async function createBooking(
     console.warn('Error updating booking status/payment_status after createBooking:', err)
   }
 
-  // Critical payment processing must complete before returning to avoid lost updates
-  try {
-    const shouldCreateTransaction =
-      ['confirmed', 'completed'].includes(finalBooking.status) &&
-      (finalBooking as any).payment_status === 'paid' &&
-      !isReservationBooking(finalBooking)
-
-    if (shouldCreateTransaction) {
-      const { data: existingTx, error: txCheckError } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('booking_id', finalBooking.id)
-        .eq('transaction_type', 'payment')
-        .eq('status', 'completed')
-        .single()
-
-      if (txCheckError && txCheckError.code !== 'PGRST116') {
-        console.warn('Error checking existing payment transaction after createBooking:', txCheckError)
-      } else if (!existingTx) {
-        const adminId = await getAdminProfileId()
-        let commissionAmount = 0
-        try {
-          commissionAmount = Number(finalBooking.commission_amount) || 0
-          if (!commissionAmount && finalBooking.commission_rate_at_booking) {
-            commissionAmount = Math.round(Number(finalBooking.total_amount || 0) * Number(finalBooking.commission_rate_at_booking) * 100) / 100
-          }
-        } catch (err) {
-          commissionAmount = 0
-        }
-
-        if (adminId) {
-          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
-            p_vendor_id: finalBooking.vendor_id,
-            p_total_amount: finalBooking.total_amount,
-            p_commission_amount: commissionAmount,
-            p_admin_id: adminId,
-            p_booking_id: finalBooking.id || null,
-            p_tourist_id: finalBooking.tourist_id || null,
-            p_currency: finalBooking.currency || 'UGX',
-            p_payment_method: 'card',
-            p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
-          }) as any
-
-          if (paymentError) {
-            throw paymentError
-          }
-          if (!paymentResult?.success) {
-            throw new Error(paymentResult?.error || 'Failed to process payment with commission')
-          }
-        } else {
-          const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_atomic', {
-            p_vendor_id: finalBooking.vendor_id,
-            p_amount: finalBooking.total_amount,
-            p_booking_id: finalBooking.id || null,
-            p_tourist_id: finalBooking.tourist_id || null,
-            p_currency: finalBooking.currency || 'UGX',
-            p_payment_method: 'card',
-            p_reference: `PMT_${finalBooking.id?.toString().slice(0, 8)}_${Date.now()}`
-          }) as any
-
-          if (paymentError) throw paymentError
-          if (!paymentResult?.success) throw new Error(paymentResult?.error || 'Failed to process payment')
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Error creating payment transaction after createBooking:', err)
-  }
+  // Settlement is server-only: marzpay-webhook → payment_fulfillment_jobs → process-payment-fulfillment-queue.
 
   // Only send confirmation emails after payment is actually paid (webhook/queue also sends on success).
   const shouldSendBookingEmails =
@@ -629,102 +566,6 @@ export async function updateBooking(id: string, updates: Partial<Pick<Booking, '
 
     console.log('DB: Booking updated successfully. New status:', data.status, 'payment_status:', data.payment_status)
 
-    // Check if we need to create a transaction and credit wallets
-    // Create transaction and credit wallets when booking is "confirmed AND paid" (after update)
-    const finalStatus = data.status;
-    const finalPaymentStatus = data.payment_status;
-    const shouldCreateTransaction =
-      ['confirmed', 'completed'].includes(finalStatus) &&
-      finalPaymentStatus === 'paid' &&
-      !isReservationBooking(data)
-
-    console.log('DB: Transaction check - finalStatus:', finalStatus, 'finalPaymentStatus:', finalPaymentStatus, 'shouldCreateTransaction:', shouldCreateTransaction);
-
-    if (shouldCreateTransaction) {
-      console.log('[Wallet Debug] Attempting to create payment transaction for booking:', id, {
-        vendor_id: data.vendor_id,
-        tourist_id: data.tourist_id,
-        amount: data.total_amount,
-        currency: data.currency,
-        transaction_type: 'payment',
-        status: 'completed',
-        payment_method: 'card',
-        reference: `PMT_${id.slice(0, 8)}_${Date.now()}`
-      });
-      // Check if a payment transaction already exists for this booking
-      const { data: existingTransaction, error: transactionCheckError } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('booking_id', id)
-        .eq('transaction_type', 'payment')
-        .eq('status', 'completed')
-        .limit(1);
-
-      if (transactionCheckError && transactionCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        // If table doesn't exist, skip transaction creation
-        if (transactionCheckError.message?.includes('relation "transactions" does not exist')) {
-          console.warn('Transactions table does not exist. Skipping payment transaction creation.');
-        } else {
-          console.error('Error checking existing transaction:', transactionCheckError);
-        }
-      } else {
-        // Only create transaction if one doesn't already exist
-        if (!existingTransaction) {
-          try {
-            // Calculate commission amount first
-            const adminId = await getAdminProfileId();
-            let commissionAmount = 0;
-            try {
-              commissionAmount = Number(data.commission_amount) || 0;
-              if (!commissionAmount && data.commission_rate_at_booking) {
-                commissionAmount = Math.round((Number(data.total_amount || 0) * Number(data.commission_rate_at_booking)) * 100) / 100;
-              }
-            } catch (e) {
-              commissionAmount = 0;
-            }
-
-            if (!adminId) {
-              throw new Error('Admin profile not found - cannot process payment with commission');
-            }
-
-            // Use atomic payment processing with commission deduction
-            const { data: paymentResult, error: paymentError } = await supabase.rpc('process_payment_with_commission', {
-              p_vendor_id: data.vendor_id,
-              p_total_amount: data.total_amount,
-              p_commission_amount: commissionAmount,
-              p_admin_id: adminId,
-              p_booking_id: id || null,
-              p_tourist_id: data.tourist_id || null,
-              p_currency: data.currency || 'UGX',
-              p_payment_method: 'card',
-              p_reference: `PMT_${id.slice(0, 8)}_${Date.now()}`
-            });
-
-            if (paymentError) throw paymentError;
-
-            if (!paymentResult?.success) {
-              throw new Error(paymentResult?.error || 'Failed to process payment with commission');
-            }
-
-            console.log('Created payment transaction with commission deduction for booking:', id, {
-              total_amount: data.total_amount,
-              vendor_amount: paymentResult.vendor_amount,
-              commission_amount: paymentResult.commission_amount
-            });
-
-          } catch (transactionError) {
-            // If transactions table doesn't exist, just log and continue
-            if (transactionError instanceof Error && transactionError.message.includes('Transactions table does not exist')) {
-              console.warn('Transactions table does not exist. Payment transaction not created.');
-            } else {
-              console.error('Error creating payment transaction:', transactionError);
-              // Don't throw here - the booking update was successful
-            }
-          }
-        }
-      }
-    }
-
     // When booking is completed, generate a review token and send review request email
     if (data.status === 'completed') {
       try {
@@ -772,13 +613,28 @@ export async function getFlaggedBookings(): Promise<Booking[]> {
 
 export async function approveFlaggedBooking(bookingId: string): Promise<void> {
   try {
-    // Use updateBooking so the payment side effects (transaction creation and wallet credit)
-    // are executed when a flagged booking is approved.
     await updateBooking(bookingId, {
       payment_status: 'paid',
       rejection_reason: null,
-      status: 'confirmed'
+      status: 'confirmed',
     })
+
+    const adminId = await getAdminProfileId()
+    if (!adminId) {
+      throw new Error('Admin profile not found — cannot settle approved booking')
+    }
+
+    const { data: backfillResult, error: backfillError } = await supabase.rpc(
+      'backfill_wallet_credits_for_booking',
+      { p_booking_id: bookingId, p_admin_id: adminId },
+    )
+
+    if (backfillError) throw backfillError
+    if (!(backfillResult as { success?: boolean })?.success) {
+      throw new Error(
+        (backfillResult as { error?: string })?.error || 'Failed to settle approved booking',
+      )
+    }
 
     // Best-effort: notify backend/edge function for audit
     try {
