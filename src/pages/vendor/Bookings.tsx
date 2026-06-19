@@ -35,22 +35,33 @@ export default function VendorBookings() {
 
   // Fetch bookings from Supabase for this vendor
   const load = async () => {
-    const allBookings = await getAllBookings()
-    let filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
-    setBookings(filteredBookings)
-
     try {
-      const svc = await getServicesDb(vendorId)
-      setServices(svc)
-      const serviceMap = new Map(svc.map(s => [s.id, s]))
-      filteredBookings = filteredBookings.map(b => ({
-        ...b,
-        service: b.service || serviceMap.get(b.service_id) || undefined
-      }))
-    } catch (err) {
-      console.error('Error loading services for vendor:', err)
+      const allBookings = await Promise.race([
+        getAllBookings(),
+        new Promise<Booking[]>((_, reject) => setTimeout(() => reject(new Error('Bookings load timed out')), 10000))
+      ])
+      let filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
+      setBookings(filteredBookings)
+
+      try {
+        const svc = await getServicesDb(vendorId)
+        setServices(svc)
+        const serviceMap = new Map(svc.map(s => [s.id, s]))
+        filteredBookings = filteredBookings.map(b => ({
+          ...b,
+          service: b.service || serviceMap.get(b.service_id) || undefined
+        }))
+      } catch (err) {
+        console.error('Error loading services for vendor:', err)
+        setServices([])
+      }
+      setBookings(filteredBookings)
+    } catch (error) {
+      console.error('Error loading bookings:', error)
+      setBookings([])
       setServices([])
     }
+  }
     setBookings(filteredBookings)
   }
 

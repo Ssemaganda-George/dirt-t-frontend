@@ -784,6 +784,48 @@ export async function getUnifiedInquiryCounts(): Promise<{
 }
 
 /**
+ * Delete a unified inquiry - routes to correct table based on inquiry_type
+ */
+export async function deleteUnifiedInquiry(inquiryId: string, inquiryType?: InquiryType): Promise<void> {
+  try {
+    let type = inquiryType
+    if (!type) {
+      const { data: existing } = await supabase
+        .from('all_inquiries')
+        .select('inquiry_type')
+        .eq('id', inquiryId)
+        .single()
+      type = existing?.inquiry_type as InquiryType
+    }
+
+    const tableMap: Record<InquiryType, string> = {
+      contact: 'contact_inquiries',
+      service: 'service_inquiries',
+      safari: 'safari_inquiries',
+      partnership: 'partnership_inquiries'
+    }
+
+    const tableName = type ? tableMap[type] : null
+    if (!tableName) {
+      throw new Error(`Could not determine table for inquiry ${inquiryId}`)
+    }
+
+    const { error } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('id', inquiryId)
+
+    if (error) {
+      console.error('Error deleting inquiry:', error)
+      throw error
+    }
+  } catch (error) {
+    console.error('Error in deleteUnifiedInquiry:', error)
+    throw error
+  }
+}
+
+/**
  * Mark email notification as sent - routes to correct table
  */
 export async function markInquiryEmailSent(

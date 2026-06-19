@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Mail, Send, X, Search, Filter, RefreshCw, Inbox, CheckCircle, MessageSquare, Archive, Phone, Calendar, Users, Briefcase, Globe } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getUnifiedInquiries, updateUnifiedInquiryStatus, getUnifiedInquiryCounts, type UnifiedInquiry, type InquiryType, type InquiryStatus } from '../../lib/database'
+import { getUnifiedInquiries, updateUnifiedInquiryStatus, getUnifiedInquiryCounts, deleteUnifiedInquiry, type UnifiedInquiry, type InquiryType, type InquiryStatus } from '../../lib/database'
 import { formatDateTime } from '../../lib/utils'
 
 export default function AdminInquiries() {
@@ -15,6 +15,7 @@ export default function AdminInquiries() {
   const [selectedInquiry, setSelectedInquiry] = useState<UnifiedInquiry | null>(null)
   const [responseMessage, setResponseMessage] = useState('')
   const [responding, setResponding] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [counts, setCounts] = useState({
     total: 0,
     unread: 0,
@@ -34,9 +35,12 @@ export default function AdminInquiries() {
   const fetchInquiries = async () => {
     setLoading(true)
     try {
-      const filters: { inquiry_type?: InquiryType } = {}
+      const filters: { inquiry_type?: InquiryType; status?: InquiryStatus } = {}
       if (activeTab !== 'all') {
         filters.inquiry_type = activeTab
+      }
+      if (filter !== 'all') {
+        filters.status = filter
       }
       const data = await getUnifiedInquiries(filters)
       setInquiries(data)
@@ -98,18 +102,18 @@ export default function AdminInquiries() {
     setResponding(true)
     try {
       await updateUnifiedInquiryStatus(
-        selectedInquiry.id, 
-        'responded', 
+        selectedInquiry.id,
+        'responded',
         responseMessage,
         profile?.id,
         selectedInquiry.inquiry_type
       )
-      
+
       // Open email client to send the response
       const subject = encodeURIComponent(`Re: ${selectedInquiry.subject || getInquiryTypeLabel(selectedInquiry.inquiry_type) + ' - ' + selectedInquiry.name}`)
       const body = encodeURIComponent(responseMessage)
       window.location.href = `mailto:${selectedInquiry.email}?subject=${subject}&body=${body}`
-      
+
       setResponseMessage('')
       setSelectedInquiry(null)
       await fetchInquiries()
@@ -118,6 +122,24 @@ export default function AdminInquiries() {
       console.error('Error responding to inquiry:', error)
     } finally {
       setResponding(false)
+    }
+  }
+
+  const handleDelete = async (inquiryId: string, inquiryType?: InquiryType) => {
+    if (!confirm('Are you sure you want to delete this inquiry? This action cannot be undone.')) return
+    setDeleting(inquiryId)
+    try {
+      await deleteUnifiedInquiry(inquiryId, inquiryType)
+      await fetchInquiries()
+      await fetchCounts()
+      if (selectedInquiry?.id === inquiryId) {
+        setSelectedInquiry(null)
+      }
+    } catch (error) {
+      console.error('Error deleting inquiry:', error)
+      alert('Failed to delete inquiry. Please try again.')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -376,6 +398,30 @@ export default function AdminInquiries() {
                       <span>•</span>
                       <span>{formatDateTime(inquiry.created_at)}</span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {inquiry.status !== 'archived' ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleStatusChange(inquiry.id, 'archived', inquiry.inquiry_type) }}
+                        className="text-xs font-medium text-gray-400 hover:text-gray-600 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
+                      >
+                        Archive
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleStatusChange(inquiry.id, 'read', inquiry.inquiry_type) }}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20 rounded"
+                      >
+                        Unarchive
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(inquiry.id, inquiry.inquiry_type) }}
+                      disabled={deleting === inquiry.id}
+                      className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleting === inquiry.id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -760,6 +806,13 @@ export default function AdminInquiries() {
                     Unarchive
                   </button>
                 )}
+                <button
+                  onClick={() => handleDelete(selectedInquiry.id, selectedInquiry.inquiry_type)}
+                  disabled={deleting === selectedInquiry.id}
+                  className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting === selectedInquiry.id ? 'Deleting...' : 'Delete'}
+                </button>
               </div>
               
               <div className="flex items-center gap-2">

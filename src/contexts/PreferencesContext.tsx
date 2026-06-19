@@ -43,14 +43,24 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
   // Load user preferences
   const loadPreferences = async () => {
     if (!user?.id) return
-
     try {
       setLoading(true)
-      const userPrefs = await getUserPreferences()
+      const userPrefs = await Promise.race([
+        getUserPreferences(),
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Preferences load timed out')), 8000))
+      ])
       setPreferences(userPrefs)
     } catch (error) {
       console.error('Error loading preferences:', error)
-      // Don't throw error, just use defaults
+      setPreferences({
+        id: 'local',
+        user_id: user?.id || 'local',
+        region: DEFAULT_REGION,
+        currency: DEFAULT_CURRENCY,
+        language: DEFAULT_LANGUAGE,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
     } finally {
       setLoading(false)
     }
