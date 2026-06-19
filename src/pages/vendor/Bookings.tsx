@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Booking, Service } from '../../types'
 import { getServices as getServicesDb } from '../../lib/database'
-import { getAllBookings, createBooking as createDbBooking, updateBooking } from '../../lib/database'
+import { getAllBookings, getArchivedBookings, getDeletedBookings, createBooking as createDbBooking, updateBooking, restoreBooking } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { Search } from 'lucide-react'
@@ -30,10 +30,12 @@ export default function VendorBookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [activeTab, setActiveTab] = useState<'pending' | 'completed' | 'archived' | 'deleted'>('pending')
+  const [archivedBookings, setArchivedBookings] = useState<Booking[]>([])
+  const [deletedBookings, setDeletedBookings] = useState<Booking[]>([])
 
   // Fetch bookings from Supabase for this vendor
   const load = async () => {
-    // Get all bookings, then filter by vendor_id
     const allBookings = await getAllBookings()
     let filteredBookings = allBookings.filter(b => b.vendor_id === vendorId)
     setBookings(filteredBookings)
@@ -41,7 +43,6 @@ export default function VendorBookings() {
     try {
       const svc = await getServicesDb(vendorId)
       setServices(svc)
-      // Attach service object to each booking
       const serviceMap = new Map(svc.map(s => [s.id, s]))
       filteredBookings = filteredBookings.map(b => ({
         ...b,
@@ -64,23 +65,20 @@ export default function VendorBookings() {
     const bookingsSubscription = supabase
       .channel('vendor_bookings')
       .on('postgres_changes', {
-        event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+        event: '*',
         schema: 'public',
         table: 'bookings',
-        filter: `vendor_id=eq.${vendorId}` // Only listen to bookings for this vendor
+        filter: `vendor_id=eq.${vendorId}`
       }, (payload) => {
         console.log('Real-time booking change:', payload)
 
         if (payload.eventType === 'INSERT') {
-          // New booking for this vendor
           setBookings(prev => [...prev, payload.new as Booking])
         } else if (payload.eventType === 'UPDATE') {
-          // Booking updated
           setBookings(prev => prev.map(booking =>
             booking.id === payload.new.id ? payload.new as Booking : booking
           ))
         } else if (payload.eventType === 'DELETE') {
-          // Booking deleted
           setBookings(prev => prev.filter(booking => booking.id !== payload.old.id))
         }
       })
@@ -94,14 +92,9 @@ export default function VendorBookings() {
 
   const handleStatusChange = async (bookingId: string, status: Booking['status']) => {
     try {
-      const updatedBooking = await updateBooking(bookingId, { status })
-      // Real-time subscription will update the UI automatically
-      
-      // Show review link notification when booking is completed
+      await updateBooking(bookingId, { status })
       if (status === 'completed') {
-        // The review token was auto-generated in updateBooking
-        // Show a notification to the vendor
-        const guestEmail = updatedBooking.guest_email || (updatedBooking as any).profiles?.email
+        const guestEmail = (bookings.find(b => b.id === bookingId) as any)?.guest_email || (bookings.find(b => b.id === bookingId) as any)?.profiles?.email
         if (guestEmail) {
           alert('Booking completed. Review request sent to guest.')
         } else {
@@ -110,7 +103,6 @@ export default function VendorBookings() {
       }
     } catch (error) {
       console.error('Error updating booking status:', error)
-      // Revert local state on error
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
     }
   }
@@ -118,13 +110,11 @@ export default function VendorBookings() {
   const handleRejectBooking = async (bookingId: string, reason: string) => {
     try {
       await updateBooking(bookingId, { status: 'cancelled', rejection_reason: reason })
-      // Real-time subscription will update the UI automatically
       setShowRejectionModal(false)
       setBookingToReject(null)
       setRejectionReason('')
     } catch (error) {
       console.error('Error rejecting booking:', error)
-      // Revert local state on error
       setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: b.status } : b))
     }
   }
@@ -135,35 +125,83 @@ export default function VendorBookings() {
     setShowRejectionModal(true)
   }
 
-  // Filtered bookings
-  const filteredBookings = bookings.filter(b => {
-    const statusMatch = statusFilter === 'all' || b.status === statusFilter
-    const serviceMatch = serviceFilter === 'all' || b.service_id === serviceFilter
+  const handleRestoreBooking = async (bookingId: string) => {
+    try {
+      const booking = deletedBookings.find(b => b.id === bookingId) || archivedBookings.find(b => b.id === bookingId)
+      await restoreBooking(bookingId)
+      if (booking) {
+        setBookings(prev => [...prev, booking])
+      }
+      if (deletedBookings.find(b => b.id === bookingId)) {
+        setDeletedBookings(prev => prev.filter(b => b.id !== bookingId))
+      }
+      if (archivedBookings.find(b => b.id === bookingId)) {
+        setArchivedBookings(prev => prev.filter(b => b.id !== bookingId))
+      }
+    } catch (error) {
+      console.error('Error restoring booking:', error)
+    }
+  }
 
-    // Search filter
+  const loadArchived = async () => {
+    try {
+      const data = await getArchivedBookings()
+      setArchivedBookings(data.filter(b => b.vendor_id === vendorId))
+    } catch (error) {
+      console.error('Error loading archived bookings:', error)
+    }
+  }
+
+  const loadDeleted = async () => {
+    try {
+      const data = await getDeletedBookings()
+      setDeletedBookings(data.filter(b => b.vendor_id === vendorId))
+    } catch (error) {
+      console.error('Error loading deleted bookings:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (!vendorId) return
+    loadArchived()
+    loadDeleted()
+  }, [vendorId])
+
+  // Determine which bookings to display based on active tab
+  const activeBookings = bookings.filter(b => !b.archived_at && !b.deleted_at)
+  const displayBookings = (() => {
+    switch (activeTab) {
+      case 'pending':
+        return activeBookings.filter(b => b.status === 'pending')
+      case 'completed':
+        return activeBookings.filter(b => b.status === 'completed')
+      case 'archived':
+        return archivedBookings
+      case 'deleted':
+        return deletedBookings
+      default:
+        return activeBookings.filter(b => b.status === 'pending')
+    }
+  })()
+
+  const displayBookingsFiltered = displayBookings.filter(b => {
+    const serviceMatch = serviceFilter === 'all' || b.service_id === serviceFilter
     const searchMatch = !searchQuery.trim() || (() => {
       const query = searchQuery.toLowerCase()
       return (
-        // Search in service title
         b.service?.title?.toLowerCase().includes(query) ||
         b.services?.title?.toLowerCase().includes(query) ||
-        // Search in service description
         b.service?.description?.toLowerCase().includes(query) ||
-        // Search in customer name
         b.tourist_profile?.full_name?.toLowerCase().includes(query) ||
         b.profiles?.full_name?.toLowerCase().includes(query) ||
         b.guest_name?.toLowerCase().includes(query) ||
-        // Search in customer email
         b.guest_email?.toLowerCase().includes(query) ||
-        // Search in booking status
         b.status?.toLowerCase().includes(query) ||
         b.payment_status?.toLowerCase().includes(query) ||
-        // Search in booking ID
         b.id?.toLowerCase().includes(query)
       )
     })()
-
-    return statusMatch && serviceMatch && searchMatch
+    return serviceMatch && searchMatch
   })
 
   return (
@@ -186,6 +224,30 @@ export default function VendorBookings() {
             Live
           </div>
         </div>
+      </div>
+
+      {/* Category Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { key: 'pending' as const, label: 'Pending', count: bookings.filter(b => !b.archived_at && !b.deleted_at && b.status === 'pending').length, icon: '⏳', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+          { key: 'completed' as const, label: 'Completed', count: bookings.filter(b => !b.archived_at && !b.deleted_at && b.status === 'completed').length, icon: '✅', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+          { key: 'archived' as const, label: 'Archived', count: archivedBookings.length, icon: '📦', color: 'bg-gray-100 border-gray-200 text-gray-700' },
+          { key: 'deleted' as const, label: 'Deleted', count: deletedBookings.length, icon: '🗑️', color: 'bg-red-50 border-red-200 text-red-700' },
+        ].map((card) => (
+          <button
+            key={card.key}
+            onClick={() => setActiveTab(card.key)}
+            className={`min-h-[80px] p-4 rounded-xl border-2 text-left transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+              activeTab === card.key ? card.color + ' ring-2 ring-offset-1' : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">{card.icon}</span>
+              <span className={`text-2xl font-bold ${activeTab === card.key ? '' : 'text-gray-900'}`}>{card.count}</span>
+            </div>
+            <p className={`text-sm font-medium mt-1 ${activeTab === card.key ? '' : 'text-gray-600'}`}>{card.label}</p>
+          </button>
+        ))}
       </div>
 
       {/* Search & Filters Card */}
@@ -229,17 +291,17 @@ export default function VendorBookings() {
         </div>
       </div>
 
-      {/* Bookings Table */}
+       {/* Bookings Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Mobile Card View */}
         <div className="block md:hidden divide-y divide-gray-100">
-          {filteredBookings.length === 0 ? (
+          {displayBookingsFiltered.length === 0 ? (
             <div className="px-6 py-10 text-center">
-              <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+              <p className="text-sm font-medium text-gray-900">No bookings in this category</p>
               <p className="text-xs text-gray-500 mt-1">Bookings will appear here</p>
             </div>
           ) : (
-            filteredBookings.map(b => (
+            displayBookingsFiltered.map(b => (
               <div key={b.id} className="p-4">
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <div className="flex-1 min-w-0">
@@ -264,7 +326,7 @@ export default function VendorBookings() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 mt-3">
-                  {b.status === 'pending' && (
+                  {b.status === 'pending' && activeTab === 'pending' && (
                     <div className="flex gap-2">
                       <button
                         className="flex-1 min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
@@ -276,11 +338,23 @@ export default function VendorBookings() {
                       >Reject</button>
                     </div>
                   )}
-                  {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                  {b.status === 'confirmed' && b.payment_status === 'paid' && activeTab === 'pending' && (
                     <button
                       className="min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
                       onClick={() => handleStatusChange(b.id, 'completed')}
                     >Mark Complete</button>
+                  )}
+                  {activeTab === 'archived' && (
+                    <button
+                      className="min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                      onClick={() => handleRestoreBooking(b.id)}
+                    >Restore</button>
+                  )}
+                  {activeTab === 'deleted' && (
+                    <button
+                      className="min-h-[36px] px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                      onClick={() => handleRestoreBooking(b.id)}
+                    >Restore</button>
                   )}
                   <button
                     onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
@@ -306,7 +380,7 @@ export default function VendorBookings() {
               </tr>
             </thead>
             <tbody>
-              {filteredBookings.map(b => (
+              {displayBookingsFiltered.map(b => (
                 <tr
                   key={b.id}
                   className="group border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer"
@@ -329,7 +403,7 @@ export default function VendorBookings() {
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {b.status === 'pending' && (
+                      {b.status === 'pending' && activeTab === 'pending' && (
                         <>
                           <button
                             className="text-xs font-medium text-gray-900 hover:underline"
@@ -341,17 +415,29 @@ export default function VendorBookings() {
                           >Reject</button>
                         </>
                       )}
-                      {b.status === 'confirmed' && b.payment_status === 'paid' && (
+                      {b.status === 'confirmed' && b.payment_status === 'paid' && activeTab === 'pending' && (
                         <button
                           className="text-xs font-medium text-gray-900 hover:underline"
                           onClick={e => { e.stopPropagation(); handleStatusChange(b.id, 'completed') }}
                         >Complete</button>
                       )}
+                      {activeTab === 'archived' && (
+                        <button
+                          className="text-xs font-medium text-blue-600 hover:underline"
+                          onClick={e => { e.stopPropagation(); handleRestoreBooking(b.id) }}
+                        >Restore</button>
+                      )}
+                      {activeTab === 'deleted' && (
+                        <button
+                          className="text-xs font-medium text-blue-600 hover:underline"
+                          onClick={e => { e.stopPropagation(); handleRestoreBooking(b.id) }}
+                        >Restore</button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))}
-              {filteredBookings.length === 0 && (
+              {displayBookingsFiltered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center">
                     <p className="text-sm font-medium text-gray-900">No bookings yet</p>
