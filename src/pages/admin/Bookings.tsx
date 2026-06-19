@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import * as QRCode from 'qrcode'
-import { useBookings, useServiceCategories } from '../../hooks/hook';
+import { useBookings } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils';
@@ -9,7 +9,6 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { useCart } from '../../contexts/CartContext';
 import type { Booking } from '../../types';
 import { supabase } from '../../lib/supabaseClient'
-import { getServiceCategories } from '../../lib/database'
 import SearchBar from '../../components/SearchBar';
 
 function BookingActionsMenu({ booking, view, onStatusChange, onPaymentChange, onArchive, onDelete, onRestore }: {
@@ -122,7 +121,7 @@ export function Bookings() {
   const { selectedCurrency, selectedLanguage } = usePreferences()
   const [vendors, setVendors] = useState<any[]>([])
   const [allVendors, setAllVendors] = useState<any[]>([])
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories] = useState<any[]>([])
   const [selectedVendor, setSelectedVendor] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -671,7 +670,7 @@ export function Bookings() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-3">
         <div 
           onClick={() => handleStatusCardClick('all')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-blue-200'}`}
