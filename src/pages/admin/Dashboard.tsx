@@ -9,7 +9,11 @@ import {
   Store,
   ShoppingBag,
   Activity,
-  ChevronRight
+  ChevronRight,
+  DollarSign,
+  MessageSquare,
+  Calendar,
+  LucideIcon
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -35,6 +39,7 @@ interface StatCardProps {
   value: string | number
   trend?: string
   color: string
+  icon: LucideIcon
   onClick?: () => void
 }
 
@@ -46,16 +51,16 @@ interface RecentItemProps {
   onClick?: () => void
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, onClick }) => {
-  const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
-    blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-l-4 border-blue-600' },
-    green: { bg: 'bg-green-50', text: 'text-green-600', border: 'border-l-4 border-green-600' },
-    purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-l-4 border-purple-600' },
-    orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-l-4 border-orange-600' }
+const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, icon: Icon, onClick }) => {
+  const colorClasses: Record<string, { chipBg: string; chipText: string; trend: string }> = {
+    blue: { chipBg: 'bg-blue-50', chipText: 'text-blue-700', trend: 'text-blue-600' },
+    green: { chipBg: 'bg-emerald-50', chipText: 'text-emerald-700', trend: 'text-emerald-600' },
+    purple: { chipBg: 'bg-violet-50', chipText: 'text-violet-700', trend: 'text-violet-600' },
+    orange: { chipBg: 'bg-amber-50', chipText: 'text-amber-700', trend: 'text-amber-600' }
   }
 
   const colorConfig = colorClasses[color] || colorClasses.blue
-  
+
   // Adaptive font sizing based on value length
   const valueStr = String(value)
   let valueFontSize = 'text-2xl'
@@ -70,9 +75,12 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, onClick
   return (
     <button
       onClick={onClick}
-      className={`text-left bg-white rounded-xl shadow-sm ${colorConfig.border} border border-gray-200 p-4 hover:shadow-md transition-all duration-200 cursor-pointer h-full`}
+      className="text-left bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer h-full"
     >
       <div className="flex items-start justify-between gap-3 h-full flex-col">
+        <div className={`h-9 w-9 rounded-lg ${colorConfig.chipBg} ${colorConfig.chipText} flex items-center justify-center`}>
+          <Icon className="h-4 w-4" />
+        </div>
         <div className="w-full">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider line-clamp-2">{title}</p>
         </div>
@@ -82,7 +90,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, onClick
         <div className="w-full flex items-end justify-between gap-2">
           <div className="flex-1">
             {trend && (
-              <p className={`text-xs font-medium ${colorConfig.text} line-clamp-2`}>
+              <p className={`text-xs font-medium ${colorConfig.trend} line-clamp-2`}>
                 {trend}
               </p>
             )}
@@ -98,14 +106,14 @@ const RecentItem: React.FC<RecentItemProps> = ({ title, subtitle, amount, status
     switch (status) {
       case 'confirmed':
       case 'approved':
-        return { bg: 'bg-green-50', text: 'text-green-700', badge: 'bg-green-100 text-green-800' }
+        return { hoverBg: 'hover:bg-emerald-50', badge: 'bg-emerald-100 text-emerald-800' }
       case 'cancelled':
       case 'rejected':
-        return { bg: 'bg-orange-50', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' }
+        return { hoverBg: 'hover:bg-red-50', badge: 'bg-red-100 text-red-800' }
       case 'pending':
-        return { bg: 'bg-purple-50', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-800' }
+        return { hoverBg: 'hover:bg-violet-50', badge: 'bg-violet-100 text-violet-800' }
       default:
-        return { bg: 'bg-blue-50', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' }
+        return { hoverBg: 'hover:bg-blue-50', badge: 'bg-blue-100 text-blue-800' }
     }
   }
 
@@ -114,7 +122,7 @@ const RecentItem: React.FC<RecentItemProps> = ({ title, subtitle, amount, status
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 border border-gray-200 rounded-lg hover:${styles.bg} hover:border-gray-300 transition-all duration-200`}
+      className={`w-full text-left p-4 border border-gray-200 rounded-lg ${styles.hoverBg} hover:border-gray-300 transition-all duration-200`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -195,6 +203,7 @@ export default function Dashboard() {
           value={stats.totalVendors}
           trend={stats.pendingVendors > 0 ? `${stats.pendingVendors} pending approval` : 'All approved'}
           color="blue"
+          icon={Store}
           onClick={() => navigate('/admin/vendors')}
         />
 
@@ -203,6 +212,7 @@ export default function Dashboard() {
           value={stats.totalTourists}
           trend="Registered users"
           color="orange"
+          icon={Users}
           onClick={() => navigate('/admin/tourists')}
         />
 
@@ -211,6 +221,7 @@ export default function Dashboard() {
           value={stats.totalServices}
           trend={stats.pendingServices > 0 ? `${stats.pendingServices} under review` : 'All published'}
           color="green"
+          icon={ShoppingBag}
           onClick={() => navigate('/admin/services')}
         />
 
@@ -219,6 +230,7 @@ export default function Dashboard() {
           value={stats.totalBookings}
           trend="Across all services"
           color="purple"
+          icon={Activity}
           onClick={() => navigate('/admin/bookings')}
         />
 
@@ -227,6 +239,7 @@ export default function Dashboard() {
           value={formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           trend="All earnings"
           color="blue"
+          icon={DollarSign}
           onClick={() => navigate('/admin/dirt-trails-wallet')}
         />
 
@@ -235,6 +248,7 @@ export default function Dashboard() {
           value={stats.totalMessages}
           trend="Customer support"
           color="orange"
+          icon={MessageSquare}
           onClick={() => navigate('/admin/messages')}
         />
       </div>
@@ -250,7 +264,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => navigate('/admin/bookings')}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-3.5 rounded-lg transition-colors"
               title="View all bookings"
             >
               <ChevronRight className="h-4 w-4" />
@@ -296,7 +310,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => navigate('/admin/vendors')}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded-lg transition-colors"
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-3.5 rounded-lg transition-colors"
               title="View all vendors"
             >
               <ChevronRight className="h-4 w-4" />
@@ -359,16 +373,16 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => navigate('/admin/services')}
-              className="flex items-center justify-center gap-2.5 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2.5 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <ShoppingBag className="h-4 w-4" />
               Review Services
             </button>
             <button
               onClick={() => navigate('/admin/bookings')}
-              className="flex items-center justify-center gap-2.5 px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2.5 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              <Users className="h-4 w-4" />
+              <Calendar className="h-4 w-4" />
               View All Bookings
             </button>
           </div>
