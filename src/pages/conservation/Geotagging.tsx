@@ -389,7 +389,7 @@ const GeotaggingPage = () => {
               </button>
               <button
                 className="px-3 py-1 md:px-5 md:py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs md:text-base font-medium rounded-md"
-                onClick={() => { window.location.href = 'http://localhost:5174/conservation/carbon'; }}
+                onClick={() => navigate('/conservation/carbon')}
               >
                 Calculate My Carbon
               </button>

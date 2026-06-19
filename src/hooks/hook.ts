@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Service, Booking, Transaction, Flight } from '../types';
 import type { ServiceCategory, ServiceDeleteRequest } from '../lib/database';
-import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getAllVendors, getAllTransactions, getAllTransactionsForAdmin, updateVendorStatus as updateVendorStatusDB, updateBooking } from '../lib/database';
+import { getServices, createService, updateService, deleteService, getFlights, createFlight, updateFlight, deleteFlight, updateFlightStatus as updateFlightStatusDB, getServiceCategories, createServiceDeleteRequest, getServiceDeleteRequests, updateServiceDeleteRequestStatus, deleteServiceDeleteRequest, getAllBookings, getArchivedBookings, getDeletedBookings, getAllVendors, getAllTransactions, getAllTransactionsForAdmin, updateVendorStatus as updateVendorStatusDB, updateBooking, archiveBooking, deleteBooking as deleteBookingDb, restoreBooking } from '../lib/database';
 import { supabase } from '../lib/supabaseClient';
 import { commissionPercentValueToRate } from '../lib/pricingService';
 
@@ -44,6 +44,9 @@ export function useVendors() {
 
 export function useBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [archivedBookings, setArchivedBookings] = useState<Booking[]>([]);
+  const [deletedBookings, setDeletedBookings] = useState<Booking[]>([]);
+  const [view, setView] = useState<'active' | 'archived' | 'deleted'>('active');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,10 +63,77 @@ export function useBookings() {
     }
   };
 
+  const fetchArchivedBookings = async () => {
+    try {
+      const data = await getArchivedBookings();
+      setArchivedBookings(data);
+    } catch (err) {
+      console.error('Error fetching archived bookings:', err);
+    }
+  };
+
+  const fetchDeletedBookings = async () => {
+    try {
+      const data = await getDeletedBookings();
+      setDeletedBookings(data);
+    } catch (err) {
+      console.error('Error fetching deleted bookings:', err);
+    }
+  };
+
+  const handleArchiveBooking = async (bookingId: string) => {
+    try {
+      await archiveBooking(bookingId);
+      setBookings(prev => prev.filter(b => b.id !== bookingId));
+      await fetchArchivedBookings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to archive booking');
+    }
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      await deleteBookingDb(bookingId);
+      setBookings(prev => prev.filter(b => b.id !== bookingId));
+      await fetchDeletedBookings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete booking');
+    }
+  };
+
+  const handleRestoreBooking = async (bookingId: string) => {
+    try {
+      await restoreBooking(bookingId);
+      setDeletedBookings(prev => prev.filter(b => b.id !== bookingId));
+      await fetchBookings();
+      await fetchArchivedBookings();
+      await fetchDeletedBookings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restore booking');
+    }
+  };
+
+  // Auto-purge deleted bookings older than 30 days
+  useEffect(() => {
+    const purgeOldDeleted = async () => {
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const oldDeleted = deletedBookings.filter(b => b.deleted_at && new Date(b.deleted_at) < thirtyDaysAgo);
+        for (const booking of oldDeleted) {
+          await deleteBookingDb(booking.id);
+          setDeletedBookings(prev => prev.filter(b => b.id !== booking.id));
+        }
+      } catch (err) {
+        console.error('Error purging old deleted bookings:', err);
+      }
+    };
+    purgeOldDeleted();
+  }, [deletedBookings]);
+
   const updateBookingStatus = async (bookingId: string, status: Booking['status']) => {
     try {
       await updateBooking(bookingId, { status });
-      // No need to refresh - real-time subscription will update the UI
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
@@ -74,7 +144,6 @@ export function useBookings() {
       console.log('Hook: Updating payment status for booking', bookingId, 'to', paymentStatus)
       await updateBooking(bookingId, { payment_status: paymentStatus })
       console.log('Hook: Payment status updated successfully')
-      // No need to refresh - real-time subscription will update the UI
     } catch (err) {
       console.error('Hook: Error updating payment status:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -82,10 +151,10 @@ export function useBookings() {
   };
 
   useEffect(() => {
-    // Initial fetch
     fetchBookings();
+    fetchArchivedBookings();
+    fetchDeletedBookings();
 
-    // Set up real-time subscription for all bookings
     const subscription = supabase
       .channel('admin_bookings')
       .on('postgres_changes', {
@@ -95,12 +164,10 @@ export function useBookings() {
       }, async (payload) => {
         console.log('Admin real-time booking change:', payload);
         
-        if (payload.eventType === 'INSERT') {
-          // For new bookings, refetch to get complete joined data (service, profile)
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           await fetchBookings();
-        } else if (payload.eventType === 'UPDATE') {
-          // For updated bookings, also refetch to get complete joined data
-          await fetchBookings();
+          await fetchArchivedBookings();
+          await fetchDeletedBookings();
         } else if (payload.eventType === 'DELETE') {
           setBookings(prev => prev.filter(booking => booking.id !== payload.old.id));
         }
@@ -112,7 +179,21 @@ export function useBookings() {
     };
   }, []);
 
-  return { bookings, loading, error, refetch: fetchBookings, updateBookingStatus, updatePaymentStatus };
+  return { 
+    bookings, 
+    archivedBookings,
+    deletedBookings,
+    view,
+    setView,
+    loading, 
+    error, 
+    refetch: fetchBookings, 
+    updateBookingStatus, 
+    updatePaymentStatus,
+    archiveBooking: handleArchiveBooking,
+    deleteBooking: handleDeleteBooking,
+    restoreBooking: handleRestoreBooking,
+  };
 }
 
 export function useTransactions() {

@@ -521,6 +521,119 @@ export async function getAllBookings(): Promise<Booking[]> {
   return transformedData
 }
 
+export async function getArchivedBookings(): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        description,
+        vendor_id,
+        category_id,
+        service_categories (
+          name
+        ),
+        vendors (
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .not('archived_at', 'is', null)
+    .is('deleted_at', null)
+    .order('archived_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching archived bookings:', error)
+    throw error
+  }
+
+  const transformedData = (data || []).map(booking => {
+    const { services, profiles, ...rest } = booking;
+    return {
+      ...rest,
+      service: services ? {
+        id: services.id,
+        title: services.title,
+        description: services.description,
+        vendor_id: services.vendor_id,
+        category_id: services.category_id,
+        service_categories: services.service_categories,
+        vendors: services.vendors
+      } : undefined,
+      tourist_profile: profiles ? {
+        id: profiles.id,
+        full_name: profiles.full_name,
+        email: profiles.email
+      } : undefined
+    };
+  });
+
+  return transformedData
+}
+
+export async function getDeletedBookings(): Promise<Booking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        description,
+        vendor_id,
+        category_id,
+        service_categories (
+          name
+        ),
+        vendors (
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching deleted bookings:', error)
+    throw error
+  }
+
+  const transformedData = (data || []).map(booking => {
+    const { services, profiles, ...rest } = booking;
+    return {
+      ...rest,
+      service: services ? {
+        id: services.id,
+        title: services.title,
+        description: services.description,
+        vendor_id: services.vendor_id,
+        category_id: services.category_id,
+        service_categories: services.service_categories,
+        vendors: services.vendors
+      } : undefined,
+      tourist_profile: profiles ? {
+        id: profiles.id,
+        full_name: profiles.full_name,
+        email: profiles.email
+      } : undefined
+    };
+  });
+
+  return transformedData
+}
+
 export async function updateBooking(id: string, updates: Partial<Pick<Booking, 'status' | 'payment_status'>> & { rejection_reason?: string | null }): Promise<Booking> {
   try {
     console.log('DB: updateBooking called with id:', id, 'updates:', updates)
@@ -752,4 +865,85 @@ export async function cancelPendingBooking(bookingId: string): Promise<void> {
   if (!(data as { success?: boolean })?.success) {
     throw new Error((data as { error?: string })?.error || 'Failed to cancel booking')
   }
+}
+
+export async function archiveBooking(bookingId: string): Promise<Booking> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        vendors (
+          id,
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .single()
+
+  if (error) throw error
+  return data as Booking
+}
+
+export async function deleteBooking(bookingId: string): Promise<Booking> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        vendors (
+          id,
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .single()
+
+  if (error) throw error
+  return data as Booking
+}
+
+export async function restoreBooking(bookingId: string): Promise<Booking> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ archived_at: null, deleted_at: null })
+    .eq('id', bookingId)
+    .select(`
+      *,
+      services (
+        id,
+        title,
+        vendors (
+          id,
+          business_name
+        )
+      ),
+      profiles (
+        id,
+        full_name,
+        email
+      )
+    `)
+    .single()
+
+  if (error) throw error
+  return data as Booking
 }
