@@ -18,6 +18,8 @@ export interface Booking {
   special_requests?: string;
   created_at: string;
   updated_at: string;
+  archived_at?: string | null;
+  deleted_at?: string | null;
   service?: Service;
   services?: {
     title: string;

@@ -9,7 +9,6 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { useCart } from '../../contexts/CartContext';
 import type { Booking } from '../../types';
 import { supabase } from '../../lib/supabaseClient'
-import { getServiceCategories } from '../../lib/database'
 import SearchBar from '../../components/SearchBar';
 
 function BookingActionsMenu({ booking, view, onStatusChange, onPaymentChange, onArchive, onDelete, onRestore }: {
@@ -120,9 +119,9 @@ export function Bookings() {
   const { bookings, archivedBookings, deletedBookings, view, setView, loading, error, updateBookingStatus, updatePaymentStatus, archiveBooking, deleteBooking, restoreBooking } = useBookings();
   const { state: cartState } = useCart();
   const { selectedCurrency, selectedLanguage } = usePreferences()
+  const { categories } = useServiceCategories()
   const [vendors, setVendors] = useState<any[]>([])
   const [allVendors, setAllVendors] = useState<any[]>([])
-  const [categories, setCategories] = useState<any[]>([])
   const [selectedVendor, setSelectedVendor] = useState<string>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -141,7 +140,6 @@ export function Bookings() {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all')
   const [selectedVendorFilter, setSelectedVendorFilter] = useState<string>('all')
   const [selectedAttendanceFilter, setSelectedAttendanceFilter] = useState<string>('all')
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
 
   // Helper function to filter bookings based on search query
   const filterBookingsBySearch = (bookingsToFilter: Booking[]): Booking[] => {
@@ -358,6 +356,8 @@ export function Bookings() {
     setFilteredBookings(searchFiltered)
   }, [searchQuery, bookings])
 
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -388,7 +388,7 @@ export function Bookings() {
     setView('active')
     setSelectedStatusFilter(status)
     if (status === 'all') {
-      setFilteredBookings(bookings.filter(b => !b.archived_at && !b.deleted_at))
+      setFilteredBookings(null)
     } else {
       const filtered = bookings.filter(b => b.status === status && !b.archived_at && !b.deleted_at)
       setFilteredBookings(filtered)
@@ -643,136 +643,106 @@ export function Bookings() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-        <button
-          onClick={async () => {
-            if (bookings.length > 0) {
-              const testBooking = bookings.find(b => b.status === 'confirmed' && b.payment_status === 'pending');
-              if (testBooking) {
-                console.log('Testing payment status update for booking:', testBooking.id);
-                try {
-                  await updatePaymentStatus(testBooking.id, 'paid');
-                  alert('Test payment status update completed! Check console for logs.');
-                } catch (err) {
-                  console.error('Test failed:', err);
-                  alert('Test failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-                }
-              } else {
-                alert('No confirmed bookings with pending payment found for testing');
-              }
-            }
-          }}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-        >
-          Test Payment Update
-        </button>
-      </div>
+      {/* View Tabs + Stats */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setView('active')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              view === 'active'
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setView('archived')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              view === 'archived'
+                ? 'border-amber-600 text-amber-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Archived
+          </button>
+          <button
+            onClick={() => setView('deleted')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              view === 'deleted'
+                ? 'border-red-600 text-red-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Deleted
+          </button>
+        </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
-        <div 
-          onClick={() => handleStatusCardClick('all')}
-          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 border-l-4 border-l-blue-500'}`}
-        >
-          <p className="text-xs font-medium text-gray-500">Total Bookings</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
-          <p className="text-xs text-gray-400 mt-1">All time</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+          <div 
+            onClick={() => handleStatusCardClick('all')}
+            className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 border-l-4 border-l-blue-500'}`}
+          >
+            <p className="text-xs font-medium text-gray-500">Total Bookings</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
+            <p className="text-xs text-gray-400 mt-1">All time</p>
+          </div>
+          <div 
+            onClick={() => handleStatusCardClick('pending')}
+            className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'pending' ? 'border-amber-500 ring-2 ring-amber-100' : 'border-gray-200 border-l-4 border-l-amber-500'}`}
+          >
+            <p className="text-xs font-medium text-gray-500">Pending</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pending}</p>
+            <p className="text-xs text-gray-400 mt-1">Awaiting</p>
+          </div>
+          <div 
+            onClick={() => handleStatusCardClick('confirmed')}
+            className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'confirmed' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 border-l-4 border-l-blue-500'}`}
+          >
+            <p className="text-xs font-medium text-gray-500">Confirmed</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.confirmed}</p>
+            <p className="text-xs text-gray-400 mt-1">Active</p>
+          </div>
+          <div 
+            onClick={() => handleStatusCardClick('completed')}
+            className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'completed' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-gray-200 border-l-4 border-l-emerald-500'}`}
+          >
+            <p className="text-xs font-medium text-gray-500">Completed</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completed}</p>
+            <p className="text-xs text-gray-400 mt-1">Done</p>
+          </div>
+          <div 
+            onClick={() => handleStatusCardClick('cancelled')}
+            className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'cancelled' ? 'border-red-500 ring-2 ring-red-100' : 'border-gray-200 border-l-4 border-l-red-500'}`}
+          >
+            <p className="text-xs font-medium text-gray-500">Cancelled</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
+            <p className="text-xs text-gray-400 mt-1">Dropped</p>
+          </div>
+          <div 
+            onClick={() => setView('archived')}
+            className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-purple-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          >
+            <p className="text-xs font-medium text-gray-500">Archived</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.archived}</p>
+            <p className="text-xs text-gray-400 mt-1">Stored</p>
+          </div>
+          <div 
+            onClick={() => setView('deleted')}
+            className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-gray-500 p-4 hover:shadow-sm transition-all cursor-pointer"
+          >
+            <p className="text-xs font-medium text-gray-500">Deleted</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.deleted}</p>
+            <p className="text-xs text-gray-400 mt-1">30-day retention</p>
+          </div>
         </div>
-        <div 
-          onClick={() => handleStatusCardClick('pending')}
-          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'pending' ? 'border-amber-500 ring-2 ring-amber-100' : 'border-gray-200 border-l-4 border-l-amber-500'}`}
-        >
-          <p className="text-xs font-medium text-gray-500">Pending</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pending}</p>
-          <p className="text-xs text-gray-400 mt-1">Awaiting</p>
-        </div>
-        <div 
-          onClick={() => handleStatusCardClick('confirmed')}
-          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'confirmed' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 border-l-4 border-l-blue-500'}`}
-        >
-          <p className="text-xs font-medium text-gray-500">Confirmed</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.confirmed}</p>
-          <p className="text-xs text-gray-400 mt-1">Active</p>
-        </div>
-        <div 
-          onClick={() => handleStatusCardClick('completed')}
-          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'completed' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-gray-200 border-l-4 border-l-emerald-500'}`}
-        >
-          <p className="text-xs font-medium text-gray-500">Completed</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completed}</p>
-          <p className="text-xs text-gray-400 mt-1">Done</p>
-        </div>
-        <div 
-          onClick={() => handleStatusCardClick('cancelled')}
-          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'cancelled' ? 'border-red-500 ring-2 ring-red-100' : 'border-gray-200 border-l-4 border-l-red-500'}`}
-        >
-          <p className="text-xs font-medium text-gray-500">Cancelled</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
-          <p className="text-xs text-gray-400 mt-1">Dropped</p>
-        </div>
-        <div 
-          onClick={() => setView('archived')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-purple-500 p-4 hover:shadow-sm transition-all cursor-pointer"
-        >
-          <p className="text-xs font-medium text-gray-500">Archived</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.archived}</p>
-          <p className="text-xs text-gray-400 mt-1">Stored</p>
-        </div>
-        <div 
-          onClick={() => setView('deleted')}
-          className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-gray-500 p-4 hover:shadow-sm transition-all cursor-pointer"
-        >
-          <p className="text-xs font-medium text-gray-500">Deleted</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.deleted}</p>
-          <p className="text-xs text-gray-400 mt-1">30-day retention</p>
-        </div>
-      </div>
-
-      {/* View Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setView('active')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            view === 'active'
-              ? 'border-blue-600 text-blue-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Active
-        </button>
-        <button
-          onClick={() => setView('archived')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            view === 'archived'
-              ? 'border-amber-600 text-amber-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Archived
-        </button>
-        <button
-          onClick={() => setView('deleted')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            view === 'deleted'
-              ? 'border-red-600 text-red-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Deleted
-        </button>
       </div>
 
       {/* Bookings Table */}
       <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Recent Bookings</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Latest booking activity across all vendors</p>
-          </div>
-          
-          {/* Mobile Card View */}
+        {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
-                {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings.filter(b => !b.archived_at && !b.deleted_at))).map((booking) => (
+            {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings)).map((booking) => (
               <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
@@ -833,65 +803,36 @@ export function Bookings() {
                       <option value="refunded">Refunded</option>
                     </select>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setShowBookingDetails(true);
-                    }}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded text-sm font-medium hover:bg-blue-700"
-                  >
-                    View Details
-                  </button>
-                  {view === 'active' && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => archiveBooking(booking.id)}
-                        className="flex-1 px-3 py-2 bg-amber-600 text-white rounded text-xs font-medium hover:bg-amber-700"
-                      >
-                        Archive
-                      </button>
-                      <button
-                        onClick={() => deleteBooking(booking.id)}
-                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                  {view === 'archived' && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => restoreBooking(booking.id)}
-                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
-                      >
-                        Restore
-                      </button>
-                      <button
-                        onClick={() => deleteBooking(booking.id)}
-                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                  {view === 'deleted' && (
-                    <button
-                      onClick={() => restoreBooking(booking.id)}
-                      className="w-full mt-2 px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
-                    >
-                      Restore
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                   <button
+                     onClick={() => {
+                       setSelectedBooking(booking);
+                       setShowBookingDetails(true);
+                     }}
+                     className="w-full bg-blue-600 text-white py-2 px-4 rounded text-sm font-medium hover:bg-blue-700"
+                   >
+                     View Details
+                   </button>
+                   <div className="mt-2">
+                     <BookingActionsMenu
+                       booking={booking}
+                       view={view}
+                       onStatusChange={updateBookingStatus}
+                       onPaymentChange={updatePaymentStatus}
+                       onArchive={archiveBooking}
+                       onDelete={deleteBooking}
+                       onRestore={restoreBooking}
+                     />
+                   </div>
+                 </div>
+               </div>
+             ))}
+           </div>
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
+           {/* Desktop Table View */}
+           <div className="hidden md:block overflow-x-auto">
+             <table className="min-w-full divide-y divide-gray-200">
+               <thead className="bg-gray-50">
+                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Booking ID
                   </th>
@@ -920,7 +861,7 @@ export function Bookings() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-            {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings.filter(b => !b.archived_at && !b.deleted_at))).map((booking) => (
+                {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings)).map((booking) => (
                   <tr 
                     key={booking.id} 
                     className="hover:bg-gray-50 cursor-pointer"
@@ -975,17 +916,18 @@ export function Bookings() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={booking.payment_status} variant="small" />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <BookingActionsMenu
-                        booking={booking}
-                        view={view}
-                        onStatusChange={updateBookingStatus}
-                        onPaymentChange={updatePaymentStatus}
-                        onArchive={archiveBooking}
-                        onDelete={deleteBooking}
-                        onRestore={restoreBooking}
-                      />
-                    </td>
+                    
+                     <td className="px-6 py-4 whitespace-nowrap text-sm">
+                       <BookingActionsMenu
+                         booking={booking}
+                         view={view}
+                         onStatusChange={updateBookingStatus}
+                         onPaymentChange={updatePaymentStatus}
+                         onArchive={archiveBooking}
+                         onDelete={deleteBooking}
+                         onRestore={restoreBooking}
+                       />
+                     </td>
                   </tr>
                 ))}
               </tbody>
