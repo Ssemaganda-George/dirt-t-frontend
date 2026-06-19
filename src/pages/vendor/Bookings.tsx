@@ -27,10 +27,9 @@ export default function VendorBookings() {
   const [bookingToReject, setBookingToReject] = useState<Booking | null>(null)
   const [rejectionReason, setRejectionReason] = useState<string>('')
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'completed' | 'archived' | 'deleted'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'completed' | 'rejected' | 'archived' | 'deleted'>('all')
   const [archivedBookings, setArchivedBookings] = useState<Booking[]>([])
   const [deletedBookings, setDeletedBookings] = useState<Booking[]>([])
 
@@ -177,6 +176,8 @@ export default function VendorBookings() {
         return activeBookings.filter(b => b.status === 'pending')
       case 'completed':
         return activeBookings.filter(b => b.status === 'completed')
+      case 'rejected':
+        return activeBookings.filter(b => b.status === 'cancelled')
       case 'archived':
         return archivedBookings
       case 'deleted':
@@ -229,26 +230,26 @@ export default function VendorBookings() {
       </div>
 
       {/* Category Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {[
-          { key: 'all' as const, label: 'All', count: activeBookings.length + archivedBookings.length + deletedBookings.length, icon: '📋', color: 'bg-gray-50 border-gray-200 text-gray-700' },
-          { key: 'pending' as const, label: 'Pending', count: activeBookings.filter(b => b.status === 'pending').length, icon: '⏳', color: 'bg-amber-50 border-amber-200 text-amber-700' },
-          { key: 'completed' as const, label: 'Completed', count: activeBookings.filter(b => b.status === 'completed').length, icon: '✅', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-          { key: 'archived' as const, label: 'Archived', count: archivedBookings.length, icon: '📦', color: 'bg-gray-100 border-gray-200 text-gray-700' },
-          { key: 'deleted' as const, label: 'Deleted', count: deletedBookings.length, icon: '🗑️', color: 'bg-red-50 border-red-200 text-red-700' },
+          { key: 'all' as const, label: 'All', count: activeBookings.length + archivedBookings.length + deletedBookings.length },
+          { key: 'pending' as const, label: 'Pending', count: activeBookings.filter(b => b.status === 'pending').length },
+          { key: 'completed' as const, label: 'Completed', count: activeBookings.filter(b => b.status === 'completed').length },
+          { key: 'rejected' as const, label: 'Rejected', count: activeBookings.filter(b => b.status === 'cancelled').length },
+          { key: 'archived' as const, label: 'Archived', count: archivedBookings.length },
+          { key: 'deleted' as const, label: 'Deleted', count: deletedBookings.length },
         ].map((card) => (
           <button
             key={card.key}
             onClick={() => setActiveTab(card.key)}
-            className={`min-h-[80px] p-4 rounded-xl border-2 text-left transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
-              activeTab === card.key ? card.color + ' ring-2 ring-offset-1' : 'bg-white border-gray-200 hover:border-gray-300'
+            className={`min-h-[48px] px-4 py-2.5 rounded-lg border text-sm font-medium transition-all hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
+              activeTab === card.key
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-2xl">{card.icon}</span>
-              <span className={`text-2xl font-bold ${activeTab === card.key ? '' : 'text-gray-900'}`}>{card.count}</span>
-            </div>
-            <p className={`text-sm font-medium mt-1 ${activeTab === card.key ? '' : 'text-gray-600'}`}>{card.label}</p>
+            <span className="font-semibold">{card.label}</span>
+            <span className={`ml-2 ${activeTab === card.key ? 'text-gray-200' : 'text-gray-500'}`}>({card.count})</span>
           </button>
         ))}
       </div>
@@ -269,17 +270,6 @@ export default function VendorBookings() {
           </div>
           {/* Filter Row */}
           <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="flex-1 min-h-[40px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="completed">Completed</option>
-            </select>
             <select
               value={serviceFilter}
               onChange={e => setServiceFilter(e.target.value)}

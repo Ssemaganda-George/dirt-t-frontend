@@ -380,17 +380,19 @@ export function Bookings() {
     confirmed: bookings.filter(b => b.status === 'confirmed' && !b.archived_at && !b.deleted_at).length,
     completed: bookings.filter(b => b.status === 'completed' && !b.archived_at && !b.deleted_at).length,
     cancelled: bookings.filter(b => b.status === 'cancelled' && !b.archived_at && !b.deleted_at).length,
+    rejected: bookings.filter(b => b.status === 'cancelled' && !b.archived_at && !b.deleted_at).length,
     archived: archivedBookings.length,
     deleted: deletedBookings.length,
   };
 
   const handleStatusCardClick = (status: string) => {
     setView('active')
-    setSelectedStatusFilter(status)
-    if (status === 'all') {
+    const filterStatus = status === 'rejected' ? 'cancelled' : status
+    setSelectedStatusFilter(filterStatus)
+    if (filterStatus === 'all') {
       setFilteredBookings(bookings.filter(b => !b.archived_at && !b.deleted_at))
     } else {
-      const filtered = bookings.filter(b => b.status === status && !b.archived_at && !b.deleted_at)
+      const filtered = bookings.filter(b => b.status === filterStatus && !b.archived_at && !b.deleted_at)
       setFilteredBookings(filtered)
     }
   }
@@ -669,7 +671,7 @@ export function Bookings() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
         <div 
           onClick={() => handleStatusCardClick('all')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-200 border-l-4 border-l-blue-500'}`}
@@ -709,6 +711,14 @@ export function Bookings() {
           <p className="text-xs font-medium text-gray-500">Cancelled</p>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
           <p className="text-xs text-gray-400 mt-1">Dropped</p>
+        </div>
+        <div 
+          onClick={() => handleStatusCardClick('rejected')}
+          className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'rejected' ? 'border-red-500 ring-2 ring-red-100' : 'border-gray-200 border-l-4 border-l-red-500'}`}
+        >
+          <p className="text-xs font-medium text-gray-500">Rejected</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.rejected}</p>
+          <p className="text-xs text-gray-400 mt-1">Rejected</p>
         </div>
         <div 
           onClick={() => setView('archived')}
