@@ -30,7 +30,7 @@ export default function VendorBookings() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [serviceFilter, setServiceFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<'pending' | 'completed' | 'archived' | 'deleted'>('pending')
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'completed' | 'archived' | 'deleted'>('all')
   const [archivedBookings, setArchivedBookings] = useState<Booking[]>([])
   const [deletedBookings, setDeletedBookings] = useState<Booking[]>([])
 
@@ -171,6 +171,8 @@ export default function VendorBookings() {
   const activeBookings = bookings.filter(b => !b.archived_at && !b.deleted_at)
   const displayBookings = (() => {
     switch (activeTab) {
+      case 'all':
+        return [...activeBookings, ...archivedBookings, ...deletedBookings]
       case 'pending':
         return activeBookings.filter(b => b.status === 'pending')
       case 'completed':
@@ -227,10 +229,11 @@ export default function VendorBookings() {
       </div>
 
       {/* Category Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { key: 'pending' as const, label: 'Pending', count: bookings.filter(b => !b.archived_at && !b.deleted_at && b.status === 'pending').length, icon: '⏳', color: 'bg-amber-50 border-amber-200 text-amber-700' },
-          { key: 'completed' as const, label: 'Completed', count: bookings.filter(b => !b.archived_at && !b.deleted_at && b.status === 'completed').length, icon: '✅', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+          { key: 'all' as const, label: 'All', count: activeBookings.length + archivedBookings.length + deletedBookings.length, icon: '📋', color: 'bg-gray-50 border-gray-200 text-gray-700' },
+          { key: 'pending' as const, label: 'Pending', count: activeBookings.filter(b => b.status === 'pending').length, icon: '⏳', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+          { key: 'completed' as const, label: 'Completed', count: activeBookings.filter(b => b.status === 'completed').length, icon: '✅', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
           { key: 'archived' as const, label: 'Archived', count: archivedBookings.length, icon: '📦', color: 'bg-gray-100 border-gray-200 text-gray-700' },
           { key: 'deleted' as const, label: 'Deleted', count: deletedBookings.length, icon: '🗑️', color: 'bg-red-50 border-red-200 text-red-700' },
         ].map((card) => (
