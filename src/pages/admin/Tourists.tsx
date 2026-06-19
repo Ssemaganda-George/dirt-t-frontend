@@ -470,15 +470,15 @@ export default function Tourists() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Tourists</h1>
-            <p className="mt-1 text-sm text-gray-600">
+            <h1 className="text-2xl font-semibold text-slate-900">Tourists</h1>
+            <p className="mt-1 text-sm text-slate-600">
               Manage tourists from the database - review profiles and track registrations
             </p>
           </div>
           <button
             onClick={fetchUsers}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -500,7 +500,7 @@ export default function Tourists() {
             className={`px-4 py-2 rounded-lg font-medium text-sm ${
               filter === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             All Tourists ({users.length})
@@ -510,7 +510,7 @@ export default function Tourists() {
             className={`px-4 py-2 rounded-lg font-medium text-sm ${
               filter === 'active'
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
             }`}
           >
             Active ({users.filter(u => u.profile.status === 'active' || !u.profile.status).length})
@@ -529,10 +529,10 @@ export default function Tourists() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <ul className="divide-y divide-gray-200">
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <ul className="divide-y divide-slate-200">
           {filteredUsers.map((user) => (
-            <li key={user.profile.id} className={`${user.profile.status === 'pending' ? 'bg-yellow-50 border-l-4 border-yellow-400' : ''}`}>
+            <li key={user.profile.id} className={`${user.profile.status === 'pending' ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -546,14 +546,14 @@ export default function Tourists() {
                       </div>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-slate-900">
                         {user.profile.full_name || 'Unnamed User'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-slate-500">
                         {user.profile.email}
                       </div>
                       {user.vendor && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-slate-500">
                           {user.vendor.business_name}
                         </div>
                       )}
@@ -561,10 +561,10 @@ export default function Tourists() {
                   </div>
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
-                      <div className="text-sm text-gray-900 capitalize">
+                      <div className="text-sm text-slate-900 capitalize">
                         {user.profile.role}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-slate-500">
                         {formatDate(user.profile.created_at)}
                       </div>
                     </div>
@@ -579,7 +579,7 @@ export default function Tourists() {
                             ? 'bg-red-100 text-red-800'
                             : user.profile.status === 'suspended'
                             ? 'bg-orange-100 text-orange-800'
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-slate-100 text-slate-800'
                         }`}>
                           {user.profile.status === 'pending' ? '⏳ PENDING APPROVAL' : (user.profile.status || 'Unknown').toUpperCase()}
                         </span>
@@ -686,9 +686,9 @@ export default function Tourists() {
 
       {filteredUsers.length === 0 && (
         <div className="text-center py-12">
-          <User className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <User className="mx-auto h-12 w-12 text-slate-400" />
+          <h3 className="mt-2 text-sm font-medium text-slate-900">No users found</h3>
+          <p className="mt-1 text-sm text-slate-500">
             {filter === 'all' ? 'No users have registered yet.' : `No users match the "${filter}" filter.`}
           </p>
         </div>
@@ -700,10 +700,10 @@ export default function Tourists() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900">User Details</h3>
+                <h3 className="text-sm font-semibold text-slate-900">User Details</h3>
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -712,8 +712,8 @@ export default function Tourists() {
               <div className="space-y-6">
                 {/* Profile Information */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Profile Information</h4>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <h4 className="font-medium text-slate-900 mb-3">Profile Information</h4>
+                  <div className="bg-slate-50 rounded-lg p-4 space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedUser.profile.full_name || 'Not provided'}</p>
                     <p><span className="font-medium">Email:</span> {selectedUser.profile.email}</p>
                     <p><span className="font-medium">Phone:</span> {selectedUser.tourist?.phone || selectedUser.profile.phone || 'Not provided'}</p>
@@ -748,7 +748,7 @@ export default function Tourists() {
 
                 {/* Actions */}
                 <div className="pt-4 border-t">
-                  <h4 className="font-medium text-gray-900 mb-3">Actions</h4>
+                  <h4 className="font-medium text-slate-900 mb-3">Actions</h4>
                   <div className="space-y-3">
                     {/* Pending Vendor Actions */}
                     {selectedUser.profile.status === 'pending' && selectedUser.profile.role === 'vendor' && (
@@ -817,42 +817,42 @@ export default function Tourists() {
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900">Confirm Suspension</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Confirm Suspension</h3>
                 <button
                   onClick={() => setShowSuspendModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center">
                     <Ban className="h-5 w-5 text-red-600 mr-2" />
-                    <span className="text-gray-900 font-medium">Suspension Warning</span>
+                    <span className="text-slate-900 font-medium">Suspension Warning</span>
                   </div>
-                  <p className="text-gray-700 text-sm mt-1">
+                  <p className="text-slate-700 text-sm mt-1">
                     You are about to suspend <strong>{suspendTarget.name}</strong>.
                     {suspendTarget.type === 'vendor' ? ' This vendor will not be able to access their account or services.' : ' This user will not be able to access their account.'}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Suspension Period
                   </label>
                   <select
                     value={suspendPeriod}
                     onChange={(e) => setSuspendPeriod(e.target.value as typeof suspendPeriod)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="1day">1 Day</option>
                     <option value="1week">1 Week</option>
                     <option value="1month">1 Month</option>
                     <option value="permanent">Permanent</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     {suspendPeriod === 'permanent' ? 'Account will remain suspended until manually unsuspended by an admin.' : `Account will be automatically unsuspended after the selected period.`}
                   </p>
                 </div>
@@ -860,7 +860,7 @@ export default function Tourists() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     onClick={() => setShowSuspendModal(false)}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                    className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     Cancel
                   </button>
@@ -884,7 +884,7 @@ export default function Tourists() {
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900">
+                <h3 className="text-sm font-semibold text-slate-900">
                   {confirmAction.type === 'approve' ?
                     (users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ?
                       (confirmAction.target.type === 'vendor' ? 'Confirm Reapproval' : 'Confirm Reactivation') :
@@ -895,14 +895,14 @@ export default function Tourists() {
                 </h3>
                 <button
                   onClick={() => setShowConfirmModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                   <div className="flex items-center">
                     {confirmAction.type === 'approve' ? (
                       <Check className="h-5 w-5 text-green-600 mr-2" />
@@ -911,7 +911,7 @@ export default function Tourists() {
                     ) : (
                       <Trash2 className="h-5 w-5 text-red-600 mr-2" />
                     )}
-                    <span className="text-gray-900 font-medium">
+                    <span className="text-slate-900 font-medium">
                       {confirmAction.type === 'approve' ?
                         (confirmAction.target.type === 'vendor' ?
                           `Reapproval Confirmation` :
@@ -921,7 +921,7 @@ export default function Tourists() {
                        'Deletion Confirmation'}
                     </span>
                   </div>
-                  <p className="text-gray-700 text-sm mt-1">
+                  <p className="text-slate-700 text-sm mt-1">
                     {confirmAction.type === 'approve' ?
                       (confirmAction.target.type === 'vendor' ?
                         `Are you sure you want to ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'reapprove' : 'approve'} ${confirmAction.target.name}? ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'This will restore their vendor privileges.' : 'This will grant them full vendor privileges.'}` :
@@ -937,7 +937,7 @@ export default function Tourists() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     onClick={() => setShowConfirmModal(false)}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                    className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     Cancel
                   </button>

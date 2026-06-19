@@ -120,7 +120,7 @@ export default function VendorPerformanceReport() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Performance Report</h1>
-          <p className="text-sm text-gray-600">Overview of your business performance — key metrics and trends to help you act.</p>
+          <p className="text-sm text-slate-600">Overview of your business performance — key metrics and trends to help you act.</p>
         </div>
         <div>
           <button onClick={exportCSV} className="bg-sky-600 text-white px-3 py-1 rounded">Export CSV</button>
@@ -129,21 +129,21 @@ export default function VendorPerformanceReport() {
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-gray-500">Services</div>
+          <div className="text-sm text-slate-500">Services</div>
           <div className="text-xl font-bold">{stats?.servicesCount}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-gray-500">Bookings</div>
+          <div className="text-sm text-slate-500">Bookings</div>
           <div className="text-xl font-bold">{stats?.totalBookings}</div>
-          <div className="text-xs text-gray-500">Paid: {stats?.paidBookings} • Pending: {stats?.pendingBookings}</div>
+          <div className="text-xs text-slate-500">Paid: {stats?.paidBookings} • Pending: {stats?.pendingBookings}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-gray-500">Revenue</div>
+          <div className="text-sm text-slate-500">Revenue</div>
           <div className="text-xl font-bold">{formatCurrency(stats?.totalRevenue)}</div>
-          <div className="text-xs text-gray-500">Transactions: {stats?.totalTransactions}</div>
+          <div className="text-xs text-slate-500">Transactions: {stats?.totalTransactions}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-gray-500">Avg. Booking Value</div>
+          <div className="text-sm text-slate-500">Avg. Booking Value</div>
           <div className="text-xl font-bold">{formatCurrency(averageBookingValue)}</div>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function VendorPerformanceReport() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-sm font-semibold mb-2">Bookings — last 6 months</h2>
-          <div className="flex space-x-2 text-sm text-gray-600 mb-2">
+          <div className="flex space-x-2 text-sm text-slate-600 mb-2">
             {stats.months.map((m: string) => (
               <div key={m} className="flex-1 text-center">
                 <div className="text-lg font-medium">{stats.bookingsByMonth[m] || 0}</div>
@@ -159,7 +159,7 @@ export default function VendorPerformanceReport() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-500">Trend shows bookings created in the last 6 months. Use this to spot seasonality.</p>
+          <p className="text-xs text-slate-500">Trend shows bookings created in the last 6 months. Use this to spot seasonality.</p>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow">
@@ -168,9 +168,9 @@ export default function VendorPerformanceReport() {
             {stats?.topServices?.length ? stats.topServices.slice(0,8).map((s: any) => (
               <div key={s.id} className="flex justify-between text-sm">
                 <div className="truncate pr-4">{s.title}</div>
-                <div className="text-gray-500">{s.bookings}</div>
+                <div className="text-slate-500">{s.bookings}</div>
               </div>
-            )) : <div className="text-sm text-gray-500">No data</div>}
+            )) : <div className="text-sm text-slate-500">No data</div>}
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function VendorPerformanceReport() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-500">
+              <tr className="text-left text-xs text-slate-500">
                 <th className="py-2">Booking</th>
                 <th className="py-2">Service</th>
                 <th className="py-2">Customer</th>
@@ -199,7 +199,7 @@ export default function VendorPerformanceReport() {
                   <td className="py-2">{b.status || b.booking_status || '—'}</td>
                   <td className="py-2">{new Date(b.created_at || b.createdAt || 0).toLocaleDateString()}</td>
                 </tr>
-              )) : <tr><td colSpan={6} className="py-4 text-gray-500">No recent bookings</td></tr>}
+              )) : <tr><td colSpan={6} className="py-4 text-slate-500">No recent bookings</td></tr>}
             </tbody>
           </table>
         </div>
@@ -207,7 +207,7 @@ export default function VendorPerformanceReport() {
 
       <div className="bg-white p-4 rounded-lg shadow">
         <h2 className="text-sm font-semibold mb-2">Actionable insights</h2>
-        <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
+        <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
           {stats.totalBookings === 0 && <li>No bookings yet — promote your services on social channels and review pricing.</li>}
           {stats.totalBookings > 0 && (stats.paidBookings / Math.max(1, stats.totalBookings) < 0.6) && <li>Paid conversion is low. Consider offering flexible payment options or clearer cancellation terms.</li>}
           {stats.topServices && stats.topServices.length > 0 && <li>Promote your top service <strong>{stats.topServices[0].title}</strong> — it drives most bookings.</li>}

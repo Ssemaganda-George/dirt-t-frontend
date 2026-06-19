@@ -66,7 +66,7 @@ export default function FlaggedBookings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Flagged Bookings</h1>
-          <p className="text-sm text-gray-600">Bookings flagged for payment verification or suspected unpaid payments.</p>
+          <p className="text-sm text-slate-600">Bookings flagged for payment verification or suspected unpaid payments.</p>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export default function FlaggedBookings() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-500">
+              <tr className="text-left text-xs text-slate-500">
                 <th className="py-2">Booking</th>
                 <th className="py-2">Service</th>
                 <th className="py-2">Customer</th>
@@ -102,7 +102,7 @@ export default function FlaggedBookings() {
                     </div>
                   </td>
                 </tr>
-              )) : <tr><td colSpan={7} className="py-4 text-gray-500">No flagged bookings</td></tr>}
+              )) : <tr><td colSpan={7} className="py-4 text-slate-500">No flagged bookings</td></tr>}
             </tbody>
           </table>
         </div>

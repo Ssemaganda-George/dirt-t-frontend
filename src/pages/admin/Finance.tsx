@@ -362,9 +362,9 @@ export function Finance() {
       completed: 'bg-emerald-50 text-emerald-700',
       rejected: 'bg-red-50 text-red-700',
       pending: 'bg-amber-50 text-amber-700',
-      failed: 'bg-gray-100 text-gray-600',
+      failed: 'bg-slate-100 text-slate-600',
     };
-    const cls = styles[status] || 'bg-gray-100 text-gray-600';
+    const cls = styles[status] || 'bg-slate-100 text-slate-600';
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${cls}`}>
         {status}
@@ -379,7 +379,7 @@ export function Finance() {
         <div className="flex items-center gap-2 min-w-[220px]">
           <label className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
             transaction.receipt_url 
-              ? 'border border-gray-200 text-gray-600 hover:bg-gray-50' 
+              ? 'border border-slate-200 text-slate-600 hover:bg-slate-50' 
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}>
             📎 {transaction.receipt_url ? 'Replace' : 'Upload Receipt'}
@@ -417,7 +417,7 @@ export function Finance() {
       return (
         <div className="space-y-2 min-w-[180px]">
           {transaction.payment_notes && (
-            <div className="text-xs text-gray-600 bg-red-50 border border-red-100 p-2 rounded-lg">
+            <div className="text-xs text-slate-600 bg-red-50 border border-red-100 p-2 rounded-lg">
               <span className="font-medium text-red-700">Rejection note:</span><br />
               {transaction.payment_notes}
             </div>
@@ -426,7 +426,7 @@ export function Finance() {
             onClick={() => {
               alert('Follow-up functionality can be implemented here (e.g., contact service provider, resubmit request)');
             }}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Follow Up
           </button>
@@ -448,21 +448,21 @@ export function Finance() {
       );
     }
 
-    return <span className="text-xs text-gray-400">—</span>;
+    return <span className="text-xs text-slate-400">—</span>;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Finance Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Platform revenue and withdrawal management</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Finance Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">Platform revenue and withdrawal management</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value as any)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Time</option>
             <option value="month">This Month</option>
@@ -483,7 +483,7 @@ export function Finance() {
           </button>
           <button
             onClick={exportMonthlyTrends}
-            className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
           >
             📈 Trends
           </button>
@@ -492,9 +492,9 @@ export function Finance() {
 
       {/* Business Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Total Revenue</p>
-          <p className="text-1xl font-semibold text-gray-900 mt-2">
+        <div className="bg-white rounded-xl border border-emerald-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Total Revenue</p>
+          <p className="text-1xl font-semibold text-slate-900 mt-2">
             {formatCurrencyWithConversion(stats.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
@@ -504,69 +504,69 @@ export function Finance() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Net Revenue</p>
-          <p className="text-1xl font-semibold text-gray-900 mt-2">
+        <div className="bg-white rounded-xl border border-blue-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Net Revenue</p>
+          <p className="text-1xl font-semibold text-slate-900 mt-2">
             {formatCurrencyWithConversion(stats.netRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
-          <p className="text-xs text-gray-400 mt-1">After withdrawals & refunds</p>
+          <p className="text-xs text-slate-400 mt-1">After withdrawals & refunds</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-orange-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Platform Fees & Commission</p>
-          <p className="text-1xl font-semibold text-gray-900 mt-2">
+        <div className="bg-white rounded-xl border border-orange-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Platform Fees & Commission</p>
+          <p className="text-1xl font-semibold text-slate-900 mt-2">
             {formatCurrencyWithConversion(stats.platformFeesAndCommissions, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
-          <p className="text-xs text-gray-400 mt-1">From linked bookings</p>
+          <p className="text-xs text-slate-400 mt-1">From linked bookings</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Pending Withdrawals</p>
-          <p className="text-1xl font-semibold text-gray-900 mt-2">{stats.pendingWithdrawals}</p>
-          <p className="text-xs text-gray-400 mt-1">
+        <div className="bg-white rounded-xl border border-amber-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Pending Withdrawals</p>
+          <p className="text-1xl font-semibold text-slate-900 mt-2">{stats.pendingWithdrawals}</p>
+          <p className="text-xs text-slate-400 mt-1">
             {formatCurrencyWithConversion(stats.pendingAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Success Rate</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.successRate}%</p>
-          <p className="text-xs text-gray-400 mt-1">{stats.totalTransactions} transactions</p>
+        <div className="bg-white rounded-xl border border-violet-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Success Rate</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.successRate}%</p>
+          <p className="text-xs text-slate-400 mt-1">{stats.totalTransactions} transactions</p>
         </div>
       </div>
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Ready for Payment</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.approvedWithdrawals}</p>
-          <p className="text-xs text-gray-400 mt-1">
+        <div className="bg-white rounded-xl border border-blue-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Ready for Payment</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.approvedWithdrawals}</p>
+          <p className="text-xs text-slate-400 mt-1">
             {formatCurrencyWithConversion(stats.approvedAmount, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Rejected Withdrawals</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.rejectedWithdrawals}</p>
-          <p className="text-xs text-gray-400 mt-1">Need follow-up</p>
+        <div className="bg-white rounded-xl border border-red-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Rejected Withdrawals</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.rejectedWithdrawals}</p>
+          <p className="text-xs text-slate-400 mt-1">Need follow-up</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-red-500 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-gray-500">Failed Transactions</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.failedTransactions}</p>
-          <p className="text-xs text-gray-400 mt-1">Require investigation</p>
+        <div className="bg-white rounded-xl border border-red-200 p-4 hover:shadow-sm transition-all">
+          <p className="text-xs font-medium text-slate-500">Failed Transactions</p>
+          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.failedTransactions}</p>
+          <p className="text-xs text-slate-400 mt-1">Require investigation</p>
         </div>
       </div>
 
       {/* Conservation Wallet */}
       <div className="mt-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-all flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500">Conservation Wallet</p>
-            <p className="text-lg font-semibold text-gray-900 mt-2">
+            <p className="text-xs font-medium text-slate-500">Conservation Wallet</p>
+            <p className="text-lg font-semibold text-slate-900 mt-2">
               {formatCurrencyWithConversion(conservationBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Funds tagged for conservation & carbon offsets</p>
+            <p className="text-xs text-slate-400 mt-1">Funds tagged for conservation & carbon offsets</p>
           </div>
           <div className="flex gap-2">
             <button onClick={exportConservationReport} className="px-3 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition">Export</button>
@@ -575,22 +575,22 @@ export function Finance() {
       </div>
 
       {/* Monthly Trends Chart */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">Revenue Trends</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Last 6 months performance overview</p>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">Revenue Trends</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Last 6 months performance overview</p>
         </div>
         <div className="p-5">
           <div className="space-y-3">
             {stats.monthlyData.map((month: any) => (
               <div key={month.month} className="group">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-gray-900">{month.month}</span>
-                  <span className="text-xs font-medium text-gray-600">
+                  <span className="text-xs font-medium text-slate-900">{month.month}</span>
+                  <span className="text-xs font-medium text-slate-600">
                     Net: {formatCurrencyWithConversion(month.net, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
+                <div className="w-full bg-slate-100 rounded-full h-2">
                   <div
                     className="bg-emerald-500 h-2 rounded-full transition-all"
                     style={{
@@ -598,7 +598,7 @@ export function Finance() {
                     }}
                   ></div>
                 </div>
-                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
                   <span>Revenue: {formatCurrencyWithConversion(month.revenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
                   <span>Withdrawals: {formatCurrencyWithConversion(month.withdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</span>
                 </div>
@@ -609,10 +609,10 @@ export function Finance() {
       </div>
 
       {/* Top Vendors */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">Top Performing Vendors</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Ranked by total revenue</p>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">Top Performing Vendors</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Ranked by total revenue</p>
         </div>
         <div className="p-5">
           <div className="space-y-3">
@@ -623,17 +623,17 @@ export function Finance() {
                     {index + 1}
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{vendor.vendorName}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-sm font-medium text-slate-900">{vendor.vendorName}</div>
+                    <div className="text-xs text-slate-500">
                       {vendor.transactionCount} transactions
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-semibold text-gray-900">
+                  <div className="text-sm font-semibold text-slate-900">
                     {formatCurrencyWithConversion(vendor.totalRevenue, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-slate-500">
                     {formatCurrencyWithConversion(vendor.pendingWithdrawals, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')} pending
                   </div>
                 </div>
@@ -644,53 +644,53 @@ export function Finance() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">Quick Actions</h3>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">Quick Actions</h3>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => setActiveTab('withdrawals')}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
+              className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all text-left"
             >
               <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-sm">💰</div>
               <div>
-                <div className="text-sm font-medium text-gray-900">Process Withdrawals</div>
-                <div className="text-xs text-gray-500">{stats.approvedWithdrawals} pending</div>
+                <div className="text-sm font-medium text-slate-900">Process Withdrawals</div>
+                <div className="text-xs text-slate-500">{stats.approvedWithdrawals} pending</div>
               </div>
             </button>
 
             <button
               onClick={() => setActiveTab('rejected')}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
+              className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all text-left"
             >
               <div className="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center text-sm">📞</div>
               <div>
-                <div className="text-sm font-medium text-gray-900">Follow Up Rejections</div>
-                <div className="text-xs text-gray-500">{stats.rejectedWithdrawals} need attention</div>
+                <div className="text-sm font-medium text-slate-900">Follow Up Rejections</div>
+                <div className="text-xs text-slate-500">{stats.rejectedWithdrawals} need attention</div>
               </div>
             </button>
 
             <button
               onClick={exportFinancialReport}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
+              className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all text-left"
             >
               <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-sm">📊</div>
               <div>
-                <div className="text-sm font-medium text-gray-900">Generate Report</div>
-                <div className="text-xs text-gray-500">Export financial data</div>
+                <div className="text-sm font-medium text-slate-900">Generate Report</div>
+                <div className="text-xs text-slate-500">Export financial data</div>
               </div>
             </button>
 
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:shadow-sm transition-all text-left"
+              className="flex items-center gap-3 p-3 border border-slate-200 rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all text-left"
             >
               <div className="w-8 h-8 bg-violet-50 text-violet-600 rounded-lg flex items-center justify-center text-sm">🔄</div>
               <div>
-                <div className="text-sm font-medium text-gray-900">Refresh Data</div>
-                <div className="text-xs text-gray-500">Update latest transactions</div>
+                <div className="text-sm font-medium text-slate-900">Refresh Data</div>
+                <div className="text-xs text-slate-500">Update latest transactions</div>
               </div>
             </button>
           </div>
@@ -698,19 +698,19 @@ export function Finance() {
       </div>
 
       {/* Tabs + Transaction Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Transactions</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{currentTransactions.length} records</p>
+            <h3 className="text-sm font-semibold text-slate-900">Transactions</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{currentTransactions.length} records</p>
           </div>
-          <div className="inline-flex gap-1 bg-gray-50 rounded-lg p-1">
+          <div className="inline-flex gap-1 bg-slate-50 rounded-lg p-1">
             <button
               onClick={() => setActiveTab('withdrawals')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'withdrawals'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               Withdrawals ({approvedWithdrawals.length})
@@ -720,7 +720,7 @@ export function Finance() {
               className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'payments'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               Payments ({completedPayments.length})
@@ -730,7 +730,7 @@ export function Finance() {
               className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'refunds'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               Refunds ({completedRefunds.length})
@@ -740,7 +740,7 @@ export function Finance() {
               className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${
                 activeTab === 'rejected'
                   ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               Rejected ({stats.rejectedWithdrawals})
@@ -750,57 +750,57 @@ export function Finance() {
 
         <div className="p-5">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Transaction ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Method
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Reference
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {currentTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={transaction.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       #{transaction.id.slice(0, 8)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {transaction.vendors?.business_name || 'Unknown Vendor'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {formatCurrencyWithConversion(transaction.amount, transaction.currency, selectedCurrency || 'UGX', selectedLanguage || 'en-US')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 capitalize">
                       <button onClick={() => setSelectedTransaction(transaction)} className="text-blue-600 hover:underline">{transaction.payment_method.replace('_', ' ')}</button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(transaction.status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">
                       {transaction.reference}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -817,34 +817,34 @@ export function Finance() {
             <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
               <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedTransaction(null)} />
               <div className="relative bg-white shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between p-6 border-b border-slate-200">
                   <h2 className="text-lg font-semibold">Payment Details</h2>
-                  <button onClick={() => setSelectedTransaction(null)} className="text-gray-500 hover:text-black">Close</button>
+                  <button onClick={() => setSelectedTransaction(null)} className="text-slate-500 hover:text-black">Close</button>
                 </div>
                 <div className="p-6 overflow-y-auto">
-                  <p className="text-sm text-gray-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_', ' ')}</span></p>
+                  <p className="text-sm text-slate-600">Method: <span className="font-medium">{selectedTransaction.payment_method.replace('_', ' ')}</span></p>
                   <div className="mt-4">
                     {selectedTransaction.payout_meta ? (
                       selectedTransaction.payout_meta.type === 'bank' ? (
                         <div>
                           <div className="text-sm font-medium">{selectedTransaction.payout_meta.name || selectedTransaction.payout_meta.account_name}</div>
-                          <div className="text-sm text-gray-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
-                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy account number</button></div>
+                          <div className="text-sm text-slate-600">Account: <span className="font-mono">{selectedTransaction.payout_meta.account_number}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.account_number || '')} className="px-3 py-1 bg-slate-100 rounded text-sm">Copy account number</button></div>
                         </div>
                       ) : (
                         <div>
                           <div className="text-sm font-medium">{selectedTransaction.payout_meta.provider || 'Mobile Money'}</div>
                           {selectedTransaction.payout_meta.name && (
-                            <div className="text-sm text-gray-700">Account name: <span className="font-medium">{selectedTransaction.payout_meta.name}</span>
-                              <button className="ml-3 text-gray-500" onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.name || '')}>Copy</button>
+                            <div className="text-sm text-slate-700">Account name: <span className="font-medium">{selectedTransaction.payout_meta.name}</span>
+                              <button className="ml-3 text-slate-500" onClick={() => navigator.clipboard.writeText(selectedTransaction.payout_meta.name || '')}>Copy</button>
                             </div>
                           )}
-                          <div className="text-sm text-gray-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
-                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())} className="px-3 py-1 bg-gray-100 rounded text-sm">Copy phone number</button></div>
+                          <div className="text-sm text-slate-600">Phone: <span className="font-mono">{(selectedTransaction.payout_meta.country_code || '') + ' ' + (selectedTransaction.payout_meta.phone || '')}</span></div>
+                          <div className="mt-3"><button onClick={() => navigator.clipboard.writeText(((selectedTransaction.payout_meta.country_code || '') + (selectedTransaction.payout_meta.phone || '')).trim())} className="px-3 py-1 bg-slate-100 rounded text-sm">Copy phone number</button></div>
                         </div>
                       )
                     ) : (
-                      <div className="text-sm text-gray-500">No payout details available for this transaction.</div>
+                      <div className="text-sm text-slate-500">No payout details available for this transaction.</div>
                     )}
                   </div>
                 </div>
@@ -854,11 +854,11 @@ export function Finance() {
 
           {currentTransactions.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-lg">📋</span>
               </div>
-              <p className="text-sm font-medium text-gray-900">No {activeTab} found</p>
-              <p className="text-xs text-gray-500 mt-1">Try adjusting your date range or filters</p>
+              <p className="text-sm font-medium text-slate-900">No {activeTab} found</p>
+              <p className="text-xs text-slate-500 mt-1">Try adjusting your date range or filters</p>
             </div>
           )}
         </div>

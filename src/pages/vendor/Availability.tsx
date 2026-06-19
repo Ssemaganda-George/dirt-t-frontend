@@ -146,11 +146,11 @@ export default function VendorAvailability() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Availability</h1>
-          <p className="text-sm text-gray-500 mt-1">View your booking calendar</p>
+          <h1 className="text-xl font-semibold text-slate-900">Availability</h1>
+          <p className="text-sm text-slate-500 mt-1">View your booking calendar</p>
         </div>
         <select
-          className="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-auto border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={selectedServiceId}
           onChange={e => setSelectedServiceId(e.target.value)}
         >
@@ -162,26 +162,26 @@ export default function VendorAvailability() {
       </div>
 
       {/* Calendar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMonth(prev => addMonths(prev, -1))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+              className="p-1.5 rounded-lg hover:bg-slate-100 transition"
               aria-label="Previous month"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
             </button>
-            <span className="text-sm font-semibold text-gray-900 min-w-[140px] text-center">{format(month, 'MMMM yyyy')}</span>
+            <span className="text-sm font-semibold text-slate-900 min-w-[140px] text-center">{format(month, 'MMMM yyyy')}</span>
             <button
               onClick={() => setMonth(prev => addMonths(prev, 1))}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition"
+              className="p-1.5 rounded-lg hover:bg-slate-100 transition"
               aria-label="Next month"
             >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-slate-600" />
             </button>
           </div>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+          <div className="flex items-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400" />Available</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400" />Booked</span>
           </div>
@@ -190,7 +190,7 @@ export default function VendorAvailability() {
         {/* Day headers */}
         <div className="grid grid-cols-7 gap-1.5 mb-2">
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} className="text-xs font-medium text-gray-400 text-center py-1">{d}</div>
+            <div key={d} className="text-xs font-medium text-slate-400 text-center py-1">{d}</div>
           ))}
         </div>
 
@@ -236,15 +236,15 @@ export default function VendorAvailability() {
                         }}
                         className={`rounded-lg p-2 min-h-[52px] sm:min-h-[60px] flex flex-col items-center justify-center text-sm transition
                           ${isSingleBlocked
-                            ? 'bg-gray-50 text-gray-300'
+                            ? 'bg-slate-50 text-slate-300'
                             : isBooked
                               ? 'bg-red-50 text-red-700 cursor-pointer hover:bg-red-100'
-                              : 'hover:bg-gray-50'
+                              : 'hover:bg-slate-50'
                           }`}
                       >
                         <span className={`text-sm font-medium ${isSingleBlocked ? 'line-through' : ''}`}>{format(cell, 'd')}</span>
                         {isSingleBlocked ? (
-                          <span className="text-[10px] text-gray-400 mt-0.5">Blocked</span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">Blocked</span>
                         ) : isBooked ? (
                           <span className="text-[10px] font-medium mt-0.5">Booked</span>
                         ) : null}
@@ -263,40 +263,40 @@ export default function VendorAvailability() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }} />
           <div className="relative w-full sm:max-w-lg bg-white rounded-xl shadow-xl overflow-hidden max-h-[80vh] flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Bookings on</p>
-                <p className="text-sm font-semibold text-gray-900">{format(new Date(selectedDate), 'MMMM d, yyyy')}</p>
+                <p className="text-xs text-slate-500">Bookings on</p>
+                <p className="text-sm font-semibold text-slate-900">{format(new Date(selectedDate), 'MMMM d, yyyy')}</p>
               </div>
               <button
                 onClick={() => { setSelectedDate(null); setSelectedDateBookings([]) }}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
               >
-                <X className="w-4 h-4 text-gray-500" />
+                <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
             <div className="p-5 space-y-3 overflow-y-auto">
               {selectedDateBookings.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-6">No bookings found for this date.</p>
+                <p className="text-sm text-slate-500 text-center py-6">No bookings found for this date.</p>
               ) : (
                 selectedDateBookings.map(b => (
-                  <div key={b.id} className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50/50 transition">
+                  <div key={b.id} className="p-4 rounded-lg border border-slate-200 hover:bg-slate-50/50 transition">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{b.profiles?.full_name || b.guest_name || 'Guest'}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{b.service?.title || b.services?.title || `Service ${b.service_id}`}</p>
+                        <p className="text-sm font-medium text-slate-900 truncate">{b.profiles?.full_name || b.guest_name || 'Guest'}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{b.service?.title || b.services?.title || `Service ${b.service_id}`}</p>
                       </div>
                       <div className="text-right flex-shrink-0 ml-3">
-                        <p className="text-sm font-medium text-gray-900">{b.guests} guest{b.guests > 1 ? 's' : ''}</p>
+                        <p className="text-sm font-medium text-slate-900">{b.guests} guest{b.guests > 1 ? 's' : ''}</p>
                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium mt-0.5 ${
                           b.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700'
                             : b.status === 'pending' ? 'bg-amber-50 text-amber-700'
-                              : 'bg-gray-100 text-gray-600'
+                              : 'bg-slate-100 text-slate-600'
                         }`}>{b.status}</span>
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {b.service_date ? (
                           b.end_date ? (
                             `${format(new Date(b.service_date), 'MMM d, h:mm a')} — ${format(new Date(b.end_date), 'MMM d, h:mm a')}`
@@ -307,7 +307,7 @@ export default function VendorAvailability() {
                       </p>
                       <button
                         onClick={() => setSelectedBookingObj(b)}
-                        className="text-xs font-medium text-gray-900 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
+                        className="text-xs font-medium text-slate-900 hover:underline transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 rounded"
                       >
                         View details
                       </button>
@@ -325,32 +325,32 @@ export default function VendorAvailability() {
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedBookingObj(null)} />
           <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl overflow-y-auto max-h-[85vh]">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-sm font-semibold text-gray-900">Booking Details</h2>
-              <button onClick={() => setSelectedBookingObj(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">
-                <X className="w-4 h-4 text-gray-500" />
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-sm font-semibold text-slate-900">Booking Details</h2>
+              <button onClick={() => setSelectedBookingObj(null)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">
+                <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
 
             <div className="p-5 space-y-5">
               <div>
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Booking Information</h3>
+                <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Booking Information</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">ID</span>
-                    <p className="font-medium text-gray-900">#{selectedBookingObj.id?.slice(0,8)}</p>
+                    <span className="text-slate-500">ID</span>
+                    <p className="font-medium text-slate-900">#{selectedBookingObj.id?.slice(0,8)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Service</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.service?.title || selectedBookingObj.services?.title || '—'}</p>
+                    <span className="text-slate-500">Service</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.service?.title || selectedBookingObj.services?.title || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Booked</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.booking_date ? format(new Date(selectedBookingObj.booking_date), 'dd MMM yyyy, HH:mm') : '—'}</p>
+                    <span className="text-slate-500">Booked</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.booking_date ? format(new Date(selectedBookingObj.booking_date), 'dd MMM yyyy, HH:mm') : '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Service Date</span>
-                    <p className="font-medium text-gray-900">
+                    <span className="text-slate-500">Service Date</span>
+                    <p className="font-medium text-slate-900">
                       {selectedBookingObj.service_date ? (
                         selectedBookingObj.end_date ? (
                           `${format(new Date(selectedBookingObj.service_date), 'dd MMM yyyy')} — ${format(new Date(selectedBookingObj.end_date), 'dd MMM yyyy')}`
@@ -361,52 +361,52 @@ export default function VendorAvailability() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Guests</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.guests ?? '—'}</p>
+                    <span className="text-slate-500">Guests</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.guests ?? '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Amount</span>
-                    <p className="font-medium text-gray-900">{formatCurrencyWithConversion(selectedBookingObj.vendor_payout_amount ?? selectedBookingObj.total_amount ?? 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</p>
+                    <span className="text-slate-500">Amount</span>
+                    <p className="font-medium text-slate-900">{formatCurrencyWithConversion(selectedBookingObj.vendor_payout_amount ?? selectedBookingObj.total_amount ?? 0, selectedBookingObj.currency || 'UGX', selectedCurrency, selectedLanguage)}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Status</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.status || '—'}</p>
+                    <span className="text-slate-500">Status</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.status || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Payment</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.payment_status || '—'}</p>
+                    <span className="text-slate-500">Payment</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.payment_status || '—'}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-5">
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Customer</h3>
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Customer</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">ID</span>
-                    <p className="font-medium text-gray-900">#{selectedBookingObj.tourist_id ? selectedBookingObj.tourist_id.slice(0,8) : '—'}</p>
+                    <span className="text-slate-500">ID</span>
+                    <p className="font-medium text-slate-900">#{selectedBookingObj.tourist_id ? selectedBookingObj.tourist_id.slice(0,8) : '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Name</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.tourist_profile?.full_name || selectedBookingObj.guest_name || 'Not available'}</p>
+                    <span className="text-slate-500">Name</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.tourist_profile?.full_name || selectedBookingObj.guest_name || 'Not available'}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-5">
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Transport Details</h3>
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Transport Details</h3>
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">Driver</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.driver_option || '—'}</p>
+                    <span className="text-slate-500">Driver</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.driver_option || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">Start</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.start_time || '—'}</p>
+                    <span className="text-slate-500">Start</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.start_time || '—'}</p>
                   </div>
                   <div>
-                    <span className="text-gray-500">End</span>
-                    <p className="font-medium text-gray-900">{selectedBookingObj.end_time || '—'}</p>
+                    <span className="text-slate-500">End</span>
+                    <p className="font-medium text-slate-900">{selectedBookingObj.end_time || '—'}</p>
                   </div>
                 </div>
               </div>

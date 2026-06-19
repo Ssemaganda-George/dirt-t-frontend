@@ -53,9 +53,9 @@ export function RestaurantsServices() {
           <p className="text-red-800">Error loading services: {error}</p>
         </div>
         {/* Still show the services management interface even if delete requests fail */}
-        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Restaurants Management</h3>
+        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">Restaurants Management</h3>
           </div>
           <div className="p-5">
             <p className="text-sm text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
@@ -261,8 +261,8 @@ export function RestaurantsServices() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Restaurants Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage and review all restaurants</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Restaurants Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage and review all restaurants</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">Pending: {selectedVendor === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
@@ -273,7 +273,7 @@ export function RestaurantsServices() {
       </div>
 
       {/* Search & Vendor Filter */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <SearchBar
@@ -287,7 +287,7 @@ export function RestaurantsServices() {
             id="vendor-filter"
             value={selectedVendor}
             onChange={(e) => setSelectedVendor(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Vendors</option>
             {vendors.map((vendor) => (
@@ -300,56 +300,56 @@ export function RestaurantsServices() {
       </div>
 
       {/* Services Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">All Restaurants</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{filteredServices.length} services found</p>
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">All Restaurants</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{filteredServices.length} services found</p>
         </div>
         <div className="p-5">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Restaurant
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Availability
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-gray-50">
+                  <tr key={service.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{service.title}</div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className="text-sm font-medium text-slate-900">{service.title}</div>
+                        <div className="text-sm text-slate-500 truncate max-w-xs">
                           {service.description}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-slate-900">
                         {service.vendors?.business_name || 'Unknown'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-slate-500">
                         {service.location}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -386,42 +386,42 @@ export function RestaurantsServices() {
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
-        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Pending Approval</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
+        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">Pending Approval</h3>
+            <p className="text-xs text-slate-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
           </div>
           <div className="p-5">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Restaurant</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Restaurant</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-slate-200">
                   {filteredPendingServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-gray-50">
+                    <tr key={service.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{service.title}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-slate-900">{service.title}</div>
+                          <div className="text-sm text-slate-500 truncate max-w-xs">
                             {service.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-900">
                           {service.vendors?.business_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-slate-500">
                           {service.location}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {formatCurrencyWithConversion(service.price, service.currency, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -452,10 +452,10 @@ export function RestaurantsServices() {
       )}
 
       {/* Delete Requests Section */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">Delete Requests</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">Delete Requests</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
         </div>
         <div className="p-5">
           {deleteRequestsError ? (
@@ -469,34 +469,34 @@ export function RestaurantsServices() {
               </p>
             </div>
           ) : pendingDeleteRequests.length === 0 ? (
-            <p className="text-gray-500 text-sm">No pending delete requests.</p>
+            <p className="text-slate-500 text-sm">No pending delete requests.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Restaurant</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comments</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Restaurant</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Availability</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Comments</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Requested</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-slate-200">
                   {pendingDeleteRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
+                    <tr key={request.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-slate-900">{request.service?.title}</div>
+                          <div className="text-sm text-slate-500 truncate max-w-xs">
                             {request.service?.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-900">
                           {request.vendor?.business_name || 'Unknown'}
                         </div>
                       </td>
@@ -506,13 +506,13 @@ export function RestaurantsServices() {
                           variant="small"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-slate-900">
                         {request.reason}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-slate-900">
                         {request.admin_notes || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {new Date(request.requested_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

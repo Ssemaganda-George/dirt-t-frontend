@@ -188,15 +188,15 @@ export default function AdminHeroVideoManager() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <Settings className="h-8 w-8 text-blue-600" />
             Hero Media Manager
           </h1>
-          <p className="mt-2 text-gray-600">Manage your website's hero section background images and videos</p>
+          <p className="mt-2 text-slate-600">Manage your website's hero section background images and videos</p>
         </div>
 
         {/* Status Messages */}
@@ -212,21 +212,21 @@ export default function AdminHeroVideoManager() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Upload Section */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
                 <Plus className="h-5 w-5 text-blue-600" />
                 Upload New Media
               </h2>
 
               {/* Media Type Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Media Type</label>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Media Type</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                       mediaType === 'image'
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                     onClick={() => setMediaType('image')}
                   >
@@ -237,7 +237,7 @@ export default function AdminHeroVideoManager() {
                     className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                       mediaType === 'video'
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                     }`}
                     onClick={() => setMediaType('video')}
                   >
@@ -249,7 +249,7 @@ export default function AdminHeroVideoManager() {
 
               {/* File Upload */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Select File</label>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Select File</label>
                 <div className="relative">
                   <input
                     type="file"
@@ -260,14 +260,14 @@ export default function AdminHeroVideoManager() {
                   />
                   <label
                     htmlFor="file-upload"
-                    className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
                   >
                     <div className="text-center">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <span className="text-sm font-medium text-gray-600">
+                      <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                      <span className="text-sm font-medium text-slate-600">
                         {file ? file.name : `Choose ${mediaType} file`}
                       </span>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1">
                         {mediaType === 'image' ? 'PNG, JPG, GIF up to 10MB' : 'MP4, WebM up to 50MB'}
                       </p>
                     </div>
@@ -297,8 +297,8 @@ export default function AdminHeroVideoManager() {
               {/* Preview */}
               {mediaUrl && (
                 <div className="mt-6">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Preview</h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-slate-700 mb-3">Preview</h3>
+                  <div className="bg-slate-50 rounded-lg p-4">
                     {mediaType === 'video' ? (
                       <video src={mediaUrl} controls className="w-full rounded-lg shadow-sm" />
                     ) : (
@@ -312,29 +312,29 @@ export default function AdminHeroVideoManager() {
 
           {/* Gallery Section */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
                   <Eye className="h-5 w-5 text-blue-600" />
                   Media Gallery
                 </h2>
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                   {gallery.length} item{gallery.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {gallery.length === 0 ? (
                 <div className="text-center py-12">
-                  <Image className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">No media uploaded yet</h3>
-                  <p className="text-gray-500">Upload your first hero image or video to get started</p>
+                  <Image className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-sm font-semibold text-slate-900 mb-2">No media uploaded yet</h3>
+                  <p className="text-slate-500">Upload your first hero image or video to get started</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {gallery.map(item => (
-                    <div key={item.name} className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div key={item.name} className="group relative bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                       {/* Media Preview */}
-                      <div className="aspect-video bg-gray-100 relative overflow-hidden">
+                      <div className="aspect-video bg-slate-100 relative overflow-hidden">
                         {item.type === 'video' ? (
                           <video
                             src={item.url}
@@ -366,7 +366,7 @@ export default function AdminHeroVideoManager() {
                           <button
                             onClick={() => handleToggleActive(item.name, !!item.active)}
                             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                              item.active ? 'bg-green-600' : 'bg-gray-200'
+                              item.active ? 'bg-green-600' : 'bg-slate-200'
                             }`}
                             title={item.active ? 'Click to deactivate' : 'Click to activate'}
                           >
@@ -388,7 +388,7 @@ export default function AdminHeroVideoManager() {
 
                         {/* Order control */}
                         <div className="flex items-center gap-2">
-                          <label className="text-xs font-medium text-gray-600">Order:</label>
+                          <label className="text-xs font-medium text-slate-600">Order:</label>
                           <div className="flex items-center gap-1">
                             <input
                               type="number"
@@ -399,20 +399,20 @@ export default function AdminHeroVideoManager() {
                                 const numValue = value === '' ? null : Number(value);
                                 handleOrderChange(item.name, numValue || 1);
                               }}
-                              className="w-12 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-12 px-2 py-1 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               placeholder="1"
                             />
                             <div className="flex flex-col gap-0.5">
                               <button
                                 onClick={() => handleOrderChange(item.name, (item.order || 1) + 1)}
-                                className="p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                className="p-0.5 text-slate-400 hover:text-slate-600 transition-colors"
                                 title="Increase order"
                               >
                                 <ChevronUp className="h-3 w-3" />
                               </button>
                               <button
                                 onClick={() => handleOrderChange(item.name, Math.max(1, (item.order || 1) - 1))}
-                                className="p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                className="p-0.5 text-slate-400 hover:text-slate-600 transition-colors"
                                 title="Decrease order"
                               >
                                 <ChevronDown className="h-3 w-3" />

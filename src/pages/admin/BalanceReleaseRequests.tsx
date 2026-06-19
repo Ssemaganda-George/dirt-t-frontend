@@ -75,8 +75,8 @@ export default function BalanceReleaseRequests() {
   return (
     <div className="p-6 max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Early release requests</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Early release requests</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Vendors can request pending earnings before the automatic release date (e.g. event setup deposits).
           Approve to move funds to their available balance.
         </p>
@@ -89,17 +89,17 @@ export default function BalanceReleaseRequests() {
       )}
 
       {requests.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-600">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-600">
           No pending release requests.
         </div>
       ) : (
         <div className="space-y-4">
           {requests.map((req) => (
-            <div key={req.id} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div key={req.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-slate-900">
                       {req.vendor?.business_name || 'Vendor'}
                     </span>
                     <span className="text-lg font-bold text-indigo-700">
@@ -111,8 +111,8 @@ export default function BalanceReleaseRequests() {
                       )}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">{formatServiceContext(req)}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-600">{formatServiceContext(req)}</p>
+                  <p className="text-sm text-slate-500">
                     Auto-release after:{' '}
                     {req.hold?.release_after
                       ? format(new Date(req.hold.release_after), 'MMM d, yyyy HH:mm')
@@ -120,16 +120,16 @@ export default function BalanceReleaseRequests() {
                   </p>
                   <div className="rounded-md bg-amber-50 border border-amber-100 px-3 py-2">
                     <p className="text-xs font-medium text-amber-800 uppercase tracking-wide">Vendor reason</p>
-                    <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap">{req.reason}</p>
+                    <p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap">{req.reason}</p>
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-slate-400">
                     Requested {format(new Date(req.requested_at), 'MMM d, yyyy HH:mm')}
                   </p>
                 </div>
 
                 <div className="w-full lg:w-72 space-y-3">
                   <textarea
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                     rows={2}
                     placeholder="Admin notes (optional)"
                     value={adminNotes[req.id] || ''}
@@ -150,7 +150,7 @@ export default function BalanceReleaseRequests() {
                       type="button"
                       disabled={reviewingId === req.id}
                       onClick={() => handleReview(req.id, false)}
-                      className="flex-1 rounded-md bg-white border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      className="flex-1 rounded-md bg-white border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                     >
                       Reject
                     </button>

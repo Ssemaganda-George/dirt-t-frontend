@@ -191,22 +191,22 @@ const Partnerships: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-4">Partnerships</h1>
+      <h1 className="text-2xl font-semibold text-slate-900 mb-4">Partnerships</h1>
       <div className="mb-4 flex gap-2">
         <button
-          className={`px-4 py-2 rounded ${filter === 'requests' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded ${filter === 'requests' ? 'bg-blue-600 text-white' : 'bg-slate-200'}`}
           onClick={() => setFilter('requests')}
         >
           Partner Requests
         </button>
         <button
-          className={`px-4 py-2 rounded ${filter === 'referrals' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded ${filter === 'referrals' ? 'bg-blue-600 text-white' : 'bg-slate-200'}`}
           onClick={() => setFilter('referrals')}
         >
           Business Referrals
         </button>
         <button
-          className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-200'}`}
           onClick={() => setFilter('all')}
         >
           All Partners
@@ -220,7 +220,7 @@ const Partnerships: React.FC = () => {
           {/* Status Filter Buttons */}
           <div className="mb-4 flex gap-2 flex-wrap">
             <button
-              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}
               onClick={() => setStatusFilter('all')}
             >
               All ({partnerRequests.length})
@@ -249,7 +249,7 @@ const Partnerships: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : partnerRequests.filter(req => statusFilter === 'all' || req.status === statusFilter).length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               {statusFilter === 'all' 
                 ? 'No partnership requests yet.' 
                 : `No ${statusFilter} partnership requests.`
@@ -262,14 +262,14 @@ const Partnerships: React.FC = () => {
                 .map((req) => (
                 <div
                   key={req.id}
-                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
+                  className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
                   onClick={() => openRequestModal(req)}
                 >
                   <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     {/* Request Summary */}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">{req.name}</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">{req.name}</h3>
                         <div className="flex items-center gap-2">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -278,25 +278,25 @@ const Partnerships: React.FC = () => {
                           }`}>
                             {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                           </span>
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
                         {req.company && <span><strong>Company:</strong> {req.company}</span>}
                         <span><strong>Email:</strong> {req.email}</span>
                         {req.phone && <span><strong>Phone:</strong> {req.phone}</span>}
                       </div>
 
                       {req.message && (
-                        <p className="text-gray-700 text-sm line-clamp-2 bg-gray-50 p-2 rounded">
+                        <p className="text-slate-700 text-sm line-clamp-2 bg-slate-50 p-2 rounded">
                           {req.message.length > 150 ? `${req.message.substring(0, 150)}...` : req.message}
                         </p>
                       )}
 
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-500">
                         {new Date(req.created_at).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -372,7 +372,7 @@ const Partnerships: React.FC = () => {
           {/* Status Filter Buttons */}
           <div className="mb-4 flex gap-2 flex-wrap">
             <button
-              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-1 rounded text-sm font-medium ${statusFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}
               onClick={() => setStatusFilter('all')}
             >
               All ({partnerRequests.filter(req => filter === 'referrals' ? isReferral(req) : !isReferral(req)).length})
@@ -401,7 +401,7 @@ const Partnerships: React.FC = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : partnerRequests.filter(req => (filter === 'referrals' ? isReferral(req) : !isReferral(req)) && (statusFilter === 'all' || req.status === statusFilter)).length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               {statusFilter === 'all' 
                 ? 'No business referrals yet.' 
                 : `No ${statusFilter} business referrals.`
@@ -415,14 +415,14 @@ const Partnerships: React.FC = () => {
                   return (
                 <div
                   key={req.id}
-                  className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
+                  className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-all cursor-pointer hover:border-blue-300"
                   onClick={() => openRequestModal(req)}
                 >
                   <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     {/* Referral Summary */}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">{req.name}</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">{req.name}</h3>
                         <div className="flex items-center gap-2">
                           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Referral</span>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -432,20 +432,20 @@ const Partnerships: React.FC = () => {
                           }`}>
                             {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                           </span>
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
                         {req.business_location && <span><strong>Location:</strong> {req.business_location}</span>}
                         <span><strong>Contact:</strong> {req.email}</span>
                         {req.phone && <span><strong>Phone:</strong> {req.phone}</span>}
                       </div>
 
                       {req.contact_person && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-slate-600">
                           <strong>Contact Person:</strong> {req.contact_person}
                         </div>
                       )}
@@ -458,12 +458,12 @@ const Partnerships: React.FC = () => {
                       )}
 
                       {req.message && (
-                        <p className="text-gray-700 text-sm line-clamp-2 bg-gray-50 p-2 rounded">
+                        <p className="text-slate-700 text-sm line-clamp-2 bg-slate-50 p-2 rounded">
                           {req.message.length > 150 ? `${req.message.substring(0, 150)}...` : req.message}
                         </p>
                       )}
 
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-slate-500">
                         {new Date(req.created_at).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
@@ -548,14 +548,14 @@ const Partnerships: React.FC = () => {
                       <img src={partner.logo_url} alt={`${partner.name} logo`} className="h-16 w-16 rounded object-contain border" />
                     )}
                     <div>
-                      <div className="font-semibold">{partner.name} {partner.company && <span className="text-xs text-gray-500">({partner.company})</span>}</div>
-                      <div className="text-sm text-gray-600">{partner.email} {partner.phone && <>| {partner.phone}</>}</div>
+                      <div className="font-semibold">{partner.name} {partner.company && <span className="text-xs text-slate-500">({partner.company})</span>}</div>
+                      <div className="text-sm text-slate-600">{partner.email} {partner.phone && <>| {partner.phone}</>}</div>
                       {partner.website && <div className="text-xs text-blue-600"><a href={partner.website} target="_blank" rel="noopener noreferrer">{partner.website}</a></div>}
                       {partner.description && <div className="text-sm mt-1">{partner.description}</div>}
                     </div>
                   </div>
                   <div className="flex gap-2 mt-2 md:mt-0 items-center">
-                    <span className={partner.status === 'active' ? 'text-green-600' : 'text-gray-500'}>{partner.status}</span>
+                    <span className={partner.status === 'active' ? 'text-green-600' : 'text-slate-500'}>{partner.status}</span>
                     <button className="text-blue-600 hover:underline" onClick={() => openEditModal(partner)}>Edit</button>
                   </div>
                 </li>
@@ -567,29 +567,29 @@ const Partnerships: React.FC = () => {
           {showModal && (
             <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto py-6 bg-black/40">
               <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 w-full max-w-md relative mx-4 max-h-[90vh] overflow-y-auto">
-                <button className="absolute top-3 right-3 text-gray-500 text-xl leading-none" onClick={() => setShowModal(false)}>&times;</button>
-                <h3 className="text-base font-semibold text-gray-900 mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
+                <button className="absolute top-3 right-3 text-slate-500 text-xl leading-none" onClick={() => setShowModal(false)}>&times;</button>
+                <h3 className="text-base font-semibold text-slate-900 mb-4">{editPartner ? 'Edit Partner' : 'Add Partner'}</h3>
                 <form onSubmit={handleFormSubmit} className="space-y-3">
-                  <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border border-gray-300 p-2 rounded-md" required />
-                  <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email (optional)" className="w-full border border-gray-300 p-2 rounded-md" type="email" />
-                  <input name="phone" value={form.phone} onChange={handleFormChange} placeholder="Phone" className="w-full border border-gray-300 p-2 rounded-md" />
-                  <input name="company" value={form.company} onChange={handleFormChange} placeholder="Company" className="w-full border border-gray-300 p-2 rounded-md" />
-                  <input name="website" value={form.website} onChange={handleFormChange} placeholder="https://miichub.com/" className="w-full border border-gray-300 p-2 rounded-md" />
-                  <label className="block text-sm font-medium text-gray-700">Partner Logo</label>
+                  <input name="name" value={form.name} onChange={handleFormChange} placeholder="Name*" className="w-full border border-slate-300 p-2 rounded-md" required />
+                  <input name="email" value={form.email} onChange={handleFormChange} placeholder="Email (optional)" className="w-full border border-slate-300 p-2 rounded-md" type="email" />
+                  <input name="phone" value={form.phone} onChange={handleFormChange} placeholder="Phone" className="w-full border border-slate-300 p-2 rounded-md" />
+                  <input name="company" value={form.company} onChange={handleFormChange} placeholder="Company" className="w-full border border-slate-300 p-2 rounded-md" />
+                  <input name="website" value={form.website} onChange={handleFormChange} placeholder="https://miichub.com/" className="w-full border border-slate-300 p-2 rounded-md" />
+                  <label className="block text-sm font-medium text-slate-700">Partner Logo</label>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
-                    className="w-full text-sm text-gray-700 file:border file:border-gray-300 file:px-3 file:py-2 file:rounded file:bg-white file:text-gray-700"
+                    className="w-full text-sm text-slate-700 file:border file:border-slate-300 file:px-3 file:py-2 file:rounded file:bg-white file:text-slate-700"
                   />
                   {logoPreview && (
                     <div className="mt-2">
-                      <p className="text-xs text-gray-500 mb-1">Logo preview</p>
+                      <p className="text-xs text-slate-500 mb-1">Logo preview</p>
                       <img src={logoPreview} alt="Partner logo preview" className="h-24 w-auto rounded border object-contain" />
                     </div>
                   )}
-                  <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" className="w-full border border-gray-300 p-2 rounded-md" rows={3} />
-                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border border-gray-300 p-2 rounded-md">
+                  <textarea name="description" value={form.description} onChange={handleFormChange} placeholder="Description" className="w-full border border-slate-300 p-2 rounded-md" rows={3} />
+                  <select name="status" value={form.status} onChange={handleFormChange} className="w-full border border-slate-300 p-2 rounded-md">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
@@ -608,12 +608,12 @@ const Partnerships: React.FC = () => {
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">
+                <h2 className="text-2xl font-semibold text-slate-900">
                   {selectedRequest.type === 'business_referral' ? 'Business Referral Details' : 'Partnership Inquiry Details'}
                 </h2>
                 <button
                   onClick={closeRequestModal}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -625,7 +625,7 @@ const Partnerships: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900">{selectedRequest.name}</h3>
+                    <h3 className="text-xl font-semibold text-slate-900">{selectedRequest.name}</h3>
                     <div className="flex items-center gap-2 mt-2">
                       {selectedRequest.type === 'business_referral' && (
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">Business Referral</span>
@@ -639,7 +639,7 @@ const Partnerships: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-slate-500">
                     {new Date(selectedRequest.created_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -682,7 +682,7 @@ const Partnerships: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
                         {selectedRequest.type === 'business_referral' ? 'Business Email' : 'Email'}
                       </label>
                       <a
@@ -695,7 +695,7 @@ const Partnerships: React.FC = () => {
 
                     {selectedRequest.phone && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
                           {selectedRequest.type === 'business_referral' ? 'Business Phone' : 'Phone'}
                         </label>
                         <a
@@ -709,8 +709,8 @@ const Partnerships: React.FC = () => {
 
                     {selectedRequest.type === 'business_referral' && selectedRequest.contact_person && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                        <span className="text-gray-900">{selectedRequest.contact_person}</span>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Contact Person</label>
+                        <span className="text-slate-900">{selectedRequest.contact_person}</span>
                       </div>
                     )}
                   </div>
@@ -718,23 +718,23 @@ const Partnerships: React.FC = () => {
                   <div className="space-y-4">
                     {selectedRequest.company && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
                           {selectedRequest.type === 'business_referral' ? 'Business Name' : 'Company'}
                         </label>
-                        <span className="text-gray-900">{selectedRequest.company}</span>
+                        <span className="text-slate-900">{selectedRequest.company}</span>
                       </div>
                     )}
 
                     {selectedRequest.type === 'business_referral' && selectedRequest.business_location && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Business Location</label>
-                        <span className="text-gray-900">{selectedRequest.business_location}</span>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Business Location</label>
+                        <span className="text-slate-900">{selectedRequest.business_location}</span>
                       </div>
                     )}
 
                     {selectedRequest.website && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Website</label>
                         <a
                           href={selectedRequest.website}
                           target="_blank"
@@ -751,9 +751,9 @@ const Partnerships: React.FC = () => {
                 {/* Message */}
                 {selectedRequest.message && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
                         {selectedRequest.message}
                       </p>
                     </div>
@@ -761,7 +761,7 @@ const Partnerships: React.FC = () => {
                 )}
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-200">
                   {selectedRequest.status === 'pending' && (
                     <>
                       <button

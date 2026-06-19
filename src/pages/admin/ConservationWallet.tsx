@@ -103,8 +103,8 @@ export default function ConservationWallet() {
     <div className="space-y-6">
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Conservation Wallet</h1>
-          <p className="mt-2 text-sm text-gray-600">View and export funds tagged for conservation and carbon offsets</p>
+          <h1 className="text-3xl font-bold text-slate-900">Conservation Wallet</h1>
+          <p className="mt-2 text-sm text-slate-600">View and export funds tagged for conservation and carbon offsets</p>
         </div>
         <div className="flex gap-2 items-center">
           <input
@@ -112,9 +112,9 @@ export default function ConservationWallet() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search ID, donor, reference, comments"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-56"
+            className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-56"
           />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
             <option value="all">All Statuses</option>
             <option value="completed">Completed</option>
             <option value="approved">Approved</option>
@@ -122,7 +122,7 @@ export default function ConservationWallet() {
             <option value="rejected">Rejected</option>
             <option value="failed">Failed</option>
           </select>
-          <select value={dateRange} onChange={(e) => setDateRange(e.target.value as any)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <select value={dateRange} onChange={(e) => setDateRange(e.target.value as any)} className="border border-slate-200 rounded-lg px-3 py-2 text-sm">
             <option value="all">All Time</option>
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
@@ -132,39 +132,39 @@ export default function ConservationWallet() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <p className="text-xs font-medium text-gray-500">Conservation Balance</p>
-        <p className="text-2xl font-semibold text-gray-900 mt-2">{formatCurrencyWithConversion(conservationBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</p>
-        <p className="text-xs text-gray-400 mt-1">Funds tagged for carbon offsets and tree planting</p>
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <p className="text-xs font-medium text-slate-500">Conservation Balance</p>
+        <p className="text-2xl font-semibold text-slate-900 mt-2">{formatCurrencyWithConversion(conservationBalance, 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</p>
+        <p className="text-xs text-slate-400 mt-1">Funds tagged for carbon offsets and tree planting</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Conservation Transactions ({filteredList.length})</h3>
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-900">Conservation Transactions ({filteredList.length})</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Donor</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comments</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Donor</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Reference</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Comments</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-white divide-y divide-slate-100">
               {filteredList.map((t: any) => (
                 <tr key={t.id}>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.id.slice(0,8)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.name || t.tourists?.full_name || t.tourists?.name || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{formatCurrencyWithConversion(t.amount, t.currency || 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.status}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.reference || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.payment_notes || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{format(new Date(t.created_at), 'yyyy-MM-dd')}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{t.id.slice(0,8)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{t.name || t.tourists?.full_name || t.tourists?.name || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{formatCurrencyWithConversion(t.amount, t.currency || 'UGX', selectedCurrency || 'UGX', selectedLanguage || 'en-US')}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{t.status}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{t.reference || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{t.payment_notes || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{format(new Date(t.created_at), 'yyyy-MM-dd')}</td>
                 </tr>
               ))}
             </tbody>

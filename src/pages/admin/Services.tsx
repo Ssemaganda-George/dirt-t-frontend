@@ -123,9 +123,9 @@ export function Services() {
           <p className="text-red-800">Error loading services: {error}</p>
         </div>
         {/* Still show the services management interface even if delete requests fail */}
-        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Services Management</h3>
+        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">Services Management</h3>
           </div>
           <div className="p-5">
             <p className="text-sm text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
@@ -372,8 +372,8 @@ export function Services() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Service Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Review, approve, and manage all platform services</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Service Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Review, approve, and manage all platform services</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
@@ -396,8 +396,8 @@ export function Services() {
       </div>
 
       {/* Search & Vendor Filter */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-4 border-b border-gray-100">
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="p-4 border-b border-slate-100">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <SearchBar
@@ -411,7 +411,7 @@ export function Services() {
               id="vendor-filter"
               value={selectedVendor}
               onChange={(e) => setSelectedVendor(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Vendors</option>
               {vendors.map((vendor) => (
@@ -431,7 +431,7 @@ export function Services() {
               className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                 selectedCategory === 'all'
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               All ({selectedVendor === 'all' ? services.length : services.filter(s => s.vendor_id === selectedVendor).length})
@@ -448,7 +448,7 @@ export function Services() {
                   className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap transition-colors ${
                     selectedCategory === category.id
                       ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   {category.name} ({filteredCategoryServices.length})
@@ -460,61 +460,61 @@ export function Services() {
       </div>
 
       {/* All Services Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">All Services</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{filteredServices.length} services found</p>
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">All Services</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{filteredServices.length} services found</p>
         </div>
         <div className="p-5">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Service
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Availability
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Toggle
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Event Link
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-gray-50">
+                  <tr key={service.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{service.title}</div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className="text-sm font-medium text-slate-900">{service.title}</div>
+                        <div className="text-sm text-slate-500 truncate max-w-xs">
                           {service.description}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-slate-900">
                         {service.vendors?.business_name || 'Unknown'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-slate-500">
                         {service.location}
                       </div>
                     </td>
@@ -523,7 +523,7 @@ export function Services() {
                         {service.service_categories?.name || service.category_id}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -557,16 +557,16 @@ export function Services() {
                         />
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {/* Show event scan link status for activities */}
                       {service.category_id === 'cat_activities' ? (
                         service.scan_enabled ? (
                           <a href={`${window.location.origin}/scan/${service.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View scan link</a>
                         ) : (
-                          <span className="text-sm text-gray-500">Scan link inactive</span>
+                          <span className="text-sm text-slate-500">Scan link inactive</span>
                         )
                       ) : (
-                        <span className="text-sm text-gray-500">—</span>
+                        <span className="text-sm text-slate-500">—</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -614,41 +614,41 @@ export function Services() {
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
-        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">
+        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">
               Pending Approval
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
+            <p className="text-xs text-slate-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
           </div>
           <div className="p-5">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Service</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-slate-200">
                   {filteredPendingServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-gray-50">
+                    <tr key={service.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{service.title}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-slate-900">{service.title}</div>
+                          <div className="text-sm text-slate-500 truncate max-w-xs">
                             {service.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-900">
                           {service.vendors?.business_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-slate-500">
                           {service.location}
                         </div>
                       </td>
@@ -657,7 +657,7 @@ export function Services() {
                           {service.service_categories?.name || service.category_id}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -688,12 +688,12 @@ export function Services() {
       )}
 
       {/* Delete Requests Section */}
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">
             Delete Requests
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{deleteRequestsError ? 'Temporarily unavailable' : `${pendingDeleteRequests.length} pending requests`}</p>
         </div>
         <div className="p-5">
           {deleteRequestsError ? (
@@ -707,34 +707,34 @@ export function Services() {
               </p>
             </div>
           ) : pendingDeleteRequests.length === 0 ? (
-            <p className="text-gray-500 text-sm">No pending delete requests.</p>
+            <p className="text-slate-500 text-sm">No pending delete requests.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comments</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Service</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Availability</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Comments</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Requested</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-slate-200">
                   {pendingDeleteRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
+                    <tr key={request.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-slate-900">{request.service?.title}</div>
+                          <div className="text-sm text-slate-500 truncate max-w-xs">
                             {request.service?.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-900">
                           {request.vendor?.business_name || 'Unknown'}
                         </div>
                       </td>
@@ -744,13 +744,13 @@ export function Services() {
                           variant="small"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-slate-900">
                         {request.reason}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-slate-900">
                         {request.admin_notes || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {new Date(request.requested_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -791,17 +791,17 @@ export function Services() {
 
       {/* Service Approval Modal */}
       {isApprovalModalOpen && approvingService && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="fixed inset-0 bg-slate-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-slate-900 mb-4">
                 Approve Service: {approvingService.title}
               </h3>
 
               <div className="space-y-6">
                 {/* Service Details */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Service Details</h4>
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-medium text-slate-900 mb-2">Service Details</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">Vendor:</span> {approvingService.vendors?.business_name}
@@ -825,9 +825,9 @@ export function Services() {
                       type="checkbox"
                       checked={pricingOverride.enabled}
                       onChange={(e) => setPricingOverride({...pricingOverride, enabled: e.target.checked})}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
                     />
-                    <label className="ml-2 text-sm font-medium text-gray-700">
+                    <label className="ml-2 text-sm font-medium text-slate-700">
                       Configure pricing override for this service
                     </label>
                   </div>
@@ -836,11 +836,11 @@ export function Services() {
                     <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Override Type</label>
+                          <label className="block text-sm font-medium text-slate-700">Override Type</label>
                           <select
                             value={pricingOverride.override_type}
                             onChange={(e) => setPricingOverride({...pricingOverride, override_type: e.target.value as 'percentage' | 'flat'})}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="percentage">Percentage</option>
                             <option value="flat">Flat Amount</option>
@@ -848,20 +848,20 @@ export function Services() {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-slate-700">
                             Override Value ({pricingOverride.override_type === 'percentage' ? '%' : `$${approvingService.currency}`})
                           </label>
                           <input
                             type="number"
                             value={pricingOverride.override_value}
                             onChange={(e) => setPricingOverride({...pricingOverride, override_value: parseFloat(e.target.value)})}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Fee Payer</label>
+                        <label className="block text-sm font-medium text-slate-700">Fee Payer</label>
                         <select
                           value={pricingOverride.fee_payer}
                           onChange={(e) => {
@@ -884,7 +884,7 @@ export function Services() {
                               vendor_percentage: vendorPercentage
                             });
                           }}
-                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="vendor">Vendor</option>
                           <option value="tourist">Tourist</option>
@@ -895,7 +895,7 @@ export function Services() {
                       {pricingOverride.fee_payer === 'shared' && (
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700">Tourist Fee %</label>
+                            <label className="block text-sm font-medium text-slate-700">Tourist Fee %</label>
                             <input
                               type="number"
                               min="0"
@@ -910,12 +910,12 @@ export function Services() {
                                   vendor_percentage: vendorPct
                                 });
                               }}
-                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700">Vendor Fee %</label>
+                            <label className="block text-sm font-medium text-slate-700">Vendor Fee %</label>
                             <input
                               type="number"
                               min="0"
@@ -930,7 +930,7 @@ export function Services() {
                                   vendor_percentage: vendorPct
                                 });
                               }}
-                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
                         </div>
@@ -938,22 +938,22 @@ export function Services() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Effective From</label>
+                          <label className="block text-sm font-medium text-slate-700">Effective From</label>
                           <input
                             type="datetime-local"
                             value={pricingOverride.effective_from}
                             onChange={(e) => setPricingOverride({...pricingOverride, effective_from: e.target.value})}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Effective Until (optional)</label>
+                          <label className="block text-sm font-medium text-slate-700">Effective Until (optional)</label>
                           <input
                             type="datetime-local"
                             value={pricingOverride.effective_until}
                             onChange={(e) => setPricingOverride({...pricingOverride, effective_until: e.target.value})}
-                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                       </div>
@@ -968,7 +968,7 @@ export function Services() {
                     setIsApprovalModalOpen(false);
                     setApprovingService(null);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200"
                 >
                   Cancel
                 </button>

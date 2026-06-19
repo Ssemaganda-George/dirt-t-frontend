@@ -75,17 +75,17 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, color, icon: I
   return (
     <button
       onClick={onClick}
-      className="text-left bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer h-full"
+      className="text-left bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer h-full"
     >
       <div className="flex items-start justify-between gap-3 h-full flex-col">
         <div className={`h-9 w-9 rounded-lg ${colorConfig.chipBg} ${colorConfig.chipText} flex items-center justify-center`}>
           <Icon className="h-4 w-4" />
         </div>
         <div className="w-full">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider line-clamp-2">{title}</p>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider line-clamp-2">{title}</p>
         </div>
         <div className="w-full flex-1 flex flex-col justify-center">
-          <p className={`${valueFontSize} font-semibold text-gray-900 break-words line-clamp-2`}>{value}</p>
+          <p className={`${valueFontSize} font-semibold text-slate-900 break-words line-clamp-2`}>{value}</p>
         </div>
         <div className="w-full flex items-end justify-between gap-2">
           <div className="flex-1">
@@ -122,15 +122,15 @@ const RecentItem: React.FC<RecentItemProps> = ({ title, subtitle, amount, status
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 border border-gray-200 rounded-lg ${styles.hoverBg} hover:border-gray-300 transition-all duration-200`}
+      className={`w-full text-left p-4 border border-slate-200 rounded-lg ${styles.hoverBg} hover:border-slate-300 transition-all duration-200`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{title}</p>
-          <p className="text-xs text-gray-600 mt-1 truncate">{subtitle}</p>
+          <p className="text-sm font-semibold text-slate-900 truncate">{title}</p>
+          <p className="text-xs text-slate-600 mt-1 truncate">{subtitle}</p>
         </div>
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          {amount && <p className="text-sm font-bold text-gray-900">{amount}</p>}
+          {amount && <p className="text-sm font-bold text-slate-900">{amount}</p>}
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${styles.badge} whitespace-nowrap`}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
@@ -190,8 +190,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Admin Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-semibold text-slate-900">Admin Dashboard</h1>
+        <p className="text-sm text-slate-500 mt-1">
           Monitor platform performance and manage operations
         </p>
       </div>
@@ -256,11 +256,11 @@ export default function Dashboard() {
       {/* Recent Activity Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Bookings */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Recent Bookings</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Latest transactions on the platform</p>
+              <h2 className="text-sm font-semibold text-slate-900">Recent Bookings</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest transactions on the platform</p>
             </div>
             <button
               onClick={() => navigate('/admin/bookings')}
@@ -294,19 +294,19 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">No recent bookings</p>
+                <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">No recent bookings</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Recent Vendor Applications */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Recent Vendors</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Latest vendor applications</p>
+              <h2 className="text-sm font-semibold text-slate-900">Recent Vendors</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Latest vendor applications</p>
             </div>
             <button
               onClick={() => navigate('/admin/vendors')}
@@ -349,8 +349,8 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Store className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">No recent applications</p>
+                <Store className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">No recent applications</p>
               </div>
             )}
           </div>
@@ -358,9 +358,9 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">Quick Actions</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">Quick Actions</h2>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

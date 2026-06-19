@@ -457,8 +457,8 @@ export function FlightsBookings() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Flights Bookings Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage and track all flight bookings</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Flights Bookings Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage and track all flight bookings</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">Total: {totalBookings}</span>
@@ -470,7 +470,7 @@ export function FlightsBookings() {
       </div>
 
       {/* Search & Vendor Filter */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <SearchBar
@@ -484,7 +484,7 @@ export function FlightsBookings() {
             id="vendor-filter"
             value={selectedVendor}
             onChange={(e) => handleSelectVendorCard(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Vendors</option>
             {vendors.map((vendor) => (
@@ -498,100 +498,100 @@ export function FlightsBookings() {
 
       {/* Current Category */}
       {/* Current Category */}
-      <div className="bg-white rounded-xl border border-gray-200 px-5 py-3">
+      <div className="bg-white rounded-xl border border-slate-200 px-5 py-3">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</span>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Category</span>
           <span className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-blue-600 text-white">Flights</span>
         </div>
       </div>
 
-      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-gray-900">All Flight Bookings</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{displayBookings.length} bookings found</p>
+      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-slate-900">All Flight Bookings</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{displayBookings.length} bookings found</p>
         </div>
         <div className="p-5">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Booking ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Flight Service
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Booking Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Departure Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Booking Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Payment Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {isFiltering ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-4 text-center">
                       <LoadingSpinner size="sm" />
-                      <span className="ml-2 text-sm text-gray-500">Filtering...</span>
+                      <span className="ml-2 text-sm text-slate-500">Filtering...</span>
                     </td>
                   </tr>
                 ) : displayBookings.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-4 text-center text-slate-500">
                       No flights bookings found
                     </td>
                   </tr>
                 ) : (
                   displayBookings.map((booking) => (
-                    <tr key={booking.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={booking.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                         #{booking.id.slice(0, 8)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-slate-900">
                             {booking.service?.title || booking.services?.title || 'N/A'}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-slate-500">
                             {booking.service?.location || 'N/A'}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-900">
                           {booking.tourist_profile?.full_name || booking.profiles?.full_name || booking.guest_name || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-slate-500">
                           {booking.guest_email || 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {formatDateTime(booking.created_at)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {booking.service?.departure_time
                           ? formatDateTime(booking.service?.departure_time)
                           : 'N/A'
                         }
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                         {formatCurrencyWithConversion(booking.total_amount || 0, booking.currency || 'UGX', selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -610,7 +610,7 @@ export function FlightsBookings() {
                         <select
                           value={booking.status || 'pending'}
                           onChange={(e) => handleBookingStatusUpdate(booking.id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
@@ -620,7 +620,7 @@ export function FlightsBookings() {
                         <select
                           value={booking.payment_status || 'pending'}
                           onChange={(e) => handlePaymentStatusUpdate(booking.id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -642,10 +642,10 @@ export function FlightsBookings() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-semibold text-gray-900">Flight Booking Details</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Flight Booking Details</h3>
                 <button
                   onClick={handleCloseBookingDetails}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   <span className="text-2xl">&times;</span>
                 </button>
@@ -653,7 +653,7 @@ export function FlightsBookings() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Booking Information</h4>
+                  <h4 className="font-medium text-slate-900 mb-2">Booking Information</h4>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Booking ID:</span> {selectedBooking.id}</p>
                     <p><span className="font-medium">Status:</span> <StatusBadge status={selectedBooking.status || 'pending'} variant="small" /></p>
@@ -664,7 +664,7 @@ export function FlightsBookings() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Customer Information</h4>
+                  <h4 className="font-medium text-slate-900 mb-2">Customer Information</h4>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Name:</span> {selectedBooking.tourist_profile?.full_name || selectedBooking.profiles?.full_name || selectedBooking.guest_name || 'N/A'}</p>
                     <p><span className="font-medium">Email:</span> {selectedBooking.guest_email || 'N/A'}</p>
@@ -673,7 +673,7 @@ export function FlightsBookings() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Flight Service</h4>
+                  <h4 className="font-medium text-slate-900 mb-2">Flight Service</h4>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Title:</span> {selectedBooking.service?.title || 'N/A'}</p>
                     <p><span className="font-medium">Location:</span> {selectedBooking.service?.location || 'N/A'}</p>
@@ -683,7 +683,7 @@ export function FlightsBookings() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Additional Details</h4>
+                  <h4 className="font-medium text-slate-900 mb-2">Additional Details</h4>
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Number of Passengers:</span> {selectedBooking.guests || 1}</p>
                     <p><span className="font-medium">Special Requests:</span> {selectedBooking.special_requests || 'None'}</p>
@@ -693,13 +693,13 @@ export function FlightsBookings() {
 
               {selectedBookingTickets.length > 0 && (
                 <div className="mt-6">
-                  <h4 className="font-medium text-gray-900 mb-2">Tickets</h4>
+                  <h4 className="font-medium text-slate-900 mb-2">Tickets</h4>
                   <div className="space-y-2">
                     {selectedBookingTickets.map((ticket: any) => (
-                      <div key={ticket.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                      <div key={ticket.id} className="flex items-center justify-between p-3 bg-slate-50 rounded">
                         <div>
                           <p className="text-sm font-medium">Ticket #{ticket.id}</p>
-                          <p className="text-xs text-gray-500">Issued: {formatDateTime(ticket.issued_at)}</p>
+                          <p className="text-xs text-slate-500">Issued: {formatDateTime(ticket.issued_at)}</p>
                         </div>
                         <button
                           onClick={() => generateTicketQR(ticket)}
@@ -721,10 +721,10 @@ export function FlightsBookings() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-semibold text-gray-900">Ticket QR Code</h3>
+              <h3 className="text-sm font-semibold text-slate-900">Ticket QR Code</h3>
               <button
                 onClick={() => setShowTicketImage(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-slate-400 hover:text-slate-600"
               >
                 <span className="text-2xl">&times;</span>
               </button>

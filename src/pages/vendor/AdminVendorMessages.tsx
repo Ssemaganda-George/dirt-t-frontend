@@ -195,13 +195,13 @@ export default function AdminVendorMessages() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-7 w-36 bg-gray-200 rounded-lg" />
+          <div className="h-7 w-36 bg-slate-200 rounded-lg" />
           <div className="flex gap-2">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-28 bg-gray-200 rounded-md" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-28 bg-slate-200 rounded-md" />)}
           </div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 bg-white rounded-xl border border-gray-200" />
+              <div key={i} className="h-20 bg-white rounded-xl border border-slate-200" />
             ))}
           </div>
         </div>
@@ -213,11 +213,11 @@ export default function AdminVendorMessages() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900">Vendor not found</h2>
-          <p className="text-gray-600 mt-2">The vendor you're looking for doesn't exist.</p>
+          <h2 className="text-xl font-semibold text-slate-900">Vendor not found</h2>
+          <p className="text-slate-600 mt-2">The vendor you're looking for doesn't exist.</p>
           <button
             onClick={() => navigate('/admin/messages')}
-            className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm"
+            className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm"
           >
             Back to Messages
           </button>
@@ -232,7 +232,7 @@ export default function AdminVendorMessages() {
       <div>
         <button
           onClick={() => navigate('/admin/messages')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-3"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 mb-3"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Admin Messages
@@ -242,8 +242,8 @@ export default function AdminVendorMessages() {
             <Eye className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Monitoring: {vendor.business_name}</h1>
-            <p className="text-sm text-gray-500">Viewing vendor's conversations (Read-Only)</p>
+            <h1 className="text-xl font-semibold text-slate-900">Monitoring: {vendor.business_name}</h1>
+            <p className="text-sm text-slate-500">Viewing vendor's conversations (Read-Only)</p>
           </div>
         </div>
       </div>
@@ -259,25 +259,25 @@ export default function AdminVendorMessages() {
               const isAdmin = selectedConversation === 'admin'
               
               return (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col" style={{ height: 'min(70vh, 520px)' }}>
                   {/* Chat Header */}
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                  <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                     <button
                       onClick={() => setSelectedConversation(null)}
-                      className="p-1.5 rounded-lg hover:bg-gray-100 transition-all"
+                      className="p-1.5 rounded-lg hover:bg-slate-100 transition-all"
                     >
-                      <ChevronLeft className="w-4 h-4 text-gray-500" />
+                      <ChevronLeft className="w-4 h-4 text-slate-500" />
                     </button>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                      isAdmin ? 'bg-blue-600' : 'bg-gray-900'
+                      isAdmin ? 'bg-blue-600' : 'bg-slate-900'
                     }`}>
                       {isAdmin ? <Shield className="w-4 h-4" /> : (convoName?.[0]?.toUpperCase() || 'C')}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {convoName}{!isAdmin && <span className="text-gray-500 font-normal ml-1">(Tourist)</span>}
+                      <p className="text-sm font-medium text-slate-900">
+                        {convoName}{!isAdmin && <span className="text-slate-500 font-normal ml-1">(Tourist)</span>}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {isAdmin ? 'Admin & System Messages' : 'Customer Conversation'}
                       </p>
                     </div>
@@ -287,7 +287,7 @@ export default function AdminVendorMessages() {
                   </div>
 
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
                     {(() => {
                       const conversationMessages = messages.filter(msg => {
                         if (selectedConversation === 'admin') {
@@ -300,8 +300,8 @@ export default function AdminVendorMessages() {
                       return conversationMessages.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center">
-                            <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
-                            <p className="mt-2 text-sm text-gray-500">No messages in this conversation</p>
+                            <MessageSquare className="mx-auto h-10 w-10 text-slate-300" />
+                            <p className="mt-2 text-sm text-slate-500">No messages in this conversation</p>
                           </div>
                         </div>
                       ) : (
@@ -315,7 +315,7 @@ export default function AdminVendorMessages() {
                           if (isSystem) {
                             return (
                               <div key={message.id} className="flex justify-center">
-                                <div className="bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-full max-w-xs text-center">
+                                <div className="bg-slate-100 text-slate-600 text-xs px-3 py-1.5 rounded-full max-w-xs text-center">
                                   {message.message}
                                 </div>
                               </div>
@@ -337,19 +337,19 @@ export default function AdminVendorMessages() {
                                 {!showAvatar && <div className="w-9" />}
                                 <div className={`flex flex-col ${isVendor ? 'items-end' : 'items-start'}`}>
                                   {showAvatar && (
-                                    <p className="text-[10px] text-gray-500 mb-0.5 px-1">
+                                    <p className="text-[10px] text-slate-500 mb-0.5 px-1">
                                       {isVendor ? vendor.business_name : (message.sender?.full_name || message.sender_name || 'Customer')}
                                     </p>
                                   )}
                                   <div className={`px-3 py-2 rounded-xl text-sm ${
                                     isVendor
                                       ? 'bg-blue-600 text-white rounded-br-sm'
-                                      : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
+                                      : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
                                   }`}>
                                     <p className="whitespace-pre-wrap">{message.message}</p>
                                   </div>
                                   {showTimestamp && (
-                                    <p className="text-[10px] text-gray-400 mt-1">
+                                    <p className="text-[10px] text-slate-400 mt-1">
                                       {formatMessageTime(message.created_at)}
                                     </p>
                                   )}
@@ -364,7 +364,7 @@ export default function AdminVendorMessages() {
                   </div>
 
                   {/* Read-Only Notice */}
-                  <div className="p-3 border-t border-gray-100 bg-amber-50">
+                  <div className="p-3 border-t border-slate-100 bg-amber-50">
                     <p className="text-xs text-amber-700 text-center">
                       You are viewing this conversation in read-only mode for monitoring purposes
                     </p>
@@ -391,14 +391,14 @@ export default function AdminVendorMessages() {
                       onClick={() => setFilter(tab.key as any)}
                       className={`min-h-[40px] px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                         isActive
-                          ? 'bg-gray-900 text-white shadow-sm'
-                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
                       <span>{tab.label}</span>
                       <span className={`text-xs px-1.5 py-0.5 rounded-md ${
-                        isActive ? 'bg-white/20' : 'bg-gray-100'
+                        isActive ? 'bg-white/20' : 'bg-slate-100'
                       }`}>
                         {tab.count}
                       </span>
@@ -410,10 +410,10 @@ export default function AdminVendorMessages() {
               {/* Conversations */}
               <div className="space-y-2">
                 {filteredConversations.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                    <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
-                    <p className="mt-3 text-sm font-medium text-gray-900">No conversations</p>
-                    <p className="mt-1 text-xs text-gray-500">
+                  <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+                    <MessageSquare className="mx-auto h-10 w-10 text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-900">No conversations</p>
+                    <p className="mt-1 text-xs text-slate-500">
                       {filter === 'unread' ? 'No unread messages.' :
                        filter === 'customer' ? 'No customer messages.' :
                        filter === 'admin' ? 'No admin messages.' :
@@ -427,8 +427,8 @@ export default function AdminVendorMessages() {
                       onClick={() => setSelectedConversation(convo.id)}
                       className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-sm ${
                         convo.unreadCount > 0 
-                          ? 'border-gray-300 shadow-sm' 
-                          : 'border-gray-200 hover:bg-gray-50/50'
+                          ? 'border-slate-300 shadow-sm' 
+                          : 'border-slate-200 hover:bg-slate-50/50'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -445,7 +445,7 @@ export default function AdminVendorMessages() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <p className={`text-sm truncate ${
-                                convo.unreadCount > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'
+                                convo.unreadCount > 0 ? 'font-semibold text-slate-900' : 'font-medium text-slate-900'
                               }`}>
                                 {convo.name}
                               </p>
@@ -463,17 +463,17 @@ export default function AdminVendorMessages() {
                                   {convo.unreadCount}
                                 </span>
                               )}
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-slate-400">
                                 {formatMessageTime(convo.lastMessageTime)}
                               </span>
                             </div>
                           </div>
                           <p className={`text-sm mt-0.5 line-clamp-1 ${
-                            convo.unreadCount > 0 ? 'text-gray-700' : 'text-gray-500'
+                            convo.unreadCount > 0 ? 'text-slate-700' : 'text-slate-500'
                           }`}>
                             {convo.latestMessage?.message || 'No messages'}
                           </p>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-slate-400 mt-1">
                             {convo.totalMessages} message{convo.totalMessages !== 1 ? 's' : ''}
                           </p>
                         </div>
@@ -488,19 +488,19 @@ export default function AdminVendorMessages() {
 
         {/* Sidebar - Vendor Info */}
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-semibold">
                 {vendor.business_name?.[0]?.toUpperCase() || 'V'}
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">{vendor.business_name}</h3>
-                <p className="text-xs text-gray-500">{vendor.business_email || 'No email'}</p>
+                <h3 className="text-sm font-semibold text-slate-900">{vendor.business_name}</h3>
+                <p className="text-xs text-slate-500">{vendor.business_email || 'No email'}</p>
               </div>
             </div>
-            <div className="space-y-3 pt-3 border-t border-gray-100">
+            <div className="space-y-3 pt-3 border-t border-slate-100">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Status</span>
+                <span className="text-slate-500">Status</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                   vendor.status === 'approved' ? 'bg-green-100 text-green-700' :
                   vendor.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -510,16 +510,16 @@ export default function AdminVendorMessages() {
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Total Conversations</span>
-                <span className="font-medium text-gray-900">{conversationCounts.all}</span>
+                <span className="text-slate-500">Total Conversations</span>
+                <span className="font-medium text-slate-900">{conversationCounts.all}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Unread Messages</span>
-                <span className="font-medium text-gray-900">{conversationCounts.totalUnreadMessages}</span>
+                <span className="text-slate-500">Unread Messages</span>
+                <span className="font-medium text-slate-900">{conversationCounts.totalUnreadMessages}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Customer Chats</span>
-                <span className="font-medium text-gray-900">{conversationCounts.customer}</span>
+                <span className="text-slate-500">Customer Chats</span>
+                <span className="font-medium text-slate-900">{conversationCounts.customer}</span>
               </div>
             </div>
           </div>

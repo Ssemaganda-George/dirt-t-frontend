@@ -450,7 +450,7 @@ const AdminConservationTrees = () => {
         </div>
       )}
       <h1 className="text-2xl font-semibold mb-4">Conservation — Trees</h1>
-      <p className="text-sm text-gray-600 mb-4">Manage submitted trees. Approve to make them visible on the public map.</p>
+      <p className="text-sm text-slate-600 mb-4">Manage submitted trees. Approve to make them visible on the public map.</p>
 
       <div className="mb-4 flex flex-wrap gap-3 items-center">
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search ID, species, planted by" className="border px-3 py-2 rounded w-64" />
@@ -465,7 +465,7 @@ const AdminConservationTrees = () => {
         </select>
         <label className="text-sm">From <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="ml-1 border rounded px-2" /></label>
         <label className="text-sm">To <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="ml-1 border rounded px-2" /></label>
-        <button onClick={() => { setSearch(''); setApprovedFilter('all'); setSpeciesFilter(''); setDateFrom(''); setDateTo(''); }} className="ml-2 px-3 py-2 bg-gray-200 rounded">Reset</button>
+        <button onClick={() => { setSearch(''); setApprovedFilter('all'); setSpeciesFilter(''); setDateFrom(''); setDateTo(''); }} className="ml-2 px-3 py-2 bg-slate-200 rounded">Reset</button>
         <button onClick={() => fetchTrees()} className="ml-2 px-3 py-2 bg-green-600 text-white rounded">Refresh</button>
         <button onClick={openAddModal} className="ml-2 px-3 py-2 bg-indigo-600 text-white rounded">Add Tree</button>
       </div>
@@ -490,7 +490,7 @@ const AdminConservationTrees = () => {
                 <tr key={t.id} className="border-t">
                   <td className="p-2 align-top">
                     <div className="font-medium">{t.external_id || t.id}</div>
-                    {t.external_id && <div className="text-xs text-gray-500 font-mono mt-1">{t.id}</div>}
+                    {t.external_id && <div className="text-xs text-slate-500 font-mono mt-1">{t.id}</div>}
                   </td>
                   <td className="p-2 align-top">{t.species}</td>
                   <td className="p-2 align-top">{t.latitude?.toFixed(6)}, {t.longitude?.toFixed(6)}</td>
@@ -501,7 +501,7 @@ const AdminConservationTrees = () => {
                       <div className="flex gap-2 overflow-x-auto">
                         {t.images.map((u, i) => <img key={i} src={u} alt={`img-${i}`} className="h-12 w-12 object-cover rounded" />)}
                       </div>
-                    ) : <span className="text-xs text-gray-500">—</span>}
+                    ) : <span className="text-xs text-slate-500">—</span>}
                   </td>
                   <td className="p-2 align-top">{t.approved ? 'Yes' : 'No'}</td>
                   <td className="p-2 align-top">
@@ -543,19 +543,19 @@ const AdminConservationTrees = () => {
               <label className="flex flex-col col-span-2"><span className="text-sm">Attach Booking (optional)</span>
                 <div className="flex gap-2">
                   <input value={editBookingSearch} onChange={e => setEditBookingSearch(e.target.value)} placeholder="Search booking ID or external ID" className="flex-1 border px-2 py-1 rounded" />
-                  <button onClick={() => searchBookingsForEdit()} className="px-2 py-1 border rounded bg-gray-50 text-xs">Search</button>
+                  <button onClick={() => searchBookingsForEdit()} className="px-2 py-1 border rounded bg-slate-50 text-xs">Search</button>
                 </div>
                 <div className="mt-2">
-                    <div className="text-xs text-gray-500 mb-1">You can type a booking ID directly and save, or search to validate.</div>
+                    <div className="text-xs text-slate-500 mb-1">You can type a booking ID directly and save, or search to validate.</div>
                     {editSelectedBooking ? (
-                    <div className="p-2 border rounded bg-gray-50">
+                    <div className="p-2 border rounded bg-slate-50">
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="text-sm font-medium">{editSelectedBooking.external_id || editSelectedBooking.id}</div>
-                          <div className="text-xs text-gray-600">{editSelectedBooking.service_name || editSelectedBooking.product_name || editSelectedBooking.title || ''}</div>
-                          <div className="text-xs text-gray-600">{editSelectedBooking.vendor_name || editSelectedBooking.provider_name || ''}</div>
+                          <div className="text-xs text-slate-600">{editSelectedBooking.service_name || editSelectedBooking.product_name || editSelectedBooking.title || ''}</div>
+                          <div className="text-xs text-slate-600">{editSelectedBooking.vendor_name || editSelectedBooking.provider_name || ''}</div>
                         </div>
-                        <div className="text-right text-xs text-gray-600">
+                        <div className="text-right text-xs text-slate-600">
                           {editSelectedBooking.start_at ? new Date(editSelectedBooking.start_at).toLocaleString() : ''}
                           <div>{editSelectedBooking.total ? `${editSelectedBooking.currency || ''} ${editSelectedBooking.total}` : ''}</div>
                         </div>
@@ -568,15 +568,15 @@ const AdminConservationTrees = () => {
                     editBookingResults.length > 0 ? (
                       <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-auto">
                         {editBookingResults.map(b => (
-                          <button key={b.id} onClick={() => setEditSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-gray-50 text-sm">
+                          <button key={b.id} onClick={() => setEditSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-slate-50 text-sm">
                             <div className="font-medium">{b.external_id || b.id}</div>
-                            <div className="text-xs text-gray-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
-                            <div className="text-xs text-gray-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
+                            <div className="text-xs text-slate-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
+                            <div className="text-xs text-slate-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
                           </button>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-500 mt-2">No booking selected. You can type an ID above or search to attach a booking.</div>
+                      <div className="text-xs text-slate-500 mt-2">No booking selected. You can type an ID above or search to attach a booking.</div>
                     )
                   )}
                 </div>
@@ -598,7 +598,7 @@ const AdminConservationTrees = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-2 text-xs text-gray-500">Existing images will be preserved and new uploads appended. Use the × button to remove an existing image.</div>
+                <div className="mt-2 text-xs text-slate-500">Existing images will be preserved and new uploads appended. Use the × button to remove an existing image.</div>
               </label>
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -616,26 +616,26 @@ const AdminConservationTrees = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Species</label>
                   <input value={addSpecies} onChange={e => setAddSpecies(e.target.value)} className="w-full border rounded px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Planted By</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Planted By</label>
                   <input value={addPlantedBy} onChange={e => setAddPlantedBy(e.target.value)} className="w-full border rounded px-3 py-2" />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
                   <input value={addLatitude} onChange={e => setAddLatitude(e.target.value)} className="w-full border rounded px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
                   <input value={addLongitude} onChange={e => setAddLongitude(e.target.value)} className="w-full border rounded px-3 py-2" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => setAddPickingLocation(p => !p)} className="w-full px-2 py-1 border rounded bg-gray-50 text-xs text-center h-9">{addPickingLocation ? 'Close map' : 'Pick on map'}</button>
+                  <button type="button" onClick={() => setAddPickingLocation(p => !p)} className="w-full px-2 py-1 border rounded bg-slate-50 text-xs text-center h-9">{addPickingLocation ? 'Close map' : 'Pick on map'}</button>
                   <button type="button" onClick={async () => {
                     if (!('geolocation' in navigator)) { alert('Geolocation not available'); return; }
                     try {
@@ -648,32 +648,32 @@ const AdminConservationTrees = () => {
                       console.error('Geolocation error', e);
                       alert('Unable to get current location');
                     }
-                  }} className="w-full px-2 py-1 border rounded bg-gray-50 text-xs text-center h-9">Use current</button>
+                  }} className="w-full px-2 py-1 border rounded bg-slate-50 text-xs text-center h-9">Use current</button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Planted On (date & time)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Planted On (date & time)</label>
                 <input type="datetime-local" value={addPlantedOn} onChange={e => setAddPlantedOn(e.target.value)} className="w-full border rounded px-3 py-2" />
-                <div className="text-xs text-gray-500 mt-1">{addPlantedOn ? new Date(addPlantedOn).toLocaleString() : 'dd/mm/yyyy, --:--'}</div>
+                <div className="text-xs text-slate-500 mt-1">{addPlantedOn ? new Date(addPlantedOn).toLocaleString() : 'dd/mm/yyyy, --:--'}</div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Attach Booking (optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Attach Booking (optional)</label>
                 <div className="flex gap-2">
                   <input value={bookingSearch} onChange={e => setBookingSearch(e.target.value)} placeholder="Search booking ID or external ID" className="flex-1 border rounded px-3 py-2" />
-                  <button onClick={() => searchBookings()} className="px-3 py-2 border rounded bg-gray-50">Search</button>
+                  <button onClick={() => searchBookings()} className="px-3 py-2 border rounded bg-slate-50">Search</button>
                 </div>
                 <div className="mt-2">
                   {selectedBooking ? (
-                    <div className="p-2 border rounded bg-gray-50">
+                    <div className="p-2 border rounded bg-slate-50">
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="text-sm font-medium">{selectedBooking.external_id || selectedBooking.id}</div>
-                          <div className="text-xs text-gray-600">{selectedBooking.service_name || selectedBooking.product_name || selectedBooking.title || ''}</div>
-                          <div className="text-xs text-gray-600">{selectedBooking.vendor_name || selectedBooking.provider_name || ''}</div>
+                          <div className="text-xs text-slate-600">{selectedBooking.service_name || selectedBooking.product_name || selectedBooking.title || ''}</div>
+                          <div className="text-xs text-slate-600">{selectedBooking.vendor_name || selectedBooking.provider_name || ''}</div>
                         </div>
-                        <div className="text-right text-xs text-gray-600">
+                        <div className="text-right text-xs text-slate-600">
                           {selectedBooking.start_at ? new Date(selectedBooking.start_at).toLocaleString() : ''}
                           <div>{selectedBooking.total ? `${selectedBooking.currency || ''} ${selectedBooking.total}` : ''}</div>
                         </div>
@@ -686,22 +686,22 @@ const AdminConservationTrees = () => {
                     bookingResults.length > 0 ? (
                       <div className="grid grid-cols-1 gap-2 mt-2 max-h-40 overflow-auto">
                         {bookingResults.map(b => (
-                          <button key={b.id} onClick={() => setSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-gray-50 text-sm">
+                          <button key={b.id} onClick={() => setSelectedBooking(b)} className="text-left p-2 border rounded hover:bg-slate-50 text-sm">
                             <div className="font-medium">{b.external_id || b.id}</div>
-                            <div className="text-xs text-gray-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
-                            <div className="text-xs text-gray-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
+                            <div className="text-xs text-slate-600">{b.service_name || b.product_name || b.title || ''} {b.vendor_name ? `— ${b.vendor_name}` : ''}</div>
+                            <div className="text-xs text-slate-500">{b.start_at ? new Date(b.start_at).toLocaleString() : ''} {b.total ? ` • ${b.currency || ''} ${b.total}` : ''}</div>
                           </button>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-xs text-gray-500 mt-2">No booking selected. Search to attach a booking.</div>
+                      <div className="text-xs text-slate-500 mt-2">No booking selected. Search to attach a booking.</div>
                     )
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Add Images</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Add Images</label>
                 <input type="file" multiple accept="image/*" onChange={onAddFilesChange} className="w-full" />
                 {addPreviews.length > 0 && (
                   <div className="flex gap-2 mt-3">

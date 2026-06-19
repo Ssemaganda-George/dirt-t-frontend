@@ -394,20 +394,20 @@ export default function Profile() {
   if (!profile || !vendorData) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <div className="h-7 w-40 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+        <div className="h-7 w-40 bg-slate-200 rounded-lg animate-pulse" />
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
           <div className="flex items-center gap-5">
-            <div className="h-20 w-20 rounded-full bg-gray-200 animate-pulse" />
+            <div className="h-20 w-20 rounded-full bg-slate-200 animate-pulse" />
             <div className="space-y-2">
-              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-36 bg-slate-200 rounded animate-pulse" />
+              <div className="h-4 w-48 bg-slate-200 rounded animate-pulse" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-                <div className="h-10 w-full bg-gray-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+                <div className="h-10 w-full bg-slate-100 rounded-lg animate-pulse" />
               </div>
             ))}
           </div>
@@ -420,13 +420,13 @@ export default function Profile() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your personal and business information</p>
+          <h1 className="text-xl font-semibold text-slate-900">My Profile</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your personal and business information</p>
         </div>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="min-h-[40px] px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+            className="min-h-[40px] px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
           >
             Edit Profile
           </button>
@@ -442,15 +442,15 @@ export default function Profile() {
       )}
 
       {/* Profile Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-5">
-          <div className="h-20 w-20 rounded-full bg-gray-900 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
+          <div className="h-20 w-20 rounded-full bg-slate-900 flex items-center justify-center text-white text-2xl font-semibold shrink-0">
             {profile.full_name?.charAt(0).toUpperCase() || 'V'}
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">{formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : profile?.full_name || 'Vendor'}</h2>
-            <p className="text-sm text-gray-500">{profile.email}</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <h2 className="text-lg font-semibold text-slate-900">{formData.first_name && formData.last_name ? `${formData.first_name} ${formData.last_name}` : profile?.full_name || 'Vendor'}</h2>
+            <p className="text-sm text-slate-500">{profile.email}</p>
+            <p className="text-xs text-slate-400 mt-1">
               Business · Member since {new Date(profile.created_at || Date.now()).toLocaleDateString()}
             </p>
           </div>
@@ -458,11 +458,11 @@ export default function Profile() {
       </div>
 
       {/* Business Information */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Business Information</h3>
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 className="text-sm font-semibold text-slate-900 mb-4">Business Information</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+            <label htmlFor="business_name" className="block text-sm font-medium text-slate-700 mb-1">Business Name</label>
             <input
               type="text"
               name="business_name"
@@ -470,12 +470,12 @@ export default function Profile() {
               value={formData.business_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="Enter your business name"
             />
           </div>
           <div>
-            <label htmlFor="business_email" className="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
+            <label htmlFor="business_email" className="block text-sm font-medium text-slate-700 mb-1">Business Email</label>
             <input
               type="email"
               name="business_email"
@@ -483,12 +483,12 @@ export default function Profile() {
               value={formData.business_email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="Enter business email"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Phone *</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Business Phone *</label>
             {isEditing ? (
               <PhoneModal
                 phone={formData.business_phone}
@@ -502,12 +502,12 @@ export default function Profile() {
                 type="text"
                 value={formData.business_phone ? `${formData.business_phone_country_code} ${formData.business_phone}` : ''}
                 readOnly
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
               />
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Additional Business Phones</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Additional Business Phones</label>
             <div className="space-y-2">
               {Array.from({ length: 2 }, (_, index) => {
                 const phoneObj = formData.business_phones[index] || { phone: '', country_code: '+256' }
@@ -538,7 +538,7 @@ export default function Profile() {
                         type="text"
                         value={phoneObj.phone ? `${phoneObj.country_code} ${phoneObj.phone}` : ''}
                         readOnly
-                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                        className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
                       />
                     )}
                   </div>
@@ -547,7 +547,7 @@ export default function Profile() {
             </div>
           </div>
           <div>
-            <label htmlFor="business_website" className="block text-sm font-medium text-gray-700 mb-1">Business Website</label>
+            <label htmlFor="business_website" className="block text-sm font-medium text-slate-700 mb-1">Business Website</label>
             <input
               type="url"
               name="business_website"
@@ -555,21 +555,21 @@ export default function Profile() {
               value={formData.business_website}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="https://yourwebsite.com"
             />
           </div>
         </div>
 
         {/* Payment / Payout Details */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Payment Details</h3>
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-3">Payment Details</h3>
 
           <div className="space-y-4">
             {/* Bank details - stacked on mobile, two columns on >=sm */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                <label htmlFor="bank_name" className="block text-sm font-medium text-slate-700 mb-1">Bank Name</label>
                 <input
                   type="text"
                   name="bank_name"
@@ -577,13 +577,13 @@ export default function Profile() {
                   value={formData.bank_name}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full min-h-[40px] border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full min-h-[40px] border border-slate-200 rounded-md px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="e.g., Stanbic"
                 />
               </div>
 
               <div>
-                <label htmlFor="bank_account_name" className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                <label htmlFor="bank_account_name" className="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
                 <input
                   type="text"
                   name="bank_account_name"
@@ -591,13 +591,13 @@ export default function Profile() {
                   value={formData.bank_account_name}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   placeholder="Name on the account"
                 />
               </div>
 
               <div>
-                <label htmlFor="bank_account_number" className="block text-sm font-medium text-gray-700 mt-1 mb-1">Account Number</label>
+                <label htmlFor="bank_account_number" className="block text-sm font-medium text-slate-700 mt-1 mb-1">Account Number</label>
                 <input
                   type="text"
                   name="bank_account_number"
@@ -605,13 +605,13 @@ export default function Profile() {
                   value={formData.bank_account_number}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   placeholder="e.g., 1234567890"
                 />
               </div>
 
               <div>
-                <label htmlFor="bank_branch" className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <label htmlFor="bank_branch" className="block text-sm font-medium text-slate-700 mb-1">Branch</label>
                 <input
                   type="text"
                   name="bank_branch"
@@ -619,13 +619,13 @@ export default function Profile() {
                   value={formData.bank_branch}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   placeholder="Branch name (optional)"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="bank_swift" className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC (optional)</label>
+                <label htmlFor="bank_swift" className="block text-sm font-medium text-slate-700 mb-1">SWIFT / BIC (optional)</label>
                 <input
                   type="text"
                   name="bank_swift"
@@ -633,7 +633,7 @@ export default function Profile() {
                   value={formData.bank_swift}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   placeholder="e.g., SBICUGKX"
                 />
               </div>
@@ -641,13 +641,13 @@ export default function Profile() {
 
             {/* Mobile money accounts - compact list optimized for mobile */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Accounts</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Money Accounts</label>
               <div className="space-y-3">
                 {formData.mobile_money_accounts.map((acct, idx) => (
-                  <div key={idx} className="bg-gray-50 border border-gray-100 rounded-md p-3">
+                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-md p-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-gray-600">Provider</label>
+                        <label className="text-xs text-slate-600">Provider</label>
                         <input
                           type="text"
                           name={`mm_provider_${idx}`}
@@ -658,13 +658,13 @@ export default function Profile() {
                           }))}
                           disabled={!isEditing}
                           placeholder="Provider (e.g., MTN, Airtel)"
-                          className="w-full border border-gray-200 rounded-md px-2 py-2 text-sm"
+                          className="w-full border border-slate-200 rounded-md px-2 py-2 text-sm"
                         />
-                        <p className="text-xs text-gray-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
+                        <p className="text-xs text-slate-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
                       </div>
 
                       <div>
-                        <label className="text-xs text-gray-600">Account name</label>
+                        <label className="text-xs text-slate-600">Account name</label>
                         <input
                           type="text"
                           name={`mm_name_${idx}`}
@@ -675,13 +675,13 @@ export default function Profile() {
                           }))}
                           disabled={!isEditing}
                           placeholder="Name on the account"
-                          className="w-full border border-gray-200 rounded-md px-2 py-2 text-sm"
+                          className="w-full border border-slate-200 rounded-md px-2 py-2 text-sm"
                         />
                       </div>
                     </div>
 
                     <div className="mt-3">
-                      <label className="text-xs text-gray-600">Mobile money phone</label>
+                      <label className="text-xs text-slate-600">Mobile money phone</label>
                       {isEditing ? (
                         <PhoneModal
                           phone={acct.phone}
@@ -701,7 +701,7 @@ export default function Profile() {
                           type="text"
                           value={acct.phone ? `${acct.country_code} ${acct.phone} ${acct.provider ? `(${acct.provider})` : ''} ${acct.name ? `- ${acct.name}` : ''}` : ''}
                           readOnly
-                          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                          className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
                         />
                       )}
                     </div>
@@ -712,16 +712,16 @@ export default function Profile() {
 
             {/* Add Payment Method */}
             <div className="mt-1 border-t pt-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Add a Payment Method</h4>
+              <h4 className="text-sm font-semibold text-slate-900 mb-2">Add a Payment Method</h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
                 <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Account Type</label>
                   <select
                     value={newPayment.type}
                     onChange={(e) => setNewPayment({ type: e.target.value })}
                     disabled={!isEditing}
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                    className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   >
                     <option value="bank">Bank</option>
                     <option value="mobile_money">Mobile Money</option>
@@ -734,19 +734,19 @@ export default function Profile() {
                   {/* bank fields */}
                   {newPayment.type === 'bank' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name — e.g., Stanbic" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Account Name" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="Account Number — e.g., 1234567890" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+                      <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name — e.g., Stanbic" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Account Name" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="Account Number — e.g., 1234567890" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
                     </div>
                   )}
 
                   {/* mobile money fields */}
                   {newPayment.type === 'mobile_money' && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider — e.g., MTN" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Account name — e.g., ssemaganda George" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider — e.g., MTN" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Account name — e.g., ssemaganda George" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
                       <div>
                         {isEditing ? (
                           <PhoneModal
@@ -757,7 +757,7 @@ export default function Profile() {
                             placeholder="700 000 000"
                           />
                         ) : (
-                          <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
+                          <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                         )}
                       </div>
                     </div>
@@ -766,23 +766,23 @@ export default function Profile() {
                   {/* swift */}
                   {newPayment.type === 'swift' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
                     </div>
                   )}
 
                   {/* crypto */}
                   {newPayment.type === 'crypto' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="Currency / Network — e.g., BTC" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="Label (optional)" className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+                      <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="Currency / Network — e.g., BTC" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
+                      <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="Label (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
                     </div>
                   )}
 
                   <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-gray-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
-                    <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-gray-900 text-white rounded-md text-sm hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50">Add</button>
+                    <p className="text-xs text-slate-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
+                    <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50">Add</button>
                   </div>
                 </div>
               </div>
@@ -790,12 +790,12 @@ export default function Profile() {
           </div>
         </div>
           <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Accounts</label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Money Accounts</label>
           <div className="space-y-3">
             {formData.mobile_money_accounts.map((acct, idx) => (
                   <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
                       <input
                         type="text"
                         name={`mm_provider_${idx}`}
@@ -806,13 +806,13 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="Provider (e.g., MTN, Airtel)"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
                       />
-                      <p className="text-xs text-gray-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
+                      <p className="text-xs text-slate-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account name</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Account name</label>
                       <input
                         type="text"
                         name={`mm_name_${idx}`}
@@ -823,12 +823,12 @@ export default function Profile() {
                         }))}
                         disabled={!isEditing}
                         placeholder="Name on the account"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
                       />
                     </div>
 
                     <div className="sm:col-span-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money phone</label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Mobile money phone</label>
                       {isEditing ? (
                         <PhoneModal
                           phone={acct.phone}
@@ -848,7 +848,7 @@ export default function Profile() {
                           type="text"
                           value={acct.phone ? `${acct.country_code} ${acct.phone} ${acct.provider ? `(${acct.provider})` : ''} ${acct.name ? `- ${acct.name}` : ''}` : ''}
                           readOnly
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
                         />
                       )}
                     </div>
@@ -859,16 +859,16 @@ export default function Profile() {
 
         {/* Add flexible payment method */}
         <div className="mt-6 border-t pt-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Add a Payment Method</h4>
+          <h4 className="text-sm font-semibold text-slate-900 mb-3">Add a Payment Method</h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
             <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Account Type</label>
               <select
                 value={newPayment.type}
                 onChange={(e) => setNewPayment({ type: e.target.value })}
                 disabled={!isEditing}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
               >
                 <option value="bank">Bank</option>
                 <option value="mobile_money">Mobile Money</option>
@@ -881,24 +881,24 @@ export default function Profile() {
               {newPayment.type === 'bank' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                    <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="e.g., Stanbic" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Bank Name</label>
+                    <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="e.g., Stanbic" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
-                    <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
+                    <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                    <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="e.g., 1234567890" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Account Number</label>
+                    <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="e.g., 1234567890" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch name (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Branch</label>
+                    <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch name (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC (optional)</label>
-                    <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">SWIFT / BIC (optional)</label>
+                    <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                 </div>
               )}
@@ -906,18 +906,18 @@ export default function Profile() {
               {newPayment.type === 'mobile_money' && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
-                    <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider (e.g., MTN, Airtel)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-                    <p className="text-xs text-gray-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
+                    <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider (e.g., MTN, Airtel)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                    <p className="text-xs text-slate-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Account name</label>
-                    <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Account name</label>
+                    <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money phone</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Mobile money phone</label>
                     {isEditing ? (
                       <PhoneModal
                         phone={newPayment.phone || ''}
@@ -927,7 +927,7 @@ export default function Profile() {
                         placeholder="700 000 000"
                       />
                     ) : (
-                      <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
+                      <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
                     )}
                   </div>
                 </div>
@@ -936,12 +936,12 @@ export default function Profile() {
               {newPayment.type === 'swift' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name (optional)</label>
-                    <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank name (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Bank Name (optional)</label>
+                    <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank name (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC</label>
-                    <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">SWIFT / BIC</label>
+                    <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                 </div>
               )}
@@ -949,38 +949,38 @@ export default function Profile() {
               {newPayment.type === 'crypto' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency / Network</label>
-                    <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="e.g., BTC, ETH" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Currency / Network</label>
+                    <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="e.g., BTC, ETH" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                    <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Label (optional)</label>
-                    <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="e.g., Main BTC wallet" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Label (optional)</label>
+                    <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="e.g., Main BTC wallet" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                 </div>
               )}
 
               <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-gray-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
-                <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50">Add</button>
+                <p className="text-xs text-slate-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
+                <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-slate-900 text-white rounded-lg text-sm hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50">Add</button>
               </div>
             </div>
           </div>
 
           {formData.crypto_accounts && formData.crypto_accounts.length > 0 && (
             <div className="mt-4">
-              <h5 className="text-sm font-medium text-gray-800">Crypto (local)</h5>
-              <ul className="mt-2 space-y-2 text-sm text-gray-700">
+              <h5 className="text-sm font-medium text-slate-800">Crypto (local)</h5>
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
                 {formData.crypto_accounts.map((c, i) => (
-                  <li key={i} className="flex items-center justify-between border border-gray-100 rounded-md px-3 py-2">
+                  <li key={i} className="flex items-center justify-between border border-slate-100 rounded-md px-3 py-2">
                     <div>
                       <div className="font-medium">{c.currency || 'Unknown'}</div>
-                      <div className="text-xs text-gray-500">{c.address}</div>
+                      <div className="text-xs text-slate-500">{c.address}</div>
                     </div>
-                    <div className="text-xs text-gray-400">{c.label}</div>
+                    <div className="text-xs text-slate-400">{c.label}</div>
                   </li>
                 ))}
               </ul>
@@ -991,11 +991,11 @@ export default function Profile() {
       </div>
 
       {/* Personal Information */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Personal Information</h3>
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <h3 className="text-sm font-semibold text-slate-900 mb-4">Personal Information</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <label htmlFor="first_name" className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
             <input
               type="text"
               name="first_name"
@@ -1003,12 +1003,12 @@ export default function Profile() {
               value={formData.first_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="Enter your first name"
             />
           </div>
           <div>
-            <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <label htmlFor="last_name" className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
             <input
               type="text"
               name="last_name"
@@ -1016,12 +1016,12 @@ export default function Profile() {
               value={formData.last_name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="Enter your last name"
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
             <input
               type="email"
               name="email"
@@ -1029,12 +1029,12 @@ export default function Profile() {
               value={formData.email}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-50 disabled:text-slate-500"
               placeholder="Enter your email"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
             {isEditing ? (
               <PhoneModal
                 phone={formData.phone}
@@ -1048,12 +1048,12 @@ export default function Profile() {
                 type="text"
                 value={formData.phone ? `${formData.phone_country_code} ${formData.phone}` : ''}
                 readOnly
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
               />
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Home City</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Home City</label>
             <CitySearchInput
               city={formData.home_city}
               onSelect={(city, country) => {
@@ -1067,12 +1067,12 @@ export default function Profile() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
             <input
               type="text"
               value="Business"
               disabled
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
             />
           </div>
         </div>
@@ -1084,14 +1084,14 @@ export default function Profile() {
           <button
             onClick={handleCancel}
             disabled={isLoading}
-            className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50"
+            className="min-h-[40px] px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50"
+            className="min-h-[40px] px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Save Changes'}
           </button>

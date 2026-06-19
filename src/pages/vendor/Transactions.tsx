@@ -457,26 +457,26 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Transactions</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your earnings and payment history</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Transactions</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your earnings and payment history</p>
         </div>
         <button
           onClick={() => setShowWithdraw(true)}
           disabled={!walletStats || walletStats.currentBalance <= 0}
-          className="min-h-[40px] px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+          className="min-h-[40px] px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
         >
           Withdraw Funds
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200 p-1.5 inline-flex gap-1">
+      <div className="bg-white rounded-xl border border-slate-200 p-1.5 inline-flex gap-1">
         {(['overview', 'transactions', 'recommendations'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 ${
-              activeTab === tab ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+            className={`min-h-[36px] px-3 py-1.5 rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+              activeTab === tab ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {tab === 'overview' ? 'Overview' : tab === 'transactions' ? 'Transactions' : 'Insights'}
@@ -486,10 +486,10 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
       {/* Error */}
       {error && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-red-600">{error}</p>
-            <button onClick={refresh} className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded">Retry</button>
+            <button onClick={refresh} className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 rounded">Retry</button>
           </div>
         </div>
       )}
@@ -498,7 +498,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-3 text-sm text-gray-500">Loading wallet data...</p>
+          <p className="mt-3 text-sm text-slate-500">Loading wallet data...</p>
         </div>
       ) : (
           <div className="space-y-8">
@@ -508,62 +508,62 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 {/* Wallet Statistics Cards */}
                 {wallet && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-blue-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats?.currentBalance ?? wallet.balance, walletStats?.currency || wallet.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">Available for withdrawal</p>
+                          <p className="text-sm font-medium text-slate-600">Current Balance</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(walletStats?.currentBalance ?? wallet.balance, walletStats?.currency || wallet.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">Available for withdrawal</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-green-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-green-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Completed Earnings</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.completedBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">Released and ready to withdraw</p>
+                          <p className="text-sm font-medium text-slate-600">Completed Earnings</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(Number(walletStats.completedBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">Released and ready to withdraw</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-yellow-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-yellow-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Pending Earnings</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(Number(walletStats.pendingBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">Awaiting service date / completion</p>
+                          <p className="text-sm font-medium text-slate-600">Pending Earnings</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(Number(walletStats.pendingBalance) || 0, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">Awaiting service date / completion</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-blue-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-blue-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Total Earned</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.totalEarned, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">All-time earnings</p>
+                          <p className="text-sm font-medium text-slate-600">Total Earned</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(walletStats.totalEarned, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">All-time earnings</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-orange-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-orange-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Pending Withdrawals</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.pendingWithdrawals, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">{walletStats.pendingWithdrawalsCount || 0} pending</p>
+                          <p className="text-sm font-medium text-slate-600">Pending Withdrawals</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(walletStats.pendingWithdrawals, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">{walletStats.pendingWithdrawalsCount || 0} pending</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 border-l-4 border-l-purple-600 rounded-lg p-5 hover:shadow-md transition-all">
+                    <div className="bg-white border border-purple-200 rounded-lg p-5 hover:shadow-md transition-all">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-600">Total Withdrawn</p>
-                          <p className="mt-2 text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(walletStats.totalWithdrawn, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
-                          <p className="text-xs text-gray-600 mt-2">{walletStats.completedWithdrawals || 0} completed</p>
+                          <p className="text-sm font-medium text-slate-600">Total Withdrawn</p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrencyWithConversion(walletStats.totalWithdrawn, walletStats.currency, selectedCurrency, selectedLanguage)}</p>
+                          <p className="text-xs text-slate-600 mt-2">{walletStats.completedWithdrawals || 0} completed</p>
                         </div>
                       </div>
                     </div>
@@ -577,10 +577,10 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 )}
 
                 {pendingHolds.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="bg-white border border-slate-200 rounded-lg p-5">
                     <div className="mb-4">
-                      <h3 className="text-base font-semibold text-gray-900">Pending earnings by booking</h3>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <h3 className="text-base font-semibold text-slate-900">Pending earnings by booking</h3>
+                      <p className="text-xs text-slate-600 mt-1">
                         These amounts are held until the service date or completion. Need funds sooner (e.g. event setup deposit)? Request an early release — an admin will review your reason.
                       </p>
                     </div>
@@ -590,10 +590,10 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         return (
                           <div
                             key={hold.id}
-                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3"
                           >
                             <div>
-                              <p className="font-medium text-gray-900">
+                              <p className="font-medium text-slate-900">
                                 {formatCurrencyWithConversion(
                                   Number(hold.amount),
                                   hold.currency || currency,
@@ -601,8 +601,8 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                   selectedLanguage,
                                 )}
                               </p>
-                              <p className="text-sm text-gray-600">{formatHoldLabel(hold)}</p>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-sm text-slate-600">{formatHoldLabel(hold)}</p>
+                              <p className="text-xs text-slate-500 mt-1">
                                 Auto-release: {formatDateTime(hold.release_after)}
                               </p>
                             </div>
@@ -638,16 +638,16 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                 {/* Performance Insights */}
                 {filteredTxs.length > 0 && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="bg-white border border-slate-200 rounded-lg p-5">
                     <div className="mb-5">
-                      <h3 className="text-base font-semibold text-gray-900">Performance Insights</h3>
-                      <p className="text-xs text-gray-600 mt-1">Key metrics and trends for your business</p>
+                      <h3 className="text-base font-semibold text-slate-900">Performance Insights</h3>
+                      <p className="text-xs text-slate-600 mt-1">Key metrics and trends for your business</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="bg-white border border-gray-200 border-l-4 border-l-green-600 rounded p-4">
-                        <p className="text-xs font-medium text-gray-600">Average Transaction</p>
-                        <p className="text-xl font-bold text-gray-900 mt-2">
+                      <div className="bg-white border border-green-200 rounded p-4">
+                        <p className="text-xs font-medium text-slate-600">Average Transaction</p>
+                        <p className="text-xl font-bold text-slate-900 mt-2">
                           {formatCurrencyWithConversion(
                             filteredTxs.length > 0 ? filteredTxs.reduce((sum, tx) => sum + getTransactionVendorAmount(tx), 0) / filteredTxs.length : 0,
                             currency,
@@ -657,9 +657,9 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </p>
                       </div>
 
-                      <div className="bg-white border border-gray-200 border-l-4 border-l-blue-600 rounded p-4">
-                        <p className="text-xs font-medium text-gray-600">Total Revenue</p>
-                        <p className="text-xl font-bold text-gray-900 mt-2">
+                      <div className="bg-white border border-blue-200 rounded p-4">
+                        <p className="text-xs font-medium text-slate-600">Total Revenue</p>
+                        <p className="text-xl font-bold text-slate-900 mt-2">
                           {formatCurrencyWithConversion(
                             filteredTxs.reduce((sum, tx) => sum + getTransactionVendorAmount(tx), 0),
                             currency,
@@ -669,58 +669,58 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </p>
                       </div>
 
-                      <div className="bg-white border border-gray-200 border-l-4 border-l-purple-600 rounded p-4">
-                        <p className="text-xs font-medium text-gray-600">Success Rate</p>
-                        <p className="text-xl font-bold text-gray-900 mt-2">
+                      <div className="bg-white border border-purple-200 rounded p-4">
+                        <p className="text-xs font-medium text-slate-600">Success Rate</p>
+                        <p className="text-xl font-bold text-slate-900 mt-2">
                           {Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100)}%
                         </p>
                       </div>
                     </div>
 
                     {/* Quick Stats */}
-                    <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 pt-5 border-t border-gray-100">
+                    <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 pt-5 border-t border-slate-100">
                       <button
                         type="button"
                         onClick={() => handleQuickStatusClick('completed')}
-                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         <p className="text-lg font-bold text-green-600">
                           {filteredTxs.filter(tx => tx.status === 'completed').length}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">Completed</p>
+                        <p className="text-xs text-slate-600 mt-1">Completed</p>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleQuickStatusClick('pending')}
-                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         <p className="text-lg font-bold text-yellow-600">
                           {filteredTxs.filter(tx => tx.status === 'pending').length}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">Pending</p>
+                        <p className="text-xs text-slate-600 mt-1">Pending</p>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleQuickStatusClick('approved')}
-                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         <div className="text-xl md:text-2xl font-bold text-blue-600">
                           {filteredTxs.filter(tx => tx.status === 'approved').length}
                         </div>
-                        <div className="text-xs md:text-sm text-gray-500">Approved</div>
+                        <div className="text-xs md:text-sm text-slate-500">Approved</div>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleQuickStatusClick('failed_rejected')}
-                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="text-center rounded-lg border border-transparent bg-white px-3 py-4 transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         <div className="text-xl md:text-2xl font-bold text-red-600">
                           {filteredTxs.filter(tx => tx.status === 'failed').length + filteredTxs.filter(tx => tx.status === 'rejected').length}
                         </div>
-                        <div className="text-xs md:text-sm text-gray-500">Failed/Rejected</div>
+                        <div className="text-xs md:text-sm text-slate-500">Failed/Rejected</div>
                       </button>
                     </div>
                   </div>
@@ -736,11 +736,11 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   <div className="mb-6 md:mb-8 bg-white shadow rounded-lg p-4 md:p-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Date Range</label>
                         <select
                           value={dateRange}
                           onChange={(e) => setDateRange(e.target.value)}
-                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                          className="w-full min-h-[40px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                         >
                           <option value="all">All Time</option>
                           <option value="today">Today</option>
@@ -754,32 +754,32 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       {dateRange === 'custom' && (
                         <>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
                             <input
                               type="date"
                               value={customStartDate}
                               onChange={(e) => setCustomStartDate(e.target.value)}
-                              className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                              className="w-full min-h-[40px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
                             <input
                               type="date"
                               value={customEndDate}
                               onChange={(e) => setCustomEndDate(e.target.value)}
-                              className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                              className="w-full min-h-[40px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                             />
                           </div>
                         </>
                       )}
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Type</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Transaction Type</label>
                         <select
                           value={transactionType}
                           onChange={(e) => setTransactionType(e.target.value)}
-                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                          className="w-full min-h-[40px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                         >
                           <option value="all">All Types</option>
                           <option value="booking_payment">Booking Payment</option>
@@ -790,11 +790,11 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
                         <select
                           value={statusFilter}
                           onChange={(e) => setStatusFilter(e.target.value)}
-                          className="w-full min-h-[40px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                          className="w-full min-h-[40px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                         >
                           <option value="all">All Statuses</option>
                           <option value="pending">Pending</option>
@@ -808,7 +808,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     </div>
 
                     <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-slate-600">
                         Showing {filteredTxs.length} of {txs.length} transactions
                       </div>
                       <button
@@ -819,7 +819,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                           setTransactionType('all')
                           setStatusFilter('all')
                         }}
-                        className="text-sm text-gray-700 hover:text-gray-900 self-start sm:self-auto transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded"
+                        className="text-sm text-slate-700 hover:text-slate-900 self-start sm:self-auto transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 rounded"
                       >
                         Clear Filters
                       </button>
@@ -829,18 +829,18 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                 {/* Transaction History */}
                 <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                  <div className="px-4 py-4 md:px-6 md:py-5 border-b border-gray-200">
+                  <div className="px-4 py-4 md:px-6 md:py-5 border-b border-slate-200">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                       <div>
-                        <h3 className="text-lg leading-6 font-medium text-gray-900">Transaction History</h3>
-                        <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                        <h3 className="text-lg leading-6 font-medium text-slate-900">Transaction History</h3>
+                        <p className="mt-1 max-w-2xl text-sm text-slate-500">
                           A complete record of all your payments, earnings, and withdrawals
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2 lg:gap-3">
                         <button
                           onClick={() => setShowFilters(!showFilters)}
-                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 min-w-[80px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 min-w-[80px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -850,7 +850,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <button
                           onClick={exportToCSV}
                           disabled={filteredTxs.length === 0}
-                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[100px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -860,7 +860,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         <button
                           onClick={generateReport}
                           disabled={filteredTxs.length === 0}
-                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -869,7 +869,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                         </button>
                         <button
                           onClick={refresh}
-                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 min-w-[80px]"
+                          className="inline-flex min-h-[40px] items-center justify-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 min-w-[80px]"
                         >
                           <svg className="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -885,22 +885,22 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     <div className="block md:hidden">
                       {filteredTxs.length === 0 ? (
                         <div className="px-4 py-8 text-center">
-                          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="mx-auto h-10 w-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                           </svg>
-                          <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
-                          <p className="mt-1 text-sm text-gray-500">
+                          <h3 className="mt-2 text-sm font-medium text-slate-900">No transactions found</h3>
+                          <p className="mt-1 text-sm text-slate-500">
                             {txs.length === 0 ? "You haven't made any transactions yet." : "No transactions match your current filters."}
                           </p>
                         </div>
                       ) : (
-                        <div className="divide-y divide-gray-200">
+                        <div className="divide-y divide-slate-200">
                           {filteredTxs.map((transaction) => (
-                            <div key={transaction.id} className="p-3.5 hover:bg-gray-50">
+                            <div key={transaction.id} className="p-3.5 hover:bg-slate-50">
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1 min-w-0 pr-4">
                                   <div className="flex items-center space-x-2 mb-2">
-                                    <span className="text-sm font-medium text-gray-900 capitalize truncate">
+                                    <span className="text-sm font-medium text-slate-900 capitalize truncate">
                                       {transaction.transaction_type.replace('_', ' ')}
                                     </span>
                                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
@@ -910,10 +910,10 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                             : 'bg-red-50 text-red-700'
                                     }`}>{transaction.status}</span>
                                   </div>
-                                  <div className="text-xs text-gray-500 mb-1 truncate">
+                                  <div className="text-xs text-slate-500 mb-1 truncate">
                                     {transaction.reference}
                                   </div>
-                                  <div className="text-xs text-gray-400">
+                                  <div className="text-xs text-slate-400">
                                     {formatDateTime(transaction.created_at)}
                                   </div>
                                 </div>
@@ -934,53 +934,53 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                     {/* Desktop Table View */}
                     <div className="hidden md:block">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
                           <tr>
-                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Type
                             </th>
-                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Reference
                             </th>
-                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Amount
                             </th>
-                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Status
                             </th>
-                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-2.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                               Date
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-slate-200">
                           {filteredTxs.length === 0 ? (
                             <tr>
                               <td colSpan={5} className="px-4 py-10 text-center">
-                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                 </svg>
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <h3 className="mt-2 text-sm font-medium text-slate-900">No transactions found</h3>
+                                <p className="mt-1 text-sm text-slate-500">
                                   {txs.length === 0 ? "You haven't made any transactions yet." : "No transactions match your current filters."}
                                 </p>
                               </td>
                             </tr>
                           ) : (
                             filteredTxs.map((transaction) => (
-                              <tr key={transaction.id} className="hover:bg-gray-50">
+                              <tr key={transaction.id} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   <div className="flex items-center">
-                                    <div className="text-sm font-medium text-gray-900 capitalize">
+                                    <div className="text-sm font-medium text-slate-900 capitalize">
                                       {transaction.transaction_type.replace('_', ' ')}
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                                   {transaction.reference}
                                 </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">
                                   {formatCurrencyWithConversion(getTransactionVendorAmount(transaction), transaction.currency, selectedCurrency, selectedLanguage)}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
@@ -991,7 +991,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                                           : 'bg-red-50 text-red-700'
                                   }`}>{transaction.status}</span>
                                 </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                                   {formatDateTime(transaction.created_at)}
                                 </td>
                               </tr>
@@ -1028,11 +1028,11 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 </div>
 
                 {/* Header */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 md:p-6 mb-5">
+                <div className="bg-white rounded-xl border border-slate-200 p-5 md:p-6 mb-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Business Recommendations</h3>
-                      <p className="text-sm text-gray-500 mt-0.5">Personalized advice that refreshes daily based on your business data</p>
+                      <h3 className="text-lg font-semibold text-slate-900">Business Recommendations</h3>
+                      <p className="text-sm text-slate-500 mt-0.5">Personalized advice that refreshes daily based on your business data</p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium self-start sm:self-auto">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -1043,79 +1043,79 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
                   {/* Financial Health — Dynamic */}
-                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="bg-white rounded-xl border border-emerald-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100">
                       <h4 className="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Financial Health</h4>
                     </div>
                     <div className="p-5 space-y-4">
                       {dailyRecs.financial.map((rec, i) => (
                         <div key={i}>
-                          {i > 0 && <hr className="border-gray-100 mb-4" />}
-                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
-                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                          {i > 0 && <hr className="border-slate-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-slate-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-slate-600 leading-relaxed">{rec.message}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Performance Optimization — Dynamic */}
-                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="bg-white rounded-xl border border-blue-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100">
                       <h4 className="text-sm font-semibold text-blue-700 uppercase tracking-wide">Performance Optimization</h4>
                     </div>
                     <div className="p-5 space-y-4">
                       {/* Success rate bar — always shown */}
                       <div>
-                        <h5 className="text-sm font-medium text-gray-900 mb-1">Success Rate</h5>
+                        <h5 className="text-sm font-medium text-slate-900 mb-1">Success Rate</h5>
                         <div className="flex items-center gap-3 mb-1.5">
-                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-blue-500 rounded-full transition-all"
                               style={{ width: `${filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%` }}
                             />
                           </div>
-                          <span className="text-sm font-semibold text-gray-900">
+                          <span className="text-sm font-semibold text-slate-900">
                             {filteredTxs.length > 0 ? Math.round((filteredTxs.filter(tx => tx.status === 'completed').length / filteredTxs.length) * 100) : 0}%
                           </span>
                         </div>
                       </div>
                       {dailyRecs.performance.map((rec, i) => (
                         <div key={i}>
-                          <hr className="border-gray-100 mb-4" />
-                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
-                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                          <hr className="border-slate-100 mb-4" />
+                          <h5 className="text-sm font-medium text-slate-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-slate-600 leading-relaxed">{rec.message}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Growth Opportunities — Dynamic */}
-                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="bg-white rounded-xl border border-violet-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100">
                       <h4 className="text-sm font-semibold text-violet-700 uppercase tracking-wide">Growth Opportunities</h4>
                     </div>
                     <div className="p-5 space-y-4">
                       {dailyRecs.growth.map((rec, i) => (
                         <div key={i}>
-                          {i > 0 && <hr className="border-gray-100 mb-4" />}
-                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
-                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                          {i > 0 && <hr className="border-slate-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-slate-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-slate-600 leading-relaxed">{rec.message}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Risk Management — Dynamic */}
-                  <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-gray-100">
+                  <div className="bg-white rounded-xl border border-amber-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-slate-100">
                       <h4 className="text-sm font-semibold text-amber-700 uppercase tracking-wide">Risk Management</h4>
                     </div>
                     <div className="p-5 space-y-4">
                       {dailyRecs.risk.map((rec, i) => (
                         <div key={i}>
-                          {i > 0 && <hr className="border-gray-100 mb-4" />}
-                          <h5 className="text-sm font-medium text-gray-900 mb-1">{rec.title}</h5>
-                          <p className="text-sm text-gray-600 leading-relaxed">{rec.message}</p>
+                          {i > 0 && <hr className="border-slate-100 mb-4" />}
+                          <h5 className="text-sm font-medium text-slate-900 mb-1">{rec.title}</h5>
+                          <p className="text-sm text-slate-600 leading-relaxed">{rec.message}</p>
                         </div>
                       ))}
                     </div>
@@ -1123,19 +1123,19 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 </div>
 
                 {/* Recommended Actions — Dynamic */}
-                <div className="mt-5 bg-white rounded-xl border border-gray-200 p-5 md:p-6">
-                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Today's Action Items</h4>
+                <div className="mt-5 bg-white rounded-xl border border-slate-200 p-5 md:p-6">
+                  <h4 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">Today's Action Items</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {dailyRecs.actions.map((item, i) => {
                       const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-500']
                       return (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
                           <span className={`flex-shrink-0 w-6 h-6 ${colors[i % colors.length]} text-white rounded-full flex items-center justify-center text-xs font-bold`}>
                             {i + 1}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900">{item.label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                            <p className="text-sm font-medium text-slate-900">{item.label}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                           </div>
                         </div>
                       )
@@ -1151,18 +1151,18 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         {showWithdraw && (
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-base font-semibold text-gray-900">Request Withdrawal</h3>
-                <button onClick={() => setShowWithdraw(false)} className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20">✕</button>
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-base font-semibold text-slate-900">Request Withdrawal</h3>
+                <button onClick={() => setShowWithdraw(false)} className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 text-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">✕</button>
               </div>
               <div className="px-6 py-4 space-y-4">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-sm text-gray-600">
-                    Available: <span className="font-semibold text-gray-900">{formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-sm text-slate-600">
+                    Available: <span className="font-semibold text-slate-900">{formatCurrencyWithConversion(walletStats?.currentBalance || 0, walletStats?.currency || 'UGX', selectedCurrency, selectedLanguage)}</span>
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Amount</label>
                   <div className="relative">
                     <input
                       type="number"
@@ -1170,26 +1170,26 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                       max={walletStats?.currentBalance || 0}
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
-                      className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                      className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 pr-16 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                       placeholder="0.00"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">{currency}</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">{currency}</span>
                   </div>
                   {amount > (walletStats?.currentBalance || 0) && (
                     <p className="mt-1 text-xs text-red-600">Exceeds available balance</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Payout account</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Payout account</label>
                   {payoutOptions.length === 0 ? (
                     <p className="text-sm text-red-600">No payout account found. Please add a bank or mobile-money account in your profile before requesting a withdrawal.</p>
                   ) : payoutOptions.length === 1 ? (
-                    <div className="text-sm text-gray-700">{payoutOptions[0].label}</div>
+                    <div className="text-sm text-slate-700">{payoutOptions[0].label}</div>
                   ) : (
                     <select
                       value={selectedPayoutId || ''}
                       onChange={(e) => setSelectedPayoutId(e.target.value)}
-                      className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                      className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                     >
                       <option value="">Select payout account</option>
                       {payoutOptions.map(opt => (
@@ -1199,8 +1199,8 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   )}
 
                   {payoutOptions.length > 1 && (
-                    <label className="inline-flex items-center mt-2 text-sm text-gray-600">
-                      <input type="checkbox" checked={setAsDefault} onChange={(e) => setSetAsDefault(e.target.checked)} className="mr-2 rounded border-gray-300 text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/20" />
+                    <label className="inline-flex items-center mt-2 text-sm text-slate-600">
+                      <input type="checkbox" checked={setAsDefault} onChange={(e) => setSetAsDefault(e.target.checked)} className="mr-2 rounded border-slate-300 text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/20" />
                       Set as default payout account
                     </label>
                   )}
@@ -1208,12 +1208,12 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setShowWithdraw(false)}
-                    className="flex-1 min-h-[40px] px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20"
+                    className="flex-1 min-h-[40px] px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                   >Cancel</button>
                   <button
                     onClick={handleWithdraw}
                     disabled={loading || amount <= 0 || amount > (walletStats?.currentBalance || 0) || payoutOptions.length === 0 || !selectedPayoutId}
-                    className="flex-1 min-h-[40px] px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="flex-1 min-h-[40px] px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >{loading ? 'Submitting...' : 'Withdraw'}</button>
                 </div>
               </div>
@@ -1224,19 +1224,19 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
         {releaseModalHold && (
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
-              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-base font-semibold text-gray-900">Request early release</h3>
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-base font-semibold text-slate-900">Request early release</h3>
                 <button
                   type="button"
                   onClick={() => setReleaseModalHold(null)}
-                  className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
+                  className="min-h-[36px] min-w-[36px] rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
                 >
                   ✕
                 </button>
               </div>
               <div className="px-6 py-4 space-y-4">
-                <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-                  <p className="font-medium text-gray-900">
+                <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                  <p className="font-medium text-slate-900">
                     {formatCurrencyWithConversion(
                       Number(releaseModalHold.amount),
                       releaseModalHold.currency || currency,
@@ -1245,21 +1245,21 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     )}
                   </p>
                   <p className="mt-1">{formatHoldLabel(releaseModalHold)}</p>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-slate-500 mt-2">
                     Normally releases on {formatDateTime(releaseModalHold.release_after)}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
                     Why do you need these funds early?
                   </label>
                   <textarea
-                    className="w-full min-h-[100px] border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    className="w-full min-h-[100px] border border-slate-200 rounded-lg px-3 py-2 text-sm"
                     placeholder="e.g. Need deposit for venue setup, equipment rental, or staff mobilization before the event date."
                     value={releaseReason}
                     onChange={(e) => setReleaseReason(e.target.value)}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Minimum 10 characters. Be specific — admins review each request.</p>
+                  <p className="text-xs text-slate-500 mt-1">Minimum 10 characters. Be specific — admins review each request.</p>
                 </div>
                 {releaseMessage && (
                   <p className="text-sm text-red-600">{releaseMessage}</p>
@@ -1268,7 +1268,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   <button
                     type="button"
                     onClick={() => setReleaseModalHold(null)}
-                    className="flex-1 min-h-[40px] rounded-lg border border-gray-200 text-sm font-medium text-gray-700"
+                    className="flex-1 min-h-[40px] rounded-lg border border-slate-200 text-sm font-medium text-slate-700"
                   >
                     Cancel
                   </button>
