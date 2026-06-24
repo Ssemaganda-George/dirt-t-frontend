@@ -1,4 +1,4 @@
-import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, XMarkIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import { useServices, useServiceCategories, useServiceDeleteRequests } from '../../hooks/hook';
 import { StatusBadge } from '../../components/StatusBadge';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
@@ -81,6 +81,8 @@ export function Services() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [approvingService, setApprovingService] = useState<Service | null>(null);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{top: number; right: number} | null>(null);
   const [pricingOverride, setPricingOverride] = useState({
     enabled: false,
     override_type: 'percentage' as 'percentage' | 'flat',
@@ -465,78 +467,152 @@ export function Services() {
           <h3 className="text-sm font-semibold text-slate-900">All Services</h3>
           <p className="text-xs text-slate-500 mt-0.5">{filteredServices.length} services found</p>
         </div>
-        <div className="p-5">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Service
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Vendor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Availability
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Toggle
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Event Link
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{service.title}</div>
-                        <div className="text-sm text-slate-500 truncate max-w-xs">
-                          {service.description}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-900">
-                        {service.vendors?.business_name || 'Unknown'}
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        {service.location}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {service.service_categories?.name || service.category_id}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {formatServicePrice(service, selectedCurrency, selectedLanguage)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={service.status} variant="small" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge
-                        status={service.status === 'approved' && !isPast24HoursAfterEvent(service) ? 'available' : 'unavailable'}
-                        variant="small"
+
+        {/* Mobile card list */}
+        <div className="block lg:hidden divide-y divide-slate-100">
+          {filteredServices.map((service) => {
+            const autoDeactivated = isPast24HoursAfterEvent(service);
+            const isLive = service.status === 'approved' && !autoDeactivated;
+            return (
+              <div key={service.id} className="group cursor-pointer" onClick={() => handleEditService(service)}>
+                {/* Banner */}
+                <div className="relative h-32 overflow-hidden">
+                  {((service as any).primary_image_url || (service as any).images?.[0]) ? (
+                    <img src={(service as any).primary_image_url || (service as any).images![0]} alt={service.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 flex items-center justify-center text-3xl">
+                      {(service.service_categories as any)?.icon || '📦'}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
+                  <span className="absolute bottom-2 left-3 text-[11px] font-semibold text-white/90 bg-black/35 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/15">
+                    {service.service_categories?.name || 'Service'}
+                  </span>
+                  <span className={`absolute top-2.5 right-3 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                    isLive ? 'bg-emerald-500 text-white' :
+                    service.status === 'rejected' ? 'bg-red-500 text-white' :
+                    service.status === 'pending' ? 'bg-amber-400 text-white' :
+                    'bg-slate-400 text-white'
+                  }`}>
+                    {isLive ? '● Live' : service.status === 'rejected' ? '✕ Rejected' : service.status === 'pending' ? '◑ Pending' : '○ Inactive'}
+                  </span>
+                </div>
+                {/* Body */}
+                <div className="px-4 pt-3 pb-4">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{service.title}</h3>
+                      <p className="text-xs text-slate-500 truncate">{service.vendors?.business_name || 'Unknown'}</p>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-600 whitespace-nowrap shrink-0">{formatServicePrice(service, selectedCurrency, selectedLanguage)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                    {(service.status === 'approved' || service.status === 'inactive') ? (
+                      <ToggleSwitch
+                        checked={isLive}
+                        onChange={async () => {
+                          setUpdatingStatus(service.id);
+                          try { await updateServiceStatus(service.id, service.status === 'approved' ? 'inactive' : 'approved'); }
+                          catch (err) { console.error(err); alert('Failed to update.'); }
+                          finally { setUpdatingStatus(null); }
+                        }}
+                        disabled={updatingStatus === service.id || autoDeactivated}
+                        size="sm"
+                        label={autoDeactivated ? 'Auto-off' : (isLive ? 'Active' : 'Inactive')}
                       />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {/* Availability toggle for approved and inactive services */}
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">
+                        {service.status === 'pending' ? 'Awaiting approval' : 'Rejected'}
+                      </span>
+                    )}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          if (openMenuId === service.id) { setOpenMenuId(null); }
+                          else { setMenuPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right }); setOpenMenuId(service.id); }
+                        }}
+                        onBlur={() => setTimeout(() => setOpenMenuId(null), 150)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                      >
+                        <EllipsisVerticalIcon className="h-5 w-5" />
+                      </button>
+                      {openMenuId === service.id && menuPosition && (
+                        <div style={{ position: 'fixed', top: menuPosition.top, right: menuPosition.right, zIndex: 9999 }}
+                          className="w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 text-left">
+                          <button onClick={() => { handleEditService(service); setOpenMenuId(null); }} className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 text-left">Edit</button>
+                          {service.category_id === 'cat_activities' && (
+                            <button
+                              onClick={async () => { setOpenMenuId(null); setUpdatingStatus(service.id); try { await updateService(service.id, { scan_enabled: !service.scan_enabled } as any); } catch(e) {} finally { setUpdatingStatus(null); } }}
+                              className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left"
+                            >
+                              {service.scan_enabled ? 'Disable Scan Link' : 'Enable Scan Link'}
+                            </button>
+                          )}
+                          <button onClick={() => { handleDeleteService(service.id, service.title); setOpenMenuId(null); }} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left">Delete</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col style={{width:'36%'}} />
+              <col style={{width:'20%'}} />
+              <col style={{width:'14%'}} />
+              <col style={{width:'18%'}} />
+              <col style={{width:'12%'}} />
+            </colgroup>
+            <thead className="bg-slate-50/80 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Vendor</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredServices.map((service) => (
+                <tr key={service.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => handleEditService(service)}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {((service as any).primary_image_url || (service as any).images?.[0]) ? (
+                        <img
+                          src={(service as any).primary_image_url || (service as any).images![0]}
+                          alt={service.title}
+                          className="w-14 h-11 rounded-lg object-cover flex-shrink-0 border border-slate-100"
+                        />
+                      ) : (
+                        <div className="w-14 h-11 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-100 text-lg">
+                          {(service.service_categories as any)?.icon || '📦'}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{service.title}</p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 mt-0.5">
+                          {service.service_categories?.name || service.category_id}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-sm text-slate-900 truncate">{service.vendors?.business_name || 'Unknown'}</p>
+                    <p className="text-xs text-slate-500 truncate">{service.location}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-semibold text-slate-900">{formatServicePrice(service, selectedCurrency, selectedLanguage)}</span>
+                  </td>
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <div className="space-y-1.5">
+                      <StatusBadge status={service.status} variant="small" />
                       {(service.status === 'approved' || service.status === 'inactive') && (
                         <ToggleSwitch
                           checked={service.status === 'approved' && !isPast24HoursAfterEvent(service)}
@@ -553,64 +629,71 @@ export function Services() {
                           }}
                           disabled={updatingStatus === service.id || isPast24HoursAfterEvent(service)}
                           size="sm"
-                          label={isPast24HoursAfterEvent(service) ? 'Auto-deactivated after 24h' : ''}
+                          label={isPast24HoursAfterEvent(service) ? 'Auto-off' : ''}
                         />
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                      {/* Show event scan link status for activities */}
-                      {service.category_id === 'cat_activities' ? (
-                        service.scan_enabled ? (
-                          <a href={`${window.location.origin}/scan/${service.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View scan link</a>
-                        ) : (
-                          <span className="text-sm text-slate-500">Scan link inactive</span>
-                        )
-                      ) : (
-                        <span className="text-sm text-slate-500">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                    <div className="relative inline-block">
                       <button
-                        onClick={() => handleEditService(service)}
-                        className="text-blue-600 hover:text-blue-900 mr-2"
-                        title="Edit service"
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          if (openMenuId === service.id) {
+                            setOpenMenuId(null);
+                          } else {
+                            setMenuPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                            setOpenMenuId(service.id);
+                          }
+                        }}
+                        onBlur={() => setTimeout(() => setOpenMenuId(null), 150)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                       >
-                        Edit
+                        <EllipsisVerticalIcon className="h-5 w-5" />
                       </button>
-                      {/* Admin toggle for enabling scan link for events */}
-                      {service.category_id === 'cat_activities' && (
-                        <button
-                          onClick={async () => {
-                            setUpdatingStatus(service.id);
-                            try {
-                              await updateService(service.id, { scan_enabled: !service.scan_enabled } as any);
-                            } catch (err) {
-                              console.error('Failed to toggle scan_enabled:', err);
-                              alert('Failed to update event link activation.');
-                            } finally {
-                              setUpdatingStatus(null);
-                            }
-                          }}
-                          disabled={updatingStatus === service.id}
-                          className="ml-3 inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                      {openMenuId === service.id && menuPosition && (
+                        <div
+                          style={{ position: 'fixed', top: menuPosition.top, right: menuPosition.right, zIndex: 9999 }}
+                          className="w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 text-left"
                         >
-                          {service.scan_enabled ? 'Disable Link' : 'Enable Link'}
-                        </button>
+                          <button
+                            onClick={() => { handleEditService(service); setOpenMenuId(null); }}
+                            className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                          >
+                            Edit
+                          </button>
+                          {service.category_id === 'cat_activities' && (
+                            <button
+                              onClick={async () => {
+                                setOpenMenuId(null);
+                                setUpdatingStatus(service.id);
+                                try {
+                                  await updateService(service.id, { scan_enabled: !service.scan_enabled } as any);
+                                } catch (err) {
+                                  console.error('Failed to toggle scan_enabled:', err);
+                                } finally {
+                                  setUpdatingStatus(null);
+                                }
+                              }}
+                              className="w-full px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors text-left"
+                            >
+                              {service.scan_enabled ? 'Disable Scan Link' : 'Enable Scan Link'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => { handleDeleteService(service.id, service.title); setOpenMenuId(null); }}
+                            className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
-                      <button
-                        onClick={() => handleDeleteService(service.id, service.title)}
-                        disabled={updatingStatus === service.id}
-                        className="text-red-600 hover:text-red-900 disabled:opacity-50 ml-2"
-                        title="Delete service"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
@@ -621,69 +704,131 @@ export function Services() {
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">{filteredPendingServices.length} services awaiting review</p>
           </div>
-          <div className="p-5">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+
+          {/* Mobile pending cards */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            {filteredPendingServices.map((service) => (
+              <div key={service.id} className="group">
+                <div className="relative h-28 overflow-hidden">
+                  {((service as any).primary_image_url || (service as any).images?.[0]) ? (
+                    <img src={(service as any).primary_image_url || (service as any).images![0]} alt={service.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-amber-600 via-amber-500 to-orange-500 flex items-center justify-center text-3xl">
+                      {(service.service_categories as any)?.icon || '📦'}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
+                  <span className="absolute bottom-2 left-3 text-[11px] font-semibold text-white/90 bg-black/35 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/15">
+                    {service.service_categories?.name || 'Service'}
+                  </span>
+                  <span className="absolute top-2.5 right-3 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-400 text-white">
+                    ◑ Pending
+                  </span>
+                </div>
+                <div className="px-4 pt-3 pb-4">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-slate-900 truncate">{service.title}</h3>
+                      <p className="text-xs text-slate-500 truncate">{service.vendors?.business_name || 'Unknown'}</p>
+                    </div>
+                    <span className="text-sm font-bold text-emerald-600 whitespace-nowrap shrink-0">{formatServicePrice(service, selectedCurrency, selectedLanguage)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => approveService(service)}
+                      disabled={updatingStatus === service.id}
+                      className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      <CheckIcon className="h-3.5 w-3.5" />
+                      {updatingStatus === service.id ? 'Approving…' : 'Approve'}
+                    </button>
+                    <button
+                      onClick={() => rejectService(service.id)}
+                      disabled={updatingStatus === service.id}
+                      className="flex-1 inline-flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      <XMarkIcon className="h-3.5 w-3.5" />
+                      {updatingStatus === service.id ? 'Rejecting…' : 'Reject'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop pending table */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full table-fixed">
+              <colgroup>
+                  <col style={{width:'38%'}} />
+                  <col style={{width:'20%'}} />
+                  <col style={{width:'14%'}} />
+                  <col style={{width:'28%'}} />
+                </colgroup>
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Service</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="divide-y divide-slate-100">
                   {filteredPendingServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-slate-900">{service.title}</div>
-                          <div className="text-sm text-slate-500 truncate max-w-xs">
-                            {service.description}
+                    <tr key={service.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {((service as any).primary_image_url || (service as any).images?.[0]) ? (
+                            <img
+                              src={(service as any).primary_image_url || (service as any).images![0]}
+                              alt={service.title}
+                              className="w-14 h-11 rounded-lg object-cover flex-shrink-0 border border-slate-100"
+                            />
+                          ) : (
+                            <div className="w-14 h-11 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-100 text-lg">
+                              {(service.service_categories as any)?.icon || '📦'}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{service.title}</p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 mt-0.5">
+                              {service.service_categories?.name || service.category_id}
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">
-                          {service.vendors?.business_name || 'Unknown'}
+                      <td className="px-4 py-3">
+                        <p className="text-sm text-slate-900 truncate">{service.vendors?.business_name || 'Unknown'}</p>
+                        <p className="text-xs text-slate-500 truncate">{service.location}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-slate-900">{formatServicePrice(service, selectedCurrency, selectedLanguage)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => approveService(service)}
+                            disabled={updatingStatus === service.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                          >
+                            <CheckIcon className="h-3.5 w-3.5" />
+                            {updatingStatus === service.id ? 'Approving…' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => rejectService(service.id)}
+                            disabled={updatingStatus === service.id}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            <XMarkIcon className="h-3.5 w-3.5" />
+                            {updatingStatus === service.id ? 'Rejecting…' : 'Reject'}
+                          </button>
                         </div>
-                        <div className="text-sm text-slate-500">
-                          {service.location}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                          {service.service_categories?.name || service.category_id}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                        {formatServicePrice(service, selectedCurrency, selectedLanguage)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => approveService(service)}
-                          disabled={updatingStatus === service.id}
-                          className="inline-flex items-center px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                        >
-                          <CheckIcon className="h-4 w-4 mr-1" />
-                          {updatingStatus === service.id ? 'Approving...' : 'Approve'}
-                        </button>
-                        <button
-                          onClick={() => rejectService(service.id)}
-                          disabled={updatingStatus === service.id}
-                          className="inline-flex items-center px-3 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                        >
-                          <XMarkIcon className="h-4 w-4 mr-1" />
-                          {updatingStatus === service.id ? 'Rejecting...' : 'Reject'}
-                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
         </div>
       )}
 
