@@ -118,10 +118,11 @@ export default function CategoryPage() {
         case 'cat_activities':
           return [
             { key: 'all', label: 'All Events' },
-            { key: 'outdoor', label: 'Outdoor' },
-            { key: 'indoor', label: 'Indoor' },
-            { key: 'water', label: 'Water Sports' },
-            { key: 'cultural', label: 'Cultural' }
+            { key: 'adventure', label: 'Adventure' },
+            { key: 'sports', label: 'Sports' },
+            { key: 'entertainment', label: 'Entertainment' },
+            { key: 'cultural', label: 'Cultural' },
+            { key: 'corporate', label: 'Corporate & Business' },
           ]
         case 'cat_shops':
           return [
@@ -241,10 +242,11 @@ export default function CategoryPage() {
       case 'cat_activities': {
         const eventType = service.event_type?.toLowerCase() || ''
         switch (filterKey) {
-          case 'outdoor': return containsKeyword(eventType, ['outdoor']) || containsKeyword(combined, ['outdoor', 'hiking', 'camping', 'nature', 'park', 'garden', 'forest', 'mountain', 'lake', 'river'])
-          case 'indoor': return containsKeyword(eventType, ['indoor']) || containsKeyword(combined, ['indoor', 'museum', 'gallery', 'theater', 'cinema', 'spa', 'gym', 'workshop', 'class'])
-          case 'water': return containsKeyword(combined, ['water', 'swimming', 'diving', 'snorkeling', 'kayak', 'boat', 'cruise', 'rafting', 'fishing', 'beach', 'lake', 'river', 'pool'])
-          case 'cultural': return containsKeyword(eventType, ['cultural']) || containsKeyword(combined, ['cultural', 'music', 'dance', 'art', 'traditional', 'heritage', 'festival', 'performance', 'exhibit'])
+          case 'adventure':     return ['adventure', 'adventure_activity', 'nature_safari', 'nature_tour', 'hiking_trekking', 'water_sports', 'extreme_sports'].includes(eventType) || containsKeyword(combined, ['adventure', 'safari', 'hiking', 'trekking', 'wildlife', 'outdoor', 'extreme'])
+          case 'sports':        return ['sports_event', 'cycling_marathon', 'fitness_yoga', 'team_sports'].includes(eventType) || containsKeyword(combined, ['sport', 'cycling', 'marathon', 'fitness', 'yoga', 'team'])
+          case 'entertainment': return ['concert', 'festival', 'comedy_show', 'film_cinema', 'exhibition'].includes(eventType) || containsKeyword(combined, ['concert', 'music', 'festival', 'comedy', 'film', 'cinema', 'show', 'exhibition', 'performance'])
+          case 'cultural':      return ['cultural_experience', 'cultural_show', 'cooking_class', 'art_craft', 'art_class', 'dance_music_lesson', 'dance_class', 'music_lesson', 'photography_workshop', 'photography', 'craft_workshop', 'language_class'].includes(eventType) || containsKeyword(combined, ['cultural', 'culture', 'traditional', 'heritage', 'cooking', 'art', 'dance', 'music', 'craft', 'language'])
+          case 'corporate':     return ['corporate_business', 'conference_seminar', 'workshop_training', 'networking', 'wellness_retreat', 'workshop', 'business_seminar'].includes(eventType) || containsKeyword(combined, ['corporate', 'business', 'seminar', 'workshop', 'conference', 'networking', 'wellness'])
           default: return true
         }
       }

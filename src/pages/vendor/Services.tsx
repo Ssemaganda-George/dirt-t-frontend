@@ -2267,15 +2267,42 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   <label className="block text-sm font-medium text-slate-700">Event Type</label>
                   <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="">Select event type</option>
-                    <option value="adventure_activity">Adventure Activity</option>
-                    <option value="cultural_experience">Cultural Experience</option>
-                    <option value="nature_tour">Nature Tour</option>
-                    <option value="sports_event">Sports Event</option>
-                    <option value="festival">Festival</option>
-                    <option value="workshop">Workshop</option>
-                    <option value="concert">Concert/Performance</option>
-                    <option value="exhibition">Exhibition</option>
-                    <option value="other">Other Event</option>
+                    <optgroup label="→ Adventure">
+                      <option value="adventure">Adventure &amp; Safari</option>
+                      <option value="nature_safari">Nature &amp; Wildlife Safari</option>
+                      <option value="hiking_trekking">Hiking &amp; Trekking</option>
+                      <option value="water_sports">Water Sports</option>
+                      <option value="extreme_sports">Extreme Sports</option>
+                    </optgroup>
+                    <optgroup label="→ Sports">
+                      <option value="sports_event">Sports Event &amp; Tournament</option>
+                      <option value="cycling_marathon">Cycling &amp; Marathon</option>
+                      <option value="fitness_yoga">Fitness &amp; Yoga</option>
+                      <option value="team_sports">Team Sports</option>
+                    </optgroup>
+                    <optgroup label="→ Entertainment">
+                      <option value="concert">Concert &amp; Live Music</option>
+                      <option value="festival">Festival</option>
+                      <option value="comedy_show">Comedy &amp; Live Show</option>
+                      <option value="film_cinema">Film &amp; Cinema</option>
+                      <option value="exhibition">Exhibition &amp; Expo</option>
+                    </optgroup>
+                    <optgroup label="→ Cultural">
+                      <option value="cultural_experience">Cultural Experience</option>
+                      <option value="cultural_show">Cultural Show &amp; Performance</option>
+                      <option value="cooking_class">Cooking Class</option>
+                      <option value="art_craft">Art &amp; Craft</option>
+                      <option value="dance_music_lesson">Dance &amp; Music Lesson</option>
+                      <option value="photography">Photography Experience</option>
+                    </optgroup>
+                    <optgroup label="→ Corporate &amp; Business">
+                      <option value="corporate_business">Corporate Event</option>
+                      <option value="conference_seminar">Conference &amp; Seminar</option>
+                      <option value="workshop_training">Workshop &amp; Training</option>
+                      <option value="networking">Networking Event</option>
+                      <option value="wellness_retreat">Wellness Retreat</option>
+                    </optgroup>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div>
@@ -2854,18 +2881,42 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Event Type</label>
                 <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select event type</option>
-                  <option value="workshop">Workshop</option>
-                  <option value="cultural_show">Cultural Show</option>
-                  <option value="cooking_class">Cooking Class</option>
-                  <option value="art_class">Art Class</option>
-                  <option value="music_lesson">Music Lesson</option>
-                  <option value="dance_class">Dance Class</option>
-                  <option value="language_class">Language Class</option>
-                  <option value="photography_workshop">Photography Workshop</option>
-                  <option value="craft_workshop">Craft Workshop</option>
-                  <option value="business_seminar">Business Seminar</option>
-                  <option value="wellness_retreat">Wellness Retreat</option>
-                  <option value="other">Other Event</option>
+                  <optgroup label="→ Adventure">
+                    <option value="adventure">Adventure &amp; Safari</option>
+                    <option value="nature_safari">Nature &amp; Wildlife Safari</option>
+                    <option value="hiking_trekking">Hiking &amp; Trekking</option>
+                    <option value="water_sports">Water Sports</option>
+                    <option value="extreme_sports">Extreme Sports</option>
+                  </optgroup>
+                  <optgroup label="→ Sports">
+                    <option value="sports_event">Sports Event &amp; Tournament</option>
+                    <option value="cycling_marathon">Cycling &amp; Marathon</option>
+                    <option value="fitness_yoga">Fitness &amp; Yoga</option>
+                    <option value="team_sports">Team Sports</option>
+                  </optgroup>
+                  <optgroup label="→ Entertainment">
+                    <option value="concert">Concert &amp; Live Music</option>
+                    <option value="festival">Festival</option>
+                    <option value="comedy_show">Comedy &amp; Live Show</option>
+                    <option value="film_cinema">Film &amp; Cinema</option>
+                    <option value="exhibition">Exhibition &amp; Expo</option>
+                  </optgroup>
+                  <optgroup label="→ Cultural">
+                    <option value="cultural_experience">Cultural Experience</option>
+                    <option value="cultural_show">Cultural Show &amp; Performance</option>
+                    <option value="cooking_class">Cooking Class</option>
+                    <option value="art_craft">Art &amp; Craft</option>
+                    <option value="dance_music_lesson">Dance &amp; Music Lesson</option>
+                    <option value="photography">Photography Experience</option>
+                  </optgroup>
+                  <optgroup label="→ Corporate &amp; Business">
+                    <option value="corporate_business">Corporate Event</option>
+                    <option value="conference_seminar">Conference &amp; Seminar</option>
+                    <option value="workshop_training">Workshop &amp; Training</option>
+                    <option value="networking">Networking Event</option>
+                    <option value="wellness_retreat">Wellness Retreat</option>
+                  </optgroup>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div>
