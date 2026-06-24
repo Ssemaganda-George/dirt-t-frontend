@@ -18,6 +18,7 @@ export interface Service {
   price: number;
   currency: string;
   images: string[];
+  primary_image_url?: string;
   location?: string;
   duration_hours?: number;
   max_capacity?: number;
@@ -76,6 +77,12 @@ export interface Service {
   check_in_process?: string;
 
   // Tour
+  tour_style?: string;
+  group_type?: string;
+  accommodation_standard?: string;
+  park_fees_included?: boolean;
+  visa_support?: boolean;
+  child_friendly?: boolean;
   itinerary?: string[];
   included_items?: string[];
   excluded_items?: string[];

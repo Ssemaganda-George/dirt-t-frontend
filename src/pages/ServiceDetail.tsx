@@ -2653,9 +2653,8 @@ export default function ServiceDetail() {
                            ? listingType === 'hire'
                              ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''} × ${quantity} item${quantity > 1 ? 's' : ''}`
                              : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${quantity} item${quantity > 1 ? 's' : ''}`
-                           : (() => {
-                               const total = guests + children
-                               const parts: string[] = []
+                            : (() => {
+                                const parts: string[] = []
                                if (guests > 0) parts.push(`${guests} adult${guests > 1 ? 's' : ''}`)
                                if (children > 0) parts.push(`${children} child${children > 1 ? 'ren' : ''}`)
                                return `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${parts.join(' + ')}`
