@@ -235,6 +235,9 @@ export default function ServiceDetail() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
+  const [children, setChildren] = useState(0)
+  const [rooms, setRooms] = useState(1)
+  const [tentSize, setTentSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
@@ -552,7 +555,7 @@ export default function ServiceDetail() {
       endDate,
       startTime,
       endTime,
-      guests,
+      guests: guests + children,
       quantity,
       transportZone,
       listingType: listingType || undefined,
@@ -1499,7 +1502,7 @@ export default function ServiceDetail() {
   const totalPrice = service!.service_categories?.name?.toLowerCase() === 'transport'
     ? getTransportUnitPrice() * calculateDays(startDate, startTime, endDate, endTime)
     : ['hotels', 'hotel', 'accommodation'].includes(service!.service_categories?.name?.toLowerCase() || '')
-    ? service!.price * calculateNights(checkInDate, checkOutDate)
+    ? service!.price * calculateNights(checkInDate, checkOutDate) * rooms
     : (() => {
         const cat = service!.service_categories?.name?.toLowerCase()
         if (cat === 'shops') {
@@ -1515,7 +1518,7 @@ export default function ServiceDetail() {
           if (Number.isFinite(buy) && buy > 0) return buy * qty
           return service!.price * qty
         }
-        return service!.price * guests
+        return service!.price * (guests + children)
       })()
 
   
@@ -2476,20 +2479,89 @@ export default function ServiceDetail() {
                               </button>
                             </div>
                           ) : (
-                            <div className="relative">
-                              <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <select className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
-                                {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                                  <option key={num} value={num}>
-                                    {num} guest{num > 1 ? 's' : ''}
-                                  </option>
-                                ))}
-                              </select>
+                            <div className="space-y-3">
+                              {/* Adults */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-900">Adults</p>
+                                  <p className="text-[10px] text-gray-400">Age 13+</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuests(g => Math.max(1, g - 1))}
+                                    disabled={guests <= 1}
+                                    className="w-8 h-8 rounded-lg bg-gray-100 disabled:opacity-50 text-lg font-semibold leading-none"
+                                  >-</button>
+                                  <span className="w-6 text-center text-sm font-medium text-gray-900">{guests}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuests(g => Math.min(((service as any).maximum_guests || service.max_capacity || 20) - children, g + 1))}
+                                    className="w-8 h-8 rounded-lg bg-gray-100 text-lg font-semibold leading-none"
+                                  >+</button>
+                                </div>
+                              </div>
+                              {/* Children */}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-900">Children</p>
+                                  <p className="text-[10px] text-gray-400">Age 2–12</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setChildren(c => Math.max(0, c - 1))}
+                                    disabled={children <= 0}
+                                    className="w-8 h-8 rounded-lg bg-gray-100 disabled:opacity-50 text-lg font-semibold leading-none"
+                                  >-</button>
+                                  <span className="w-6 text-center text-sm font-medium text-gray-900">{children}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setChildren(c => Math.min(((service as any).maximum_guests || service.max_capacity || 20) - guests, c + 1))}
+                                    className="w-8 h-8 rounded-lg bg-gray-100 text-lg font-semibold leading-none"
+                                  >+</button>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
                       )}
                    </div>
+
+                      {/* Rooms / Tents — hotels only, not home/guesthouse */}
+                      {['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') && (() => {
+                        const pt = ((service as any).property_type || '').toLowerCase()
+                        const isHomeGuesthouse = ['home', 'guesthouse', 'homestay'].includes(pt)
+                        const isTented = ['tented_camp', 'bush_camp'].includes(pt)
+                        if (isHomeGuesthouse) return null
+                        const maxRooms = (service as any).total_rooms || 20
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-medium text-gray-900">{isTented ? 'Tents' : 'Rooms'}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button type="button" onClick={() => setRooms(r => Math.max(1, r - 1))} disabled={rooms <= 1} className="w-8 h-8 rounded-lg bg-gray-100 disabled:opacity-50 text-lg font-semibold leading-none">-</button>
+                                <span className="w-6 text-center text-sm font-medium text-gray-900">{rooms}</span>
+                                <button type="button" onClick={() => setRooms(r => Math.min(maxRooms, r + 1))} className="w-8 h-8 rounded-lg bg-gray-100 text-lg font-semibold leading-none">+</button>
+                              </div>
+                            </div>
+                            {isTented && (
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase">Tent Size</label>
+                                <select value={tentSize} onChange={e => setTentSize(e.target.value)} className="w-full py-2 px-3 text-xs border border-gray-300 rounded-lg">
+                                  <option value="">Select size</option>
+                                  <option value="single">Single (1 person)</option>
+                                  <option value="double">Double (2 people)</option>
+                                  <option value="family">Family (3–4 people)</option>
+                                  <option value="group">Group (5+ people)</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                   {/* Price Calculation */}
                   <div className="bg-gray-50 rounded-lg p-3 mb-6">
@@ -2498,12 +2570,27 @@ export default function ServiceDetail() {
                          {service.service_categories?.name?.toLowerCase() === 'transport'
                            ? `${formatCurrencyWithConversion(getTransportUnitPrice(), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
                            : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                           ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                           ? (() => {
+                               const nights = calculateNights(checkInDate, checkOutDate)
+                               const pt = ((service as any).property_type || '').toLowerCase()
+                               const isTented = ['tented_camp', 'bush_camp'].includes(pt)
+                               const unit = formatCurrencyWithConversion(displayUnit, service.currency)
+                               const roomLabel = isTented ? `tent${rooms > 1 ? 's' : ''}` : `room${rooms > 1 ? 's' : ''}`
+                               return rooms > 1
+                                 ? `${unit} × ${nights} night${nights > 1 ? 's' : ''} × ${rooms} ${roomLabel}`
+                                 : `${unit} × ${nights} night${nights > 1 ? 's' : ''}`
+                             })()
                            : service.service_categories?.name?.toLowerCase() === 'shops'
                            ? listingType === 'hire'
                              ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''} × ${quantity} item${quantity > 1 ? 's' : ''}`
                              : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${quantity} item${quantity > 1 ? 's' : ''}`
-                           : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                           : (() => {
+                               const total = guests + children
+                               const parts: string[] = []
+                               if (guests > 0) parts.push(`${guests} adult${guests > 1 ? 's' : ''}`)
+                               if (children > 0) parts.push(`${children} child${children > 1 ? 'ren' : ''}`)
+                               return `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${parts.join(' + ')}`
+                             })()}
                        </span>
                       <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
@@ -2610,7 +2697,7 @@ export default function ServiceDetail() {
               endDate,
               startTime,
               endTime,
-              guests,
+              guests: guests + children,
               transportZone,
             }}
           />

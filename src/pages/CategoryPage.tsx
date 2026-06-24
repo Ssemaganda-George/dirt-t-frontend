@@ -79,9 +79,9 @@ export default function CategoryPage() {
             { key: 'hotel', label: 'Hotel' },
             { key: 'lodge_eco', label: 'Lodge & Eco Lodge' },
             { key: 'safari_camp', label: 'Safari & Camp' },
-            { key: 'home_guesthouse', label: 'Home & Guesthouse' },
+            { key: 'home_guesthouse', label: 'Homes & Stays' },
             { key: 'resort', label: 'Resort' },
-            { key: 'hostel', label: 'Hostel / Budget' },
+            { key: 'hostel', label: 'Hostel / Guest house / Budget' },
           ]
         case 'cat_tour_packages':
           return [
@@ -202,9 +202,9 @@ export default function CategoryPage() {
           case 'hotel':          return containsKeyword(pt, ['hotel', 'boutique_hotel', 'boutique', 'business_hotel', 'business'])
           case 'lodge_eco':      return containsKeyword(pt, ['safari_lodge', 'eco_lodge', 'lodge', 'eco'])
           case 'safari_camp':    return containsKeyword(pt, ['tented_camp', 'bush_camp', 'camp', 'tented', 'glamping', 'safari'])
-          case 'home_guesthouse':return containsKeyword(pt, ['home', 'guesthouse', 'homestay', 'b&b', 'bnb', 'apartment'])
+          case 'home_guesthouse':return containsKeyword(pt, ['home', 'homestay', 'bnb', 'apartment'])
           case 'resort':         return containsKeyword(pt, ['resort', 'spa_resort', 'spa', 'beach', 'lake'])
-          case 'hostel':         return containsKeyword(pt, ['hostel', 'backpacker', 'budget', 'dorm'])
+          case 'hostel':         return containsKeyword(pt, ['hostel', 'guesthouse', 'backpacker', 'budget', 'dorm'])
           default: return true
         }
       }

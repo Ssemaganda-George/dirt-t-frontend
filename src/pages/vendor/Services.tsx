@@ -1474,26 +1474,30 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
-                  <optgroup label="Hotels">
+                  <optgroup label="→ Hotel">
                     <option value="hotel">Hotel</option>
                     <option value="boutique_hotel">Boutique Hotel</option>
                     <option value="business_hotel">Business Hotel</option>
                   </optgroup>
-                  <optgroup label="Safari &amp; Nature">
+                  <optgroup label="→ Lodge &amp; Eco Lodge">
                     <option value="safari_lodge">Safari Lodge</option>
                     <option value="eco_lodge">Eco Lodge</option>
+                  </optgroup>
+                  <optgroup label="→ Safari &amp; Camp">
                     <option value="tented_camp">Tented Camp / Glamping</option>
                     <option value="bush_camp">Bush Camp</option>
                   </optgroup>
-                  <optgroup label="Alternative Stays">
+                  <optgroup label="→ Homes &amp; Stays">
                     <option value="home">Home / Private Home</option>
-                    <option value="guesthouse">Guesthouse / B&amp;B</option>
                     <option value="apartment">Serviced Apartment</option>
-                    <option value="hostel">Hostel / Backpackers</option>
                   </optgroup>
-                  <optgroup label="Resorts">
+                  <optgroup label="→ Resort">
                     <option value="resort">Resort</option>
                     <option value="spa_resort">Spa &amp; Wellness Resort</option>
+                  </optgroup>
+                  <optgroup label="→ Hostel / Guest house / Budget">
+                    <option value="guesthouse">Guesthouse / B&amp;B</option>
+                    <option value="hostel">Hostel / Backpackers</option>
                   </optgroup>
                   <option value="other">Other</option>
                 </select>
@@ -3220,14 +3224,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
-                  <option value="home">Home / Private Home</option>
-                  <option value="guesthouse">Guesthouse / B&amp;B</option>
-                  <option value="hostel">Hostel / Backpackers</option>
-                  <option value="apartment">Serviced Apartment</option>
-                  <option value="boutique_hotel">Boutique Hotel</option>
-                  <option value="eco_lodge">Eco Lodge</option>
-                  <option value="safari_lodge">Safari Lodge</option>
-                  <option value="resort">Resort</option>
+                  <option value="home">Home / Private Home → Homes &amp; Stays</option>
+                  <option value="apartment">Serviced Apartment → Homes &amp; Stays</option>
+                  <option value="guesthouse">Guesthouse / B&amp;B → Hostel / Guest house / Budget</option>
+                  <option value="hostel">Hostel / Backpackers → Hostel / Guest house / Budget</option>
+                  <option value="boutique_hotel">Boutique Hotel → Hotel</option>
+                  <option value="eco_lodge">Eco Lodge → Lodge &amp; Eco Lodge</option>
+                  <option value="safari_lodge">Safari Lodge → Lodge &amp; Eco Lodge</option>
+                  <option value="resort">Resort → Resort</option>
                 </select>
               </div>
               <div>
