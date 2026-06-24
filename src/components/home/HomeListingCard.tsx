@@ -87,7 +87,7 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
   const locationLine = getLocationLine(service)
   const categoryName = service.service_categories?.name?.toLowerCase()
   const isShop = categoryName === 'shops' || service.category_id === 'cat_shops'
-  const buyPrice = Number((service as any)?.buy_price ?? (isShop ? service.price : NaN) ?? NaN)
+  const buyPrice = Number((service as any)?.buy_price || (isShop ? service.price : NaN))
   const rentPrice = Number((service as any)?.rental_price_per_day ?? NaN)
   const hasBuy = Number.isFinite(buyPrice) && buyPrice > 0
   const hasRent = Number.isFinite(rentPrice) && rentPrice > 0

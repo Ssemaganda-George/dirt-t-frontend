@@ -281,27 +281,21 @@ export default function ServiceDetail() {
   const [listingType, setListingType] = useState<string | null>(null)
   useEffect(() => {
     if (!service) return
-    const buy = Number((service as any)?.buy_price ?? ((service.service_categories?.name?.toLowerCase() === 'shops' ? service.price : NaN)) ?? NaN)
+    const isShop = service.service_categories?.name?.toLowerCase() === 'shops'
+    const buy = Number((service as any)?.buy_price || (isShop ? service.price : NaN))
     const rent = Number((service as any)?.rental_price_per_day ?? NaN)
     const hasBuy = Number.isFinite(buy) && buy > 0
     const hasRent = Number.isFinite(rent) && rent > 0
 
-    if (hasBuy && hasRent) {
-      setListingType('buy')
-      return
-    }
+    // Both prices: default to buy
+    if (hasBuy && hasRent) { setListingType('buy'); return }
+    // Hire-only
+    if (hasRent && !hasBuy) { setListingType('hire'); return }
 
     const lt = (service as any)?.listing_type || (service as any)?.type || null
-    if (lt) {
-      setListingType(lt)
-      return
-    }
+    if (lt && lt !== 'hire') { setListingType(lt); return }
 
-    if (hasRent) {
-      setListingType('hire')
-    } else {
-      setListingType('experience')
-    }
+    setListingType('experience')
   }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day, service?.price, service?.service_categories?.name])
   const { user, profile } = useAuth()
   const { selectedLanguage } = usePreferences()
@@ -1517,7 +1511,7 @@ export default function ServiceDetail() {
               return rental * days * qty
             }
           }
-          const buy = Number((service as any).buy_price ?? NaN)
+          const buy = Number((service as any).buy_price || service!.price)
           if (Number.isFinite(buy) && buy > 0) return buy * qty
           return service!.price * qty
         }
@@ -1535,7 +1529,7 @@ export default function ServiceDetail() {
             const rental = Number((service as any).rental_price_per_day ?? NaN)
             if (Number.isFinite(rental) && rental > 0) return rental
           }
-          const buy = Number((service as any).buy_price ?? NaN)
+          const buy = Number((service as any).buy_price || service!.price)
           if (Number.isFinite(buy) && buy > 0) return buy
         }
         return getDisplayPrice(service!, ticketTypes)
@@ -2344,11 +2338,12 @@ export default function ServiceDetail() {
                    </div>
 
                    {service.service_categories?.name?.toLowerCase() === 'shops' && (() => {
-                     const buy = Number((service as any).buy_price ?? ((service as any).price ?? NaN) ?? NaN)
+                     const buy = Number((service as any).buy_price || (service as any).price)
                      const rent = Number((service as any).rental_price_per_day ?? NaN)
                      const hasBuy = Number.isFinite(buy) && buy > 0
                      const hasRent = Number.isFinite(rent) && rent > 0
-                     if (!hasBuy && !hasRent) return null
+                     // Only show the option picker when BOTH buy and hire prices are set
+                     if (!hasBuy || !hasRent) return null
                      return (
                        <div className="mb-4">
                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Option</label>
@@ -2358,14 +2353,14 @@ export default function ServiceDetail() {
                              onClick={() => setListingType('buy')}
                              className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'buy' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
                            >
-                             Buy{hasBuy ? ` ${formatCurrencyWithConversion(buy, service.currency)}` : ''}
+                             Buy {formatCurrencyWithConversion(buy, service.currency)}
                            </button>
                            <button
                              type="button"
                              onClick={() => setListingType('hire')}
                              className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'hire' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
                            >
-                             Hire{hasRent ? ` ${formatCurrencyWithConversion(rent, service.currency)}/day` : ''}
+                             Hire {formatCurrencyWithConversion(rent, service.currency)}/day
                            </button>
                          </div>
                        </div>

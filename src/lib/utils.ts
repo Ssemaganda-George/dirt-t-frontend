@@ -224,7 +224,7 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
     }
 
     if (categoryName === 'shops') {
-      const buy = Number(service?.buy_price ?? NaN)
+      const buy = Number((service as any)?.buy_price || service?.price)
       const rent = Number(service?.rental_price_per_day ?? NaN)
       const prices: number[] = []
       if (Number.isFinite(buy) && buy > 0) prices.push(buy)
