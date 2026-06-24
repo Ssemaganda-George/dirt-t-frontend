@@ -156,7 +156,12 @@ interface ServiceDetail {
     certificates_provided?: boolean
     safety_gear_required?: boolean
     event_notes?: string
-}
+
+    // Shop / listing
+    listing_type?: string
+    buy_price?: number
+    rental_price_per_day?: number
+  }
 
 export default function ServiceDetail() {
   const formatServiceTitle = (service: ServiceDetail, isDesktop = false) => {
@@ -230,6 +235,7 @@ export default function ServiceDetail() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [guests, setGuests] = useState(1)
+  const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -270,6 +276,23 @@ export default function ServiceDetail() {
     if (candidates.length > 0) { setUnitPrice(Math.min(...candidates)); return }
     setUnitPrice(Number(service.price) || 0)
   }, [transportZone, service])
+
+  // Shop listing type (buy / hire / experience) — top-level so hook order stays stable
+  const [listingType, setListingType] = useState<string | null>(null)
+  useEffect(() => {
+    if (!service) return
+    const lt = (service as any)?.listing_type || (service as any)?.type || null
+    if (lt) { setListingType(lt); return }
+    const buy = Number((service as any)?.buy_price ?? NaN)
+    const rent = Number((service as any)?.rental_price_per_day ?? NaN)
+    if (Number.isFinite(buy) && buy > 0 && Number.isFinite(rent) && rent > 0) {
+      setListingType('buy')
+    } else if (Number.isFinite(rent) && rent > 0) {
+      setListingType('hire')
+    } else {
+      setListingType('experience')
+    }
+  }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day])
   const { user, profile } = useAuth()
   const { selectedLanguage } = usePreferences()
 
@@ -465,6 +488,7 @@ export default function ServiceDetail() {
     if (state.checkOutDate) setCheckOutDate(String(state.checkOutDate))
     if (state.selectedDate) setSelectedDate(String(state.selectedDate))
     if (state.guests) setGuests(Number(state.guests))
+    if (state.quantity) setQuantity(Number(state.quantity))
     if (state.startDate) setStartDate(String(state.startDate))
     if (state.endDate) setEndDate(String(state.endDate))
     if (state.startTime) setStartTime(String(state.startTime))
@@ -486,6 +510,12 @@ export default function ServiceDetail() {
     if (cat === 'transport') return Boolean(startDate && endDate && transportZone)
     if (['hotels', 'hotel', 'accommodation'].includes(cat)) {
       return Boolean(checkInDate && checkOutDate)
+    }
+    if (cat === 'shops' && listingType === 'hire') {
+      return Boolean(startDate && endDate)
+    }
+    if (cat === 'shops') {
+      return true
     }
     return Boolean(selectedDate)
   }
@@ -519,7 +549,9 @@ export default function ServiceDetail() {
       startTime,
       endTime,
       guests,
+      quantity,
       transportZone,
+      listingType: listingType || undefined,
     }
 
     if (usesInlineBookingDrawer(mappedCategory)) {
@@ -539,7 +571,10 @@ export default function ServiceDetail() {
     const name = (categoryName || '').toLowerCase()
     if (name === 'transport') return 'per day'
     if (['hotels', 'hotel', 'accommodation'].includes(name)) return 'per night'
-    if (name === 'shops') return 'per item'
+    if (name === 'shops') {
+      if (listingType === 'hire') return 'per day'
+      return 'per item'
+    }
     if (name === 'restaurants') return 'per meal'
     return 'per person'
   }
@@ -1461,13 +1496,40 @@ export default function ServiceDetail() {
     ? getTransportUnitPrice() * calculateDays(startDate, startTime, endDate, endTime)
     : ['hotels', 'hotel', 'accommodation'].includes(service!.service_categories?.name?.toLowerCase() || '')
     ? service!.price * calculateNights(checkInDate, checkOutDate)
-    : service!.price * guests
+    : (() => {
+        const cat = service!.service_categories?.name?.toLowerCase()
+        if (cat === 'shops') {
+          const qty = quantity
+          if (listingType === 'hire') {
+            const rental = Number((service as any).rental_price_per_day ?? NaN)
+            if (Number.isFinite(rental) && rental > 0) {
+              const days = startDate && endDate ? calculateDays(startDate, startTime, endDate, endTime) : 1
+              return rental * days * qty
+            }
+          }
+          const buy = Number((service as any).buy_price ?? NaN)
+          if (Number.isFinite(buy) && buy > 0) return buy * qty
+          return service!.price * qty
+        }
+        return service!.price * guests
+      })()
 
   
 
   const displayUnit = service!.service_categories?.name?.toLowerCase() === 'transport'
     ? (unitPrice ?? getDisplayPrice(service!, ticketTypes))
-    : getDisplayPrice(service!, ticketTypes)
+    : (() => {
+        const cat = service!.service_categories?.name?.toLowerCase()
+        if (cat === 'shops') {
+          if (listingType === 'hire') {
+            const rental = Number((service as any).rental_price_per_day ?? NaN)
+            if (Number.isFinite(rental) && rental > 0) return rental
+          }
+          const buy = Number((service as any).buy_price ?? NaN)
+          if (Number.isFinite(buy) && buy > 0) return buy
+        }
+        return getDisplayPrice(service!, ticketTypes)
+      })()
 
   if (isLoading) {
     return <PageSkeleton type="serviceDetail" />
@@ -2261,104 +2323,183 @@ export default function ServiceDetail() {
                 </div>
               ) : (
                 <div>
-                  <div className="text-center mb-6">
-                      <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(displayUnit, service.currency)}</div>
-                      <div className="text-xs text-gray-500">
-                        {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
-                         ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
-                         service.service_categories?.name?.toLowerCase() === 'shops' ? 'per item' :
-                         service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
-                      </div>
-                  </div>
+                   <div className="text-center mb-6">
+                       <div className="text-2xl font-bold text-gray-900">{formatCurrencyWithConversion(displayUnit, service.currency)}</div>
+                       <div className="text-xs text-gray-500">
+                         {service.service_categories?.name?.toLowerCase() === 'transport' ? 'per day' : 
+                          ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? 'per night' :
+                          service.service_categories?.name?.toLowerCase() === 'shops' ? (listingType === 'hire' ? 'per day' : 'per item') :
+                          service.service_categories?.name?.toLowerCase() === 'restaurants' ? 'per meal' : 'per person'}
+                       </div>
+                   </div>
 
-                  {/* Date & Guest Selection Form */}
-                  <div className="space-y-3 mb-6">
-                    {service.service_categories?.name?.toLowerCase() === 'transport' ? (
-                      <>
+                   {service.service_categories?.name?.toLowerCase() === 'shops' && (() => {
+                     const buy = Number((service as any).buy_price ?? NaN)
+                     const rent = Number((service as any).rental_price_per_day ?? NaN)
+                     const hasBuy = Number.isFinite(buy) && buy > 0
+                     const hasRent = Number.isFinite(rent) && rent > 0
+                     if (!hasBuy && !hasRent) return null
+                     return (
+                       <div className="mb-4">
+                         <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Option</label>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => setListingType('buy')}
+                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'buy' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                           >
+                             Buy{hasBuy ? ` ${formatCurrencyWithConversion(buy, service.currency)}` : ''}
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => setListingType('hire')}
+                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'hire' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                           >
+                             Hire{hasRent ? ` ${formatCurrencyWithConversion(rent, service.currency)}/day` : ''}
+                           </button>
+                         </div>
+                       </div>
+                     )
+                   })()}
+
+                    {/* Date & Guest Selection Form */}
+                   <div className="space-y-3 mb-6">
+                     {service.service_categories?.name?.toLowerCase() === 'transport' ? (
+                       <>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Service Type</label>
+                           <div className="flex gap-3 mb-2">
+                             <label className="inline-flex items-center text-sm">
+                               <input type="radio" name="transportZone" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
+                               Within Town
+                             </label>
+                             <label className="inline-flex items-center text-sm">
+                               <input type="radio" name="transportZone" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
+                               Upcountry
+                             </label>
+                           </div>
+                           <p className="text-xs text-gray-500 mb-3">Choose town or upcountry pricing before selecting dates.</p>
+
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
+                           <div className="grid grid-cols-2 gap-2">
+                             <div className="relative">
+                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                               <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                             </div>
+                             <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                           </div>
+                         </div>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Drop-off</label>
+                           <div className="grid grid-cols-2 gap-2">
+                             <div className="relative">
+                               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                               <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                             </div>
+                             <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                           </div>
+                         </div>
+                       </>
+                     ) : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? (
+                       <>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-in</label>
+                           <div className="relative">
+                             <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                             <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                           </div>
+                         </div>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-out</label>
+                           <div className="relative">
+                             <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                             <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
+                           </div>
+                         </div>
+                       </>
+                     ) : service.service_categories?.name?.toLowerCase() === 'shops' && listingType === 'hire' ? (
+                       <>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Start Date</label>
+                           <div className="relative">
+                             <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                             <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                           </div>
+                         </div>
+                         <div>
+                           <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">End Date</label>
+                           <div className="relative">
+                             <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                             <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} />
+                           </div>
+                         </div>
+                       </>
+                     ) : (
+                       <div>
+                         <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Date</label>
+                         <div className="relative">
+                           <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                           <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                         </div>
+                       </div>
+                     )}
+
+                      {service.service_categories?.name?.toLowerCase() !== 'transport' && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Service Type</label>
-                          <div className="flex gap-3 mb-2">
-                            <label className="inline-flex items-center text-sm">
-                              <input type="radio" name="transportZone" value="within" checked={transportZone === 'within'} onChange={() => setTransportZone('within')} className="mr-2" />
-                              Within Town
-                            </label>
-                            <label className="inline-flex items-center text-sm">
-                              <input type="radio" name="transportZone" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => setTransportZone('upcountry')} className="mr-2" />
-                              Upcountry
-                            </label>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-3">Choose town or upcountry pricing before selecting dates.</p>
-
-                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Pick-up</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">
+                            {service.service_categories?.name?.toLowerCase() === 'shops' ? 'Quantity' : 'Guests'}
+                          </label>
+                          {service.service_categories?.name?.toLowerCase() === 'shops' ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                                disabled={quantity <= 1}
+                                className="w-10 h-10 rounded-lg bg-gray-100 disabled:opacity-50 text-lg font-semibold"
+                              >
+                                -
+                              </button>
+                              <div className="flex-1 text-center text-sm font-medium text-gray-900">
+                                {quantity} item{quantity > 1 ? 's' : ''}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setQuantity(q => Math.min(service.max_capacity || 100, q + 1))}
+                                className="w-10 h-10 rounded-lg bg-gray-100 text-lg font-semibold"
+                              >
+                                +
+                              </button>
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Drop-off</label>
-                          <div className="grid grid-cols-2 gap-2">
+                          ) : (
                             <div className="relative">
-                              <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                              <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
+                              <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                              <select className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
+                                {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
+                                  <option key={num} value={num}>
+                                    {num} guest{num > 1 ? 's' : ''}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
-                            <input type="time" className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={service.service_categories?.name?.toLowerCase() === 'transport' && !transportZone} />
-                          </div>
+                          )}
                         </div>
-                      </>
-                    ) : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '') ? (
-                      <>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-in</label>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Check-out</label>
-                          <div className="relative">
-                            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} min={checkInDate || new Date().toISOString().split('T')[0]} />
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Date</label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <input type="date" className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
-                        </div>
-                      </div>
-                    )}
-
-                    {service.service_categories?.name?.toLowerCase() !== 'transport' && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Guests</label>
-                        <div className="relative">
-                          <Users className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <select className="w-full pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>
-                            {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (<option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>))}
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                   </div>
 
                   {/* Price Calculation */}
                   <div className="bg-gray-50 rounded-lg p-3 mb-6">
                     <div className="flex justify-between items-center mb-2 text-xs">
-                      <span className="text-gray-600">
-                        {service.service_categories?.name?.toLowerCase() === 'transport'
-                          ? `${formatCurrencyWithConversion(getTransportUnitPrice(), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
-                          : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
-                          ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
-                          : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
-                      </span>
+                       <span className="text-gray-600">
+                         {service.service_categories?.name?.toLowerCase() === 'transport'
+                           ? `${formatCurrencyWithConversion(getTransportUnitPrice(), service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''}`
+                           : ['hotels', 'hotel', 'accommodation'].includes(service.service_categories?.name?.toLowerCase() || '')
+                           ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateNights(checkInDate, checkOutDate)} night${calculateNights(checkInDate, checkOutDate) > 1 ? 's' : ''}`
+                           : service.service_categories?.name?.toLowerCase() === 'shops'
+                           ? listingType === 'hire'
+                             ? `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${calculateDays(startDate, startTime, endDate, endTime)} day${calculateDays(startDate, startTime, endDate, endTime) > 1 ? 's' : ''} × ${quantity} item${quantity > 1 ? 's' : ''}`
+                             : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${quantity} item${quantity > 1 ? 's' : ''}`
+                           : `${formatCurrencyWithConversion(displayUnit, service.currency)} × ${guests} guest${guests > 1 ? 's' : ''}`}
+                       </span>
                       <span className="font-medium text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
                     <div className="flex justify-between items-center font-bold text-sm">

@@ -21,7 +21,9 @@ export interface ServiceDetailBookingPrefill {
   startTime: string
   endTime: string
   guests: number
+  quantity: number
   transportZone: 'within' | 'upcountry' | ''
+  listingType?: string | null
 }
 
 /** Map service category labels to booking route segment */
@@ -66,7 +68,9 @@ export function buildBookingStateFromCartItem(
     startTime: String(bookingData.startTime || ''),
     endTime: String(bookingData.endTime || ''),
     guests: Number(bookingData.guests || 1),
+    quantity: Number(bookingData.quantity || 1),
     transportZone: (bookingData.transportZone as 'within' | 'upcountry' | '') || '',
+    listingType: (bookingData.listingType as string | null) || undefined,
   })
 }
 
@@ -107,6 +111,14 @@ export function buildBookingNavigateState(
         passengers: prefill.guests,
       }
     default:
+      if (prefill.listingType) {
+        return {
+          selectedDate: prefill.selectedDate,
+          guests: prefill.guests,
+          quantity: prefill.quantity,
+          listingType: prefill.listingType,
+        }
+      }
       return undefined
   }
 }

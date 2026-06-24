@@ -7,7 +7,6 @@ const TransportBooking = lazy(() => import('./TransportBooking'))
 const TourBooking = lazy(() => import('./TourBooking'))
 const RestaurantBooking = lazy(() => import('./RestaurantBooking'))
 const ActivityBooking = lazy(() => import('./ActivityBooking'))
-const FlightBooking = lazy(() => import('./FlightBooking'))
 
 function BookingLoading() {
   return (
@@ -49,8 +48,8 @@ export default function BookingFlow() {
     case 'activities':
       bookingPage = <ActivityBooking service={service as any} />
       break
-    case 'flights':
-      bookingPage = <FlightBooking service={service as any} />
+    case 'shops':
+      bookingPage = <ActivityBooking service={service as any} />
       break
     default:
       bookingPage = <ActivityBooking service={service as any} />

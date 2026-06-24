@@ -468,6 +468,8 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       'maintenance_included', 'replacement_value', 'delivery_radius', 'usage_instructions',
       'maintenance_requirements', 'training_provided', 'cleaning_included', 'repair_service',
       'equipment_condition', 'rental_terms',
+      // Rental/shop listing/pricing
+      'listing_type', 'buy_price', 'rental_price_per_day',
       // Event fields
       'event_type', 'event_date', 'event_duration_hours', 'max_participants', 'materials_included',
       'prerequisites', 'learning_outcomes', 'instructor_credentials', 'certificates_provided',

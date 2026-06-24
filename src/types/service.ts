@@ -27,7 +27,10 @@ export interface Service {
   approved_by?: string;
   created_at: string;
   updated_at: string;
-  type?: string;
+  type?: 'experience' | 'buy' | 'hire';
+  listing_type?: 'experience' | 'buy' | 'hire';
+  buy_price?: number;
+  rental_price_per_day?: number;
 
   // General
   duration_days?: number;

@@ -58,14 +58,12 @@ export default function VendorBookings() {
       setBookings(filteredBookings)
     } catch (error) {
       console.error('Error loading bookings:', error)
-      setBookings([])
-      setServices([])
-    }
+    setBookings([])
+    setServices([])
   }
-    setBookings(filteredBookings)
-  }
+}
 
-  useEffect(() => {
+useEffect(() => {
     if (!vendorId) return
 
     // Initial load
@@ -579,8 +577,8 @@ function BookingForm({ services, onClose, onSubmit }: { services: Service[]; onC
     guests: 1,
     total_amount: services[0] ? services[0].price : 0,
     currency: services[0]?.currency || 'UGX',
-    status: services[0]?.type === 'ticket' ? 'confirmed' : 'pending',
-    payment_status: services[0]?.type === 'ticket' ? 'paid' : 'pending'
+    status: 'pending',
+    payment_status: 'pending'
   })
 
   const selectedService = services.find(s => s.id === form.service_id)

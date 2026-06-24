@@ -336,6 +336,9 @@ export default function VendorServices() {
         delivery_fee: data.delivery_fee || undefined,
         shop_policies: data.shop_policies || '',
         shop_notes: data.shop_notes || '',
+        listing_type: data.listing_type || (data as any).type || 'experience',
+        buy_price: (data as any).buy_price ?? undefined,
+        rental_price_per_day: (data as any).rental_price_per_day ?? undefined,
 
         // Event fields
         event_description: (data as any).event_description || '',
@@ -499,6 +502,11 @@ export default function VendorServices() {
       if (updates.transportation_included !== undefined) validUpdates.transportation_included = updates.transportation_included
       if (updates.meals_included !== undefined) validUpdates.meals_included = updates.meals_included
       if (updates.internal_ticketing !== undefined) validUpdates.internal_ticketing = updates.internal_ticketing
+
+      // Shop / rental fields
+      if ((updates as any).listing_type !== undefined) validUpdates.listing_type = (updates as any).listing_type
+      if ((updates as any).buy_price !== undefined) validUpdates.buy_price = (updates as any).buy_price
+      if ((updates as any).rental_price_per_day !== undefined) validUpdates.rental_price_per_day = (updates as any).rental_price_per_day
 
       console.log('Valid updates:', validUpdates)
 
@@ -1292,7 +1300,15 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
     tags: initial?.tags || [],
     contact_info: initial?.contact_info || {},
     booking_requirements: initial?.booking_requirements || '',
-    cancellation_policy: initial?.cancellation_policy || ''
+    cancellation_policy: initial?.cancellation_policy || '',
+
+    // Shop / rental fields
+    listing_type: (initial as any)?.listing_type || (initial as any)?.type || 'experience',
+    buy_price: (initial as any)?.buy_price ?? undefined,
+    rental_price_per_day: (initial as any)?.rental_price_per_day ?? undefined,
+    deposit_required: initial?.deposit_required ?? undefined,
+    replacement_value: initial?.replacement_value ?? undefined,
+    rental_terms: initial?.rental_terms || ''
   }
 
   // If existing service is transport or has transport prices, include the specialized price fields
@@ -3711,6 +3727,48 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   </span>
                 ))}
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Listing Type</label>
+                <select value={form.listing_type || (form.type || 'experience')} onChange={(e) => { update('listing_type', e.target.value); update('type', e.target.value); }} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="experience">Experience / Booking</option>
+                  <option value="buy">Buy / Purchase</option>
+                  <option value="hire">Hire / Rental</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Price ({form.currency || 'UGX'})</label>
+                <input type="number" value={form.price || ''} onChange={(e) => update('price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Buy Price (one-time purchase)</label>
+                <input type="number" value={(form as any).buy_price ?? ''} onChange={(e) => update('buy_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Rental Price per Day</label>
+                <input type="number" value={(form as any).rental_price_per_day ?? ''} onChange={(e) => update('rental_price_per_day', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Deposit Required</label>
+                <input type="number" value={form.deposit_required || ''} onChange={(e) => update('deposit_required', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Replacement Value</label>
+                <input type="number" value={form.replacement_value || ''} onChange={(e) => update('replacement_value', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Rental Terms / Instructions</label>
+              <textarea value={form.rental_terms || ''} onChange={(e) => update('rental_terms', e.target.value)} placeholder="How the item should be returned after hire, late fee rules..." rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div className="flex items-center space-x-4">

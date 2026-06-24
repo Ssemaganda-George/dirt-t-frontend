@@ -77,12 +77,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
 
   const [bookingData, setBookingData] = useState({
     date: '',
+    startDate: '',
+    endDate: '',
+    listingType: '',
     guests: 1,
     specialRequests: '',
     contactName: '',
     contactEmail: '',
     contactPhone: '',
-    countryCode: '+256', // Default to Uganda
+    countryCode: '+256',
     paymentMethod: 'mobile',
     mobileProvider: ''
   })
@@ -131,11 +134,14 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   // Prefill date and guests from ServiceDetail navigation state
   useEffect(() => {
     if (!location.state) return
-    const { selectedDate, guests } = location.state as { selectedDate?: string; guests?: number }
+    const { selectedDate, guests, quantity, startDate, endDate, listingType } = location.state as { selectedDate?: string; guests?: number; quantity?: number; startDate?: string; endDate?: string; listingType?: string | null }
     setBookingData(prev => ({
       ...prev,
       ...(selectedDate ? { date: selectedDate } : {}),
-      ...(guests ? { guests } : {}),
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(listingType ? { listingType } : {}),
+      ...(listingType === 'hire' ? { guests: quantity ?? guests ?? 1 } : guests ? { guests } : {}),
     }))
   }, [location.state])
 
@@ -172,7 +178,12 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   const validateStep = (step: number): boolean => {
     const errs: FieldErrors = {}
     if (step === 1) {
-      if (!bookingData.date.trim()) errs.date = 'Please select an activity date.'
+      if (bookingData.listingType === 'hire') {
+        if (!bookingData.startDate.trim()) errs.startDate = 'Please select a start date.'
+        if (!bookingData.endDate.trim()) errs.endDate = 'Please select an end date.'
+      } else if (!bookingData.date.trim()) {
+        errs.date = 'Please select an activity date.'
+      }
     }
     if (step === 2 && !loggedInReady) {
       if (!bookingData.contactName.trim()) errs.contactName = 'Full name is required.'
@@ -234,7 +245,23 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
     setBookingData(prev => ({ ...prev, paymentMethod: value }))
   }
 
-  const totalPrice = service.price * bookingData.guests
+  const totalPrice = (() => {
+    const cat = (service as any)?.service_categories?.name?.toLowerCase()
+    if (cat === 'shops' && bookingData.listingType === 'hire') {
+      const rental = Number((service as any)?.rental_price_per_day ?? NaN)
+      if (Number.isFinite(rental) && rental > 0 && bookingData.startDate && bookingData.endDate) {
+        const start = new Date(bookingData.startDate)
+        const end = new Date(bookingData.endDate)
+        const diff = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+        return rental * diff * bookingData.guests
+      }
+    }
+    if (cat === 'shops') {
+      const buy = Number((service as any)?.buy_price ?? NaN)
+      if (Number.isFinite(buy) && buy > 0) return buy * bookingData.guests
+    }
+    return service.price * bookingData.guests
+  })()
   const [pricingCalc, setPricingCalc] = useState<any | null>(null)
 
   // Calculate platform/service fee per participant using pricing rules
@@ -300,13 +327,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           service_id: service.id,
           vendor_id: service.vendor_id || service.vendors?.id || '',
           booking_date: new Date().toISOString(),
-          service_date: bookingData.date,
+          service_date: (bookingData.listingType === 'hire' ? (bookingData.startDate || bookingData.date) : bookingData.date) || new Date().toISOString(),
           guests: bookingData.guests,
           total_amount: customerPaysTotal,
           currency: service.currency,
           status: 'pending',
           payment_status: 'pending',
-          special_requests: bookingData.specialRequests,
+          special_requests: bookingData.listingType === 'hire'
+            ? `${bookingData.specialRequests || ''}\nRental: ${bookingData.startDate} to ${bookingData.endDate}`.trim()
+            : bookingData.specialRequests,
           tourist_id: user?.id,
           guest_name: user ? undefined : contact.guest_name,
           guest_email: user ? undefined : contact.guest_email,
@@ -405,13 +434,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           service_id: service.id,
           vendor_id: service.vendor_id || service.vendors?.id || '',
           booking_date: new Date().toISOString(),
-          service_date: bookingData.date,
+          service_date: (bookingData.listingType === 'hire' ? (bookingData.startDate || bookingData.date) : bookingData.date) || new Date().toISOString(),
           guests: bookingData.guests,
           total_amount: customerPaysTotal,
           currency: service.currency,
           status: paymentStatus === 'paid' ? 'confirmed' : 'pending',
           payment_status: paymentStatus,
-          special_requests: bookingData.specialRequests,
+          special_requests: bookingData.listingType === 'hire'
+            ? `${bookingData.specialRequests || ''}\nRental: ${bookingData.startDate} to ${bookingData.endDate}`.trim()
+            : bookingData.specialRequests,
           tourist_id: user?.id,
           guest_name: user ? undefined : contact.guest_name,
           guest_email: user ? undefined : contact.guest_email,
@@ -446,34 +477,61 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Date & Number of Guests</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Activity Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    className={fieldInputClass(Boolean(fieldErrors.date))}
-                    value={bookingData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    aria-invalid={Boolean(fieldErrors.date)}
-                  />
-                  <FieldError message={fieldErrors.date} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Participants
-                  </label>
-                  <select
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
-                    value={bookingData.guests}
-                    onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
-                  >
-                    {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                      <option key={num} value={num}>{num} participant{num > 1 ? 's' : ''}</option>
-                    ))}
-                  </select>
-                </div>
+                {bookingData.listingType === 'hire' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date <span className="text-red-500">*</span></label>
+                      <input
+                        type="date"
+                        className={fieldInputClass(Boolean(fieldErrors.startDate))}
+                        value={bookingData.startDate}
+                        onChange={(e) => handleInputChange('startDate', e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        aria-invalid={Boolean(fieldErrors.startDate)}
+                      />
+                      <FieldError message={fieldErrors.startDate} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">End Date <span className="text-red-500">*</span></label>
+                      <input
+                        type="date"
+                        className={fieldInputClass(Boolean(fieldErrors.endDate))}
+                        value={bookingData.endDate}
+                        onChange={(e) => handleInputChange('endDate', e.target.value)}
+                        min={bookingData.startDate || new Date().toISOString().split('T')[0]}
+                        aria-invalid={Boolean(fieldErrors.endDate)}
+                      />
+                      <FieldError message={fieldErrors.endDate} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Activity Date <span className="text-red-500">*</span></label>
+                      <input
+                        type="date"
+                        className={fieldInputClass(Boolean(fieldErrors.date))}
+                        value={bookingData.date}
+                        onChange={(e) => handleInputChange('date', e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        aria-invalid={Boolean(fieldErrors.date)}
+                      />
+                      <FieldError message={fieldErrors.date} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Number of Participants</label>
+                      <select
+                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                        value={bookingData.guests}
+                        onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
+                      >
+                        {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
+                          <option key={num} value={num}>{num} participant{num > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div>
@@ -597,11 +655,15 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
           <div className="space-y-6">
             <BookingFormBanner message={formBanner} />
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-600">Activity: {service.title}</span>
-                <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)} × {bookingData.guests}</span>
-              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600">Activity: {service.title}</span>
+                  <span className="font-medium">
+                    {bookingData.listingType === 'hire'
+                      ? `${formatCurrencyWithConversion((service as any).rental_price_per_day, service.currency)} × ${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); })()} day${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); const d = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); return d > 1 ? 's' : ''; })()}`
+                      : `${formatCurrencyWithConversion(service.price, service.currency)} × ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`}
+                  </span>
+                </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>Subtotal</span>
@@ -763,12 +825,20 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               <p className="text-gray-600 text-sm sm:text-base">{service.location}</p>
               <p className="text-gray-600 text-sm">{service.service_categories.name}</p>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0">
-              <div className="text-lg sm:text-xl font-bold text-gray-900">
-                {formatCurrencyWithConversion(totalPrice, service.currency)}
-              </div>
-              <div className="text-sm text-gray-500">for {bookingData.guests} participant{bookingData.guests > 1 ? 's' : ''}</div>
-            </div>
+               <div className="text-left sm:text-right flex-shrink-0">
+                 <div className="text-lg sm:text-xl font-bold text-gray-900">
+                   {formatCurrencyWithConversion(totalPrice, service.currency)}
+                 </div>
+                  {bookingData.listingType === 'hire' && bookingData.startDate && bookingData.endDate ? (
+                    <div className="text-sm text-gray-500">
+                      {(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); const d = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); return `${d} day${d > 1 ? 's' : ''} rental`; })()}
+                    </div>
+                  ) : (service as any)?.service_categories?.name?.toLowerCase() === 'shops' ? (
+                    <div className="text-sm text-gray-500">for {bookingData.guests} item{bookingData.guests > 1 ? 's' : ''}</div>
+                  ) : (
+                    <div className="text-sm text-gray-500">for {bookingData.guests} participant{bookingData.guests > 1 ? 's' : ''}</div>
+                  )}
+               </div>
           </div>
         </div>
 
