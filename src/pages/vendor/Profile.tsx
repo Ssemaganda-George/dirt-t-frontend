@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { updateAuthUser } from '../../services/AuthService'
 import CitySearchInput from '../../components/CitySearchInput'
 import PhoneModal from '../../components/PhoneModal'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 export default function Profile() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const { profile, user } = useAuth()
+  const paymentSectionRef = useRef<HTMLDivElement>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [vendorData, setVendorData] = useState<any>(null)
@@ -135,6 +139,16 @@ export default function Profile() {
       })
     }
   }, [profile, vendorData])
+
+  useEffect(() => {
+    if (location.state?.openPaymentSection) {
+      setIsEditing(true)
+      setTimeout(() => {
+        paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.state, navigate])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -369,19 +383,6 @@ export default function Profile() {
         ].slice(0, 4) // limit how many are kept in UI
       }))
       setMessage('Mobile money account added. Save changes to persist.')
-    } else if (type === 'swift') {
-      // Map swift into bank_swift field so it will be persisted with bank_details
-      setFormData(prev => ({ ...prev, bank_swift: newPayment.swift_bic || prev.bank_swift, bank_name: newPayment.swift_bank_name || prev.bank_name }))
-      setMessage('SWIFT/BIC noted. Save changes to persist.')
-    } else if (type === 'crypto') {
-      setFormData(prev => ({
-        ...prev,
-        crypto_accounts: [
-          ...prev.crypto_accounts,
-          { currency: newPayment.crypto_currency || '', address: newPayment.crypto_address || '', label: newPayment.crypto_label || '' }
-        ]
-      }))
-      setMessage('Crypto account added locally. Backend support for persisting crypto is required before it will be stored server-side.')
     }
 
     // reset the newPayment form
@@ -562,7 +563,7 @@ export default function Profile() {
         </div>
 
         {/* Payment / Payout Details */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div ref={paymentSectionRef} className="bg-white rounded-xl border border-slate-200 p-5">
           <h3 className="text-base font-semibold text-slate-900 mb-3">Payment Details</h3>
 
           <div className="space-y-4">
@@ -724,9 +725,6 @@ export default function Profile() {
                     className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
                   >
                     <option value="bank">Bank</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="swift">SWIFT / BIC</option>
-                    <option value="crypto">Crypto</option>
                   </select>
                 </div>
 
@@ -740,253 +738,16 @@ export default function Profile() {
                       <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
                       <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
                     </div>
-                  )}
-
-                  {/* mobile money fields */}
-                  {newPayment.type === 'mobile_money' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider — e.g., MTN" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Account name — e.g., ssemaganda George" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                      <div>
-                        {isEditing ? (
-                          <PhoneModal
-                            phone={newPayment.phone || ''}
-                            countryCode={newPayment.country_code || '+256'}
-                            onPhoneChange={(phone) => setNewPayment((prev:any) => ({ ...prev, phone }))}
-                            onCountryCodeChange={(countryCode) => setNewPayment((prev:any) => ({ ...prev, country_code: countryCode }))}
-                            placeholder="700 000 000"
-                          />
-                        ) : (
-                          <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* swift */}
-                  {newPayment.type === 'swift' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank Name (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="SWIFT / BIC — e.g., SBICUGKX" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                    </div>
-                  )}
-
-                  {/* crypto */}
-                  {newPayment.type === 'crypto' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="Currency / Network — e.g., BTC" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm" />
-                      <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="Label (optional)" className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm sm:col-span-2" />
-                    </div>
-                  )}
+                   )}
 
                   <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-slate-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
+                    <p className="text-xs text-slate-500">Bank and Mobile Money methods will be saved to your account.</p>
                     <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50">Add</button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-          <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Money Accounts</label>
-          <div className="space-y-3">
-            {formData.mobile_money_accounts.map((acct, idx) => (
-                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
-                      <input
-                        type="text"
-                        name={`mm_provider_${idx}`}
-                        value={acct.provider}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, provider: e.target.value } : m)
-                        }))}
-                        disabled={!isEditing}
-                        placeholder="Provider (e.g., MTN, Airtel)"
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                      />
-                      <p className="text-xs text-slate-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Account name</label>
-                      <input
-                        type="text"
-                        name={`mm_name_${idx}`}
-                        value={acct.name || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, name: e.target.value } : m)
-                        }))}
-                        disabled={!isEditing}
-                        placeholder="Name on the account"
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-1">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Mobile money phone</label>
-                      {isEditing ? (
-                        <PhoneModal
-                          phone={acct.phone}
-                          countryCode={acct.country_code || '+256'}
-                          onPhoneChange={(phone) => setFormData(prev => ({
-                            ...prev,
-                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, phone } : m)
-                          }))}
-                          onCountryCodeChange={(countryCode) => setFormData(prev => ({
-                            ...prev,
-                            mobile_money_accounts: prev.mobile_money_accounts.map((m, i) => i === idx ? { ...m, country_code: countryCode } : m)
-                          }))}
-                          placeholder="700 000 000"
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          value={acct.phone ? `${acct.country_code} ${acct.phone} ${acct.provider ? `(${acct.provider})` : ''} ${acct.name ? `- ${acct.name}` : ''}` : ''}
-                          readOnly
-                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed"
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-          </div>
-        </div>
-
-        {/* Add flexible payment method */}
-        <div className="mt-6 border-t pt-4">
-          <h4 className="text-sm font-semibold text-slate-900 mb-3">Add a Payment Method</h4>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-            <div className="sm:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Account Type</label>
-              <select
-                value={newPayment.type}
-                onChange={(e) => setNewPayment({ type: e.target.value })}
-                disabled={!isEditing}
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="bank">Bank</option>
-                <option value="mobile_money">Mobile Money</option>
-                <option value="swift">SWIFT / BIC</option>
-                <option value="crypto">Crypto</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              {newPayment.type === 'bank' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Bank Name</label>
-                    <input type="text" value={newPayment.bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_name: e.target.value }))} disabled={!isEditing} placeholder="e.g., Stanbic" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Account Name</label>
-                    <input type="text" value={newPayment.bank_account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Account Number</label>
-                    <input type="text" value={newPayment.bank_account_number || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_account_number: e.target.value }))} disabled={!isEditing} placeholder="e.g., 1234567890" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Branch</label>
-                    <input type="text" value={newPayment.bank_branch || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_branch: e.target.value }))} disabled={!isEditing} placeholder="Branch name (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">SWIFT / BIC (optional)</label>
-                    <input type="text" value={newPayment.bank_swift || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, bank_swift: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                </div>
-              )}
-
-              {newPayment.type === 'mobile_money' && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
-                    <input type="text" value={newPayment.provider || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, provider: e.target.value }))} disabled={!isEditing} placeholder="Provider (e.g., MTN, Airtel)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                    <p className="text-xs text-slate-400 mt-1">e.g., MTN Mobile Money, Airtel Money</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Account name</label>
-                    <input type="text" value={newPayment.account_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, account_name: e.target.value }))} disabled={!isEditing} placeholder="Name on the account" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Mobile money phone</label>
-                    {isEditing ? (
-                      <PhoneModal
-                        phone={newPayment.phone || ''}
-                        countryCode={newPayment.country_code || '+256'}
-                        onPhoneChange={(phone) => setNewPayment((prev:any) => ({ ...prev, phone }))}
-                        onCountryCodeChange={(countryCode) => setNewPayment((prev:any) => ({ ...prev, country_code: countryCode }))}
-                        placeholder="700 000 000"
-                      />
-                    ) : (
-                      <input type="text" value={newPayment.phone ? `${newPayment.country_code} ${newPayment.phone}` : ''} readOnly className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50 text-slate-500 cursor-not-allowed" />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {newPayment.type === 'swift' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Bank Name (optional)</label>
-                    <input type="text" value={newPayment.swift_bank_name || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bank_name: e.target.value }))} disabled={!isEditing} placeholder="Bank name (optional)" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">SWIFT / BIC</label>
-                    <input type="text" value={newPayment.swift_bic || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, swift_bic: e.target.value }))} disabled={!isEditing} placeholder="e.g., SBICUGKX" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                </div>
-              )}
-
-              {newPayment.type === 'crypto' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Currency / Network</label>
-                    <input type="text" value={newPayment.crypto_currency || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_currency: e.target.value }))} disabled={!isEditing} placeholder="e.g., BTC, ETH" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                    <input type="text" value={newPayment.crypto_address || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_address: e.target.value }))} disabled={!isEditing} placeholder="Wallet address" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Label (optional)</label>
-                    <input type="text" value={newPayment.crypto_label || ''} onChange={(e) => setNewPayment((prev:any) => ({ ...prev, crypto_label: e.target.value }))} disabled={!isEditing} placeholder="e.g., Main BTC wallet" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-slate-500">Bank and Mobile Money methods will be saved to your account. Crypto/Swift are stored locally until backend support is added.</p>
-                <button onClick={handleAddPayment} disabled={!isEditing} className="min-h-[36px] px-3 py-2 bg-slate-900 text-white rounded-lg text-sm hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 disabled:opacity-50">Add</button>
-              </div>
-            </div>
-          </div>
-
-          {formData.crypto_accounts && formData.crypto_accounts.length > 0 && (
-            <div className="mt-4">
-              <h5 className="text-sm font-medium text-slate-800">Crypto (local)</h5>
-              <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                {formData.crypto_accounts.map((c, i) => (
-                  <li key={i} className="flex items-center justify-between border border-slate-100 rounded-md px-3 py-2">
-                    <div>
-                      <div className="font-medium">{c.currency || 'Unknown'}</div>
-                      <div className="text-xs text-slate-500">{c.address}</div>
-                    </div>
-                    <div className="text-xs text-slate-400">{c.label}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
         </div>
       </div>
 

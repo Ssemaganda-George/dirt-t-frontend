@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import {useNavigate} from 'react-router-dom'
 import { Transaction } from '../../types'
 import { getTransactions, requestWithdrawal, getWalletStats, getVendorWallet, reconcileMissingPaymentTransactions, getVendorPendingHolds, getVendorBalanceReleaseRequests, submitBalanceReleaseRequest, type VendorPendingHold, type BalanceReleaseRequest } from '../../lib/database'
 import { formatCurrencyWithConversion, formatDateTime } from '../../lib/utils'
@@ -11,6 +12,7 @@ import { getDailyRecommendations, type VendorMetrics } from '../../lib/businessR
 
 export default function VendorTransactions() {
   const { profile, vendor, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
 
   const { selectedCurrency, selectedLanguage } = usePreferences()
@@ -1179,11 +1181,20 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                     <p className="mt-1 text-xs text-red-600">Exceeds available balance</p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Payout account</label>
-                  {payoutOptions.length === 0 ? (
-                    <p className="text-sm text-red-600">No payout account found. Please add a bank or mobile-money account in your profile before requesting a withdrawal.</p>
-                  ) : payoutOptions.length === 1 ? (
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Payout account</label>
+                   {payoutOptions.length === 0 ? (
+                     <div className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                       <p className="text-red-600 font-medium">No payout account found</p>
+                       <p className="mt-1 text-slate-600">Please add a bank or mobile-money account in your profile before requesting a withdrawal.</p>
+                       <button
+                         onClick={() => { setShowWithdraw(false); navigate('/vendor/profile', { state: { openPaymentSection: true } }) }}
+                         className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800 underline"
+                       >
+                         Add payout account →
+                       </button>
+                     </div>
+                   ) : payoutOptions.length === 1 ? (
                     <div className="text-sm text-slate-700">{payoutOptions[0].label}</div>
                   ) : (
                     <select
