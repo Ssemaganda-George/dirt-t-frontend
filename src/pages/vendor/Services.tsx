@@ -415,7 +415,14 @@ export default function VendorServices() {
       if (updates.category_id !== undefined) validUpdates.category_id = updates.category_id
 
       // Hotel fields (note: check_in_time and check_out_time don't exist in database, use check_in_process instead)
+      if (updates.property_type !== undefined) validUpdates.property_type = updates.property_type
+      if (updates.total_rooms !== undefined) validUpdates.total_rooms = updates.total_rooms
       if (updates.room_types !== undefined) validUpdates.room_types = updates.room_types
+      if (updates.breakfast_included !== undefined) validUpdates.breakfast_included = updates.breakfast_included
+      if (updates.wifi_available !== undefined) validUpdates.wifi_available = updates.wifi_available
+      if (updates.parking_available !== undefined) validUpdates.parking_available = updates.parking_available
+      if (updates.minimum_stay !== undefined) validUpdates.minimum_stay = updates.minimum_stay
+      if (updates.maximum_guests !== undefined) validUpdates.maximum_guests = updates.maximum_guests
       if (updates.star_rating !== undefined && updates.star_rating !== null && updates.star_rating >= 1 && updates.star_rating <= 5) {
         validUpdates.star_rating = updates.star_rating
       }
@@ -504,6 +511,7 @@ export default function VendorServices() {
       if (updates.internal_ticketing !== undefined) validUpdates.internal_ticketing = updates.internal_ticketing
 
       // Shop / rental fields
+      if ((updates as any).shop_type !== undefined) validUpdates.shop_type = (updates as any).shop_type
       if ((updates as any).listing_type !== undefined) validUpdates.listing_type = (updates as any).listing_type
       if ((updates as any).buy_price !== undefined) validUpdates.buy_price = (updates as any).buy_price
       if ((updates as any).rental_price_per_day !== undefined) validUpdates.rental_price_per_day = (updates as any).rental_price_per_day
@@ -1303,6 +1311,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
     cancellation_policy: initial?.cancellation_policy || '',
 
     // Shop / rental fields
+    shop_type: (initial as any)?.shop_type || '',
     listing_type: (initial as any)?.listing_type || (initial as any)?.type || 'experience',
     buy_price: (initial as any)?.buy_price ?? undefined,
     rental_price_per_day: (initial as any)?.rental_price_per_day ?? undefined,
@@ -1465,11 +1474,27 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
-                  <option value="boutique">Boutique Hotel</option>
-                  <option value="resort">Resort</option>
-                  <option value="business">Business Hotel</option>
-                  <option value="apartment">Serviced Apartments</option>
-                  <option value="lodge">Lodge</option>
+                  <optgroup label="Hotels">
+                    <option value="hotel">Hotel</option>
+                    <option value="boutique_hotel">Boutique Hotel</option>
+                    <option value="business_hotel">Business Hotel</option>
+                  </optgroup>
+                  <optgroup label="Safari &amp; Nature">
+                    <option value="safari_lodge">Safari Lodge</option>
+                    <option value="eco_lodge">Eco Lodge</option>
+                    <option value="tented_camp">Tented Camp / Glamping</option>
+                    <option value="bush_camp">Bush Camp</option>
+                  </optgroup>
+                  <optgroup label="Alternative Stays">
+                    <option value="home">Home / Private Home</option>
+                    <option value="guesthouse">Guesthouse / B&amp;B</option>
+                    <option value="apartment">Serviced Apartment</option>
+                    <option value="hostel">Hostel / Backpackers</option>
+                  </optgroup>
+                  <optgroup label="Resorts">
+                    <option value="resort">Resort</option>
+                    <option value="spa_resort">Spa &amp; Wellness Resort</option>
+                  </optgroup>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -1779,14 +1804,24 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Vehicle Type</label>
                 <select value={form.vehicle_type || ''} onChange={(e) => update('vehicle_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select vehicle type</option>
-                  <option value="sedan">Sedan Car</option>
-                  <option value="suv">SUV</option>
-                  <option value="van">Van/Minivan</option>
-                  <option value="bus">Bus</option>
-                  <option value="motorcycle">Motorcycle</option>
-                  <option value="bicycle">Bicycle</option>
-                  <option value="boat">Boat</option>
-                  <option value="helicopter">Helicopter</option>
+                  <optgroup label="Road Vehicles">
+                    <option value="private_car">Private Car / Saloon</option>
+                    <option value="4x4_suv">4x4 / SUV</option>
+                    <option value="safari_tourist">Safari &amp; Tourist Vehicle</option>
+                    <option value="minivan_van">Minivan / Van</option>
+                    <option value="minibus_coach">Minibus / Coach</option>
+                    <option value="luxury">Luxury / Executive</option>
+                    <option value="motorcycle">Motorcycle</option>
+                  </optgroup>
+                  <optgroup label="Eco &amp; Alternative">
+                    <option value="bicycle">Bicycle / E-Bike</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="electric">Electric Vehicle</option>
+                  </optgroup>
+                  <optgroup label="Water &amp; Air">
+                    <option value="boat">Boat / Water Vessel</option>
+                    <option value="helicopter">Helicopter / Light Aircraft</option>
+                  </optgroup>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -3185,11 +3220,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <label className="block text-sm font-medium text-slate-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
-                  <option value="hostel">Hostel</option>
-                  <option value="guesthouse">Guesthouse</option>
-                  <option value="homestay">Homestay</option>
+                  <option value="home">Home / Private Home</option>
+                  <option value="guesthouse">Guesthouse / B&amp;B</option>
+                  <option value="hostel">Hostel / Backpackers</option>
+                  <option value="apartment">Serviced Apartment</option>
                   <option value="boutique_hotel">Boutique Hotel</option>
-                  <option value="lodge">Lodge</option>
+                  <option value="eco_lodge">Eco Lodge</option>
+                  <option value="safari_lodge">Safari Lodge</option>
                   <option value="resort">Resort</option>
                 </select>
               </div>
@@ -3651,160 +3688,115 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'shops':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Shop Details</h4>
+            <h4 className="font-medium text-slate-900">Pricing &amp; Availability</h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Shop Type</label>
-                <select value={form.shop_type || ''} onChange={(e) => update('shop_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
-                  <option value="">Select shop type</option>
-                  <option value="boutique">Boutique</option>
-                  <option value="souvenir_shop">Souvenir Shop</option>
-                  <option value="craft_market">Craft Market</option>
-                  <option value="department_store">Department Store</option>
-                  <option value="specialty_shop">Specialty Shop</option>
-                  <option value="online_store">Online Store</option>
-                  <option value="pop_up_shop">Pop-up Shop</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Store Size (sq meters)</label>
-                <input type="number" value={form.store_size || ''} onChange={(e) => update('store_size', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 50" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Opening Time</label>
-                <input type="time" value={form.opening_time || ''} onChange={(e) => update('opening_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Closing Time</label>
-                <input type="time" value={form.closing_time || ''} onChange={(e) => update('closing_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
+            {/* Product category */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Products & Services</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-slate-700">Product Category</label>
+              <select
+                value={form.shop_type || ''}
+                onChange={(e) => update('shop_type', e.target.value)}
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              >
+                <option value="">Select a category</option>
+                <option value="clothing">Clothing</option>
+                <option value="footwear">Footwear</option>
+                <option value="sun_bug">Sun &amp; Bug Protection</option>
+                <option value="souvenir">Souvenirs</option>
+                <option value="gadgets">Gadgets</option>
+                <option value="camping_gear">Camping Gear</option>
+                <option value="handmade_crafts">Handmade Crafts</option>
+                <option value="sustainable">Sustainable Only</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Listing type */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Listing Type</label>
+              <select
+                value={form.listing_type || (form.type || 'buy')}
+                onChange={(e) => { update('listing_type', e.target.value); update('type', e.target.value) }}
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              >
+                <option value="buy">Buy — one-time purchase</option>
+                <option value="hire">Hire — daily rental</option>
+                <option value="experience">Buy &amp; Hire — offer both</option>
+              </select>
+            </div>
+
+            {/* Buy price + Rental price */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Buy Price ({form.currency || 'UGX'})</label>
                 <input
-                  value={arrayInputs.products_offered || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, products_offered: e.target.value }))}
-                  placeholder="e.g., Handcrafted souvenirs, Local textiles, Traditional crafts"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('products_offered', arrayInputs.products_offered || ''))}
+                  type="number"
+                  value={(form as any).buy_price ?? ''}
+                  onChange={(e) => update('buy_price', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="0.00"
+                  className="mt-1 w-full border rounded-md px-3 py-2"
                 />
-                <button type="button" onClick={() => addToArray('products_offered', arrayInputs.products_offered || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <p className="mt-1 text-xs text-slate-400">Leave blank if hire-only</p>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.products_offered || []).map((product, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                    {product}
-                    <button type="button" onClick={() => removeFromArray('products_offered', idx)} className="ml-1 text-blue-600 hover:text-blue-800">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Payment Methods</label>
-              <div className="flex gap-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Rental Price per Day ({form.currency || 'UGX'})</label>
                 <input
-                  value={arrayInputs.payment_methods || ''}
-                  onChange={(e) => setArrayInputs(prev => ({ ...prev, payment_methods: e.target.value }))}
-                  placeholder="e.g., Cash, Mobile Money, Credit Card, Bank Transfer"
-                  className="flex-1 border rounded-md px-3 py-2"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('payment_methods', arrayInputs.payment_methods || ''))}
+                  type="number"
+                  value={(form as any).rental_price_per_day ?? ''}
+                  onChange={(e) => update('rental_price_per_day', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="0.00"
+                  className="mt-1 w-full border rounded-md px-3 py-2"
                 />
-                <button type="button" onClick={() => addToArray('payment_methods', arrayInputs.payment_methods || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(form.payment_methods || []).map((method, idx) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                    {method}
-                    <button type="button" onClick={() => removeFromArray('payment_methods', idx)} className="ml-1 text-green-600 hover:text-green-800">×</button>
-                  </span>
-                ))}
+                <p className="mt-1 text-xs text-slate-400">Leave blank if buy-only</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Listing Type</label>
-                <select value={form.listing_type || (form.type || 'experience')} onChange={(e) => { update('listing_type', e.target.value); update('type', e.target.value); }} className="mt-1 w-full border rounded-md px-3 py-2">
-                  <option value="experience">Experience / Booking</option>
-                  <option value="buy">Buy / Purchase</option>
-                  <option value="hire">Hire / Rental</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Price ({form.currency || 'UGX'})</label>
-                <input type="number" value={form.price || ''} onChange={(e) => update('price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Buy Price (one-time purchase)</label>
-                <input type="number" value={(form as any).buy_price ?? ''} onChange={(e) => update('buy_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Rental Price per Day</label>
-                <input type="number" value={(form as any).rental_price_per_day ?? ''} onChange={(e) => update('rental_price_per_day', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Deposit Required</label>
-                <input type="number" value={form.deposit_required || ''} onChange={(e) => update('deposit_required', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Replacement Value</label>
-                <input type="number" value={form.replacement_value || ''} onChange={(e) => update('replacement_value', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
+            {/* Deposit */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Rental Terms / Instructions</label>
-              <textarea value={form.rental_terms || ''} onChange={(e) => update('rental_terms', e.target.value)} placeholder="How the item should be returned after hire, late fee rules..." rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-slate-700">Security Deposit ({form.currency || 'UGX'})</label>
+              <input
+                type="number"
+                value={form.deposit_required || ''}
+                onChange={(e) => update('deposit_required', e.target.value ? Number(e.target.value) : undefined)}
+                placeholder="0.00"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              />
+              <p className="mt-1 text-xs text-slate-400">Required for hire items (optional)</p>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center">
-                <input type="checkbox" checked={form.delivery_available || false} onChange={(e) => update('delivery_available', e.target.checked)} className="mr-2" />
-                Delivery Available
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" checked={form.in_store_pickup || false} onChange={(e) => update('in_store_pickup', e.target.checked)} className="mr-2" />
-                In-store Pickup
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" checked={form.online_orders || false} onChange={(e) => update('online_orders', e.target.checked)} className="mr-2" />
-                Online Orders
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Minimum Order Value</label>
-                <input type="number" value={form.minimum_order_value || ''} onChange={(e) => update('minimum_order_value', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Delivery Fee</label>
-                <input type="number" value={form.delivery_fee || ''} onChange={(e) => update('delivery_fee', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
-              </div>
-            </div>
-
+            {/* Hire terms */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Shop Policies</label>
-              <textarea value={form.shop_policies || ''} onChange={(e) => update('shop_policies', e.target.value)} placeholder="Return policy, exchange terms, special conditions, etc." rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-slate-700">Hire Terms &amp; Return Instructions</label>
+              <textarea
+                value={form.rental_terms || ''}
+                onChange={(e) => update('rental_terms', e.target.value)}
+                placeholder="How the item should be returned, late fee rules, damage policy…"
+                rows={3}
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              />
             </div>
 
+            {/* Delivery */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.delivery_available || false}
+                onChange={(e) => update('delivery_available', e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900"
+              />
+              <span className="text-sm text-slate-700">Delivery available</span>
+            </label>
+
+            {/* Return policy */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Additional Shop Information</label>
-              <textarea value={form.shop_notes || ''} onChange={(e) => update('shop_notes', e.target.value)} placeholder="Any additional information about your shop, special features, or services" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
+              <label className="block text-sm font-medium text-slate-700">Return &amp; Exchange Policy</label>
+              <textarea
+                value={form.shop_policies || ''}
+                onChange={(e) => update('shop_policies', e.target.value)}
+                placeholder="Return policy, exchange terms, special conditions…"
+                rows={2}
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              />
             </div>
           </div>
         )

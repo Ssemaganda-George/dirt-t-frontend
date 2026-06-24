@@ -22,6 +22,7 @@ export default function CategoryPage() {
   const [priceRange, setPriceRange] = useState([0, 100000000])
   const [showFilters, setShowFilters] = useState(false)
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
+  const [shopListingFilter, setShopListingFilter] = useState('all')
   const prefillCheckIn = searchParams.get('checkIn') || ''
   const prefillCheckOut = searchParams.get('checkOut') || ''
   const prefillGuests = Number(searchParams.get('guests') || '1')
@@ -74,11 +75,13 @@ export default function CategoryPage() {
           ]
         case 'cat_hotels':
           return [
-            { key: 'all', label: 'All Stays' },
-            { key: 'budget', label: 'Budget' },
-            { key: 'midrange', label: 'Mid-range' },
-            { key: 'luxury', label: 'Luxury' },
-            { key: 'resort', label: 'Resort' }
+            { key: 'all', label: 'All' },
+            { key: 'hotel', label: 'Hotel' },
+            { key: 'lodge_eco', label: 'Lodge & Eco Lodge' },
+            { key: 'safari_camp', label: 'Safari & Camp' },
+            { key: 'home_guesthouse', label: 'Home & Guesthouse' },
+            { key: 'resort', label: 'Resort' },
+            { key: 'hostel', label: 'Hostel / Budget' },
           ]
         case 'cat_tour_packages':
           return [
@@ -98,11 +101,19 @@ export default function CategoryPage() {
           ]
         case 'cat_transport':
           return [
-            { key: 'all', label: 'All Transport' },
-            { key: 'taxi', label: 'Taxi' },
-            { key: 'bus', label: 'Bus' },
-            { key: 'private', label: 'Private Car' },
-            { key: 'shuttle', label: 'Shuttle' }
+            { key: 'all', label: 'All' },
+            { key: 'private_car', label: 'Private Car' },
+            { key: '4x4_suv', label: '4x4 / SUV' },
+            { key: 'safari_tourist', label: 'Safari & Tourist' },
+            { key: 'minivan_van', label: 'Minivan / Van' },
+            { key: 'minibus_coach', label: 'Minibus / Coach' },
+            { key: 'luxury', label: 'Luxury' },
+            { key: 'motorcycle', label: 'Motorcycle' },
+            { key: 'bicycle', label: 'Bicycle' },
+            { key: 'boat', label: 'Boat' },
+            { key: 'helicopter', label: 'Helicopter' },
+            { key: 'hybrid', label: 'Hybrid' },
+            { key: 'electric', label: 'Electric' },
           ]
         case 'cat_activities':
           return [
@@ -114,11 +125,15 @@ export default function CategoryPage() {
           ]
         case 'cat_shops':
           return [
-            { key: 'all', label: 'All Shops' },
-            { key: 'crafts', label: 'Crafts & Art' },
-            { key: 'souvenirs', label: 'Souvenirs' },
+            { key: 'all', label: 'All' },
             { key: 'clothing', label: 'Clothing' },
-            { key: 'food', label: 'Food & Produce' }
+            { key: 'footwear', label: 'Footwear' },
+            { key: 'sun_bug', label: 'Sun & Bug Protection' },
+            { key: 'souvenir', label: 'Souvenirs' },
+            { key: 'gadgets', label: 'Gadgets' },
+            { key: 'camping_gear', label: 'Camping Gear' },
+            { key: 'handmade_crafts', label: 'Handmade Crafts' },
+            { key: 'sustainable', label: 'Sustainable Only' },
           ]
         default:
           return [{ key: 'all', label: 'All' }]
@@ -149,6 +164,7 @@ export default function CategoryPage() {
 
   useEffect(() => {
     setSelectedCategoryFilter('all')
+    setShopListingFilter('all')
   }, [category])
 
   const { t, selectedCurrency } = usePreferences()
@@ -180,27 +196,34 @@ export default function CategoryPage() {
             return containsKeyword(combined, ['cultural', 'heritage', 'history', 'traditional', 'village', 'community', 'tribal', 'museum', 'craft', 'dance', 'ceremony'])
           default: return true
         }
-      case 'cat_hotels':
+      case 'cat_hotels': {
+        const pt = service.property_type?.toLowerCase() || ''
         switch (filterKey) {
-          case 'budget':
-            return (service.star_rating !== undefined && service.star_rating <= 2) ||
-              containsKeyword(service.property_type, ['budget', 'hostel', 'guesthouse', 'backpacker'])
-          case 'midrange':
-            return service.star_rating !== undefined && service.star_rating >= 3 && service.star_rating <= 4
-          case 'luxury':
-            return (service.star_rating !== undefined && service.star_rating >= 5) ||
-              containsKeyword(service.property_type, ['luxury', 'boutique', '5-star', 'five star'])
-          case 'resort':
-            return containsKeyword(service.property_type, ['resort', 'lodge', 'safari lodge', 'beach resort'])
+          case 'hotel':          return containsKeyword(pt, ['hotel', 'boutique_hotel', 'boutique', 'business_hotel', 'business'])
+          case 'lodge_eco':      return containsKeyword(pt, ['safari_lodge', 'eco_lodge', 'lodge', 'eco'])
+          case 'safari_camp':    return containsKeyword(pt, ['tented_camp', 'bush_camp', 'camp', 'tented', 'glamping', 'safari'])
+          case 'home_guesthouse':return containsKeyword(pt, ['home', 'guesthouse', 'homestay', 'b&b', 'bnb', 'apartment'])
+          case 'resort':         return containsKeyword(pt, ['resort', 'spa_resort', 'spa', 'beach', 'lake'])
+          case 'hostel':         return containsKeyword(pt, ['hostel', 'backpacker', 'budget', 'dorm'])
           default: return true
         }
+      }
       case 'cat_transport': {
         const vehicleType = service.vehicle_type?.toLowerCase() || ''
         switch (filterKey) {
-          case 'taxi': return containsKeyword(vehicleType, ['taxi', 'cab'])
-          case 'bus': return containsKeyword(vehicleType, ['bus', 'coach', 'coaster'])
-          case 'private': return containsKeyword(vehicleType, ['private', 'car', 'suv', 'sedan', 'land cruiser', '4x4', 'jeep'])
-          case 'shuttle': return containsKeyword(vehicleType, ['shuttle', 'van', 'minibus', 'transfer'])
+          case 'private_car':    return containsKeyword(vehicleType, ['private_car', 'sedan', 'saloon', 'car', 'private', 'corolla', 'camry'])
+          case '4x4_suv':        return containsKeyword(vehicleType, ['4x4_suv', '4x4', 'suv', 'jeep', 'prado', 'patrol', 'rav4', 'harrier', 'land cruiser', '4wd', 'offroad', 'off-road'])
+          case 'safari_tourist': return containsKeyword(vehicleType, ['safari_tourist', 'safari', 'tourist', 'game drive', 'game viewing', 'open top', 'custom'])
+          case 'minivan_van':    return containsKeyword(vehicleType, ['minivan_van', 'van', 'minivan', 'hiace', 'transit', 'sprinter'])
+          case 'minibus_coach':  return containsKeyword(vehicleType, ['minibus_coach', 'minibus', 'coach', 'bus', 'coaster', 'shuttle', 'transfer'])
+          case 'luxury':         return containsKeyword(vehicleType, ['luxury', 'executive', 'limousine', 'premium', 'mercedes', 'bmw', 'v8', 'vip'])
+          case 'motorcycle':     return containsKeyword(vehicleType, ['motorcycle', 'motorbike', 'boda', 'boda-boda', 'moto'])
+          case 'bicycle':        return containsKeyword(vehicleType, ['bicycle', 'bike', 'e-bike', 'cycling', 'cycle'])
+          case 'boat':           return containsKeyword(vehicleType, ['boat', 'water vessel', 'ferry', 'canoe', 'kayak', 'cruise', 'vessel'])
+          case 'helicopter':     return containsKeyword(vehicleType, ['helicopter', 'chopper', 'aircraft', 'light aircraft', 'plane', 'charter'])
+          case 'hybrid':         return containsKeyword(vehicleType, ['hybrid'])
+          case 'electric':       return containsKeyword(vehicleType, ['electric', 'ev', 'tesla', 'e-vehicle'])
+          case 'sustainable':    return containsKeyword(vehicleType, ['sustainable', 'eco', 'green', 'solar'])
           default: return true
         }
       }
@@ -225,14 +248,20 @@ export default function CategoryPage() {
           default: return true
         }
       }
-      case 'cat_shops':
+      case 'cat_shops': {
+        const shopType = (service as any)?.shop_type?.toLowerCase() || ''
         switch (filterKey) {
-          case 'crafts': return containsKeyword(combined, ['craft', 'art', 'handmade', 'artisan', 'pottery', 'painting', 'sculpture', 'woodwork', 'basket', 'weaving'])
-          case 'souvenirs': return containsKeyword(combined, ['souvenir', 'gift', 'memento', 'keepsake', 'trinket', 'curio', 'collectible'])
-          case 'clothing': return containsKeyword(combined, ['clothing', 'fashion', 'apparel', 'wear', 'fabric', 'textile', 'kitenge', 'gomesi', 'traditional dress'])
-          case 'food': return containsKeyword(combined, ['food', 'grocery', 'produce', 'market', 'spice', 'coffee', 'tea', 'organic', 'fresh', 'farm'])
+          case 'clothing': return shopType === 'clothing'
+          case 'footwear': return shopType === 'footwear'
+          case 'sun_bug': return shopType === 'sun_bug'
+          case 'souvenir': return shopType === 'souvenir'
+          case 'gadgets': return shopType === 'gadgets'
+          case 'camping_gear': return shopType === 'camping_gear'
+          case 'handmade_crafts': return shopType === 'handmade_crafts'
+          case 'sustainable': return shopType === 'sustainable'
           default: return true
         }
+      }
       case 'cat_flights':
         switch (filterKey) {
           case 'domestic': return containsKeyword(combined, ['domestic', 'local', 'internal', 'uganda'])
@@ -259,7 +288,17 @@ export default function CategoryPage() {
       const categoryId = categoryMapping[category]
       matchesCategoryFilter = matchesSubFilter(service, selectedCategoryFilter, categoryId)
     }
-    return matchesSearch && matchesPrice && matchesCategoryFilter
+    let matchesListingFilter = true
+    if (category === 'shops' && shopListingFilter !== 'all') {
+      const buyP = Number((service as any)?.buy_price || service.price)
+      const rentP = Number((service as any)?.rental_price_per_day)
+      const hasBuy = Number.isFinite(buyP) && buyP > 0
+      const hasRent = Number.isFinite(rentP) && rentP > 0
+      if (shopListingFilter === 'buy') matchesListingFilter = hasBuy && !hasRent
+      else if (shopListingFilter === 'hire') matchesListingFilter = hasRent && !hasBuy
+      else if (shopListingFilter === 'both') matchesListingFilter = hasBuy && hasRent
+    }
+    return matchesSearch && matchesPrice && matchesCategoryFilter && matchesListingFilter
   })
 
   const sortedServices = [...searchFilteredServices].sort((a, b) => {
@@ -282,7 +321,7 @@ export default function CategoryPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900">Filter results</h2>
         <button
-          onClick={() => { setPriceRange([0, 100000000]); setSelectedCategoryFilter('all') }}
+          onClick={() => { setPriceRange([0, 100000000]); setSelectedCategoryFilter('all'); setShopListingFilter('all') }}
           className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
         >
           Clear all
@@ -325,10 +364,31 @@ export default function CategoryPage() {
         </div>
       </div>
 
+      {/* Shop: listing type (Buy / Hire / Both) */}
+      {category === 'shops' && (
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Listing Type</h3>
+          <div className="space-y-2.5">
+            {[{ key: 'all', label: 'All' }, { key: 'buy', label: 'Buy' }, { key: 'hire', label: 'Hire' }, { key: 'both', label: 'Buy & Hire' }].map(opt => (
+              <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="radio"
+                  name="shop-listing-filter"
+                  checked={shopListingFilter === opt.key}
+                  onChange={() => setShopListingFilter(opt.key)}
+                  className="h-4 w-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Sub-category type */}
       {categoryFilters.length > 1 && (
         <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Type</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Category</h3>
           <div className="space-y-2.5">
             {categoryFilters.map(filter => (
               <label key={filter.key} className="flex items-center gap-3 cursor-pointer group">
@@ -430,6 +490,11 @@ export default function CategoryPage() {
           >
             <SlidersHorizontal className="h-4 w-4" />
             <span>Filters</span>
+            {(selectedCategoryFilter !== 'all' || (category === 'shops' && shopListingFilter !== 'all') || priceRange[0] > 0 || priceRange[1] < 100000000) && (
+              <span className="ml-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {[selectedCategoryFilter !== 'all', category === 'shops' && shopListingFilter !== 'all', priceRange[0] > 0 || priceRange[1] < 100000000].filter(Boolean).length}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -454,6 +519,45 @@ export default function CategoryPage() {
 
           {/* Results column */}
           <div className="flex-1 min-w-0">
+
+            {/* Mobile quick-filter chips — always visible, no panel needed */}
+            <div className="lg:hidden mb-4">
+              {categoryFilters.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {categoryFilters.map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => setSelectedCategoryFilter(f.key)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        selectedCategoryFilter === f.key
+                          ? 'bg-gray-900 text-white border-gray-900'
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {category === 'shops' && (
+                <div className="flex gap-2 overflow-x-auto pb-1 mt-2 scrollbar-hide">
+                  <span className="flex-shrink-0 text-xs text-gray-400 self-center pr-1">Type:</span>
+                  {[{key:'all',label:'All'},{key:'buy',label:'Buy'},{key:'hire',label:'Hire'},{key:'both',label:'Buy & Hire'}].map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setShopListingFilter(opt.key)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                        shopListingFilter === opt.key
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Result count + sort */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
@@ -511,7 +615,7 @@ export default function CategoryPage() {
               <div className="space-y-3">
                 {[...Array(5)].map((_, i) => (
                   <div key={i} className="flex bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
-                    <div className="w-44 sm:w-52 bg-gray-200 flex-shrink-0 min-h-[180px]" />
+                    <div className="w-28 sm:w-44 md:w-52 bg-gray-200 flex-shrink-0 min-h-[140px] sm:min-h-[180px]" />
                     <div className="flex-1 p-5 space-y-3">
                       <div className="h-4 bg-gray-200 rounded w-3/4" />
                       <div className="h-3 bg-gray-200 rounded w-1/2" />
@@ -611,7 +715,7 @@ function HorizontalServiceCard({ service }: ServiceCardProps) {
       className="group flex flex-row bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-gray-300 transition-all duration-200"
     >
       {/* Image */}
-      <div className="relative w-36 sm:w-44 md:w-52 flex-shrink-0 min-h-[180px] bg-gray-100">
+      <div className="relative w-28 sm:w-44 md:w-52 flex-shrink-0 min-h-[140px] sm:min-h-[180px] bg-gray-100">
         <img
           src={imageUrl}
           alt={service.title}
@@ -629,7 +733,7 @@ function HorizontalServiceCard({ service }: ServiceCardProps) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between min-w-0">
+      <div className="flex-1 p-3 sm:p-5 flex flex-col justify-between min-w-0">
         <div className="space-y-1.5">
           <h3 className="text-sm sm:text-base font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-emerald-700 transition-colors">
             {service.title}
@@ -660,17 +764,17 @@ function HorizontalServiceCard({ service }: ServiceCardProps) {
           )}
         </div>
 
-        {/* Price + CTA */}
-        <div className="flex items-end justify-between gap-3 mt-4 pt-3 border-t border-gray-100">
+          <div className="flex items-end justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
           <div>
             <span className="text-xs text-gray-400">From</span>
-            <div className="text-lg font-bold text-gray-900 leading-tight">
+            <div className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
               {formatCurrency(price, service.currency)}
             </div>
             <span className="text-xs text-gray-400">{getUnitLabel()}</span>
           </div>
-          <span className="flex-shrink-0 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors whitespace-nowrap">
-            See availability
+          <span className="flex-shrink-0 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-semibold px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap">
+            <span className="sm:hidden">View</span>
+            <span className="hidden sm:inline">See availability</span>
           </span>
         </div>
       </div>
