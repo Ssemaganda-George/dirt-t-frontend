@@ -85,7 +85,28 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
 
   const imageUrl = service.images?.[0] || DEFAULT_DESTINATION_IMAGE
   const locationLine = getLocationLine(service)
-  const unitLabel = getUnitLabel(service.service_categories?.name)
+  const categoryName = service.service_categories?.name?.toLowerCase()
+  const isShop = categoryName === 'shops' || service.category_id === 'cat_shops'
+  const buyPrice = Number((service as any)?.buy_price ?? (isShop ? service.price : NaN) ?? NaN)
+  const rentPrice = Number((service as any)?.rental_price_per_day ?? NaN)
+  const hasBuy = Number.isFinite(buyPrice) && buyPrice > 0
+  const hasRent = Number.isFinite(rentPrice) && rentPrice > 0
+  const shopLabel = isShop
+    ? hasBuy && hasRent
+      ? 'Buy or Hire'
+      : hasBuy
+      ? 'Buy'
+      : hasRent
+      ? 'Hire'
+      : ''
+    : ''
+  const displayPrice = getDisplayPrice(
+    service,
+    localTicketTypes.length > 0 ? localTicketTypes : undefined
+  )
+  const effectiveUnitLabel = isShop
+    ? (hasRent && (!hasBuy || rentPrice <= buyPrice) ? 'per day' : 'per item')
+    : getUnitLabel(service.service_categories?.name)
 
   return (
     <article
@@ -134,13 +155,17 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
           </div>
 
           <div className="flex-shrink-0 text-right">
-            <p className="text-[10px] leading-none text-gray-500">Starting from</p>
-            <div className="mt-0.5 text-sm font-bold leading-none text-gray-900">
+            <div className="flex flex-col items-end gap-1">
+              {shopLabel ? (
+                <span className="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                  {shopLabel}
+                </span>
+              ) : null}
+              <span className="text-[10px] leading-none text-gray-500">Starting from</span>
+            </div>
+            <div className="mt-1 text-sm font-bold leading-none text-gray-900">
               <Money
-                amount={getDisplayPrice(
-                  service,
-                  localTicketTypes.length > 0 ? localTicketTypes : undefined
-                )}
+                amount={displayPrice}
                 serviceCurrency={service.currency}
                 targetCurrency={selectedCurrency || 'UGX'}
                 locale={selectedLanguage || 'en-US'}
@@ -149,7 +174,7 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
                 amountClassName="text-sm font-bold text-gray-900"
               />
             </div>
-            <p className="mt-0.5 text-[10px] text-gray-500">{unitLabel}</p>
+            <p className="mt-0.5 text-[10px] text-gray-500">{effectiveUnitLabel}</p>
           </div>
         </div>
       </div>

@@ -281,18 +281,28 @@ export default function ServiceDetail() {
   const [listingType, setListingType] = useState<string | null>(null)
   useEffect(() => {
     if (!service) return
-    const lt = (service as any)?.listing_type || (service as any)?.type || null
-    if (lt) { setListingType(lt); return }
-    const buy = Number((service as any)?.buy_price ?? NaN)
+    const buy = Number((service as any)?.buy_price ?? ((service.service_categories?.name?.toLowerCase() === 'shops' ? service.price : NaN)) ?? NaN)
     const rent = Number((service as any)?.rental_price_per_day ?? NaN)
-    if (Number.isFinite(buy) && buy > 0 && Number.isFinite(rent) && rent > 0) {
+    const hasBuy = Number.isFinite(buy) && buy > 0
+    const hasRent = Number.isFinite(rent) && rent > 0
+
+    if (hasBuy && hasRent) {
       setListingType('buy')
-    } else if (Number.isFinite(rent) && rent > 0) {
+      return
+    }
+
+    const lt = (service as any)?.listing_type || (service as any)?.type || null
+    if (lt) {
+      setListingType(lt)
+      return
+    }
+
+    if (hasRent) {
       setListingType('hire')
     } else {
       setListingType('experience')
     }
-  }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day])
+  }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day, service?.price, service?.service_categories?.name])
   const { user, profile } = useAuth()
   const { selectedLanguage } = usePreferences()
 
@@ -2334,7 +2344,7 @@ export default function ServiceDetail() {
                    </div>
 
                    {service.service_categories?.name?.toLowerCase() === 'shops' && (() => {
-                     const buy = Number((service as any).buy_price ?? NaN)
+                     const buy = Number((service as any).buy_price ?? ((service as any).price ?? NaN) ?? NaN)
                      const rent = Number((service as any).rental_price_per_day ?? NaN)
                      const hasBuy = Number.isFinite(buy) && buy > 0
                      const hasRent = Number.isFinite(rent) && rent > 0

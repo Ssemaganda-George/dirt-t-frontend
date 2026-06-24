@@ -223,6 +223,15 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
       if (Number.isFinite(price)) return price
     }
 
+    if (categoryName === 'shops') {
+      const buy = Number(service?.buy_price ?? NaN)
+      const rent = Number(service?.rental_price_per_day ?? NaN)
+      const prices: number[] = []
+      if (Number.isFinite(buy) && buy > 0) prices.push(buy)
+      if (Number.isFinite(rent) && rent > 0) prices.push(rent)
+      if (prices.length > 0) return Math.min(...prices)
+    }
+
     // Fall back to general price field
     let p = service?.price
     if (typeof p === 'string') {
