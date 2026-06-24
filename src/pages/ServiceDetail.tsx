@@ -239,6 +239,10 @@ export default function ServiceDetail() {
   const [rooms, setRooms] = useState(1)
   const [tentSize, setTentSize] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [tourPickup, setTourPickup] = useState('')
+  const [tourGroupType, setTourGroupType] = useState('')
+  const [tourAccomm, setTourAccomm] = useState('')
+  const [tourSpecialRequests, setTourSpecialRequests] = useState('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState('')
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -2562,6 +2566,71 @@ export default function ServiceDetail() {
                           </div>
                         )
                       })()}
+
+                      {/* Tour Options — tours only */}
+                      {['tours', 'tour packages', 'tour_packages'].includes(service.service_categories?.name?.toLowerCase() || '') && (
+                        <div className="space-y-3 pt-1">
+                          {/* Pickup Location */}
+                          {service.pickup_locations && service.pickup_locations.length > 0 && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase">Pickup Location</label>
+                              <select value={tourPickup} onChange={e => setTourPickup(e.target.value)} className="w-full py-2 px-3 text-xs border border-gray-300 rounded-lg">
+                                <option value="">Select pickup point</option>
+                                {service.pickup_locations.map((loc: string) => (
+                                  <option key={loc} value={loc}>{loc}</option>
+                                ))}
+                                <option value="custom">Other (specify in requests)</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {/* Group Type */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase">Group Type</label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {[['join', 'Join Group'], ['small_group', 'Small Group'], ['private', 'Private']].map(([val, label]) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setTourGroupType(val)}
+                                  className={`py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
+                                    tourGroupType === val
+                                      ? 'bg-slate-900 text-white border-slate-900'
+                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                  }`}
+                                >{label}</button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Accommodation Preference — only if accommodation_included */}
+                          {service.accommodation_included && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase">Accommodation Preference</label>
+                              <select value={tourAccomm} onChange={e => setTourAccomm(e.target.value)} className="w-full py-2 px-3 text-xs border border-gray-300 rounded-lg">
+                                <option value="">Any / Operator's choice</option>
+                                <option value="budget">Budget / Camping</option>
+                                <option value="midrange">Mid-range (3★)</option>
+                                <option value="upmarket">Upmarket (4★)</option>
+                                <option value="luxury">Luxury (5★)</option>
+                                <option value="ultra_luxury">Ultra-luxury / Private</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {/* Special Requests */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase">Special Requests</label>
+                            <textarea
+                              value={tourSpecialRequests}
+                              onChange={e => setTourSpecialRequests(e.target.value)}
+                              placeholder="Dietary requirements, accessibility needs, celebratory occasions…"
+                              rows={2}
+                              className="w-full py-2 px-3 text-xs border border-gray-300 rounded-lg resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
 
                   {/* Price Calculation */}
                   <div className="bg-gray-50 rounded-lg p-3 mb-6">

@@ -444,6 +444,7 @@ export async function updateService(serviceId: string, vendorId: string | undefi
       'itinerary', 'included_items', 'excluded_items', 'difficulty_level', 'minimum_age', 'languages_offered',
       'tour_highlights', 'meeting_point', 'end_point', 'transportation_included', 'meals_included',
       'guide_included', 'accommodation_included',
+      'tour_style', 'group_type', 'accommodation_standard', 'park_fees_included', 'visa_support', 'child_friendly',
       // Transport fields
       'vehicle_type', 'vehicle_capacity', 'pickup_locations', 'dropoff_locations', 'route_description',
       'vehicle_features', 'vehicle_ccs', 'vehicle_engine', 'fuel_type', 'fuel_km_per_liter',

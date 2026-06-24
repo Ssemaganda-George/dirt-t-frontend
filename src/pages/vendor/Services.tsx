@@ -5,7 +5,7 @@ import { Service } from '../../types'
 import { useServices, useServiceCategories, useServiceDeleteRequests, useVendorPricing } from '../../hooks/hook'
 import { formatCurrencyWithConversion } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
-import { Plus, X, Search, Map } from 'lucide-react'
+import { Plus, X, Search, Map, MoreVertical } from 'lucide-react'
 import SearchMap from '../../components/SearchMap'
 import PricingNotification from '../../components/PricingNotification'
 import { supabase } from '../../lib/supabaseClient'
@@ -91,6 +91,7 @@ export default function VendorServices() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [ticketTypes, setTicketTypes] = useState<{ [serviceId: string]: any[] }>({})
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const itemsPerPage = 10
 
   // Helper: determine if an event is more than 24 hours past its event datetime
@@ -437,6 +438,20 @@ export default function VendorServices() {
       }
       if (updates.minimum_age !== undefined) validUpdates.minimum_age = updates.minimum_age
       if (updates.languages_offered !== undefined) validUpdates.languages_offered = updates.languages_offered
+      if (updates.best_time_to_visit !== undefined) validUpdates.best_time_to_visit = updates.best_time_to_visit
+      if (updates.tour_highlights !== undefined) validUpdates.tour_highlights = updates.tour_highlights
+      if (updates.what_to_bring !== undefined) validUpdates.what_to_bring = updates.what_to_bring
+      if (updates.meeting_point !== undefined) validUpdates.meeting_point = updates.meeting_point
+      if (updates.end_point !== undefined) validUpdates.end_point = updates.end_point
+      if (updates.guide_included !== undefined) validUpdates.guide_included = updates.guide_included
+      if (updates.accommodation_included !== undefined) validUpdates.accommodation_included = updates.accommodation_included
+      if ((updates as any).tour_style !== undefined) validUpdates.tour_style = (updates as any).tour_style
+      if ((updates as any).group_type !== undefined) validUpdates.group_type = (updates as any).group_type
+      if ((updates as any).accommodation_standard !== undefined) validUpdates.accommodation_standard = (updates as any).accommodation_standard
+      if ((updates as any).park_fees_included !== undefined) validUpdates.park_fees_included = (updates as any).park_fees_included
+      if ((updates as any).visa_support !== undefined) validUpdates.visa_support = (updates as any).visa_support
+      if ((updates as any).duration_days !== undefined) validUpdates.duration_days = (updates as any).duration_days
+      if ((updates as any).child_friendly !== undefined) validUpdates.child_friendly = (updates as any).child_friendly
 
       // Transport fields
       if (updates.vehicle_type !== undefined) validUpdates.vehicle_type = updates.vehicle_type
@@ -863,87 +878,111 @@ export default function VendorServices() {
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div>
               {paginatedServices.map(s => (
-                <div key={s.id} className="p-5 hover:bg-slate-50/50 transition-colors duration-200 group">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-semibold text-slate-900 truncate mb-1 group-hover:text-blue-600 transition-colors">
-                        {s.title}
-                      </h3>
-                      <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">{s.description}</p>
-                    </div>
+                <div key={s.id} className="border-b border-slate-100 last:border-0 group cursor-pointer" onClick={() => handleOpenEdit(s)}>
+                  {/* Image banner — chips overlaid directly on image */}
+                  <div className="relative h-36 overflow-hidden">
+                    {(s.primary_image_url || s.images?.[0]) ? (
+                      <img
+                        src={s.primary_image_url || s.images?.[0]}
+                        alt={s.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 flex flex-col items-center justify-center gap-1">
+                        <span className="text-4xl">{s.service_categories?.icon || '📦'}</span>
+                      </div>
+                    )}
+                    {/* Dark gradient for text legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-transparent" />
+                    {/* Category chip — bottom left */}
+                    <span className="absolute bottom-2.5 left-3 text-[11px] font-semibold text-white/90 bg-black/35 backdrop-blur-sm px-2.5 py-0.5 rounded-full border border-white/15">
+                      {s.service_categories?.name || 'Service'}
+                    </span>
+                    {/* Status badge — top right */}
                     {(() => {
                       const autoDeactivated = isPast24HoursAfterEvent(s);
                       const available = s.status === 'approved' && !autoDeactivated;
                       return (
-                        <span className={`flex-shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                          available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
+                        <span className={`absolute top-2.5 right-3 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                          available ? 'bg-emerald-500 text-white' :
+                          s.status === 'rejected' ? 'bg-red-500 text-white' :
+                          'bg-amber-400 text-white'
                         }`}>
-                          {available ? 'Live' : s.status === 'rejected' ? 'Rejected' : (autoDeactivated ? 'Unavailable' : 'Pending')}
+                          {available ? '● Live' : s.status === 'rejected' ? '✕ Rejected' : (autoDeactivated ? '○ Unavailable' : '◑ Pending')}
                         </span>
                       )
                     })()}
                   </div>
 
-                  <div className="flex items-center gap-4 mb-4 text-sm">
-                    <span className="text-slate-500">{s.service_categories?.name || s.category_id}</span>
-                    <span className="text-slate-300">·</span>
-                    <span className="font-semibold text-slate-900">{formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}</span>
-                  </div>
-
-                  {s.category_id === 'cat_activities' && (
-                    <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                      {s.scan_enabled ? (
-                        <a
-                          href={`${window.location.origin}/scan/${s.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
-                        >
-                          View scan link ↗
-                        </a>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-500">Scan link inactive</span>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                alert('Activation request submitted.')
-                              } catch (err) {
-                                console.error('Failed to create activation request:', err)
-                                alert('Failed to submit request.')
-                              }
-                            }}
-                            className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-                          >
-                            Request activation
-                          </button>
-                        </div>
-                      )}
+                  {/* Card body */}
+                  <div className="px-4 pt-3 pb-4">
+                    {/* Title + Price on same row */}
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <h3 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+                        {s.title}
+                      </h3>
+                      <span className="text-sm font-bold text-emerald-600 whitespace-nowrap shrink-0">
+                        {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
+                      </span>
                     </div>
-                  )}
+                    {/* Description */}
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">{s.description}</p>
 
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                    <button
-                      onClick={() => { handleOpenEdit(s) }}
-                      className="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(s)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-sm border ${
-                        s.status === 'approved'
-                          ? 'text-amber-700 hover:bg-amber-50 border-amber-200'
-                          : 'text-red-600 hover:bg-red-50 border-red-200'
-                      }`}
-                    >
-                      {s.status === 'approved' ? 'Request Delete' : 'Delete'}
-                    </button>
+                    {/* Scan link — events only */}
+                    {s.category_id === 'cat_activities' && (
+                      <div className="mb-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                        {s.scan_enabled ? (
+                          <a
+                            href={`${window.location.origin}/scan/${s.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-blue-600 font-medium hover:underline transition-colors"
+                          >
+                            View scan link ↗
+                          </a>
+                        ) : (
+                          <>
+                            <span className="text-xs text-slate-400">Scan inactive</span>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                  alert('Activation request submitted.')
+                                } catch (err) {
+                                  console.error('Failed to create activation request:', err)
+                                  alert('Failed to submit request.')
+                                }
+                              }}
+                              className="text-xs font-medium text-blue-600 hover:underline transition-colors"
+                            >
+                              Request activation
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons — full-width, side by side */}
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => { handleOpenEdit(s) }}
+                        className="flex-1 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(s)}
+                        className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                          s.status === 'approved'
+                            ? 'text-amber-700 border-amber-200 hover:bg-amber-50'
+                            : 'text-red-600 border-red-200 hover:bg-red-50'
+                        }`}
+                      >
+                        {s.status === 'approved' ? 'Request Delete' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -952,77 +991,91 @@ export default function VendorServices() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block">
-          <table className="w-full">
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[42%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
+              <col className="w-[12%]" />
+              <col className="w-[14%]" />
+            </colgroup>
             <thead className="bg-slate-50/50">
               <tr className="border-b border-slate-200">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                <th className="px-5 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-slate-500">Loading services...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-slate-500">Loading services...</td></tr>
               ) : error ? (
-                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm text-red-500">Error: {error}</td></tr>
+                <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-14 text-center">
+                  <td colSpan={5} className="px-4 py-14 text-center">
                     <p className="text-sm text-slate-500">No services found.</p>
                     <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-slate-900 hover:underline">Create your first service →</button>
                   </td>
                 </tr>
               ) : (
                 paginatedServices.map(s => (
-                  <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200">
-                    <td className="px-5 py-3">
-                      <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">{s.title}</p>
-                      <p className="text-xs text-slate-500 truncate max-w-xs mt-0.5">{s.description}</p>
+                  <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200 cursor-pointer" onClick={() => handleOpenEdit(s)}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {(s.primary_image_url || s.images?.[0]) ? (
+                          <img
+                            src={s.primary_image_url || s.images?.[0]}
+                            alt={s.title}
+                            className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-100"
+                          />
+                        ) : (
+                          <div className="w-16 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xl border border-slate-100">
+                            {s.service_categories?.icon || '📦'}
+                          </div>
+                        )}
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{s.title}</p>
+                      </div>
                     </td>
-                    <td className="px-5 py-3">
-                      <span className="text-sm text-slate-600">{s.service_categories?.name || s.category_id}</span>
+                    <td className="px-4 py-3">
+                      <span className="text-sm text-slate-600 truncate block">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
                         <div className="mt-1">
                           {s.scan_enabled ? (
-                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:text-blue-700 hover:underline transition-colors">Scan link ↗</a>
+                            <a href={`${window.location.origin}/scan/${s.id}`} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline transition-colors">Scan ↗</a>
                           ) : (
-                                <div>
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        await createActivationRequest(s.id, s.vendor_id, user?.id)
-                                        alert('Activation request submitted.')
-                                      } catch (err) {
-                                        console.error('Failed to create activation request:', err)
-                                        alert('Failed to submit request.')
-                                      }
-                                    }}
-                                    className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
-                                  >
-                                    Request scan activation
-                                  </button>
-                                  {isPast24HoursAfterEvent(s) && (
-                                    <div className="text-[11px] text-slate-500 italic mt-1">Auto-deactivated after 24h</div>
-                                  )}
-                                </div>
-                              )}
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await createActivationRequest(s.id, s.vendor_id, user?.id)
+                                  alert('Activation request submitted.')
+                                } catch (err) {
+                                  console.error('Failed to create activation request:', err)
+                                  alert('Failed to submit request.')
+                                }
+                              }}
+                              className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
+                            >
+                              Activate scan
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3">
                       <span className="text-sm font-semibold text-slate-900">
                         {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-3">
                       {(() => {
                         const autoDeactivated = isPast24HoursAfterEvent(s);
                         const available = s.status === 'approved' && !autoDeactivated;
                         return (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
                             available ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                             s.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
                             'bg-amber-50 text-amber-700 border-amber-200'
@@ -1032,24 +1085,35 @@ export default function VendorServices() {
                         )
                       })()}
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                      <div className="relative inline-block">
                         <button
-                          onClick={() => { handleOpenEdit(s) }}
-                          className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 hover:shadow-sm"
+                          onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}
+                          onBlur={() => setTimeout(() => setOpenMenuId(null), 150)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                         >
-                          Edit
+                          <MoreVertical className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => onDelete(s)}
-                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 hover:shadow-sm border ${
-                            s.status === 'approved'
-                              ? 'text-amber-700 hover:bg-amber-50 border-amber-200'
-                              : 'text-red-600 hover:bg-red-50 border-red-200'
-                          }`}
-                        >
-                          {s.status === 'approved' ? 'Request Delete' : 'Delete'}
-                        </button>
+                        {openMenuId === s.id && (
+                          <div className="absolute right-0 top-8 z-20 w-36 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-left">
+                            <button
+                              onClick={() => { handleOpenEdit(s); setOpenMenuId(null) }}
+                              className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => { onDelete(s); setOpenMenuId(null) }}
+                              className={`w-full px-4 py-2 text-sm transition-colors ${
+                                s.status === 'approved'
+                                  ? 'text-amber-700 hover:bg-amber-50'
+                                  : 'text-red-600 hover:bg-red-50'
+                              }`}
+                            >
+                              {s.status === 'approved' ? 'Request Delete' : 'Delete'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1209,6 +1273,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
     meals_included: initial?.meals_included || [],
     guide_included: initial?.guide_included || false,
     accommodation_included: initial?.accommodation_included || false,
+    tour_style: (initial as any)?.tour_style || '',
+    group_type: (initial as any)?.group_type || '',
+    accommodation_standard: (initial as any)?.accommodation_standard || '',
+    park_fees_included: (initial as any)?.park_fees_included || false,
+    visa_support: (initial as any)?.visa_support || false,
+    child_friendly: (initial as any)?.child_friendly || false,
 
     // Transport fields
     vehicle_type: initial?.vehicle_type || '',
@@ -1583,12 +1653,75 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           </div>
         )
 
+      case 'tours':
       case 'tour packages':
         return (
           <div className="space-y-4 border-t pt-4">
             <h4 className="font-medium text-slate-900">Tour Package Details</h4>
 
+            {/* Tour Classification */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Tour Style</label>
+                <select value={(form as any).tour_style || ''} onChange={(e) => update('tour_style', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select tour style</option>
+                  <optgroup label="→ Wildlife Safari">
+                    <option value="wildlife_safari">Wildlife Safari &amp; Game Drive</option>
+                    <option value="birding">Birding Tour</option>
+                    <option value="photography_safari">Photography Safari</option>
+                  </optgroup>
+                  <optgroup label="→ Gorilla &amp; Chimp">
+                    <option value="gorilla_chimp">Gorilla &amp; Chimp Tracking</option>
+                    <option value="primate_tour">Primate &amp; Forest Tour</option>
+                  </optgroup>
+                  <optgroup label="→ Adventure &amp; Trek">
+                    <option value="adventure_trek">Adventure &amp; Trekking</option>
+                    <option value="hiking">Hiking &amp; Nature Walk</option>
+                    <option value="mountain_climbing">Mountain Climbing</option>
+                    <option value="white_water">White Water Rafting</option>
+                    <option value="water_activities">Water Activities &amp; Lake Tour</option>
+                    <option value="cycling_tour">Cycling Tour</option>
+                  </optgroup>
+                  <optgroup label="→ Eco Tour">
+                    <option value="eco_tour">Eco &amp; Sustainable Tour</option>
+                    <option value="conservation">Conservation &amp; Community</option>
+                    <option value="forest_nature">Forest &amp; Nature Immersion</option>
+                  </optgroup>
+                  <optgroup label="→ Cultural &amp; Heritage">
+                    <option value="cultural_heritage">Cultural &amp; Heritage Tour</option>
+                    <option value="community_tour">Community &amp; Village Tour</option>
+                    <option value="historical">Historical &amp; Museum Tour</option>
+                  </optgroup>
+                  <option value="family">Family &amp; School Tour</option>
+                  <option value="honeymoon">Honeymoon &amp; Romance</option>
+                  <option value="customizable">Customizable Itinerary</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Group Type</label>
+                <select value={(form as any).group_type || ''} onChange={(e) => update('group_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select group type</option>
+                  <option value="private">Private (exclusive group)</option>
+                  <option value="small_group">Small Group (2–8 pax)</option>
+                  <option value="join_group">Join Group (shared departure)</option>
+                  <option value="large_group">Large Group (9+ pax)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Accommodation Standard</label>
+                <select value={(form as any).accommodation_standard || ''} onChange={(e) => update('accommodation_standard', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
+                  <option value="">Select standard</option>
+                  <option value="budget">Budget / Camping</option>
+                  <option value="midrange">Mid-range (3★)</option>
+                  <option value="upmarket">Upmarket (4★)</option>
+                  <option value="luxury">Luxury (5★)</option>
+                  <option value="ultra_luxury">Ultra-luxury / Private</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Difficulty Level</label>
                 <select value={form.difficulty_level || ''} onChange={(e) => update('difficulty_level', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
@@ -1599,9 +1732,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   <option value="extreme">Extreme - Advanced fitness needed</option>
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700">Best Time to Visit</label>
                 <input value={form.best_time_to_visit || ''} onChange={(e) => update('best_time_to_visit', e.target.value)} placeholder="e.g., June-September (Dry season)" className="mt-1 w-full border rounded-md px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Number of Days</label>
+                <input type="number" min="1" value={(form as any).duration_days || ''} onChange={(e) => update('duration_days', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 5" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
@@ -1759,7 +1899,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <label className="flex items-center">
                 <input type="checkbox" checked={form.transportation_included || false} onChange={(e) => update('transportation_included', e.target.checked)} className="mr-2" />
                 Transportation included
@@ -1771,6 +1911,18 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               <label className="flex items-center">
                 <input type="checkbox" checked={form.accommodation_included || false} onChange={(e) => update('accommodation_included', e.target.checked)} className="mr-2" />
                 Accommodation included
+              </label>
+              <label className="flex items-center">
+                <input type="checkbox" checked={(form as any).park_fees_included || false} onChange={(e) => update('park_fees_included', e.target.checked)} className="mr-2" />
+                Park / gorilla permit fees included
+              </label>
+              <label className="flex items-center">
+                <input type="checkbox" checked={(form as any).visa_support || false} onChange={(e) => update('visa_support', e.target.checked)} className="mr-2" />
+                Visa &amp; permit support provided
+              </label>
+              <label className="flex items-center">
+                <input type="checkbox" checked={(form as any).child_friendly || false} onChange={(e) => update('child_friendly', e.target.checked)} className="mr-2" />
+                Child-friendly tour
               </label>
             </div>
 

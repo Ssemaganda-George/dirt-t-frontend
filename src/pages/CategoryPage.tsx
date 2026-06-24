@@ -86,10 +86,15 @@ export default function CategoryPage() {
         case 'cat_tour_packages':
           return [
             { key: 'all', label: 'All Tours' },
+            { key: 'wildlife_safari', label: 'Wildlife Safari' },
+            { key: 'gorilla_chimp', label: 'Gorilla & Chimp' },
+            { key: 'adventure_trek', label: 'Adventure & Trek' },
+            { key: 'hiking', label: 'Hiking' },
+            { key: 'water', label: 'Water Activities' },
+            { key: 'eco_tour', label: 'Eco Tour' },
+            { key: 'cultural_heritage', label: 'Cultural & Heritage' },
             { key: 'daytrip', label: 'Day Trips' },
             { key: 'multiday', label: 'Multi-day' },
-            { key: 'adventure', label: 'Adventure' },
-            { key: 'cultural', label: 'Cultural' }
           ]
         case 'cat_restaurants':
           return [
@@ -185,16 +190,33 @@ export default function CategoryPage() {
     switch (categoryId) {
       case 'cat_tour_packages':
         switch (filterKey) {
+          case 'wildlife_safari':
+            return (service as any).tour_style === 'wildlife_safari' ||
+              containsKeyword(combined, ['wildlife', 'game drive', 'game park', 'national park', 'savanna', 'big five', 'lion', 'elephant', 'leopard', 'safari'])
+          case 'gorilla_chimp':
+            return (service as any).tour_style === 'gorilla_chimp' ||
+              containsKeyword(combined, ['gorilla', 'chimp', 'primate', 'bwindi', 'kibale', 'mgahinga', 'ape'])
+          case 'adventure_trek':
+            return (service as any).tour_style === 'adventure_trek' ||
+              service.difficulty_level === 'challenging' || service.difficulty_level === 'difficult' ||
+              containsKeyword(combined, ['adventure', 'hiking', 'trekking', 'climbing', 'rafting', 'bungee', 'extreme', 'trail'])
+          case 'hiking':
+            return (service as any).tour_style === 'hiking' ||
+              containsKeyword(combined, ['hiking', 'hike', 'nature walk', 'trail', 'walk', 'trek'])
+          case 'water':
+            return (service as any).tour_style === 'water_activities' ||
+              containsKeyword(combined, ['water', 'lake', 'river', 'boat', 'kayak', 'rafting', 'swim', 'dive', 'snorkel', 'canoe', 'cruise', 'fishing'])
+          case 'eco_tour':
+            return ['eco_tour', 'conservation', 'forest_nature'].includes((service as any).tour_style || '') ||
+              containsKeyword(combined, ['eco', 'sustainable', 'conservation', 'green', 'organic', 'responsible', 'community'])
+          case 'cultural_heritage':
+            return (service as any).tour_style === 'cultural_heritage' ||
+              containsKeyword(combined, ['cultural', 'heritage', 'history', 'traditional', 'village', 'community', 'tribal', 'museum', 'craft', 'dance', 'ceremony'])
           case 'daytrip':
             return (service.duration_days !== undefined && service.duration_days <= 1) ||
               (service.duration_hours !== undefined && service.duration_hours <= 24 && !service.duration_days)
           case 'multiday':
             return service.duration_days !== undefined && service.duration_days > 1
-          case 'adventure':
-            return service.difficulty_level === 'challenging' || service.difficulty_level === 'difficult' ||
-              containsKeyword(combined, ['adventure', 'hiking', 'trekking', 'climbing', 'safari', 'gorilla', 'wildlife', 'rafting', 'bungee', 'extreme'])
-          case 'cultural':
-            return containsKeyword(combined, ['cultural', 'heritage', 'history', 'traditional', 'village', 'community', 'tribal', 'museum', 'craft', 'dance', 'ceremony'])
           default: return true
         }
       case 'cat_hotels': {
