@@ -2678,7 +2678,7 @@ export default function ServiceDetail() {
 
                   {/* Action Buttons */}
                     <div className="flex gap-2 mb-3">
-                    <button onClick={handleBooking} disabled={!bookingPrefillReady()} className="flex-1 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service', listingType) : 'Check Availability & Book'}</button>
+                    <button onClick={handleBooking} disabled={!bookingPrefillReady()} className="flex-1 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service', listingType ?? undefined) : 'Check Availability & Book'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
