@@ -2666,6 +2666,9 @@ export default function ServiceDetail() {
                       <span>Total</span>
                       <span className="text-gray-900">{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
                     </div>
+                    {service.service_categories?.name?.toLowerCase() !== 'restaurants' && (
+                      <p className="text-xs text-gray-400 mt-2">+ booking fee applies — shown in checkout summary</p>
+                    )}
                   </div>
 
                   {/* Pricing Breakdown removed as requested */}

@@ -134,7 +134,7 @@ export default function VendorLogin() {
                businessAddress.trim() !== '' && businessCity.trim() !== '' &&
                businessPhone.trim() !== ''
       case 3:
-        return password.length >= 6 && password === confirmPassword
+        return password.length >= 8 && password === confirmPassword
       default:
         return false
     }
@@ -204,7 +204,7 @@ export default function VendorLogin() {
   const businessPhoneInvalid = stepTwoHasErrors && businessPhone.trim() === ''
 
   const stepThreeHasErrors = showStepValidationErrors && currentStep === 3
-  const passwordInvalid = stepThreeHasErrors && password.length < 6
+  const passwordInvalid = stepThreeHasErrors && password.length < 8
   const confirmPasswordInvalid = stepThreeHasErrors && (confirmPassword === '' || password !== confirmPassword)
 
 
@@ -265,6 +265,8 @@ export default function VendorLogin() {
           .upsert({
             user_id: user.id,
             business_name: businessName,
+            business_type: businessType,
+            business_city: businessCity,
             business_description: businessDescription,
             business_email: businessEmail || email,
             business_address: businessAddress,
@@ -289,15 +291,7 @@ export default function VendorLogin() {
         clearLocalAuthStorage()
       }
 
-      setSuccessMessage(
-        'Business account created! Check your email to verify your account before signing in. Review the information below while your account is being prepared.'
-      )
-      setShowPostSignupBenefits(true)
-      setIsSignUp(false)
-      setCurrentStep(1)
-      setShowStepValidationErrors(false)
-      setPassword('')
-      setConfirmPassword('')
+      navigate('/vendor-pending')
     } catch (error: any) {
       setError(error.message || 'Failed to sign up')
     } finally {
@@ -459,7 +453,7 @@ export default function VendorLogin() {
                   {currentStep === 1 && (
                     <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
                       <div>
-                        <label className={getLabelClass(fullNameInvalid)}>Your Full Names</label>
+                        <label className={getLabelClass(fullNameInvalid)}>Full name</label>
                         <input
                           type="text"
                           value={fullName}
@@ -536,7 +530,6 @@ export default function VendorLogin() {
                                 <option value="tour">Tour Operator / Safari</option>
                                 <option value="shop">Shop / Retail</option>
                                 <option value="event_venue">Event Venue</option>
-                                <option value="spa">Spa / Wellness</option>
                                 <option value="other">Other</option>
                               </select>
                             </div>
@@ -572,12 +565,12 @@ export default function VendorLogin() {
                             <div>
                               <label className={getLabelClass(businessAddressInvalid)}>Business address *</label>
                               <input
-                              type="text"
-                              value={businessAddress}
-                              onChange={(e) => setBusinessAddress(e.target.value)}
-                              className="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
-                              placeholder="Street address (optional)"
-                            />
+                                type="text"
+                                value={businessAddress}
+                                onChange={(e) => setBusinessAddress(e.target.value)}
+                                className={getFieldClass(businessAddressInvalid)}
+                                placeholder="e.g. 15 Kampala Road"
+                              />
                             </div>
 
                             <div>

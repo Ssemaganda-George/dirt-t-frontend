@@ -226,10 +226,9 @@ export function getDisplayPrice(service: any, ticketTypes?: any[]): number {
     if (categoryName === 'shops') {
       const buy = Number((service as any)?.buy_price || service?.price)
       const rent = Number(service?.rental_price_per_day ?? NaN)
-      const prices: number[] = []
-      if (Number.isFinite(buy) && buy > 0) prices.push(buy)
-      if (Number.isFinite(rent) && rent > 0) prices.push(rent)
-      if (prices.length > 0) return Math.min(...prices)
+      // prefer buy price on cards so "From" matches the product page primary price
+      if (Number.isFinite(buy) && buy > 0) return buy
+      if (Number.isFinite(rent) && rent > 0) return rent
     }
 
     // Fall back to general price field

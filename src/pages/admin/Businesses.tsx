@@ -33,6 +33,7 @@ interface Vendor {
   business_email?: string
   business_website?: string
   business_type?: string
+  business_city?: string
   operating_hours?: string
   years_in_business?: string
   status: 'pending' | 'approved' | 'rejected' | 'suspended'
@@ -1020,6 +1021,30 @@ export default function Businesses() {
                   )}
                 </div>
               </div>
+
+              {/* Business Details */}
+              {selectedUser.vendor && (
+                <div>
+                  <h4 className="font-medium text-slate-900 mb-3">Business Details</h4>
+                  <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                    <p><span className="font-medium">Business name:</span> {selectedUser.vendor.business_name || 'Not provided'}</p>
+                    <p><span className="font-medium">Business type:</span> {selectedUser.vendor.business_type || 'Not provided'}</p>
+                    <p><span className="font-medium">City:</span> {selectedUser.vendor.business_city || 'Not provided'}</p>
+                    <p><span className="font-medium">Address:</span> {selectedUser.vendor.business_address || 'Not provided'}</p>
+                    <p><span className="font-medium">Business phone:</span> {selectedUser.vendor.business_phone || 'Not provided'}</p>
+                    <p><span className="font-medium">Business email:</span> {selectedUser.vendor.business_email || 'Not provided'}</p>
+                    {selectedUser.vendor.business_website && (
+                      <p><span className="font-medium">Website:</span> <a href={selectedUser.vendor.business_website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{selectedUser.vendor.business_website}</a></p>
+                    )}
+                    {selectedUser.vendor.years_in_business && (
+                      <p><span className="font-medium">Years in business:</span> {selectedUser.vendor.years_in_business}</p>
+                    )}
+                    {selectedUser.vendor.business_description && (
+                      <p><span className="font-medium">Description:</span> {selectedUser.vendor.business_description}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="pt-4 border-t">

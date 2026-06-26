@@ -96,6 +96,108 @@ Live audit of Supabase (project `ywxvgfhwmnwzsafwmpil`) + the booking/payment co
 
 ---
 
+# Live UX Audit — Tracks A/B/C/D (2026-06-26)
+
+Browser-verified via Claude in Chrome. All claims confirmed on https://bookings.dirt-trails.com/
+
+---
+
+## [2026-06-26] — Business details from Step 2 signup form not stored in admin-visible fields
+
+**Context:** User role: vendor (new signup) | Page: /vendor-login?signup=true | Action: complete 3-step signup | Category: onboarding
+
+**Classification:** Technical bug
+
+**Analysis:** Step 2 of vendor signup collects business name, business type, city, address, phone. After submission the admin's "Business Details" panel shows only Name (personal), Email, Phone ("Not provided"), Role, Status, Joined. No business data surfaces — including the phone number explicitly entered (+256 700123456). Admin cannot make an informed approval decision. Root cause: step 2 form data likely writes to a `business_profiles` or `vendor_profiles` table that the admin panel does not query, or the data isn't being persisted at all. DB CHECK needed: `SELECT * FROM profiles WHERE email = 'vierycalliper+dirtaudit@gmail.com'; SELECT * FROM vendors WHERE email ILIKE '%dirtaudit%'; SELECT * FROM businesses WHERE user_id = (SELECT id FROM auth.users WHERE email ILIKE '%dirtaudit%');`
+
+**Recommended Fix:** Surface all business detail fields in the admin approval panel; verify that step 2 `POST` is writing to the correct table with a FK to `auth.users`. (Priority: CRITICAL)
+
+---
+
+## [2026-06-26] — Post-signup screen shows "Business Sign In" as dominant heading with immediate login form
+
+**Context:** User role: vendor (new signup) | Page: /vendor-login?signup=true (post-submit) | Action: complete signup | Category: onboarding
+
+**Classification:** UX failure / conceptual misalignment
+
+**Analysis:** After successful signup the page renders a "Business Sign In" h1 with a pre-filled login form. The success message (green banner) is visually subordinate. New vendors immediately attempt login and fail because email is not yet verified. Two separate approval gates (email verification + admin approval) are compressed into one vague sentence ("being prepared") with no timeline. No redirect to /vendor-pending. No explicit "what happens next" step list.
+
+**Recommended Fix:** On successful signup redirect to `/vendor-pending` with a step map: (1) Verify email → (2) Wait for admin review (typically N days) → (3) Access dashboard. Remove the sign-in form from the success state entirely. (Priority: CRITICAL)
+
+---
+
+## [2026-06-26] — Hidden booking fee (UGX 10,800) not shown until booking summary panel
+
+**Context:** User role: guest | Page: /category/shops → product detail → booking widget | Action: initiate purchase | Category: shops
+
+**Classification:** UX failure / business-model gap
+
+**Analysis:** "Booking fee" of UGX 10,800 (~5.4% surcharge on a UGX 200,000 item) first appears in the Booking Summary panel after clicking "Check Availability & Book". It is never shown on the product detail page, the category page, or anywhere prior to the checkout step. Guests see UGX 200,000 until they click through to the summary where total becomes UGX 210,800. This is a conversion killer and a trust violation — analogous to airline "fees" that appear at checkout.
+
+**Recommended Fix:** Display total price inclusive of booking fee on product detail page inside the booking widget (alongside or below the base price). The fee can be itemized in a tooltip. (Priority: CRITICAL)
+
+---
+
+## [2026-06-26] — Category page shows HIRE price, product page shows BUY price — sticker shock
+
+**Context:** User role: guest | Page: /category/shops → product detail | Action: browse → open listing | Category: shops
+
+**Classification:** UX failure / business-model gap
+
+**Analysis:** Shop category page shows "From UGX 40,000" (the Hire price). Product detail page shows the BUY price at UGX 200,000 — a 5× difference. Guests who follow the standard intent of "buying" an item experience immediate price sticker shock. The "From" label implies the lowest available price, but it actually shows the price for a different listing type (Hire). No explanation of buy vs hire pricing model appears on the category page.
+
+**Recommended Fix:** On category cards for shop listings, either (a) show BUY price as primary with HIRE shown as secondary/badge, or (b) show a price range "UGX 40,000–200,000" with a "hire / buy" label. The current implementation uses `listing_type = hire` as the "from" price source — fix the price-selection logic. (Priority: CRITICAL)
+
+---
+
+## [2026-06-26] — Vendor ledger Total Revenue ≠ Total Earned (~UGX 607K gap)
+
+**Context:** User role: vendor | Page: /vendor/transactions | Action: view financial summary | Category: vendor dashboard
+
+**Classification:** Technical bug
+
+**Analysis:** Vendor dashboard shows Total Revenue: UGX 1,646,649.54 and Total Earned: UGX 1,039,967 — a gap of approximately UGX 606,682. Commission at Bronze tier (6%) on UGX 1,646,649 = ~UGX 98,799, leaving ~UGX 1,547,850 net. Total Earned of UGX 1,039,967 is ~37% less than expected net — the gap is not explained by commission. Also: Admin finance page shows Total Revenue = Net Revenue (both UGX 1,974,455.43), with Platform Fees at UGX 92,068 (4.66% effective rate vs 6% stated). Numbers across roles don't reconcile. DB CHECK needed: `SELECT sum(amount) as total, sum(vendor_amount) as vendor_earned, sum(platform_fee) as commission FROM transactions WHERE vendor_id = (SELECT id FROM vendors WHERE email = 'dinducatering@gmail.com');`
+
+**Recommended Fix:** Reconcile wallet balance, transaction ledger, and dashboard totals. Ensure vendor-facing Total Earned reflects credited wallet amount. Fix currency formatting to remove decimal places from UGX amounts. (Priority: HIGH)
+
+---
+
+## [2026-06-26] — Admin's own vendor account in pending queue (self-approval conflict)
+
+**Context:** User role: admin | Page: /admin/businesses → Pending filter | Action: review vendor applications | Category: admin
+
+**Classification:** Business-model gap
+
+**Analysis:** Admin account (ssgeorge480@gmail.com) has a SEPARATE vendor account (ugandaquantum@gmail.com / "Ssemaganda George") sitting in the Pending queue since 23 May 2026. The admin sees their own vendor application in the list with "Approve" and "Reject" actions available — they can self-approve. No guard exists preventing the admin from approving their own application. This is a marketplace integrity violation.
+
+**Recommended Fix:** Add a backend check in the vendor approval RPC: if `approving_admin_user_id = vendor_user_id` (or same email domain), block the approval and surface an alert requiring a secondary admin. (Priority: HIGH)
+
+---
+
+## [2026-06-26] — Ghost vendor pending for 4+ months with no admin alert or aging signal
+
+**Context:** User role: admin | Page: /admin/businesses → Pending filter | Action: review vendor applications | Category: admin
+
+**Classification:** UX failure
+
+**Analysis:** "Test Vendor / Test Business" (test-vendor-1770691790...) has been in Pending state since 10 February 2026 — 4+ months. No aging badge, no overdue alert, no escalation trigger visible in the admin panel. The pending queue has no SLA enforcement. A vendor who applied 4 months ago has received zero response and has zero visibility into their application status.
+
+**Recommended Fix:** Add an "overdue" badge (e.g., amber → red after 7/30 days) on pending vendor cards in admin. Send automated email to vendor after 48h with no action. Surface count of "pending >7 days" on admin dashboard. (Priority: HIGH)
+
+---
+
+## [2026-06-26] — "Continue to Your Details" booking CTA hidden below fold
+
+**Context:** User role: guest | Page: product detail page → booking widget | Action: initiate checkout | Category: shops
+
+**Classification:** UX failure
+
+**Analysis:** On the product detail page, clicking "Check Availability & Book" opens a booking summary panel. The primary CTA "Continue to Your Details" is rendered below the fold of this panel and is not visible without scrolling. No visual indicator (shadow, arrow, scroll hint) communicates that more content and a CTA exist below. Guests who don't scroll never reach checkout.
+
+**Recommended Fix:** Ensure "Continue to Your Details" is always visible in the booking summary panel viewport — either pin it to the panel bottom, or add a visible scroll cue (gradient + chevron). (Priority: HIGH)
+
+---
+
 # UI/UX & Business-Journey Audit
 
 Methodology: code + flow read (not live browser). Compared to Booking.com / Airbnb / GetYourGuide per `PRODUCT.md` and `CLAUDE.md`.

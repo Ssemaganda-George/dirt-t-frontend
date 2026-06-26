@@ -595,7 +595,7 @@ export default function PublicLayout() {
               <ul className="space-y-3 text-sm">
                 <li>
                   <a
-                    href="https://2www.dirt-trails.com"
+                    href="https://www.dirt-trails.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-slate-600 hover:text-slate-900 transition-colors"
