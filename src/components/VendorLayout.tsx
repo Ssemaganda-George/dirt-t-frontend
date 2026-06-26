@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+﻿import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
@@ -330,7 +330,7 @@ export default function VendorLayout() {
         {/* Top bar (fixed) */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-slate-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 lg:hidden">
               <Menu className="h-5 w-5" />
             </button>
 

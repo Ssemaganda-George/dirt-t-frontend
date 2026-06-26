@@ -226,7 +226,7 @@ export default function Bookings() {
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                       <Link
                         to={`/booking/${booking.id}`}
-                        className="bg-gray-900 text-white px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-all duration-200 ease-out text-sm text-center w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+                        className="bg-emerald-700 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-800 transition-all duration-200 ease-out text-sm text-center w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                       >
                         View Details
                       </Link>
@@ -234,10 +234,18 @@ export default function Bookings() {
                         <button
                           onClick={() => handleCancel(booking.id)}
                           disabled={cancellingId === booking.id}
-                          className="bg-red-600 text-white px-4 py-2.5 rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+                          className="border border-red-200 text-red-600 bg-white px-4 py-2.5 rounded-xl hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-out text-sm w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
                         >
                           {cancellingId === booking.id ? 'Cancelling…' : 'Cancel'}
                         </button>
+                      )}
+                      {booking.status === 'confirmed' && (
+                        <a
+                          href={`mailto:safaris.dirttrails@gmail.com?subject=Cancellation%20Request%20%E2%80%93%20Booking%20${booking.id}&body=Hi%2C%20I%20would%20like%20to%20cancel%20booking%20${booking.id}.`}
+                          className="border border-gray-200 text-gray-500 bg-white px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-all duration-200 ease-out text-sm text-center w-full sm:w-auto"
+                        >
+                          Request Cancellation
+                        </a>
                       )}
                     </div>
                   </div>

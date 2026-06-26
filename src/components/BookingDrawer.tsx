@@ -559,7 +559,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               )}
 
               <div className="text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2">
-                <span className="font-medium text-gray-600">Free cancellation</span> up to 24 hours before your booking.
+                Pending bookings can be cancelled from your account. For confirmed bookings, contact us at <span className="font-medium text-gray-600">safaris.dirttrails@gmail.com</span>.
               </div>
             </div>
           )}

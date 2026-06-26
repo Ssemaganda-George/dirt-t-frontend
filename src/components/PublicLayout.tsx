@@ -202,7 +202,7 @@ export default function PublicLayout() {
                 <span className={`text-lg font-bold tracking-tight transition-colors ${isTransparent ? 'text-white' : 'text-gray-900'}`}>
                   DirtTrails<span className="text-emerald-500 ml-0.5">.</span>
                 </span>
-                <span className={`self-end text-[7px] font-semibold uppercase tracking-[0.16em] mt-0.5 transition-colors ${isTransparent ? 'text-white/70' : 'text-slate-500'}`}>
+                <span className={`self-end text-[7px] font-semibold uppercase tracking-[0.16em] mt-0.5 transition-colors ${isTransparent ? 'text-white/70' : 'text-gray-500'}`}>
                   Safari intel
                 </span>
                 {location.pathname.includes('/scan/') && (
@@ -537,13 +537,13 @@ export default function PublicLayout() {
       )}
 
       {/* Footer */}
-      <footer className="hidden md:block text-slate-900">
+      <footer className="hidden md:block text-gray-900">
         {/* Top CTA strip */}
         <div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 rounded-[28px] border border-slate-200/70 bg-white/80 backdrop-blur-sm shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 rounded-[28px] border border-gray-200/70 bg-white/80 backdrop-blur-sm shadow-sm">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">For Businesses</p>
-              <p className="text-lg font-bold text-slate-900">Reach thousands of travellers around the world.</p>
+              <p className="text-lg font-bold text-gray-900">Reach thousands of travellers around the world.</p>
             </div>
             <Link
               to="/vendor-login"
@@ -560,7 +560,7 @@ export default function PublicLayout() {
             {/* Brand column */}
             <div className="md:col-span-4">
               <p className="text-2xl font-bold tracking-tight mb-1">DirtTrails<span className="text-emerald-500">.</span></p>
-              <p className="text-slate-500 text-sm leading-relaxed mt-3 max-w-xs">
+              <p className="text-gray-500 text-sm leading-relaxed mt-3 max-w-xs">
                 Intelligent bookings, trusted hosts, and journeys built for sustainability.
               </p>
               
@@ -568,23 +568,23 @@ export default function PublicLayout() {
 
             {/* Links */}
             <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-5">Explore</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Explore</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors">Home</Link></li>
-                <li><Link to="/category/hotels" className="text-slate-600 hover:text-slate-900 transition-colors">Stays</Link></li>
-                <li><Link to="/category/tours" className="text-slate-600 hover:text-slate-900 transition-colors">Tours</Link></li>
-                <li><Link to="/category/events" className="text-slate-600 hover:text-slate-900 transition-colors">Events</Link></li>
-                <li><Link to="/category/restaurants" className="text-slate-600 hover:text-slate-900 transition-colors">Restaurants</Link></li>
-                <li><Link to="/category/transport" className="text-slate-600 hover:text-slate-900 transition-colors">Transport</Link></li>
-                <li><Link to="/category/shops" className="text-slate-600 hover:text-slate-900 transition-colors">Shops</Link></li>
+                <li><Link to="/" className="text-gray-600 hover:text-gray-900 transition-colors">Home</Link></li>
+                <li><Link to="/category/hotels" className="text-gray-600 hover:text-gray-900 transition-colors">Stays</Link></li>
+                <li><Link to="/category/tours" className="text-gray-600 hover:text-gray-900 transition-colors">Tours</Link></li>
+                <li><Link to="/category/events" className="text-gray-600 hover:text-gray-900 transition-colors">Events</Link></li>
+                <li><Link to="/category/restaurants" className="text-gray-600 hover:text-gray-900 transition-colors">Restaurants</Link></li>
+                <li><Link to="/category/transport" className="text-gray-600 hover:text-gray-900 transition-colors">Transport</Link></li>
+                <li><Link to="/category/shops" className="text-gray-600 hover:text-gray-900 transition-colors">Shops</Link></li>
               </ul>
             </div>
 
             {/* Conservation column */}
             <div className="md:col-span-2">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-5">Conservation</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Conservation</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/conservation/geotagging" className="text-slate-600 hover:text-slate-900 transition-colors">Geotagging &amp; Monitoring</Link></li>
+                <li><Link to="/conservation/geotagging" className="text-gray-600 hover:text-gray-900 transition-colors">Geotagging &amp; Monitoring</Link></li>
                 <li><Link to="/conservation/tree-planting" className="text-gray-400 hover:text-white transition-colors">Tree Planting Initiatives</Link></li>
                 <li><Link to="/conservation/carbon" className="text-gray-400 hover:text-white transition-colors">Calculate My Carbon</Link></li>
               </ul>
@@ -598,39 +598,39 @@ export default function PublicLayout() {
                     href="https://www.dirt-trails.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-slate-600 hover:text-slate-900 transition-colors"
+                    className="text-gray-600 hover:text-gray-900 transition-colors"
                   >
                     Visit Our Website
                   </a>
                 </li>
-                <li><Link to="/help" className="text-slate-600 hover:text-slate-900 transition-colors">Help Center</Link></li>
-                <li><Link to="/contact" className="text-slate-600 hover:text-slate-900 transition-colors">Contact Us</Link></li>
-                <li><Link to="/safety" className="text-slate-600 hover:text-slate-900 transition-colors">Safety</Link></li>
-                <li><Link to="/terms" className="text-slate-600 hover:text-slate-900 transition-colors">Terms of Service</Link></li>
-                <li><Link to="/travel-insurance" className="text-slate-600 hover:text-slate-900 transition-colors">Travel Insurance</Link></li>
-                <li><Link to="/visa-processing" className="text-slate-600 hover:text-slate-900 transition-colors">Visa Processing</Link></li>
+                <li><Link to="/help" className="text-gray-600 hover:text-gray-900 transition-colors">Help Center</Link></li>
+                <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact Us</Link></li>
+                <li><Link to="/safety" className="text-gray-600 hover:text-gray-900 transition-colors">Safety</Link></li>
+                <li><Link to="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/travel-insurance" className="text-gray-600 hover:text-gray-900 transition-colors">Travel Insurance</Link></li>
+                <li><Link to="/visa-processing" className="text-gray-600 hover:text-gray-900 transition-colors">Visa Processing</Link></li>
               </ul>
             </div>
 
             <div className="md:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Business</h4>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/vendor-login" className="text-slate-600 hover:text-slate-900 transition-colors">List My Business</Link></li>
-                <li><Link to="/refer-business" className="text-slate-600 hover:text-slate-900 transition-colors">Refer a Business</Link></li>
-                <li><Link to="/hospitality-class" className="text-slate-600 hover:text-slate-900 transition-colors">Hospitality Class</Link></li>
-                <li><Link to="/partner" className="text-slate-600 hover:text-slate-900 transition-colors">Our Partners</Link></li>
+                <li><Link to="/vendor-login" className="text-gray-600 hover:text-gray-900 transition-colors">List My Business</Link></li>
+                <li><Link to="/refer-business" className="text-gray-600 hover:text-gray-900 transition-colors">Refer a Business</Link></li>
+                <li><Link to="/hospitality-class" className="text-gray-600 hover:text-gray-900 transition-colors">Hospitality Class</Link></li>
+                <li><Link to="/partner" className="text-gray-600 hover:text-gray-900 transition-colors">Our Partners</Link></li>
               </ul>
             </div>
           </div>
 
           {partnersLoading && !partners.length && (
-            <div className="mt-14 rounded-3xl border border-gray-200 bg-slate-50 py-8 text-center text-sm text-slate-600">
+            <div className="mt-14 rounded-3xl border border-gray-200 bg-gray-50 py-8 text-center text-sm text-gray-600">
               Loading partner highlights...
             </div>
           )}
 
           {partnersError && !partners.length && (
-            <div className="mt-14 rounded-3xl border border-gray-200 bg-slate-50 py-8 text-center text-sm text-red-600">
+            <div className="mt-14 rounded-3xl border border-gray-200 bg-gray-50 py-8 text-center text-sm text-red-600">
               {partnersError}
             </div>
           )}
@@ -661,7 +661,7 @@ export default function PublicLayout() {
                             {partner.name.slice(0, 2)}
                           </div>
                         )}
-                        <span className="text-xs font-medium text-slate-900">{partner.name}</span>
+                        <span className="text-xs font-medium text-gray-900">{partner.name}</span>
                       </>
                     );
 
@@ -683,25 +683,25 @@ export default function PublicLayout() {
           {/* Bottom bar */}
           <div className="mt-14 pt-8 flex flex-col gap-4">
             <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <a href="https://x.com/DirtTrails_Ug" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Twitter">
+              <a href="https://x.com/DirtTrails_Ug" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="Twitter">
                 <Twitter className="h-4 w-4" />
               </a>
-              <a href="https://www.instagram.com/dirttrailssafaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Instagram">
+              <a href="https://www.instagram.com/dirttrailssafaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="Instagram">
                 <Instagram className="h-4 w-4" />
               </a>
-              <a href="https://www.facebook.com/people/DirtTrails-Safaris/100081666093047/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="Facebook">
+              <a href="https://www.facebook.com/people/DirtTrails-Safaris/100081666093047/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="Facebook">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="https://www.linkedin.com/company/dirt-trails-safaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-slate-500 hover:text-slate-900 transition-colors" aria-label="LinkedIn">
+              <a href="https://www.linkedin.com/company/dirt-trails-safaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="LinkedIn">
                 <Linkedin className="h-4 w-4" />
               </a>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-slate-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-gray-500">
               <p className="text-center sm:text-left">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
               <div className="flex items-center gap-6 justify-center sm:justify-start">
-                <Link to="/privacy" className="hover:text-slate-900 transition-colors">Privacy Policy</Link>
-                <Link to="/terms" className="hover:text-slate-900 transition-colors">Terms</Link>
-                <Link to="/cookies" className="hover:text-slate-900 transition-colors">Cookies</Link>
+                <Link to="/privacy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="hover:text-gray-900 transition-colors">Terms</Link>
+                <Link to="/cookies" className="hover:text-gray-900 transition-colors">Cookies</Link>
               </div>
             </div>
           </div>

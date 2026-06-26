@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { getActivationRequests, updateActivationRequestStatus } from '../../lib/database'
 
 export default function ActivationRequests() {
@@ -45,8 +45,8 @@ export default function ActivationRequests() {
               <div className="flex justify-between">
                 <div>
                   <div className="font-medium">{req.service?.title || 'Unknown event'}</div>
-                  <div className="text-sm text-slate-600">Requested by: {req.vendor?.business_name || req.vendor_id}</div>
-                  <div className="text-sm text-slate-500">Status: {req.status}</div>
+                  <div className="text-sm text-gray-600">Requested by: {req.vendor?.business_name || req.vendor_id}</div>
+                  <div className="text-sm text-gray-500">Status: {req.status}</div>
                 </div>
                 <div className="space-x-2">
                   <button onClick={() => handle(req.id, true)} className="px-3 py-1 bg-green-600 text-white rounded">Approve</button>

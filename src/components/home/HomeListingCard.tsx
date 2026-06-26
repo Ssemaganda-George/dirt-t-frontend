@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { getServiceAverageRating, getTicketTypes } from '../../lib/database'
 import { getDisplayPrice } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
@@ -157,7 +157,7 @@ export default function HomeListingCard({ service, onClick }: HomeListingCardPro
           <div className="flex-shrink-0 text-right">
             <div className="flex flex-col items-end gap-1">
               {shopLabel ? (
-                <span className="inline-flex items-center rounded-full bg-slate-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                <span className="inline-flex items-center rounded-full bg-gray-900 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
                   {shopLabel}
                 </span>
               ) : null}

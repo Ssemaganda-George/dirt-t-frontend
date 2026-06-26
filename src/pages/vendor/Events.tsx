@@ -242,14 +242,14 @@ export default function VendorEvents() {
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
             />
           </div>
           <div className="w-full md:w-48">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -266,7 +266,7 @@ export default function VendorEvents() {
         {filteredEvents.map((event) => (
           <div key={event.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow border border-gray-200">
             {/* Event Image */}
-            <div className="h-32 md:h-36 bg-slate-200 relative">
+            <div className="h-32 md:h-36 bg-gray-200 relative">
                 {event.primary_image_url ? (
                 <img
                   loading="lazy"

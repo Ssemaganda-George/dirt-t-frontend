@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Star, CheckCircle, XCircle, Clock, MessageSquare, Shield, Search, MapPin, Mail, Calendar, Trash2 } from 'lucide-react'
 import { getAllReviewsForAdmin, approveReview, rejectReview } from '../../lib/database'
 import type { ServiceReview } from '../../lib/database'
@@ -93,14 +93,14 @@ export function Reviews() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-1/3"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
           <div className="grid grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-slate-200 rounded-lg"></div>
+              <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
             ))}
           </div>
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-20 bg-slate-200 rounded-lg"></div>
+            <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
           ))}
         </div>
       </div>
@@ -111,18 +111,18 @@ export function Reviews() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Review Management</h1>
-        <p className="text-slate-600 mt-1">Moderate and manage customer reviews across all services</p>
+        <h1 className="text-2xl font-bold text-gray-900">Review Management</h1>
+        <p className="text-gray-600 mt-1">Moderate and manage customer reviews across all services</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <div className="bg-white rounded-lg p-4 shadow-sm border">
           <div className="flex items-center gap-2 mb-1">
-            <MessageSquare className="w-4 h-4 text-slate-500" />
-            <p className="text-xs font-medium text-slate-500">Total</p>
+            <MessageSquare className="w-4 h-4 text-gray-500" />
+            <p className="text-xs font-medium text-gray-500">Total</p>
           </div>
-          <p className="text-2xl font-semibold text-slate-900">{stats.total}</p>
+          <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
         </div>
         <div className="bg-white rounded-lg p-4 shadow-sm border border-yellow-200">
           <div className="flex items-center gap-2 mb-1">
@@ -164,13 +164,13 @@ export function Reviews() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search reviews by name, comment, service..."
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
         </div>
         <div className="flex gap-2">
@@ -184,7 +184,7 @@ export function Reviews() {
                     : status === 'approved' ? 'bg-green-100 text-green-800 border border-green-300'
                     : status === 'rejected' ? 'bg-red-100 text-red-800 border border-red-300'
                     : 'bg-blue-100 text-blue-800 border border-blue-300'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -200,8 +200,8 @@ export function Reviews() {
       <div className="space-y-4">
         {filteredReviews.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border">
-            <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No reviews found matching your filters.</p>
+            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No reviews found matching your filters.</p>
           </div>
         ) : (
           filteredReviews.map((review) => (
@@ -228,14 +228,14 @@ export function Reviews() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-900">{review.visitor_name || 'Anonymous'}</h3>
+                      <h3 className="font-semibold text-gray-900">{review.visitor_name || 'Anonymous'}</h3>
                       {review.is_verified_booking && (
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex items-center gap-1">
                           <Shield className="w-3 h-3" /> Verified Booking
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                       {review.visitor_email && (
                         <span className="flex items-center gap-1">
                           <Mail className="w-3 h-3" /> {review.visitor_email}
@@ -264,14 +264,14 @@ export function Reviews() {
               {/* Card Body */}
               <div className="p-5">
                 {/* Service Info */}
-                <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
-                  <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                  <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium">
                     {review.service_title || 'Unknown Service'}
                   </span>
                   {review.vendor_name && (
-                    <span className="text-xs text-slate-400">by {review.vendor_name}</span>
+                    <span className="text-xs text-gray-400">by {review.vendor_name}</span>
                   )}
-                  <span className="text-xs text-slate-400 ml-auto flex items-center gap-1">
+                  <span className="text-xs text-gray-400 ml-auto flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {new Date(review.created_at).toLocaleDateString('en-US', { 
                       year: 'numeric', month: 'short', day: 'numeric' 
@@ -287,7 +287,7 @@ export function Reviews() {
                         <Star
                           key={star}
                           className={`w-5 h-5 ${
-                            star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'
+                            star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'
                           }`}
                         />
                       ))}
@@ -298,12 +298,12 @@ export function Reviews() {
 
                 {/* KPI Ratings if available */}
                 {review.kpi_ratings && Object.keys(review.kpi_ratings).length > 0 && (
-                  <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs font-medium text-slate-500 mb-2">Category Ratings</p>
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Category Ratings</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {Object.entries(review.kpi_ratings).map(([key, value]) => (
                         <div key={key} className="flex items-center justify-between bg-white p-2 rounded border">
-                          <span className="text-xs text-slate-600 capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className="text-xs text-gray-600 capitalize">{key.replace(/_/g, ' ')}</span>
                           <div className="flex items-center gap-1">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                             <span className="text-xs font-semibold">{value}</span>
@@ -316,8 +316,8 @@ export function Reviews() {
 
                 {/* Comment */}
                 {review.comment && (
-                  <div className="bg-slate-50 rounded-lg p-4 mb-4">
-                    <p className="text-slate-700 leading-relaxed italic">"{review.comment}"</p>
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-gray-700 leading-relaxed italic">"{review.comment}"</p>
                   </div>
                 )}
 
@@ -379,24 +379,24 @@ export function Reviews() {
       {showRejectModal && selectedReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Reject Review</h3>
-            <p className="text-sm text-slate-600 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Reject Review</h3>
+            <p className="text-sm text-gray-600 mb-4">
               Review by <span className="font-medium">{selectedReview.visitor_name}</span> on <span className="font-medium">{selectedReview.service_title}</span>
             </p>
             
             {/* Show the review */}
-            <div className="p-3 bg-slate-50 rounded-lg mb-4">
+            <div className="p-3 bg-gray-50 rounded-lg mb-4">
               <div className="flex items-center gap-1 mb-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-3 h-3 ${i < selectedReview.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300'}`} />
+                  <Star key={i} className={`w-3 h-3 ${i < selectedReview.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                 ))}
               </div>
               {selectedReview.comment && (
-                <p className="text-sm text-slate-700">{selectedReview.comment}</p>
+                <p className="text-sm text-gray-700">{selectedReview.comment}</p>
               )}
             </div>
 
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Reason for rejection (optional)
             </label>
             <textarea
@@ -404,7 +404,7 @@ export function Reviews() {
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="e.g., Inappropriate content, spam, irrelevant..."
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm resize-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm resize-none"
             />
             <div className="flex gap-3 mt-4">
               <button
@@ -416,7 +416,7 @@ export function Reviews() {
               </button>
               <button
                 onClick={() => { setShowRejectModal(false); setSelectedReview(null) }}
-                className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+                className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
               >
                 Cancel
               </button>

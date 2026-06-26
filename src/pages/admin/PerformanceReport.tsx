@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { getAllBookings, getAllTransactionsForAdmin, getAllVendorsWithActivity, getAllReviewsForAdmin, getServices } from '../../lib/database'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 
@@ -116,7 +116,7 @@ export default function AdminPerformanceReport() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Performance Report</h1>
-          <p className="text-sm text-slate-600">Platform-wide statistics and KPIs — summaries to help prioritise support and grow the marketplace.</p>
+          <p className="text-sm text-gray-600">Platform-wide statistics and KPIs — summaries to help prioritise support and grow the marketplace.</p>
         </div>
         <div>
           <button onClick={exportCSV} className="bg-sky-600 text-white px-3 py-1 rounded">Export CSV</button>
@@ -125,19 +125,19 @@ export default function AdminPerformanceReport() {
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-slate-500">Unique Visitors</div>
+          <div className="text-sm text-gray-500">Unique Visitors</div>
           <div className="text-xl font-bold">{stats?.uniqueVisitors}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-slate-500">Total Bookings</div>
+          <div className="text-sm text-gray-500">Total Bookings</div>
           <div className="text-xl font-bold">{stats?.totalBookings}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-slate-500">Total Transactions</div>
+          <div className="text-sm text-gray-500">Total Transactions</div>
           <div className="text-xl font-bold">{stats?.totalTransactions}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow"> 
-          <div className="text-sm text-slate-500">Total Revenue</div>
+          <div className="text-sm text-gray-500">Total Revenue</div>
           <div className="text-xl font-bold">{formatCurrency(stats?.totalRevenue)}</div>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function AdminPerformanceReport() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-sm font-semibold mb-2">Revenue — last 6 months</h2>
-          <div className="flex space-x-2 text-sm text-slate-600 mb-2">
+          <div className="flex space-x-2 text-sm text-gray-600 mb-2">
             {stats.months.map((m: string) => (
               <div key={m} className="flex-1 text-center">
                 <div className="text-lg font-medium">{formatCurrency(stats.revenueByMonth[m] || 0)}</div>
@@ -153,7 +153,7 @@ export default function AdminPerformanceReport() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-500">Revenue broken down by month for quick trend spotting.</p>
+          <p className="text-xs text-gray-500">Revenue broken down by month for quick trend spotting.</p>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow">
@@ -162,9 +162,9 @@ export default function AdminPerformanceReport() {
             {stats?.topVendors?.length ? stats.topVendors.slice(0,8).map((v: any, i: number) => (
               <div key={v.id} className="flex justify-between text-sm">
                 <div>#{i+1} {v.name || v.id}</div>
-                <div className="text-slate-500">{formatCurrency(v.revenue)}</div>
+                <div className="text-gray-500">{formatCurrency(v.revenue)}</div>
               </div>
-            )) : <div className="text-sm text-slate-500">No data</div>}
+            )) : <div className="text-sm text-gray-500">No data</div>}
           </div>
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function AdminPerformanceReport() {
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-slate-500">
+              <tr className="text-left text-xs text-gray-500">
                 <th className="py-2">Tx ID</th>
                 <th className="py-2">Vendor</th>
                 <th className="py-2">Amount</th>
@@ -195,7 +195,7 @@ export default function AdminPerformanceReport() {
                   <td className="py-2">{createdAt ? new Date(createdAt).toLocaleDateString() : '—'}</td>
                 </tr>
               )
-            }) : <tr><td colSpan={5} className="py-4 text-slate-500">No transactions</td></tr>}
+            }) : <tr><td colSpan={5} className="py-4 text-gray-500">No transactions</td></tr>}
             </tbody>
           </table>
         </div>
@@ -203,7 +203,7 @@ export default function AdminPerformanceReport() {
 
       <div className="bg-white p-4 rounded-lg shadow">
         <h2 className="text-sm font-semibold mb-2">Actionable insights</h2>
-        <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+        <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
           <li>Average booking value: <strong>{formatCurrency(stats.avgBookingValue)}</strong></li>
           {stats.totalRevenue === 0 && <li>No revenue recorded — check onboarding and payment integrations.</li>}
           {stats.topVendors && stats.topVendors.length > 0 && <li>Top vendor by revenue: <strong>{stats.topVendors[0].name || stats.topVendors[0].id}</strong> — consider highlighting or supporting growth.</li>}

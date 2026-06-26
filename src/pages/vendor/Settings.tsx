@@ -43,15 +43,15 @@ export default function Settings() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        <div className="h-7 w-32 bg-slate-200 rounded-lg animate-pulse" />
+        <div className="h-7 w-32 bg-gray-200 rounded-lg animate-pulse" />
         {[...Array(3)].map((_, i) => (
           <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-            <div className="h-5 w-36 bg-slate-200 rounded animate-pulse" />
+            <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
             <div className="space-y-3">
               {[...Array(3)].map((_, j) => (
                 <div key={j} className="flex items-center justify-between">
                   <div className="h-4 w-48 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-6 w-11 bg-slate-200 rounded-full animate-pulse" />
+                  <div className="h-6 w-11 bg-gray-200 rounded-full animate-pulse" />
                 </div>
               ))}
             </div>
@@ -367,7 +367,7 @@ export default function Settings() {
               <button
                 onClick={() => handleNotificationChange(item.key, !(notifications as any)[item.key])}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
-                  (notifications as any)[item.key] ? 'bg-emerald-700' : 'bg-slate-200'
+                  (notifications as any)[item.key] ? 'bg-emerald-700' : 'bg-gray-200'
                 }`}
               >
                 <span

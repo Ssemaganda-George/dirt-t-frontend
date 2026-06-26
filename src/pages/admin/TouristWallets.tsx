@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+﻿import { format } from 'date-fns';
 import { useState, useMemo, useEffect } from 'react';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { useAdminTransactions } from '../../hooks/hook';
@@ -162,14 +162,14 @@ export default function TouristWallets() {
     <div className="space-y-6">
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Tourist Wallets</h1>
-          <p className="mt-2 text-sm text-slate-600">Per-tourist totals from completed transactions (derived)</p>
+          <h1 className="text-3xl font-bold text-gray-900">Tourist Wallets</h1>
+          <p className="mt-2 text-sm text-gray-600">Per-tourist totals from completed transactions (derived)</p>
         </div>
         <div className="flex gap-2 mt-4 sm:mt-0">
           <select
             value={dateRange}
             onChange={e => setDateRange(e.target.value as typeof dateRange)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
           >
             <option value="all">All Time</option>
             <option value="month">This Month</option>
@@ -182,42 +182,42 @@ export default function TouristWallets() {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 max-w-3xl">
+      <p className="text-xs text-gray-500 max-w-3xl">
         <strong>Balance</strong> = sum of completed <strong>payments</strong> minus completed <strong>withdrawals</strong> and{' '}
         <strong>refunds</strong> in the selected period. Amounts are parsed as numbers so they stay accurate. Profile names load from{' '}
-        <code className="text-slate-600">profiles</code> (<code className="text-slate-600">tourist_id</code> = profile id).
+        <code className="text-gray-600">profiles</code> (<code className="text-gray-600">tourist_id</code> = profile id).
       </p>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-900">Tourists ({tourists.length})</h3>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Tourists ({tourists.length})</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Tourist</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Balance</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Payments</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Withdrawals</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Refunds</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Txns</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tourist</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Payments</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Withdrawals</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Refunds</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Txns</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-100">
+            <tbody className="bg-white divide-y divide-gray-100">
               {tourists.map(t => (
                 <tr key={t.id}>
-                  <td className="px-4 py-3 text-sm text-slate-900">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     <div className="font-medium">{displayName(t.id)}</div>
-                    <div className="text-xs text-slate-400 font-mono truncate max-w-xs" title={t.id}>
+                    <div className="text-xs text-gray-400 font-mono truncate max-w-xs" title={t.id}>
                       {t.id}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-900 text-right tabular-nums font-medium">{fmt(t.balance)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{fmt(t.payments)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{fmt(t.withdrawals)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{fmt(t.refunds)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{t.count}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900 text-right tabular-nums font-medium">{fmt(t.balance)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 text-right tabular-nums">{fmt(t.payments)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 text-right tabular-nums">{fmt(t.withdrawals)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 text-right tabular-nums">{fmt(t.refunds)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 text-right tabular-nums">{t.count}</td>
                 </tr>
               ))}
             </tbody>

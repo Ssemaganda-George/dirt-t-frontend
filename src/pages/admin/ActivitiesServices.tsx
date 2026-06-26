@@ -1,4 +1,4 @@
-import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
+﻿import { CheckIcon, XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useServices, useServiceDeleteRequests } from '../../hooks/hook';
 import { ToggleSwitch } from '../../components/ToggleSwitch';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -176,9 +176,9 @@ export function ActivitiesServices() {
           <p className="text-red-800">Error loading services: {error}</p>
         </div>
         {/* Still show the services management interface even if delete requests fail */}
-        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-slate-900">Activities Management</h3>
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">Activities Management</h3>
           </div>
           <div className="p-5">
             <p className="text-sm text-yellow-600">Services loaded, but delete requests are temporarily unavailable.</p>
@@ -395,8 +395,8 @@ export function ActivitiesServices() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Events Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage and review all events and activities</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Events Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage and review all events and activities</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">Pending: {selectedVendor === 'all' ? pendingServices.length : filteredPendingServices.length}</span>
@@ -407,7 +407,7 @@ export function ActivitiesServices() {
       </div>
 
       {/* Search & Vendor Filter */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <SearchBar
@@ -421,7 +421,7 @@ export function ActivitiesServices() {
             id="vendor-filter"
             value={selectedVendor}
             onChange={(e) => setSelectedVendor(e.target.value)}
-            className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Vendors</option>
             {vendors.map((vendor) => (
@@ -434,62 +434,62 @@ export function ActivitiesServices() {
       </div>
 
       {/* Services Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-slate-900">All Events</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{filteredServices.length} events found</p>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Events</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{filteredServices.length} events found</p>
         </div>
         <div className="p-5">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Activity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Availability
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Toggle
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Event Link
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-slate-50">
+                  <tr key={service.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">{service.title}</div>
-                        <div className="text-sm text-slate-500 truncate max-w-xs">
+                        <div className="text-sm font-medium text-gray-900">{service.title}</div>
+                        <div className="text-sm text-gray-500 truncate max-w-xs">
                           {service.description}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-900">
+                      <div className="text-sm text-gray-900">
                         {service.vendors?.business_name || 'Unknown'}
                       </div>
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-gray-500">
                         {service.location}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -522,12 +522,12 @@ export function ActivitiesServices() {
                         />
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {/* Show event scan link status for activities (match admin/Services) */}
                       {service.scan_enabled ? (
                         <a href={`${window.location.origin}/scan/${service.id}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">View scan link</a>
                       ) : (
-                        <span className="text-sm text-slate-500">Scan link inactive</span>
+                        <span className="text-sm text-gray-500">Scan link inactive</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -591,43 +591,43 @@ export function ActivitiesServices() {
         </div>
       </div>
       {filteredPendingServices.length > 0 && (
-        <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h3 className="text-sm font-semibold text-slate-900">
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">
               Pending Approval ({filteredPendingServices.length})
             </h3>
           </div>
           <div className="p-5">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Activity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Price</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activity</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-gray-200">
                   {filteredPendingServices.map((service) => (
-                    <tr key={service.id} className="hover:bg-slate-50">
+                    <tr key={service.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-slate-900">{service.title}</div>
-                          <div className="text-sm text-slate-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-gray-900">{service.title}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
                             {service.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">
+                        <div className="text-sm text-gray-900">
                           {service.vendors?.business_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-gray-500">
                           {service.location}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {formatServicePrice(service, selectedCurrency, selectedLanguage)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -660,9 +660,9 @@ export function ActivitiesServices() {
       )}
 
       {/* Delete Requests Section */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-slate-900">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">
             Delete Requests ({deleteRequestsError ? '—' : pendingDeleteRequests.length})
           </h3>
         </div>
@@ -678,34 +678,34 @@ export function ActivitiesServices() {
               </p>
             </div>
           ) : pendingDeleteRequests.length === 0 ? (
-            <p className="text-slate-500 text-sm">No pending delete requests.</p>
+            <p className="text-gray-500 text-sm">No pending delete requests.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Activity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Vendor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Availability</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Comments</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Requested</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activity</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Availability</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comments</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Requested</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-gray-200">
                   {pendingDeleteRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-slate-50">
+                    <tr key={request.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-slate-900">{request.service?.title}</div>
-                          <div className="text-sm text-slate-500 truncate max-w-xs">
+                          <div className="text-sm font-medium text-gray-900">{request.service?.title}</div>
+                          <div className="text-sm text-gray-500 truncate max-w-xs">
                             {request.service?.description}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">
+                        <div className="text-sm text-gray-900">
                           {request.vendor?.business_name || 'Unknown'}
                         </div>
                       </td>
@@ -715,13 +715,13 @@ export function ActivitiesServices() {
                             variant="small"
                           />
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-900">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {request.reason}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-900">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         {request.admin_notes || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(request.requested_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -762,21 +762,21 @@ export function ActivitiesServices() {
 
       {/* Scan Session Duration Prompt Modal */}
       {scanSessionPrompt?.show && (
-        <div className="fixed inset-0 bg-slate-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
-              <h3 className="text-lg font-medium text-slate-900 mb-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Enable Scan Link for {scanSessionPrompt.service.title}
               </h3>
               <div className="mb-4">
-                <label htmlFor="duration" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
                   Duration (hours)
                 </label>
                 <select
                   id="duration"
                   value={sessionDuration}
                   onChange={(e) => setSessionDuration(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={1}>1 hour</option>
                   <option value={2}>2 hours</option>
@@ -786,14 +786,14 @@ export function ActivitiesServices() {
                   <option value={12}>12 hours</option>
                   <option value={24}>24 hours</option>
                 </select>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-gray-500 mt-1">
                   Session will end at: {new Date(Date.now() + sessionDuration * 60 * 60 * 1000).toLocaleString()}
                 </p>
               </div>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={cancelScanSessionPrompt}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded-md hover:bg-slate-200"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
                 >
                   Cancel
                 </button>

@@ -222,8 +222,8 @@ export default function VendorDashboard() {
       <div className="max-w-6xl mx-auto">
         <div className="animate-pulse space-y-6">
           <div>
-            <div className="h-7 bg-slate-200 rounded w-48 mb-2"></div>
-            <div className="h-4 bg-slate-200 rounded w-64"></div>
+            <div className="h-7 bg-gray-200 rounded w-48 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-64"></div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
@@ -341,7 +341,7 @@ export default function VendorDashboard() {
               </div>
               <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">{stats.recentBookings.length}</span>
             </div>
-            <div className="p-5 flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div className="p-5 flex-1 overflow-y-auto divide-y divide-gray-100">
               {stats.recentBookings.map((b) => (
                 <div key={b.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -418,7 +418,7 @@ export default function VendorDashboard() {
               <h3 className="text-sm font-semibold text-gray-900">Transactions</h3>
               <p className="text-xs text-gray-500 mt-0.5">Financial activity</p>
             </div>
-            <div className="p-5 flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div className="p-5 flex-1 overflow-y-auto divide-y divide-gray-100">
               {stats.recentTransactions.map((t) => (
                 <div key={t.id} className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">

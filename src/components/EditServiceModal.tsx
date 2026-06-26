@@ -486,35 +486,35 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         <label className="block text-sm font-medium text-gray-700">Ticket Types</label>
                         <div className="mt-2 space-y-3">
                           {((formData.ticket_types || []) as any[]).map((tt, idx) => (
-                            <div key={idx} className="p-3 border border-slate-200 rounded-lg bg-white">
+                            <div key={idx} className="p-3 border border-gray-200 rounded-lg bg-white">
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
-                                  <input className="w-full border border-slate-200 rounded px-3 py-2" value={tt.title || tt.name || ''} onChange={(e) => updateTicketType(idx, { title: e.target.value })} />
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
+                                  <input className="w-full border border-gray-200 rounded px-3 py-2" value={tt.title || tt.name || ''} onChange={(e) => updateTicketType(idx, { title: e.target.value })} />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Price (UGX)</label>
-                                  <input className="w-full border border-slate-200 rounded px-3 py-2" type="number" value={tt.price ?? ''} onChange={(e) => updateTicketType(idx, { price: e.target.value === '' ? 0 : Number(e.target.value) })} />
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Price (UGX)</label>
+                                  <input className="w-full border border-gray-200 rounded px-3 py-2" type="number" value={tt.price ?? ''} onChange={(e) => updateTicketType(idx, { price: e.target.value === '' ? 0 : Number(e.target.value) })} />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Quantity</label>
-                                  <input className="w-full border border-slate-200 rounded px-3 py-2" type="number" value={tt.quantity ?? ''} onChange={(e) => updateTicketType(idx, { quantity: e.target.value === '' ? undefined : Number(e.target.value) })} />
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Quantity</label>
+                                  <input className="w-full border border-gray-200 rounded px-3 py-2" type="number" value={tt.quantity ?? ''} onChange={(e) => updateTicketType(idx, { quantity: e.target.value === '' ? undefined : Number(e.target.value) })} />
                                 </div>
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Sale starts</label>
-                                  <input type="datetime-local" className="w-full border border-slate-200 rounded px-3 py-2" value={tt.sale_start ? new Date(tt.sale_start).toISOString().slice(0,16) : ''} onChange={(e) => { updateTicketType(idx, { sale_start: e.target.value || undefined }); markTicketManual(idx, 'saleStart'); }} />
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Sale starts</label>
+                                  <input type="datetime-local" className="w-full border border-gray-200 rounded px-3 py-2" value={tt.sale_start ? new Date(tt.sale_start).toISOString().slice(0,16) : ''} onChange={(e) => { updateTicketType(idx, { sale_start: e.target.value || undefined }); markTicketManual(idx, 'saleStart'); }} />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">Sale ends</label>
-                                  <input type="datetime-local" className="w-full border border-slate-200 rounded px-3 py-2" value={tt.sale_end ? new Date(tt.sale_end).toISOString().slice(0,16) : ''} onChange={(e) => { updateTicketType(idx, { sale_end: e.target.value || undefined }); markTicketManual(idx, 'saleEnd'); }} />
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">Sale ends</label>
+                                  <input type="datetime-local" className="w-full border border-gray-200 rounded px-3 py-2" value={tt.sale_end ? new Date(tt.sale_end).toISOString().slice(0,16) : ''} onChange={(e) => { updateTicketType(idx, { sale_end: e.target.value || undefined }); markTicketManual(idx, 'saleEnd'); }} />
                                 </div>
                               </div>
 
                               <div className="flex justify-between items-center">
-                                <div className="text-xs text-slate-500">{tt.description || ''}</div>
+                                <div className="text-xs text-gray-500">{tt.description || ''}</div>
                                 <div className="flex items-center gap-2">
                                   <button type="button" onClick={() => removeTicketType(idx)} className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded-lg">Remove</button>
                                 </div>

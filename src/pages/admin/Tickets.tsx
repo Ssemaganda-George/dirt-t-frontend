@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import * as QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
 import { formatCurrencyWithConversion, formatDateTime, convertCurrency } from '../../lib/utils'
@@ -325,8 +325,8 @@ export default function AdminTickets() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Ticket Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Monitor event tickets and attendance</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Ticket Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Monitor event tickets and attendance</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-emerald-600">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -337,57 +337,57 @@ export default function AdminTickets() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border border-violet-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Total Events</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.totalEvents}</p>
-          <p className="text-xs text-slate-400 mt-1">Active events</p>
+          <p className="text-xs font-medium text-gray-500">Total Events</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.totalEvents}</p>
+          <p className="text-xs text-gray-400 mt-1">Active events</p>
         </div>
 
         <div className="bg-white rounded-xl border border-blue-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Total Tickets</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.total}</p>
-          <p className="text-xs text-slate-400 mt-1">All tickets</p>
+          <p className="text-xs font-medium text-gray-500">Total Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
+          <p className="text-xs text-gray-400 mt-1">All tickets</p>
         </div>
 
         <div className="bg-white rounded-xl border border-emerald-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Active Tickets</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.issued}</p>
-          <p className="text-xs text-slate-400 mt-1">Issued</p>
+          <p className="text-xs font-medium text-gray-500">Active Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.issued}</p>
+          <p className="text-xs text-gray-400 mt-1">Issued</p>
         </div>
 
         <div className="bg-white rounded-xl border border-sky-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Used Tickets</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.used}</p>
-          <p className="text-xs text-slate-400 mt-1">Scanned</p>
+          <p className="text-xs font-medium text-gray-500">Used Tickets</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.used}</p>
+          <p className="text-xs text-gray-400 mt-1">Scanned</p>
         </div>
 
         <div className="bg-white rounded-xl border border-red-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Cancelled</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.cancelled}</p>
-          <p className="text-xs text-slate-400 mt-1">Voided</p>
+          <p className="text-xs font-medium text-gray-500">Cancelled</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
+          <p className="text-xs text-gray-400 mt-1">Voided</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 p-4">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
                 placeholder="Search tickets by code, event, vendor, buyer name, email, or ticket type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-[#61B82C] focus:border-[#61B82C]"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-[#61B82C] focus:border-[#61B82C]"
               />
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="text-slate-400 h-4 w-4" />
+            <Filter className="text-gray-400 h-4 w-4" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-slate-300 rounded-lg px-3 py-2 focus:ring-[#61B82C] focus:border-[#61B82C]"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-[#61B82C] focus:border-[#61B82C]"
             >
               <option value="all">All Statuses</option>
               <option value="issued">Active</option>
@@ -396,7 +396,7 @@ export default function AdminTickets() {
             </select>
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1 px-3 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               title="Clear all filters"
             >
               <RotateCcw className="h-4 w-4" />
@@ -407,30 +407,30 @@ export default function AdminTickets() {
       </div>
 
       {/* Tickets Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-slate-900">All Tickets</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Event tickets and attendance records</p>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">All Tickets</h3>
+          <p className="text-xs text-gray-500 mt-0.5">Event tickets and attendance records</p>
         </div>
         <div className="p-5">
 
           {filteredTickets.length === 0 ? (
             <div className="text-center py-8">
-              <Ticket className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">No tickets found</p>
+              <Ticket className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">No tickets found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Booking ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ticket Code</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       <select
                         value={selectedEventFilter}
                         onChange={(e) => setSelectedEventFilter(e.target.value)}
-                        className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Events</option>
                         {Array.from(new Set(tickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
@@ -438,11 +438,11 @@ export default function AdminTickets() {
                         ))}
                       </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       <select
                         value={selectedTypeFilter}
                         onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                        className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Types</option>
                         {Array.from(new Set(tickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
@@ -450,11 +450,11 @@ export default function AdminTickets() {
                         ))}
                       </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       <select
                         value={selectedVendorFilter}
                         onChange={(e) => setSelectedVendorFilter(e.target.value)}
-                        className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Vendors</option>
                         {Array.from(new Set(tickets.map(t => t.services?.vendors?.business_name || 'Unknown').filter(name => name !== 'Unknown'))).sort().map(vendorName => (
@@ -462,12 +462,12 @@ export default function AdminTickets() {
                         ))}
                       </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Issued</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       <select
                         value={selectedStatusFilter}
                         onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                        className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Status</option>
                         <option value="issued">Active</option>
@@ -475,23 +475,23 @@ export default function AdminTickets() {
                         <option value="cancelled">Cancelled</option>
                       </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Booking Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       <select
                         value={selectedAttendanceFilter}
                         onChange={(e) => setSelectedAttendanceFilter(e.target.value)}
-                        className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="all">All Attendance</option>
                         <option value="attended">Attended</option>
                         <option value="not-attended">Not Attended</option>
                       </select>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-gray-200">
                   {(() => {
                     const tableFilteredTickets = filteredTickets
                       .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
@@ -508,8 +508,8 @@ export default function AdminTickets() {
                     return (
                       <>
                         {tableFilteredTickets.map((ticket) => (
-                          <tr key={ticket.id} className="hover:bg-slate-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                          <tr key={ticket.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
                                 // Match tickets to bookings based on service and tourist
                                 let match = bookings.find((b: any) =>
@@ -530,16 +530,16 @@ export default function AdminTickets() {
                                 return match ? `#${match.id.slice(0,8)}` : ticket.order_id ? `#${ticket.order_id.slice(0,8)}` : `#${ticket.id.slice(0,8)}`
                               })()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ticket.code}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{ticket.services?.title || 'Event'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{ticket.ticket_types?.title || 'Ticket'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{ticket.services?.vendors?.business_name || 'Unknown'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{formatDateTime(ticket.issued_at)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{ticket.code}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.ticket_types?.title || 'Ticket'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ticket.services?.vendors?.business_name || 'Unknown'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDateTime(ticket.issued_at)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <StatusBadge status={ticket.status} variant="small" />
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(ticket.ticket_types?.price || 0, ticket.orders?.currency || 'UGX', selectedCurrency)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {(() => {
                                 // Match tickets to bookings based on service and tourist
                                 const match = bookings.find((b: any) =>
@@ -549,28 +549,28 @@ export default function AdminTickets() {
                                 // If ticket's order is paid, booking should be confirmed
                                 const bookingStatus = ticket.orders?.status === 'paid' ? 'confirmed' : (match?.status || null)
                                 
-                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-slate-500">—</span>
+                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-gray-500">—</span>
                               })()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {ticket.status === 'used' ? (
                                 <div className="flex flex-col">
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-1">
                                     ✓ Attended
                                   </span>
                                   {ticket.used_at && (
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs text-gray-500">
                                       {formatDateTime(ticket.used_at)}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                   Not Attended
                                 </span>
                               )}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               <button
                                 onClick={() => downloadTicket(ticket)}
                                 className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
@@ -581,11 +581,11 @@ export default function AdminTickets() {
                           </tr>
                         ))}
                         {tableFilteredTickets.length > 0 && (
-                          <tr className="bg-slate-50 border-t-2 border-slate-200">
-                            <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-slate-900 text-right">
+                          <tr className="bg-gray-50 border-t-2 border-gray-200">
+                            <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
                               Total ({tableFilteredTickets.length} ticket{tableFilteredTickets.length !== 1 ? 's' : ''}):
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                               {(() => {
                                 const total = tableFilteredTickets.reduce((sum, ticket) => {
                                   const price = ticket.ticket_types?.price || 0;

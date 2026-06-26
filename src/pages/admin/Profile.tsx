@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { updateAuthUser } from '../../services/AuthService'
@@ -122,11 +122,11 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">My Profile</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">My Profile</h1>
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Edit className="h-4 w-4 mr-2" />
             Edit Profile
@@ -140,16 +140,16 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
         <div className="p-5">
           <div className="flex items-center mb-6">
             <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold mr-6 shadow-lg">
               {profile.full_name?.charAt(0)?.toUpperCase() || 'A'}
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">{profile.full_name || 'Admin User'}</h2>
-              <p className="text-slate-600">{profile.email}</p>
-              <p className="text-sm text-slate-500 mt-1">
+              <h2 className="text-xl font-semibold text-gray-900">{profile.full_name || 'Admin User'}</h2>
+              <p className="text-gray-600">{profile.email}</p>
+              <p className="text-sm text-gray-500 mt-1">
                 Admin • Member since {new Date(profile.created_at || Date.now()).toLocaleDateString()}
               </p>
             </div>
@@ -158,12 +158,12 @@ export default function Profile() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {/* Full Name */}
             <div>
-              <label htmlFor="full_name" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
                 Full Name
               </label>
               <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-400" />
+                  <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
@@ -172,7 +172,7 @@ export default function Profile() {
                   value={formData.full_name}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-500"
+                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -180,12 +180,12 @@ export default function Profile() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email Address
               </label>
               <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400" />
+                  <Mail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="email"
@@ -194,7 +194,7 @@ export default function Profile() {
                   value={formData.email}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-slate-300 rounded-lg disabled:bg-slate-50 disabled:text-slate-500"
+                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg disabled:bg-gray-50 disabled:text-gray-500"
                   placeholder="Enter your email"
                 />
               </div>
@@ -202,7 +202,7 @@ export default function Profile() {
 
             {/* Phone */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                 Phone Number
               </label>
               <div className="mt-1">
@@ -217,13 +217,13 @@ export default function Profile() {
                 ) : (
                   <div className="relative rounded-lg shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-slate-400" />
+                      <Phone className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
                       type="text"
                       value={formData.phone ? `${formData.phone_country_code} ${formData.phone}` : ''}
                       readOnly
-                      className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-slate-300 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
+                      className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                     />
                   </div>
                 )}
@@ -232,12 +232,12 @@ export default function Profile() {
 
             {/* City */}
             <div>
-              <label htmlFor="city" className="block text-sm font-medium text-slate-700">
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700">
                 Home City
               </label>
               <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-slate-400" />
+                  <MapPin className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
@@ -246,7 +246,7 @@ export default function Profile() {
                   value={formData.home_city && formData.home_country ? `${formData.home_city}, ${formData.home_country}` : ''}
                   onClick={() => isEditing && setIsCityModalOpen(true)}
                   readOnly
-                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-slate-300 rounded-lg bg-white cursor-pointer disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg bg-white cursor-pointer disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
                   placeholder="Click to select city"
                 />
               </div>
@@ -254,18 +254,18 @@ export default function Profile() {
 
             {/* Role (Read-only) */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-gray-700">
                 Role
               </label>
               <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-slate-400" />
+                  <MapPin className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
                   value="Admin"
                   disabled
-                  className="bg-slate-50 text-slate-500 block w-full pl-10 pr-3 py-2 border-slate-300 rounded-lg cursor-not-allowed"
+                  className="bg-gray-50 text-gray-500 block w-full pl-10 pr-3 py-2 border-gray-300 rounded-lg cursor-not-allowed"
                 />
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function Profile() {
               <button
                 onClick={handleCancel}
                 disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel

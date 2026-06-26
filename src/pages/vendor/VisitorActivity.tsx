@@ -83,12 +83,12 @@ export default function VendorVisitorActivity() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-7 w-48 bg-slate-200 rounded-lg" />
+          <div className="h-7 w-48 bg-gray-200 rounded-lg" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-28 bg-white rounded-xl border border-gray-200 p-5">
-                <div className="h-3 w-20 bg-slate-200 rounded mb-3" />
-                <div className="h-7 w-16 bg-slate-200 rounded" />
+                <div className="h-3 w-20 bg-gray-200 rounded mb-3" />
+                <div className="h-7 w-16 bg-gray-200 rounded" />
               </div>
             ))}
           </div>
@@ -329,7 +329,7 @@ export default function VendorVisitorActivity() {
           {stats.recentReviews.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Reviews</h2>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-gray-100">
                 {stats.recentReviews.slice(0, 5).map((review) => (
                   <div key={review.id} className="py-4 first:pt-0 last:pb-0">
                     <div className="flex items-start justify-between">

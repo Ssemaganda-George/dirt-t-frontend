@@ -1,4 +1,4 @@
-import { cn } from '../lib/utils';
+﻿import { cn } from '../lib/utils';
 
 interface StatusBadgeProps {
   status: string;
@@ -14,7 +14,7 @@ const statusConfig = {
   cancelled: { color: 'bg-gray-100 text-gray-800', label: 'Cancelled' },
   completed: { color: 'bg-green-100 text-green-800', label: 'Completed' },
   paid: { color: 'bg-green-100 text-green-800', label: 'Paid' },
-  not_required: { color: 'bg-slate-100 text-slate-700', label: 'Not required' },
+  not_required: { color: 'bg-gray-100 text-gray-700', label: 'Not required' },
   refunded: { color: 'bg-orange-100 text-orange-800', label: 'Refunded' },
   failed: { color: 'bg-red-100 text-red-800', label: 'Failed' },
   available: { color: 'bg-green-100 text-green-800', label: 'Available' },

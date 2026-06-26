@@ -811,7 +811,6 @@ export default function ServiceDetail() {
               <div className="text-sm text-gray-600 space-y-2">
                 <p>• <span className="font-medium">Check-in:</span> {service.check_in_time || '2:00 PM'}</p>
                 <p>• <span className="font-medium">Check-out:</span> {service.check_out_time || '11:00 AM'}</p>
-                <p>• Free cancellation up to 24 hours before check-in</p>
                 {service.hotel_policies && service.hotel_policies.length > 0 && (
                   <>
                     {service.hotel_policies.map((policy, index) => (
@@ -2358,14 +2357,14 @@ export default function ServiceDetail() {
                            <button
                              type="button"
                              onClick={() => setListingType('buy')}
-                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'buy' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'buy' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}
                            >
                              Buy {formatCurrencyWithConversion(buy, service.currency)}
                            </button>
                            <button
                              type="button"
                              onClick={() => setListingType('hire')}
-                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'hire' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                             className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${listingType === 'hire' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}
                            >
                              Hire {formatCurrencyWithConversion(rent, service.currency)}/day
                            </button>
@@ -2595,8 +2594,8 @@ export default function ServiceDetail() {
                                   onClick={() => setTourGroupType(val)}
                                   className={`py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
                                     tourGroupType === val
-                                      ? 'bg-slate-900 text-white border-slate-900'
-                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                                      ? 'bg-gray-900 text-white border-gray-900'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
                                   }`}
                                 >{label}</button>
                               ))}

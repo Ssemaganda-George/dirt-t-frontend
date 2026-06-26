@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 import { MessageSquare, User, Store, Send, X, ChevronLeft, Search, Users, Bell, ChevronRight, Check, CheckCheck } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAdminMessages, getAllVendors, Vendor, sendMessage, getAdminConversationMessages, decryptMessages, markConversationAsRead } from '../../lib/database'
@@ -296,8 +296,8 @@ export default function Messages() {
     <div className={`${vendorId || touristId ? 'h-[calc(100dvh-4rem)]' : ''} max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 flex flex-col overflow-hidden lg:overflow-visible`}>
       {/* Header - hidden on mobile when in chat view */}
       <div className={`${vendorId || touristId ? 'hidden lg:block' : ''} flex-shrink-0 mb-4 lg:mb-6`}>
-        <h1 className="text-xl font-semibold text-slate-900">Messages</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+        <p className="text-sm text-gray-500 mt-1">
           {vendorId || touristId 
             ? `Conversation with ${vendorId ? vendors.find(v => v.user_id === vendorId)?.business_name || 'Vendor' : 'Tourist'}`
             : 'Manage communications with vendors and tourists'
@@ -308,14 +308,14 @@ export default function Messages() {
       <div className={`flex-1 min-h-0 grid grid-cols-1 ${vendorId || touristId ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-4 lg:gap-6`}>
         {vendorId || touristId ? (
             /* Chat Interface */
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 6rem)' }}>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 6rem)' }}>
               {/* Chat Header */}
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                 <button
                   onClick={() => navigate('/admin/messages')}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 transition-all"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-all"
                 >
-                  <ChevronLeft className="w-5 h-5 text-slate-500" />
+                  <ChevronLeft className="w-5 h-5 text-gray-500" />
                 </button>
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
                   vendorId ? 'bg-blue-600' : 'bg-green-600'
@@ -323,29 +323,29 @@ export default function Messages() {
                   {vendorId ? <Store className="w-5 h-5" /> : <User className="w-5 h-5" />}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium text-gray-900">
                     {vendorId
                       ? vendors.find(v => v.user_id === vendorId)?.business_name || 'Vendor'
                       : (chatMessages[0]?.sender?.full_name || chatMessages[0]?.sender_name || 'Tourist')
                     }
-                    <span className="text-slate-500 font-normal ml-1">
+                    <span className="text-gray-500 font-normal ml-1">
                       ({vendorId ? 'Vendor' : 'Tourist'})
                     </span>
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-gray-500">
                     {vendorId ? 'Vendor Account' : 'Tourist Account'}
                   </p>
                 </div>
               </div>
 
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
                 {chatMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <MessageSquare className="mx-auto h-10 w-10 text-slate-300" />
-                      <p className="mt-2 text-sm text-slate-500">No messages yet</p>
-                      <p className="text-xs text-slate-400 mt-1">Start the conversation</p>
+                      <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
+                      <p className="mt-2 text-sm text-gray-500">No messages yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Start the conversation</p>
                     </div>
                   </div>
                 ) : (
@@ -361,7 +361,7 @@ export default function Messages() {
                           {showAvatar && (
                             <div className={`flex-shrink-0 ${isAdmin ? 'ml-2' : 'mr-2'}`}>
                               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                isAdmin ? 'bg-slate-900 text-white' : (vendorId ? 'bg-blue-600 text-white' : 'bg-green-600 text-white')
+                                isAdmin ? 'bg-gray-900 text-white' : (vendorId ? 'bg-blue-600 text-white' : 'bg-green-600 text-white')
                               }`}>
                                 {isAdmin ? 'A' : (vendorId ? 'V' : 'T')}
                               </div>
@@ -371,8 +371,8 @@ export default function Messages() {
                           <div className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
                             <div className={`px-3 py-2 rounded-xl text-sm ${
                               isAdmin
-                                ? 'bg-slate-900 text-white rounded-br-sm'
-                                : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                ? 'bg-gray-900 text-white rounded-br-sm'
+                                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                             }`}>
                               <p className="whitespace-pre-wrap">{message.message}</p>
                               {/* Time and status ticks for admin messages */}
@@ -392,7 +392,7 @@ export default function Messages() {
                               )}
                             </div>
                             {showTimestamp && !isAdmin && (
-                              <p className="text-[10px] text-slate-400 mt-1">
+                              <p className="text-[10px] text-gray-400 mt-1">
                                 {formatMessageTime(message.created_at)}
                               </p>
                             )}
@@ -405,7 +405,7 @@ export default function Messages() {
               </div>
 
               {/* Message Input */}
-              <div className="p-3 border-t border-slate-100 bg-white">
+              <div className="p-3 border-t border-gray-100 bg-white">
                 {sendMessageError && (
                   <div className="mb-2 p-2.5 rounded-lg bg-red-50 border border-red-100 flex items-center gap-2">
                     <X className="w-3.5 h-3.5 text-red-500" />
@@ -423,7 +423,7 @@ export default function Messages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 resize-none"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/20 resize-none"
                     rows={1}
                     style={{ minHeight: '38px', maxHeight: '100px' }}
                     onInput={(e) => {
@@ -437,8 +437,8 @@ export default function Messages() {
                     disabled={!newMessageContent.trim() || sendingMessage}
                     className={`min-h-[38px] px-3 py-2 rounded-lg transition-all flex items-center ${
                       newMessageContent.trim() && !sendingMessage
-                        ? 'bg-slate-900 text-white hover:bg-slate-800'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        ? 'bg-gray-900 text-white hover:bg-gray-800'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     {sendingMessage ? (
@@ -470,14 +470,14 @@ export default function Messages() {
                         onClick={() => setFilter(tab.key as any)}
                         className={`min-h-[40px] px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                           isActive
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                            ? 'bg-gray-900 text-white shadow-sm'
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <Icon className="w-4 h-4" />
                         <span>{tab.label}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-md ${
-                          isActive ? 'bg-white/20' : 'bg-slate-100'
+                          isActive ? 'bg-white/20' : 'bg-gray-100'
                         }`}>
                           {tab.count}
                         </span>
@@ -489,10 +489,10 @@ export default function Messages() {
                 {/* Conversations List */}
                 <div className="space-y-2">
                   {filteredSenders.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-                      <MessageSquare className="mx-auto h-10 w-10 text-slate-300" />
-                      <p className="mt-3 text-sm font-medium text-slate-900">No conversations</p>
-                      <p className="mt-1 text-xs text-slate-500">
+                    <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                      <MessageSquare className="mx-auto h-10 w-10 text-gray-300" />
+                      <p className="mt-3 text-sm font-medium text-gray-900">No conversations</p>
+                      <p className="mt-1 text-xs text-gray-500">
                         {filter === 'unread' ? 'All caught up! No unread messages.' :
                          filter === 'vendor_to_admin' ? 'No messages from vendors.' :
                          filter === 'tourist_to_admin' ? 'No messages from tourists.' :
@@ -512,8 +512,8 @@ export default function Messages() {
                         }}
                         className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-sm ${
                           sender.unreadCount > 0 
-                            ? 'border-slate-300 shadow-sm' 
-                            : 'border-slate-200 hover:bg-slate-50/50'
+                            ? 'border-gray-300 shadow-sm' 
+                            : 'border-gray-200 hover:bg-gray-50/50'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -532,7 +532,7 @@ export default function Messages() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 min-w-0">
                                 <p className={`text-sm truncate ${
-                                  sender.unreadCount > 0 ? 'font-semibold text-slate-900' : 'font-medium text-slate-900'
+                                  sender.unreadCount > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'
                                 }`}>
                                   {sender.senderName}
                                 </p>
@@ -550,18 +550,18 @@ export default function Messages() {
                                     {sender.unreadCount}
                                   </span>
                                 )}
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-gray-400">
                                   {formatMessageTime(sender.lastMessageTime)}
                                 </span>
                               </div>
                             </div>
                             <div className={`flex items-center gap-1 mt-0.5 ${
-                              sender.unreadCount > 0 ? 'text-slate-700' : 'text-slate-500'
+                              sender.unreadCount > 0 ? 'text-gray-700' : 'text-gray-500'
                             }`}>
                               {/* Show tick if admin sent the latest message */}
                               {(sender.latestMessage.sender_role === 'admin' || sender.latestMessage.sender_id === profile?.id) && (
                                 <span className={`flex-shrink-0 ${
-                                  sender.latestMessage.status === 'read' ? 'text-blue-500' : 'text-slate-400'
+                                  sender.latestMessage.status === 'read' ? 'text-blue-500' : 'text-gray-400'
                                 }`}>
                                   {sender.latestMessage.status === 'unread' ? (
                                     <Check className="w-3.5 h-3.5" />
@@ -574,11 +574,11 @@ export default function Messages() {
                                 {sender.latestMessage.message}
                               </p>
                             </div>
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs text-gray-400 mt-1">
                               {sender.totalMessages} message{sender.totalMessages !== 1 ? 's' : ''}
                             </p>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                          <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                         </div>
                       </div>
                     ))
@@ -588,21 +588,21 @@ export default function Messages() {
 
               {/* Monitor Vendor Chats */}
               <div className="space-y-4">
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-slate-900">Monitor Vendor Chats</h2>
-                    <span className="text-xs text-slate-500">{vendors.length}</span>
+                    <h2 className="text-sm font-semibold text-gray-900">Monitor Vendor Chats</h2>
+                    <span className="text-xs text-gray-500">{vendors.length}</span>
                   </div>
 
                   {/* Search */}
                   <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Search vendors..."
                       value={vendorSearch}
                       onChange={(e) => setVendorSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900/20"
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/20"
                     />
                   </div>
 
@@ -619,25 +619,25 @@ export default function Messages() {
 
                       return filteredVendors.length === 0 ? (
                         <div className="py-8 text-center">
-                          <Store className="mx-auto h-8 w-8 text-slate-300" />
-                          <p className="mt-2 text-xs text-slate-500">No vendors found</p>
+                          <Store className="mx-auto h-8 w-8 text-gray-300" />
+                          <p className="mt-2 text-xs text-gray-500">No vendors found</p>
                         </div>
                       ) : (
                         paginatedVendors.map((vendor) => (
                           <div
                             key={vendor.id}
                             onClick={() => navigate(`/admin/vendor-messages?vendor=${btoa(vendor.user_id)}`)}
-                            className="p-3 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-all"
+                            className="p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-all"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                                 {vendor.business_name?.[0]?.toUpperCase() || 'V'}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-slate-900 truncate">
+                                <p className="text-sm font-medium text-gray-900 truncate">
                                   {vendor.business_name}
                                 </p>
-                                <p className="text-xs text-slate-500 truncate">
+                                <p className="text-xs text-gray-500 truncate">
                                   {vendor.business_email || 'No email'}
                                 </p>
                               </div>
@@ -662,7 +662,7 @@ export default function Messages() {
                     if (filteredVendors.length <= VENDORS_PER_PAGE) return null
 
                     return (
-                      <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
                         <span>
                           {Math.min((currentVendorPage - 1) * VENDORS_PER_PAGE + 1, filteredVendors.length)}-{Math.min(currentVendorPage * VENDORS_PER_PAGE, filteredVendors.length)} of {filteredVendors.length}
                         </span>
@@ -670,7 +670,7 @@ export default function Messages() {
                           <button
                             onClick={() => setCurrentVendorPage(prev => Math.max(1, prev - 1))}
                             disabled={currentVendorPage === 1}
-                            className="p-1 rounded hover:bg-slate-100 disabled:opacity-50"
+                            className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </button>
@@ -678,7 +678,7 @@ export default function Messages() {
                           <button
                             onClick={() => setCurrentVendorPage(prev => Math.min(totalPages, prev + 1))}
                             disabled={currentVendorPage === totalPages}
-                            className="p-1 rounded hover:bg-slate-100 disabled:opacity-50"
+                            className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
                           >
                             <ChevronRight className="w-4 h-4" />
                           </button>

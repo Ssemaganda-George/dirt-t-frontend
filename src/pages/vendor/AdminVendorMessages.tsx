@@ -195,9 +195,9 @@ export default function AdminVendorMessages() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-7 w-36 bg-slate-200 rounded-lg" />
+          <div className="h-7 w-36 bg-gray-200 rounded-lg" />
           <div className="flex gap-2">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-28 bg-slate-200 rounded-md" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-8 w-28 bg-gray-200 rounded-md" />)}
           </div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
@@ -427,7 +427,7 @@ export default function AdminVendorMessages() {
                       onClick={() => setSelectedConversation(convo.id)}
                       className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-sm ${
                         convo.unreadCount > 0 
-                          ? 'border-slate-300 shadow-sm' 
+                          ? 'border-gray-300 shadow-sm' 
                           : 'border-gray-200 hover:bg-gray-50/50'
                       }`}
                     >

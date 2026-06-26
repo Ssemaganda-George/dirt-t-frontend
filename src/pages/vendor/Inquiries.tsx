@@ -100,9 +100,9 @@ export default function VendorInquiries() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-7 w-48 bg-slate-200 rounded-lg" />
+          <div className="h-7 w-48 bg-gray-200 rounded-lg" />
           <div className="flex gap-2">
-            {[...Array(5)].map((_, i) => <div key={i} className="h-8 w-20 bg-slate-200 rounded-md" />)}
+            {[...Array(5)].map((_, i) => <div key={i} className="h-8 w-20 bg-gray-200 rounded-md" />)}
           </div>
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => (

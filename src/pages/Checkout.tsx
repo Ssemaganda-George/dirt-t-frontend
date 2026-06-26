@@ -358,7 +358,7 @@ export default function CheckoutPage() {
 
         <div className="fixed md:sticky bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex flex-col gap-2">
           <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2 max-w-6xl mx-auto w-full">
-            <span><span className="font-medium text-gray-600">Secure checkout via MarzPay.</span> Free cancellation up to 24 hours before your event.</span>
+            <span><span className="font-medium text-gray-600">Secure checkout via MarzPay.</span> Pending bookings can be cancelled from your account dashboard.</span>
           </div>
           {displayError && (
             <div className="max-w-6xl mx-auto w-full rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{displayError}</div>

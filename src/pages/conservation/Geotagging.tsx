@@ -467,7 +467,7 @@ const GeotaggingPage = () => {
                           e.stopPropagation();
                           focusTree(tree);
                         }}
-                        className="block w-full text-left text-sm font-semibold text-slate-900 hover:underline"
+                        className="block w-full text-left text-sm font-semibold text-gray-900 hover:underline"
                       >
                         {tree.species || 'Tree'}
                       </button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { formatDate, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, User, Store, RefreshCw, Ban, Trash2, AlertCircle, UserCog } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
@@ -486,7 +486,7 @@ export default function Businesses() {
             {tierName} (Manual)
           </span>
           {user.vendor.manual_tier_expires_at && (
-            <span className="text-xs text-slate-500 mt-1">
+            <span className="text-xs text-gray-500 mt-1">
               Expires: {formatDate(user.vendor.manual_tier_expires_at)}
             </span>
           )}
@@ -498,10 +498,10 @@ export default function Businesses() {
       const tierName = user.vendor.current_tier?.name || 'Unknown'
       return (
         <div className="flex flex-col">
-          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700">
             {tierName} (Auto)
           </span>
-          <span className="text-xs text-slate-500 mt-1">Manual tier expired</span>
+          <span className="text-xs text-gray-500 mt-1">Manual tier expired</span>
         </div>
       )
     }
@@ -719,15 +719,15 @@ export default function Businesses() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Businesses</h1>
-            <p className="mt-1 text-base text-slate-600 font-medium">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Businesses</h1>
+            <p className="mt-1 text-base text-gray-600 font-medium">
               Manage businesses from the database – review profiles, verify vendors, and track registrations
             </p>
           </div>
           <button
             onClick={fetchUsers}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-base font-semibold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-base font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             <RefreshCw className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -743,13 +743,13 @@ export default function Businesses() {
           placeholder="Search businesses by name, email, or business name..."
           className="mb-4"
         />
-        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg border border-slate-200 mb-2">
+        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-lg border border-gray-200 mb-2">
           <button
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
               filter === 'all'
                 ? 'bg-blue-700 text-white shadow'
-                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
             }`}
           >
             All Businesses ({users.length})
@@ -798,8 +798,8 @@ export default function Businesses() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white shadow rounded-2xl border border-slate-100 overflow-hidden">
-        <ul className="divide-y divide-slate-100">
+      <div className="bg-white shadow rounded-2xl border border-gray-100 overflow-hidden">
+        <ul className="divide-y divide-gray-100">
           {filteredUsers.map((user) => (
             <li key={user.profile.id} className={`group transition-all duration-150 ${user.profile.status === 'pending' ? 'bg-yellow-100 border border-yellow-200' : ''} hover:bg-blue-50/30`}> 
               <div className="px-4 py-5 sm:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -815,14 +815,14 @@ export default function Businesses() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-base font-semibold text-slate-900 truncate max-w-[180px]">{user.profile.full_name || 'Unnamed User'}</span>
+                      <span className="text-base font-semibold text-gray-900 truncate max-w-[180px]">{user.profile.full_name || 'Unnamed User'}</span>
                       {user.vendor && (
-                        <span className="text-sm text-slate-500 truncate max-w-[140px]">{user.vendor.business_name}</span>
+                        <span className="text-sm text-gray-500 truncate max-w-[140px]">{user.vendor.business_name}</span>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                      <span className="text-sm text-slate-500 truncate max-w-[180px]">{user.profile.email}</span>
-                      <span className="text-xs text-slate-400">{formatDate(user.profile.created_at)}</span>
+                      <span className="text-sm text-gray-500 truncate max-w-[180px]">{user.profile.email}</span>
+                      <span className="text-xs text-gray-400">{formatDate(user.profile.created_at)}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       {user.profile.role === 'vendor' && (
@@ -836,7 +836,7 @@ export default function Businesses() {
                                   ? 'bg-red-700 text-white border-red-900'
                                   : user.profile.status === 'suspended'
                                   ? 'bg-orange-700 text-white border-orange-900'
-                                  : 'bg-slate-400 text-white border-slate-600'
+                                  : 'bg-gray-400 text-white border-gray-600'
                               }`}>
                                 {user.profile.status === 'pending' ? '⏳ Pending approval' : (user.profile.status || 'Unknown').charAt(0).toUpperCase() + (user.profile.status || 'Unknown').slice(1)}
                               </span>
@@ -854,7 +854,7 @@ export default function Businesses() {
                         </span>
                       )}
                       {user.vendor && (
-                        <div className="w-full basis-full mt-1 text-xs text-slate-600">
+                        <div className="w-full basis-full mt-1 text-xs text-gray-600">
                           {getCurrentTierDisplay(user)}
                         </div>
                       )}
@@ -977,9 +977,9 @@ export default function Businesses() {
 
       {filteredUsers.length === 0 && (
         <div className="text-center py-12">
-          <User className="mx-auto h-12 w-12 text-slate-400" />
-          <h3 className="mt-2 text-sm font-medium text-slate-900">No businesses found</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <User className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No businesses found</h3>
+          <p className="mt-1 text-sm text-gray-500">
             {filter === 'all' ? 'No businesses have registered yet.' : `No businesses match the "${filter}" filter.`}
           </p>
         </div>
@@ -990,10 +990,10 @@ export default function Businesses() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
           <div className="mt-3">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-900">Business Details</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Business Details</h3>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -1002,8 +1002,8 @@ export default function Businesses() {
             <div className="space-y-6">
               {/* Profile Information */}
               <div>
-                <h4 className="font-medium text-slate-900 mb-3">Profile Information</h4>
-                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                <h4 className="font-medium text-gray-900 mb-3">Profile Information</h4>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <p><span className="font-medium">Name:</span> {selectedUser.profile.full_name || 'Not provided'}</p>
                   <p><span className="font-medium">Email:</span> {selectedUser.profile.email}</p>
                   <p><span className="font-medium">Phone:</span> {selectedUser.profile.phone || 'Not provided'}</p>
@@ -1033,8 +1033,8 @@ export default function Businesses() {
               {/* Business Details */}
               {selectedUser.vendor && (
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-3">Business Details</h4>
-                  <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                  <h4 className="font-medium text-gray-900 mb-3">Business Details</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <p><span className="font-medium">Business name:</span> {selectedUser.vendor.business_name || 'Not provided'}</p>
                     <p><span className="font-medium">Business type:</span> {selectedUser.vendor.business_type || 'Not provided'}</p>
                     <p><span className="font-medium">City:</span> {selectedUser.vendor.business_city || 'Not provided'}</p>
@@ -1056,7 +1056,7 @@ export default function Businesses() {
 
               {/* Actions */}
               <div className="pt-4 border-t">
-                <h4 className="font-medium text-slate-900 mb-3">Actions</h4>
+                <h4 className="font-medium text-gray-900 mb-3">Actions</h4>
                 <div className="space-y-3">
                   {/* Pending Vendor Actions */}
                   {selectedUser.profile.status === 'pending' && selectedUser.profile.role === 'vendor' && (
@@ -1124,42 +1124,42 @@ export default function Businesses() {
     <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-md md:w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-900">Confirm Suspension</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Confirm Suspension</h3>
                 <button
                   onClick={() => setShowSuspendModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center">
                     <Ban className="h-5 w-5 text-red-600 mr-2" />
-                    <span className="text-slate-900 font-medium">Suspension Warning</span>
+                    <span className="text-gray-900 font-medium">Suspension Warning</span>
                   </div>
-                  <p className="text-slate-700 text-sm mt-1">
+                  <p className="text-gray-700 text-sm mt-1">
                     You are about to suspend <strong>{suspendTarget.name}</strong>.
                     {suspendTarget.type === 'vendor' ? ' This vendor will not be able to access their account or services.' : ' This user will not be able to access their account.'}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Suspension Period
                   </label>
                   <select
                     value={suspendPeriod}
                     onChange={(e) => setSuspendPeriod(e.target.value as typeof suspendPeriod)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="1day">1 Day</option>
                     <option value="1week">1 Week</option>
                     <option value="1month">1 Month</option>
                     <option value="permanent">Permanent</option>
                   </select>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     {suspendPeriod === 'permanent' ? 'Account will remain suspended until manually unsuspended by an admin.' : `Account will be automatically unsuspended after the selected period.`}
                   </p>
                 </div>
@@ -1167,7 +1167,7 @@ export default function Businesses() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     onClick={() => setShowSuspendModal(false)}
-                    className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     Cancel
                   </button>
@@ -1191,7 +1191,7 @@ export default function Businesses() {
     <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-md md:w-96 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-sm font-semibold text-gray-900">
                   {confirmAction.type === 'approve' ?
                     (users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ?
                       (confirmAction.target.type === 'vendor' ? 'Confirm Reapproval' : 'Confirm Reactivation') :
@@ -1202,14 +1202,14 @@ export default function Businesses() {
                 </h3>
                 <button
                   onClick={() => setShowConfirmModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center">
                     {confirmAction.type === 'approve' ? (
                       <Check className="h-5 w-5 text-green-600 mr-2" />
@@ -1218,7 +1218,7 @@ export default function Businesses() {
                     ) : (
                       <Trash2 className="h-5 w-5 text-red-600 mr-2" />
                     )}
-                    <span className="text-slate-900 font-medium">
+                    <span className="text-gray-900 font-medium">
                       {confirmAction.type === 'approve' ?
                         (users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ?
                           (confirmAction.target.type === 'vendor' ? 'Reapproval Confirmation' : 'Reactivation Confirmation') :
@@ -1228,7 +1228,7 @@ export default function Businesses() {
                        'Deletion Confirmation'}
                     </span>
                   </div>
-                  <p className="text-slate-700 text-sm mt-1">
+                  <p className="text-gray-700 text-sm mt-1">
                     {confirmAction.type === 'approve' ?
                       (confirmAction.target.type === 'vendor' ?
                         `Are you sure you want to ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'reapprove' : 'approve'} ${confirmAction.target.name}? ${users.find(u => u.profile.id === confirmAction.target.id)?.profile.status === 'suspended' ? 'This will restore their vendor privileges.' : 'This will grant them full vendor privileges.'}` :
@@ -1244,7 +1244,7 @@ export default function Businesses() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     onClick={() => setShowConfirmModal(false)}
-                    className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                   >
                     Cancel
                   </button>
@@ -1289,10 +1289,10 @@ export default function Businesses() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Assign Tier to {tierVendor.vendor?.business_name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Assign Tier to {tierVendor.vendor?.business_name}</h3>
                 <button
                   onClick={() => setShowTierModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -1300,22 +1300,22 @@ export default function Businesses() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Current Tier
                   </label>
-                  <div className="p-3 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-gray-50 rounded-lg">
                     {getCurrentTierDisplay(tierVendor)}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assign New Tier
                   </label>
                   <select
                     value={tierForm.tierId}
                     onChange={(e) => setTierForm(prev => ({ ...prev, tierId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
                     <option value="">Select a tier...</option>
@@ -1328,29 +1328,29 @@ export default function Businesses() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Expiration Date (Optional)
                   </label>
                   <input
                     type="datetime-local"
                     value={tierForm.expiresAt}
                     onChange={(e) => setTierForm(prev => ({ ...prev, expiresAt: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     min={new Date().toISOString().slice(0, 16)}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Leave empty for permanent assignment
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Reason for Assignment
                   </label>
                   <textarea
                     value={tierForm.reason}
                     onChange={(e) => setTierForm(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}
                     placeholder="Explain why this tier is being assigned..."
                     required
@@ -1368,7 +1368,7 @@ export default function Businesses() {
                 </button>
                 <button
                   onClick={() => setShowTierModal(false)}
-                  className="bg-slate-600 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                 >
                   Cancel
                 </button>

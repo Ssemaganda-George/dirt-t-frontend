@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+﻿import { format } from 'date-fns';
 import { useState, useEffect, useRef } from 'react';
 import * as QRCode from 'qrcode'
 import { useBookings } from '../../hooks/hook';
@@ -35,14 +35,14 @@ function BookingActionsMenu({ booking, view, onStatusChange, onPaymentChange, on
     <div className="relative" ref={ref}>
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-        className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors"
+        className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 transition-colors"
         aria-label="Actions"
       >
         <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-30 py-1.5">
-          <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase border-b border-slate-100">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-30 py-1.5">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-100">
             Booking Status
           </div>
           <select
@@ -55,7 +55,7 @@ function BookingActionsMenu({ booking, view, onStatusChange, onPaymentChange, on
             <option value="cancelled">Cancelled</option>
             <option value="completed">Completed</option>
           </select>
-          <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase border-t border-slate-100 mt-1">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase border-t border-gray-100 mt-1">
             Payment Status
           </div>
           <select
@@ -67,7 +67,7 @@ function BookingActionsMenu({ booking, view, onStatusChange, onPaymentChange, on
             <option value="paid">Paid</option>
             <option value="refunded">Refunded</option>
           </select>
-          <div className="border-t border-slate-100 mt-1 pt-1">
+          <div className="border-t border-gray-100 mt-1 pt-1">
             {view === 'active' && (
               <>
                 <button
@@ -486,8 +486,8 @@ export function Bookings() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Booking Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Monitor and manage all platform bookings</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Booking Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Monitor and manage all platform bookings</p>
         </div>
         <div className="flex items-center text-sm text-emerald-600">
           <div className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></div>
@@ -504,11 +504,11 @@ export function Bookings() {
 
       {/* Category cards - click to filter bookings for services in that category */}
       <div className="pt-2">
-        <h2 className="text-sm font-semibold text-slate-700 mb-2">Filter by Category</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">Filter by Category</h2>
         <div className="flex space-x-3 overflow-x-auto pb-2">
           <button
             onClick={() => handleSelectCategoryCard('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition ${selectedCategory === 'all' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+            className={`flex-shrink-0 px-4 py-2 rounded-lg border text-sm font-medium transition ${selectedCategory === 'all' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             All categories
           </button>
@@ -516,7 +516,7 @@ export function Bookings() {
             <button
               key={c.id}
               onClick={() => handleSelectCategoryCard(c.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg border text-left transition ${selectedCategory === c.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg border text-left transition ${selectedCategory === c.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               <div className="text-sm font-medium truncate" style={{maxWidth: 220}}>{displayCategoryName(c)}</div>
             </button>
@@ -527,11 +527,11 @@ export function Bookings() {
       {/* Filters: Vendor & Category */}
       <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Filter by Vendor</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Filter by Vendor</label>
           <select
             value={selectedVendor}
             onChange={async (e) => setSelectedVendor(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All vendors</option>
             {vendors.map(v => (
@@ -541,11 +541,11 @@ export function Bookings() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">Filter by Category</label>
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Filter by Category</label>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All categories</option>
             {categories.map(c => (
@@ -637,7 +637,7 @@ export function Bookings() {
               setSelectedCategory('all')
               setFilteredBookings(null)
             }}
-            className="ml-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+            className="ml-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
           >
             Clear
           </button>
@@ -675,76 +675,76 @@ export function Bookings() {
           onClick={() => handleStatusCardClick('all')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'all' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-blue-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Total Bookings</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.total}</p>
-          <p className="text-xs text-slate-400 mt-1">All time</p>
+          <p className="text-xs font-medium text-gray-500">Total Bookings</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.total}</p>
+          <p className="text-xs text-gray-400 mt-1">All time</p>
         </div>
         <div 
           onClick={() => handleStatusCardClick('pending')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'pending' ? 'border-amber-500 ring-2 ring-amber-100' : 'border-amber-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Pending</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.pending}</p>
-          <p className="text-xs text-slate-400 mt-1">Awaiting</p>
+          <p className="text-xs font-medium text-gray-500">Pending</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pending}</p>
+          <p className="text-xs text-gray-400 mt-1">Awaiting</p>
         </div>
         <div 
           onClick={() => handleStatusCardClick('confirmed')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'confirmed' ? 'border-blue-500 ring-2 ring-blue-100' : 'border-blue-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Confirmed</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.confirmed}</p>
-          <p className="text-xs text-slate-400 mt-1">Active</p>
+          <p className="text-xs font-medium text-gray-500">Confirmed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.confirmed}</p>
+          <p className="text-xs text-gray-400 mt-1">Active</p>
         </div>
         <div 
           onClick={() => handleStatusCardClick('completed')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'completed' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-emerald-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Completed</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.completed}</p>
-          <p className="text-xs text-slate-400 mt-1">Done</p>
+          <p className="text-xs font-medium text-gray-500">Completed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completed}</p>
+          <p className="text-xs text-gray-400 mt-1">Done</p>
         </div>
         <div 
           onClick={() => handleStatusCardClick('cancelled')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'cancelled' ? 'border-red-500 ring-2 ring-red-100' : 'border-red-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Cancelled</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.cancelled}</p>
-          <p className="text-xs text-slate-400 mt-1">Dropped</p>
+          <p className="text-xs font-medium text-gray-500">Cancelled</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.cancelled}</p>
+          <p className="text-xs text-gray-400 mt-1">Dropped</p>
         </div>
         <div 
           onClick={() => handleStatusCardClick('rejected')}
           className={`bg-white rounded-xl border p-4 hover:shadow-sm transition-all cursor-pointer ${selectedStatusFilter === 'rejected' ? 'border-red-500 ring-2 ring-red-100' : 'border-red-200'}`}
         >
-          <p className="text-xs font-medium text-slate-500">Rejected</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.rejected}</p>
-          <p className="text-xs text-slate-400 mt-1">Rejected</p>
+          <p className="text-xs font-medium text-gray-500">Rejected</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.rejected}</p>
+          <p className="text-xs text-gray-400 mt-1">Rejected</p>
         </div>
         <div 
           onClick={() => setView('archived')}
           className="bg-white rounded-xl border border-purple-200 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
-          <p className="text-xs font-medium text-slate-500">Archived</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.archived}</p>
-          <p className="text-xs text-slate-400 mt-1">Stored</p>
+          <p className="text-xs font-medium text-gray-500">Archived</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.archived}</p>
+          <p className="text-xs text-gray-400 mt-1">Stored</p>
         </div>
         <div 
           onClick={() => setView('deleted')}
-          className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-sm transition-all cursor-pointer"
+          className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-all cursor-pointer"
         >
-          <p className="text-xs font-medium text-slate-500">Deleted</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.deleted}</p>
-          <p className="text-xs text-slate-400 mt-1">30-day retention</p>
+          <p className="text-xs font-medium text-gray-500">Deleted</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.deleted}</p>
+          <p className="text-xs text-gray-400 mt-1">30-day retention</p>
         </div>
       </div>
 
       {/* View Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex items-center gap-2 border-b border-gray-200">
         <button
           onClick={() => setView('active')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             view === 'active'
               ? 'border-blue-600 text-blue-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Active
@@ -754,7 +754,7 @@ export function Bookings() {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             view === 'archived'
               ? 'border-amber-600 text-amber-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Archived
@@ -764,7 +764,7 @@ export function Bookings() {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             view === 'deleted'
               ? 'border-red-600 text-red-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           Deleted
@@ -772,31 +772,31 @@ export function Bookings() {
       </div>
 
       {/* Bookings Table */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
-        <div className="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Recent Bookings</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Latest booking activity across all vendors</p>
+            <h3 className="text-sm font-semibold text-gray-900">Recent Bookings</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Latest booking activity across all vendors</p>
           </div>
           
           {/* Mobile Card View */}
           <div className="block md:hidden space-y-4">
                 {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings.filter(b => !b.archived_at && !b.deleted_at))).map((booking) => (
-              <div key={booking.id} className="border border-slate-200 rounded-lg p-4">
+              <div key={booking.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-slate-900">
+                    <h4 className="text-sm font-medium text-gray-900">
                       #{booking.id.slice(0, 8)}
                     </h4>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       {booking.service?.title || 'Unknown Service'}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-gray-500">
                       {booking.tourist_profile?.full_name || booking.guest_name || 'Unknown Tourist'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="text-sm font-medium text-gray-900">
                       {formatCurrencyWithConversion(booking.total_amount, booking.currency, selectedCurrency, selectedLanguage)}
                     </div>
                     <div className="flex gap-1 mt-1">
@@ -808,7 +808,7 @@ export function Bookings() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Booking Status</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Booking Status</label>
                     <select
                       value={booking.status}
                       onChange={(e) => updateBookingStatus(booking.id, e.target.value as Booking['status'])}
@@ -821,7 +821,7 @@ export function Bookings() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Status</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Status</label>
                     <select
                       value={booking.payment_status}
                       onChange={async (e) => {
@@ -898,83 +898,83 @@ export function Bookings() {
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Booking ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Service
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tourist
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Payment
                   </th>
                   
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="bg-white divide-y divide-gray-200">
             {(filteredBookings ?? (view === 'archived' ? archivedBookings : view === 'deleted' ? deletedBookings : bookings.filter(b => !b.archived_at && !b.deleted_at))).map((booking) => (
                   <tr 
                     key={booking.id} 
-                    className="hover:bg-slate-50 cursor-pointer"
+                    className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => {
                       setSelectedBooking(booking);
                       setShowBookingDetails(true);
                     }}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       #{booking.id.slice(0, 8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {booking.service?.title || 'Unknown Service'}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-gray-500">
                           {booking.service?.vendors?.business_name}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {booking.tourist_profile?.full_name || booking.guest_name || 'Unknown'}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-gray-500">
                           {booking.tourist_profile?.phone || booking.guest_email || booking.guest_phone}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-900">
+                      <div className="text-sm text-gray-900">
                         {booking.service_date 
                           ? format(new Date(booking.service_date), 'MMM dd, yyyy')
                           : 'Not specified'
                         }
                       </div>
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-gray-500">
                         Booked: {format(new Date(booking.created_at), 'MMM dd, yyyy')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrencyWithConversion(booking.total_amount, booking.currency, selectedCurrency, selectedLanguage)}
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-gray-500">
                         {booking.guests} guest{booking.guests !== 1 ? 's' : ''}
                       </div>
                     </td>
@@ -1003,33 +1003,33 @@ export function Bookings() {
           
           {bookings.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-slate-500">No bookings found</p>
+              <p className="text-gray-500">No bookings found</p>
             </div>
           )}
 
           {/* Tickets for selected category - only show for Events (cat_activities) */}
           {selectedCategory === 'cat_activities' && (
-            <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm">
-              <div className="border-b border-slate-100 px-5 py-3">
-                <h3 className="text-sm font-semibold text-slate-900">Tickets for selected category</h3>
+            <div className="mt-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+              <div className="border-b border-gray-100 px-5 py-3">
+                <h3 className="text-sm font-semibold text-gray-900">Tickets for selected category</h3>
               </div>
               <div className="p-5">
                 {categoryTicketsLoading ? (
                   <div className="py-6"><LoadingSpinner size="md" /></div>
                 ) : categoryTickets.length === 0 ? (
-                  <p className="text-sm text-slate-500">No tickets found for this category.</p>
+                  <p className="text-sm text-gray-500">No tickets found for this category.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Booking ID</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ticket Code</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             <select
                               value={selectedEventFilter}
                               onChange={(e) => setSelectedEventFilter(e.target.value)}
-                              className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="all">All Events</option>
                               {Array.from(new Set(categoryTickets.map(t => t.services?.title || 'Event').filter(title => title !== 'Event'))).sort().map(eventName => (
@@ -1037,11 +1037,11 @@ export function Bookings() {
                               ))}
                             </select>
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             <select
                               value={selectedTypeFilter}
                               onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                              className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="all">All Types</option>
                               {Array.from(new Set(categoryTickets.map(t => t.ticket_types?.title || 'Ticket').filter(title => title !== 'Ticket'))).sort().map(typeName => (
@@ -1049,11 +1049,11 @@ export function Bookings() {
                               ))}
                             </select>
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             <select
                               value={selectedVendorFilter}
                               onChange={(e) => setSelectedVendorFilter(e.target.value)}
-                              className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="all">All Vendors</option>
                               {Array.from(new Set(categoryTickets.map(t => t.services?.vendors?.business_name || 'Unknown').filter(name => name !== 'Unknown'))).sort().map(vendorName => (
@@ -1061,25 +1061,25 @@ export function Bookings() {
                               ))}
                             </select>
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Issued</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Amount</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Booking Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                             <select
                               value={selectedAttendanceFilter}
                               onChange={(e) => setSelectedAttendanceFilter(e.target.value)}
-                              className="text-xs font-medium text-slate-500 uppercase bg-white border border-slate-300 rounded px-2 py-1 cursor-pointer hover:border-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                              className="text-xs font-medium text-gray-500 uppercase bg-white border border-gray-300 rounded px-2 py-1 cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="all">All Attendance</option>
                               <option value="attended">Attended</option>
                               <option value="not-attended">Not Attended</option>
                             </select>
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-slate-200">
+                      <tbody className="bg-white divide-y divide-gray-200">
                         {categoryTickets
                           .filter(t => selectedEventFilter === 'all' || (t.services?.title || 'Event') === selectedEventFilter)
                           .filter(t => selectedTypeFilter === 'all' || (t.ticket_types?.title || 'Ticket') === selectedTypeFilter)
@@ -1091,8 +1091,8 @@ export function Bookings() {
                             return true;
                           })
                           .map(t => (
-                          <tr key={t.id} className="hover:bg-slate-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                          <tr key={t.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
                                 // Match tickets to bookings based on service and tourist
                                 let match = (filteredBookings || []).find((b: any) =>
@@ -1113,16 +1113,16 @@ export function Bookings() {
                                 return match ? `#${match.id.slice(0,8)}` : t.order_id ? `#${t.order_id.slice(0,8)}` : `#${t.id.slice(0,8)}`
                               })()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{t.code}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{t.services?.title || 'Event'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{t.ticket_types?.title || 'Ticket'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{t.services?.vendors?.business_name || 'Unknown'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{t.issued_at ? formatDateTime(t.issued_at) : '—'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.code}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.services?.title || 'Event'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{t.ticket_types?.title || 'Ticket'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{t.services?.vendors?.business_name || 'Unknown'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.issued_at ? formatDateTime(t.issued_at) : '—'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <StatusBadge status={t.status} variant="small" />
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{formatCurrencyWithConversion(t.ticket_types?.price || 0, t.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrencyWithConversion(t.ticket_types?.price || 0, t.orders?.currency || 'UGX', selectedCurrency, selectedLanguage)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {(() => {
                                 // Match tickets to bookings based on service and tourist
                                 let match = (filteredBookings || []).find((b: any) =>
@@ -1143,21 +1143,21 @@ export function Bookings() {
                                 // If ticket's order is paid, booking should be confirmed
                                 const bookingStatus = t.orders?.status === 'paid' ? 'confirmed' : (match?.status || null)
                                 
-                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-slate-500">—</span>
+                                return bookingStatus ? <StatusBadge status={bookingStatus} variant="small" /> : <span className="text-sm text-gray-500">—</span>
                               })()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               {t.status === 'used' ? (
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                   ✓ Attended
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                   Not Attended
                                 </span>
                               )}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                               <button
                                 onClick={async (e) => {
                                   e.stopPropagation();
@@ -1195,50 +1195,50 @@ export function Bookings() {
       </div>
 
       {/* Saved Cart Items */}
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200">
-        <div className="border-b border-slate-100 px-5 py-3">
-          <h3 className="text-sm font-semibold text-slate-900">Saved Cart Items ({cartState.items.length})</h3>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200">
+        <div className="border-b border-gray-100 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Service
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Saved Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {cartState.items.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50">
+                  <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {item.service.title}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-gray-500">
                           {item.service.vendors.business_name}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                       {item.category}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {format(new Date(item.savedAt), 'MMM dd, yyyy')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1254,7 +1254,7 @@ export function Bookings() {
           
           {cartState.items.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-slate-500">No saved cart items</p>
+              <p className="text-gray-500">No saved cart items</p>
             </div>
           )}
         </div>
@@ -1264,11 +1264,11 @@ export function Bookings() {
       {showBookingDetails && selectedBooking && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-slate-900">Booking Details</h3>
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-sm font-semibold text-gray-900">Booking Details</h3>
               <button 
                 onClick={() => setShowBookingDetails(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-gray-400 hover:text-gray-600"
               >
                 ✕
               </button>
@@ -1276,7 +1276,7 @@ export function Bookings() {
             <div className="px-6 py-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-slate-900">Booking Information</h4>
+                  <h4 className="font-medium text-gray-900">Booking Information</h4>
                   <div className="mt-2 space-y-2">
                     <p><span className="font-medium">Booking ID:</span> #{selectedBooking.id.slice(0, 8)}</p>
                     <p><span className="font-medium">Service:</span> {selectedBooking.service?.title || selectedBooking.service_id}</p>
@@ -1290,7 +1290,7 @@ export function Bookings() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-medium text-slate-900">Customer Information</h4>
+                  <h4 className="font-medium text-gray-900">Customer Information</h4>
                   <div className="mt-2 space-y-2">
                     {selectedBooking.is_guest_booking ? (
                       <>
@@ -1309,37 +1309,37 @@ export function Bookings() {
                   
                   {selectedBooking.special_requests && (
                     <div className="mt-4">
-                      <h4 className="font-medium text-slate-900">Special Requests</h4>
-                      <p className="mt-1 text-sm text-slate-600">{selectedBooking.special_requests}</p>
+                      <h4 className="font-medium text-gray-900">Special Requests</h4>
+                      <p className="mt-1 text-sm text-gray-600">{selectedBooking.special_requests}</p>
                     </div>
                   )}
               
                   {/* Tickets issued for this booking (if any) */}
                   <div className="border-t pt-4">
-                    <h4 className="font-medium text-slate-900">Tickets</h4>
+                    <h4 className="font-medium text-gray-900">Tickets</h4>
                     <div className="mt-2">
                       {ticketsLoading ? (
                         <div className="py-4"><LoadingSpinner size="md" /></div>
                       ) : (selectedBookingTickets.length === 0 ? (
-                        <p className="text-sm text-slate-500">No tickets found for this booking/customer.</p>
+                        <p className="text-sm text-gray-500">No tickets found for this booking/customer.</p>
                       ) : (
                         <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-slate-200">
-                            <thead className="bg-slate-50">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
                               <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Ticket Code</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Issued</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ticket Code</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Issued</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                               </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
+                            <tbody className="bg-white divide-y divide-gray-200">
                               {selectedBookingTickets.map(t => (
-                                <tr key={t.id} className="hover:bg-slate-50">
-                                  <td className="px-4 py-2 text-sm text-slate-900 font-mono">{t.code}</td>
-                                  <td className="px-4 py-2 text-sm text-slate-700">{t.ticket_types?.title || 'Ticket'}</td>
-                                  <td className="px-4 py-2 text-sm text-slate-700">{t.issued_at ? format(new Date(t.issued_at), 'MMM dd, yyyy') : '—'}</td>
+                                <tr key={t.id} className="hover:bg-gray-50">
+                                  <td className="px-4 py-2 text-sm text-gray-900 font-mono">{t.code}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-700">{t.ticket_types?.title || 'Ticket'}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-700">{t.issued_at ? format(new Date(t.issued_at), 'MMM dd, yyyy') : '—'}</td>
                                   <td className="px-4 py-2 text-sm">
                                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                       {t.status}
@@ -1383,7 +1383,7 @@ export function Bookings() {
               {/* Transport-specific details */}
               {(selectedBooking.pickup_location || selectedBooking.dropoff_location || selectedBooking.driver_option) && (
                 <div className="border-t pt-4">
-                  <h4 className="font-medium text-slate-900">Transport Details</h4>
+                  <h4 className="font-medium text-gray-900">Transport Details</h4>
                   <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedBooking.pickup_location && (
                       <p><span className="font-medium">Pickup Location:</span> {selectedBooking.pickup_location}</p>
@@ -1410,7 +1410,7 @@ export function Bookings() {
               <div className="border-t pt-4 flex justify-end space-x-2">
                 <button 
                   onClick={() => setShowBookingDetails(false)}
-                  className="px-4 py-2 bg-slate-600 text-white rounded hover:bg-slate-700"
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                 >
                   Close
                 </button>
@@ -1423,17 +1423,17 @@ export function Bookings() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-semibold text-slate-900">Ticket</h3>
-              <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="text-slate-400 hover:text-slate-600">✕</button>
+              <h3 className="text-sm font-semibold text-gray-900">Ticket</h3>
+              <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div className="flex flex-col items-center">
                 {ticketImageUrl ? (
                 <img loading="lazy" decoding="async" src={ticketImageUrl} alt="Ticket" className="max-w-full h-auto" />
               ) : (
-                <p className="text-sm text-slate-500">No image available</p>
+                <p className="text-sm text-gray-500">No image available</p>
               )}
               {selectedTicket && (
-                <div className="mt-3 text-sm text-slate-700 w-full">
+                <div className="mt-3 text-sm text-gray-700 w-full">
                   <p><span className="font-medium">Ticket Code:</span> {selectedTicket.code}</p>
                   <p><span className="font-medium">Event:</span> {selectedTicket.services?.title || selectedTicket.service_id}</p>
                   <p><span className="font-medium">Type:</span> {selectedTicket.ticket_types?.title || 'Ticket'}</p>
@@ -1441,7 +1441,7 @@ export function Bookings() {
                 </div>
               )}
               <div className="mt-4 flex justify-end w-full">
-                <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="px-3 py-2 bg-slate-600 text-white rounded">Close</button>
+                <button onClick={() => { setShowTicketImage(false); setTicketImageUrl(null); setSelectedTicket(null); }} className="px-3 py-2 bg-gray-600 text-white rounded">Close</button>
               </div>
             </div>
           </div>

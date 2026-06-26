@@ -816,7 +816,7 @@ export default function VendorServices() {
                     className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                       selectedCategory === 'all'
                         ? 'bg-emerald-700 text-white shadow-lg transform scale-[1.02]'
-                        : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                     }`}
                   >
                     All ({categoryCounts.all})
@@ -832,7 +832,7 @@ export default function VendorServices() {
                           className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                             selectedCategory === category.id
                               ? 'bg-emerald-700 text-white shadow-lg transform scale-[1.02]'
-                              : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                           }`}
                         >
                           {category.name} ({count})
@@ -890,7 +890,7 @@ export default function VendorServices() {
                         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 flex flex-col items-center justify-center gap-1">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-700 via-gray-600 to-gray-800 flex flex-col items-center justify-center gap-1">
                         <span className="text-4xl">{s.service_categories?.icon || '📦'}</span>
                       </div>
                     )}
@@ -968,7 +968,7 @@ export default function VendorServices() {
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => { handleOpenEdit(s) }}
-                        className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                       >
                         Edit
                       </button>
@@ -1009,7 +1009,7 @@ export default function VendorServices() {
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-gray-500">Loading services...</td></tr>
               ) : error ? (
@@ -1033,7 +1033,7 @@ export default function VendorServices() {
                             className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-100"
                           />
                         ) : (
-                          <div className="w-16 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xl border border-gray-100">
+                          <div className="w-16 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-xl border border-gray-100">
                             {s.service_categories?.icon || '📦'}
                           </div>
                         )}
@@ -1131,7 +1131,7 @@ export default function VendorServices() {
             <h2 className="text-base font-semibold text-gray-900">Pending Delete Requests</h2>
             <p className="text-sm text-gray-600 mt-1">These services are awaiting admin approval for deletion.</p>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-gray-100">
             {pendingDeleteRequests.map((request) => (
               <div key={request.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors duration-200">
                 <div className="min-w-0 flex-1">
@@ -2552,7 +2552,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     type="checkbox"
                     checked={(form as any).internal_ticketing || false}
                     onChange={(e) => update('internal_ticketing', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2"
                   />
                   <span className="text-sm font-medium text-gray-700">Enable internal ticketing</span>
                 </label>
@@ -2785,7 +2785,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.group_discounts || false}
                       onChange={(e) => update('group_discounts', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Group Discounts</span>
                   </label>
@@ -2794,7 +2794,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.photography_allowed || false}
                       onChange={(e) => update('photography_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Photography Allowed</span>
                   </label>
@@ -2803,7 +2803,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.recording_allowed || false}
                       onChange={(e) => update('recording_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Recording Allowed</span>
                   </label>
@@ -2812,7 +2812,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.transportation_included || false}
                       onChange={(e) => update('transportation_included', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Transportation Included</span>
                   </label>
@@ -2827,7 +2827,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           update('meals_included', []);
                         }
                       }}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Meals Included</span>
                   </label>
@@ -2836,7 +2836,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.certificates_provided || false}
                       onChange={(e) => update('certificates_provided', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Certificates Provided</span>
                   </label>
@@ -3989,7 +3989,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 type="checkbox"
                 checked={form.delivery_available || false}
                 onChange={(e) => update('delivery_available', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-gray-900"
+                className="h-4 w-4 rounded border-gray-300 text-gray-900"
               />
               <span className="text-sm text-gray-700">Delivery available</span>
             </label>
@@ -4173,7 +4173,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
             <div className="space-y-3">
-              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-slate-300 hover:bg-gray-50 transition-colors">
+              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
                 <div className="text-center">
                   <p className="text-sm text-gray-500">{uploadingImage ? 'Uploading...' : 'Click to upload an image'}</p>
                   <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP</p>
@@ -4209,7 +4209,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
+              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
             >
               Cancel
             </button>

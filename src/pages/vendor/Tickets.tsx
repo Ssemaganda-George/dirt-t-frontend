@@ -306,7 +306,7 @@ export default function VendorTickets() {
     return (
       <div className="max-w-6xl mx-auto">
         <div className="animate-pulse space-y-6">
-          <div className="h-7 bg-slate-200 rounded w-36"></div>
+          <div className="h-7 bg-gray-200 rounded w-36"></div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => <div key={i} className="bg-white rounded-xl border border-gray-200 h-20"></div>)}
           </div>
@@ -435,7 +435,7 @@ export default function VendorTickets() {
             </thead>
             <tbody>
               {tableFilteredTickets.map((ticket) => (
-                <tr key={ticket.id} className="group border-b border-slate-50 hover:bg-gray-50/50">
+                <tr key={ticket.id} className="group border-b border-gray-50 hover:bg-gray-50/50">
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{ticket.code}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-900">{ticket.services?.title || 'Event'}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500">{ticket.ticket_types?.title || 'Ticket'}</td>
@@ -486,7 +486,7 @@ export default function VendorTickets() {
         </div>
 
         {/* Mobile Card View */}
-        <div className="block md:hidden divide-y divide-slate-100">
+        <div className="block md:hidden divide-y divide-gray-100">
           {tableFilteredTickets.map((ticket) => (
             <div key={ticket.id} className="p-3.5">
               <div className="flex justify-between items-start gap-2 mb-1">

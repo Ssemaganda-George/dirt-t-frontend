@@ -254,7 +254,7 @@ useEffect(() => {
             className={`min-h-[48px] px-4 py-2.5 rounded-lg border text-sm font-medium transition-all hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
               activeTab === card.key
                 ? 'bg-emerald-700 text-white border-emerald-700'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-slate-300'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
             }`}
           >
             <span className="font-semibold">{card.label}</span>
@@ -296,7 +296,7 @@ useEffect(() => {
        {/* Bookings Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {/* Mobile Card View */}
-        <div className="block md:hidden divide-y divide-slate-100">
+        <div className="block md:hidden divide-y divide-gray-100">
           {displayBookingsFiltered.length === 0 ? (
             <div className="px-6 py-10 text-center">
               <p className="text-sm font-medium text-gray-900">No bookings in this category</p>
@@ -385,7 +385,7 @@ useEffect(() => {
               {displayBookingsFiltered.map(b => (
                 <tr
                   key={b.id}
-                  className="group border-b border-slate-50 hover:bg-gray-50/50 cursor-pointer"
+                  className="group border-b border-gray-50 hover:bg-gray-50/50 cursor-pointer"
                   onClick={() => { setSelectedBooking(b); setShowBookingDetails(true) }}
                 >
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</td>
@@ -471,7 +471,7 @@ useEffect(() => {
               </thead>
               <tbody>
                 {cartState.items.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-50 hover:bg-gray-50/50">
+                  <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                     <td className="px-4 py-2.5">
                       <p className="text-sm font-medium text-gray-900">{item.service.title}</p>
                       <p className="text-xs text-gray-500">{item.service.vendors.business_name}</p>
@@ -558,7 +558,7 @@ useEffect(() => {
                 <button
                   onClick={() => handleRejectBooking(bookingToReject.id, rejectionReason)}
                   disabled={!rejectionReason.trim()}
-                  className="flex-1 min-h-[40px] px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  className="flex-1 min-h-[40px] px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/20 disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >Reject</button>
               </div>
             </div>

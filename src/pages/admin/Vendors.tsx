@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { formatDate, getStatusColor, formatTierCommission } from '../../lib/utils'
 import { Check, X, Eye, Store, UserCog } from 'lucide-react'
@@ -24,7 +24,7 @@ function tierBadge(
           {tierName} (Manual)
         </span>
         {vendor.manual_tier_expires_at && (
-          <span className="text-xs text-slate-500 mt-1">
+          <span className="text-xs text-gray-500 mt-1">
             Expires: {formatDate(vendor.manual_tier_expires_at)}
           </span>
         )}
@@ -36,10 +36,10 @@ function tierBadge(
     const tierName = tierNameById[vendor.current_tier_id ?? ''] ?? 'Unknown'
     return (
       <div className="flex flex-col">
-        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-600">
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
           {tierName} (Auto)
         </span>
-        <span className="text-xs text-slate-500 mt-1">Manual tier expired</span>
+        <span className="text-xs text-gray-500 mt-1">Manual tier expired</span>
       </div>
     )
   }
@@ -238,8 +238,8 @@ export default function Vendors() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-slate-900">Vendors</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-gray-900">Vendors</h1>
+        <p className="mt-1 text-sm text-gray-600">
           Manage vendor registrations and approvals
         </p>
       </div>
@@ -254,7 +254,7 @@ export default function Vendors() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filter === status
                   ? 'bg-blue-50 text-blue-700'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -271,32 +271,32 @@ export default function Vendors() {
       {/* Vendors List */}
       <div className="card">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Business
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Owner
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Current Tier
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {filteredVendors.map((vendor) => (
-                <tr key={vendor.id} className="hover:bg-slate-50">
+                <tr key={vendor.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -305,18 +305,18 @@ export default function Vendors() {
                         </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {vendor.business_name}
                         </div>
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-gray-500">
                           {vendor.business_description?.substring(0, 50)}...
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900">{vendor.profiles?.full_name}</div>
-                    <div className="text-sm text-slate-500">{vendor.profiles?.email}</div>
+                    <div className="text-sm text-gray-900">{vendor.profiles?.full_name}</div>
+                    <div className="text-sm text-gray-500">{vendor.profiles?.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(vendor.status)}`}>
@@ -326,7 +326,7 @@ export default function Vendors() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {tierBadge(vendor, tierNameById)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(vendor.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -384,10 +384,10 @@ export default function Vendors() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-900">Vendor Details</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Vendor Details</h3>
                 <button
                   onClick={() => setSelectedVendor(null)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -395,7 +395,7 @@ export default function Vendors() {
               
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-slate-900">Business Information</h4>
+                  <h4 className="font-medium text-gray-900">Business Information</h4>
                   <div className="mt-2 space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedVendor.business_name}</p>
                     <p><span className="font-medium">Description:</span> {selectedVendor.business_description}</p>
@@ -406,7 +406,7 @@ export default function Vendors() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900">Owner Information</h4>
+                  <h4 className="font-medium text-gray-900">Owner Information</h4>
                   <div className="mt-2 space-y-2">
                     <p><span className="font-medium">Name:</span> {selectedVendor.profiles?.full_name}</p>
                     <p><span className="font-medium">Email:</span> {selectedVendor.profiles?.email}</p>
@@ -415,7 +415,7 @@ export default function Vendors() {
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-slate-900">Status</h4>
+                  <h4 className="font-medium text-gray-900">Status</h4>
                   <div className="mt-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedVendor.status)}`}>
                       {selectedVendor.status}
@@ -453,10 +453,10 @@ export default function Vendors() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-xl rounded-xl bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Assign Tier to {tierVendor.business_name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Assign Tier to {tierVendor.business_name}</h3>
                 <button
                   onClick={() => setShowTierModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -464,22 +464,22 @@ export default function Vendors() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Current Tier
                   </label>
-                  <div className="p-3 bg-slate-50 rounded-lg">
+                  <div className="p-3 bg-gray-50 rounded-lg">
                     {tierBadge(tierVendor, tierNameById)}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assign New Tier
                   </label>
                   <select
                     value={tierForm.tierId}
                     onChange={(e) => setTierForm(prev => ({ ...prev, tierId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
                     <option value="">Select a tier...</option>
@@ -492,29 +492,29 @@ export default function Vendors() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Expiration Date (Optional)
                   </label>
                   <input
                     type="datetime-local"
                     value={tierForm.expiresAt}
                     onChange={(e) => setTierForm(prev => ({ ...prev, expiresAt: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     min={new Date().toISOString().slice(0, 16)}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Leave empty for permanent assignment
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Reason for Assignment
                   </label>
                   <textarea
                     value={tierForm.reason}
                     onChange={(e) => setTierForm(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}
                     placeholder="Explain why this tier is being assigned..."
                     required
@@ -532,7 +532,7 @@ export default function Vendors() {
                 </button>
                 <button
                   onClick={() => setShowTierModal(false)}
-                  className="bg-slate-600 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                 >
                   Cancel
                 </button>
