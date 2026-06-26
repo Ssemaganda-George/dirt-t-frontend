@@ -3,6 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, MessageSquare, AlertCircle } from 'lucide-react'
 import { getServiceBySlug, createUnifiedInquiry } from '../lib/database'
 import { validateServiceInquiry, sanitizeString } from '../lib/validation'
+import { formatCurrencyWithConversion } from '../lib/utils'
+import {
+  defaultShopCheckoutListingType,
+  getShopUnitPrice,
+  isShopDualListing,
+  type ShopListingService,
+} from '../lib/shopListingMode'
 
 interface ServiceDetail {
   id: string
@@ -11,6 +18,10 @@ interface ServiceDetail {
   description: string
   price: number
   currency: string
+  buy_price?: number | string | null
+  rental_price_per_day?: number | string | null
+  listing_type?: string | null
+  type?: string | null
   images: string[]
   location: string
   duration_hours: number
@@ -43,6 +54,7 @@ export default function ServiceInquiry() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [shopListingType, setShopListingType] = useState<'buy' | 'hire'>('buy')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -77,6 +89,9 @@ export default function ServiceInquiry() {
       
       const serviceData = await getServiceBySlug(slug)
       setService(serviceData)
+      if (serviceData?.service_categories?.name?.toLowerCase() === 'shops') {
+        setShopListingType(defaultShopCheckoutListingType(serviceData as ShopListingService))
+      }
       setLoading(false)
     } catch (error) {
       console.error('Error fetching service:', error)
@@ -118,9 +133,13 @@ export default function ServiceInquiry() {
       // Prepare category-specific data
       const categorySpecificData: Record<string, any> = {}
       const categoryName = service?.service_categories.name.toLowerCase()
+      const isShop = categoryName === 'shops'
 
       // Add category-specific fields based on the service category
-      if (categoryName === 'hotels') {
+      if (isShop) {
+        categorySpecificData.listingType = shopListingType
+        categorySpecificData.quantity = formData.numberOfGuests
+      } else if (categoryName === 'hotels') {
         categorySpecificData.roomType = sanitizeString(formData.roomType)
         categorySpecificData.specialRequests = sanitizeString(formData.specialRequests)
       } else if (categoryName === 'tours') {
@@ -149,8 +168,8 @@ export default function ServiceInquiry() {
         phone: formData.phone ? sanitizeString(formData.phone) : undefined,
         message: sanitizeString(formData.message),
         service_id: service.id,
-        preferred_date: formData.preferredDate || undefined,
-        number_of_guests: formData.numberOfGuests,
+        preferred_date: !isShop || shopListingType === 'hire' ? formData.preferredDate || undefined : undefined,
+        number_of_guests: isShop ? undefined : formData.numberOfGuests,
         contact_method: formData.contactMethod as 'email' | 'phone' | 'whatsapp',
         service_specific_data: categorySpecificData,
         source: 'website'
@@ -400,6 +419,18 @@ export default function ServiceInquiry() {
     }
   }
 
+  const categoryName = service?.service_categories.name.toLowerCase() ?? ''
+  const isShop = categoryName === 'shops'
+  const shopUnitPrice = isShop && service ? getShopUnitPrice(service, shopListingType) : 0
+
+  const getInquiryUnitLabel = () => {
+    if (isShop) return shopListingType === 'hire' ? 'per day' : 'per item'
+    if (categoryName === 'transport') return 'per day'
+    if (['hotels', 'hotel', 'accommodation'].includes(categoryName)) return 'per night'
+    if (categoryName === 'restaurants') return 'per meal'
+    return 'per person'
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -488,9 +519,30 @@ export default function ServiceInquiry() {
               <p className="text-sm text-gray-500">{service.service_categories.name}</p>
               <div className="mt-4 pt-4 border-t">
                 <div className="text-lg font-bold text-gray-900">
-                  From ${service.price}
+                  {isShop && isShopDualListing(service) ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShopListingType('buy')}
+                          className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${shopListingType === 'buy' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200'}`}
+                        >
+                          Buy {formatCurrencyWithConversion(getShopUnitPrice(service, 'buy'), service.currency)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShopListingType('hire')}
+                          className={`flex-1 min-h-[36px] rounded-lg text-xs font-medium border transition-colors ${shopListingType === 'hire' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200'}`}
+                        >
+                          Hire {formatCurrencyWithConversion(getShopUnitPrice(service, 'hire'), service.currency)}/day
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>From {formatCurrencyWithConversion(isShop ? shopUnitPrice : service.price, service.currency)}</>
+                  )}
                 </div>
-                <div className="text-sm text-gray-500">per person</div>
+                <div className="text-sm text-gray-500">{getInquiryUnitLabel()}</div>
               </div>
             </div>
           </div>
@@ -504,7 +556,7 @@ export default function ServiceInquiry() {
               </div>
 
               <p className="text-gray-600 mb-6">
-                Have questions about this service? Send an inquiry and {service.vendors?.business_name || 'the provider'} will get back to you with more details.
+                Have questions about this {isShop ? 'product' : 'service'}? Send an inquiry and {service.vendors?.business_name || 'the provider'} will get back to you with more details.
               </p>
 
               {/* Validation Errors */}
@@ -575,34 +627,55 @@ export default function ServiceInquiry() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Preferred Date (Optional)
-                    </label>
-                    <input
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-                      value={formData.preferredDate}
-                      onChange={(e) => handleInputChange('preferredDate', e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                    />
+                {(isShop ? shopListingType === 'hire' : true) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {isShop ? 'Preferred hire start (Optional)' : 'Preferred Date (Optional)'}
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                        value={formData.preferredDate}
+                        onChange={(e) => handleInputChange('preferredDate', e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    {!isShop && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Number of Guests (Optional)
+                        </label>
+                        <select
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                          value={formData.numberOfGuests}
+                          onChange={(e) => handleInputChange('numberOfGuests', parseInt(e.target.value))}
+                        >
+                          {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
+                            <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {isShop && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Number of Guests (Optional)
+                      Quantity (Optional)
                     </label>
                     <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent md:max-w-xs"
                       value={formData.numberOfGuests}
                       onChange={(e) => handleInputChange('numberOfGuests', parseInt(e.target.value))}
                     >
-                      {Array.from({ length: service.max_capacity || 10 }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>{num} guest{num > 1 ? 's' : ''}</option>
+                      {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                        <option key={num} value={num}>{num} item{num > 1 ? 's' : ''}</option>
                       ))}
                     </select>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -612,7 +685,7 @@ export default function ServiceInquiry() {
                     required
                     rows={5}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
-                    placeholder="Tell us about your interests, questions, or special requirements..."
+                    placeholder={isShop ? 'Ask about availability, delivery, customization, or bulk orders…' : 'Tell us about your interests, questions, or special requirements...'}
                     value={formData.message}
                     onChange={(e) => handleInputChange('message', e.target.value)}
                   />
