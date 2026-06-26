@@ -8,7 +8,7 @@ import {
   isEmailConfirmed,
   signOut as authSignOut,
 } from '../services/AuthService'
-import { Eye, EyeOff, Store, User, Shield } from 'lucide-react'
+import { Eye, EyeOff, Store } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import { COUNTRIES } from '../lib/countries'
 
@@ -37,7 +37,6 @@ export default function VendorLogin() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [showStepValidationErrors, setShowStepValidationErrors] = useState(false)
-  const [showPostSignupBenefits, setShowPostSignupBenefits] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -420,6 +419,16 @@ export default function VendorLogin() {
                     ← Back
                   </button>
 
+                  {/* Approval gate disclosure */}
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 space-y-1">
+                    <p className="font-semibold">How it works</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-blue-700">
+                      <li>Verify your email (link sent on sign up)</li>
+                      <li>Admin reviews your application — typically 1–3 business days</li>
+                      <li>Once approved, you can create and publish listings</li>
+                    </ol>
+                  </div>
+
                   {/* Step progress indicator */}
                   <div className="flex items-center justify-between px-1">
                     {([
@@ -784,38 +793,6 @@ export default function VendorLogin() {
           </div>
         </div>
 
-        {/* Benefits Section - shown only after successful business account creation */}
-        {showPostSignupBenefits && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-8">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 sm:mb-8 tracking-tight antialiased">Why Join Our Business Network?</h2>
-
-            <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                  <User className="h-7 w-7 text-gray-700" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Easy Management</h3>
-                <p className="text-gray-600 leading-snug antialiased">Simple tools to manage your listings, bookings, and customer communications all in one place.</p>
-              </div>
-
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                  <Store className="h-7 w-7 text-gray-700" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Grow Your Business</h3>
-                <p className="text-gray-600 leading-snug antialiased">Access thousands of travelers seeking authentic Ugandan experiences and local services.</p>
-              </div>
-
-              <div className="text-center p-4 sm:p-6">
-                <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-                  <Shield className="h-7 w-7 text-gray-700" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 tracking-tight antialiased">Secure & Reliable</h3>
-                <p className="text-gray-600 leading-snug antialiased">Secure payment processing, verified customer reviews, and dedicated support for businesses.</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

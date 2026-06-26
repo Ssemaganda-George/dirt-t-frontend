@@ -826,19 +826,27 @@ export default function Businesses() {
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       {user.profile.role === 'vendor' && (
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${
-                              user.profile.status === 'pending'
-                                ? 'bg-yellow-500 text-white border-yellow-700 animate-pulse shadow'
-                                : user.profile.status === 'approved'
-                                ? 'bg-green-700 text-white border-green-900'
-                                : user.profile.status === 'rejected'
-                                ? 'bg-red-700 text-white border-red-900'
-                                : user.profile.status === 'suspended'
-                                ? 'bg-orange-700 text-white border-orange-900'
-                                : 'bg-slate-400 text-white border-slate-600'
-                            }`}>
-                              {user.profile.status === 'pending' ? '⏳ Pending approval' : (user.profile.status || 'Unknown').charAt(0).toUpperCase() + (user.profile.status || 'Unknown').slice(1)}
-                            </span>
+                        <>
+                          <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                                user.profile.status === 'pending'
+                                  ? 'bg-yellow-500 text-white border-yellow-700 animate-pulse shadow'
+                                  : user.profile.status === 'approved'
+                                  ? 'bg-green-700 text-white border-green-900'
+                                  : user.profile.status === 'rejected'
+                                  ? 'bg-red-700 text-white border-red-900'
+                                  : user.profile.status === 'suspended'
+                                  ? 'bg-orange-700 text-white border-orange-900'
+                                  : 'bg-slate-400 text-white border-slate-600'
+                              }`}>
+                                {user.profile.status === 'pending' ? '⏳ Pending approval' : (user.profile.status || 'Unknown').charAt(0).toUpperCase() + (user.profile.status || 'Unknown').slice(1)}
+                              </span>
+                          {user.profile.status === 'pending' && (() => {
+                            const days = Math.floor((Date.now() - new Date(user.profile.created_at).getTime()) / 86400000)
+                            if (days >= 30) return <span className="inline-flex px-2 py-0.5 text-xs font-bold rounded-full bg-red-600 text-white">{days}d overdue</span>
+                            if (days >= 7) return <span className="inline-flex px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500 text-white">{days}d pending</span>
+                            return null
+                          })()}
+                        </>
                       )}
                       {user.profile.role === 'tourist' && (
                         <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full border ${user.profile.status === 'suspended' ? 'bg-orange-100 text-orange-800 border-orange-300' : 'bg-green-100 text-green-800 border-green-300'}`}>
