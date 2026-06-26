@@ -17,15 +17,7 @@ export function AppVisitorTracker() {
       if (!visitorSession) return
 
       try {
-        // Get visitor's IP address
-        const ipResponse = await fetch('https://api.ipify.org?format=json')
-        const ipData = await ipResponse.json()
-        const ipAddress = ipData.ip
-
-        // Skip geolocation to avoid CORS issues
-        let country: string | undefined
-        let city: string | undefined
-        // Geolocation disabled due to CORS policy
+        const ipAddress = visitorSession.ip_address
 
         // Log the visit to app_visits table
         const { error } = await supabase
@@ -36,8 +28,8 @@ export function AppVisitorTracker() {
             page_name: getPageName(location.pathname),
             referrer: document.referrer || null,
             ip_address: ipAddress,
-            country,
-            city,
+            country: visitorSession.country || null,
+            city: visitorSession.city || null,
             user_agent: navigator.userAgent,
           })
 

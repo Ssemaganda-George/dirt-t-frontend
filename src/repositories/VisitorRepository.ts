@@ -23,50 +23,6 @@ export {
 } from './ScanSessionRepository'
 
 /**
- * Lookup country name for an IP address using ipapi.co with a short timeout.
- * Caches results in-memory. Returns null if lookup fails or no country found.
- */
-const ipCountryCache = new Map<string, string | null>()
-
-async function lookupCountryByIp(_ip: string): Promise<string | null> {
-  const ip = String(_ip || '').trim()
-  if (!ip) return null
-
-  if (ipCountryCache.has(ip)) {
-    return ipCountryCache.get(ip) || null
-  }
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 3000)
-
-  try {
-    const response = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      return null
-    }
-
-    const data = await response.json()
-    const country = (data?.country_name || data?.country || data?.region_name || data?.region || null)
-      ? String(data?.country_name || data?.country || data?.region_name || data?.region).trim()
-      : null
-
-    ipCountryCache.set(ip, country)
-    return country
-  } catch (error) {
-    return null
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
-/**
  * Get or create a visitor session based on IP address
  */
 export async function getOrCreateVisitorSession(
@@ -473,285 +429,39 @@ export async function getVisitorActivityStats() {
 
 export async function getVendorActivityStats(vendorId: string) {
   try {
-    // Get all services for this vendor
-    const { data: vendorServices, error: servicesError } = await supabase
-      .from('services')
-      .select('id, title')
-      .eq('vendor_id', vendorId)
-
-    if (servicesError) throw servicesError
-
-    // Get all bookings for this vendor's services
-    const { data: vendorBookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('id, tourist_id, service_id, status, created_at, total_amount, currency, profiles(full_name)')
-      .in('service_id', vendorServices?.map((s: any) => s.id) || [])
-
-    if (bookingsError) throw bookingsError
-
-    // Get visitor sessions and view logs for this vendor's services
-    let visitorSessions: any[] = []
-    let serviceViewLogs: any[] = []
-    try {
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from('visitor_sessions')
-        .select('id, ip_address, country, city, device_type, user_id, first_visit_at, last_visit_at, created_at, visit_count')
-        .order('first_visit_at', { ascending: false })
-        .limit(100)
-
-      if (!sessionsError && sessionsData) {
-        visitorSessions = sessionsData
-      } else if (sessionsError) {
-        console.warn('Visitor sessions table unavailable:', sessionsError)
-      }
-
-      // For sessions missing country info, attempt an IP->country lookup (cached)
-      try {
-        const sessionsToLookup = visitorSessions.filter((s: any) => (!s.country || s.country === '') && s.ip_address)
-        if (sessionsToLookup.length > 0) {
-          await Promise.all(sessionsToLookup.map(async (s: any) => {
-            try {
-              const country = await lookupCountryByIp(s.ip_address)
-              if (country) s.country = country
-            } catch (err) {
-              // ignore lookup errors per-session
-            }
-          }))
-        }
-      } catch (err) {
-        console.warn('Error during IP->country lookups:', err)
-      }
-
-      // Get view logs for services
-      const { data: viewLogsData, error: viewLogsError } = await supabase
-        .from('service_view_logs')
-        .select('id, service_id, visitor_session_id, viewed_at, services(title)')
-        .in('service_id', vendorServices?.map((s: any) => s.id) || [])
-        .order('viewed_at', { ascending: false })
-        .limit(100)
-
-      if (!viewLogsError && viewLogsData) {
-        serviceViewLogs = viewLogsData
-      } else if (viewLogsError) {
-        console.warn('Service view logs table unavailable:', viewLogsError)
-      }
-    } catch (error) {
-      console.warn('Error fetching visitor sessions or view logs:', error)
-    }
-
-    // Get reviews for this vendor's services
-    let vendorReviews: any[] = []
-    const { data: reviewsData, error: reviewsError } = await supabase
-      .from('service_reviews')
-      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, visitor_name, services(title)')
-      .in('service_id', vendorServices?.map((s: any) => s.id) || [])
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (reviewsError) {
-      console.warn(`Reviews table unavailable for vendor ${vendorId}:`, reviewsError)
-      vendorReviews = []
-    } else {
-      vendorReviews = reviewsData
-    }
-
-    // Track visitor sessions and unique guest IPs for this vendor
-    const sessionById: Record<string, any> = {}
-    visitorSessions.forEach((s: any) => {
-      if (s && s.id) sessionById[s.id] = s
+    const { data, error } = await supabase.rpc('get_vendor_visitor_stats', {
+      p_vendor_id: vendorId,
     })
 
-    const viewedSessionIds = new Set(
-      serviceViewLogs
-        .map((log: any) => log.visitor_session_id)
-        .filter((id: any) => id)
-    )
+    if (error) throw error
 
-    const relevantSessions = [...viewedSessionIds]
-      .map((id: any) => sessionById[id])
-      .filter(Boolean)
-
-    const sessionsToCount = relevantSessions.length > 0 ? relevantSessions : visitorSessions
-
-    const uniqueVisitorIps = new Set(
-      sessionsToCount
-        .map((session: any) => (session.ip_address || '').trim())
-        .filter((ip: string) => ip)
-    )
-
-    const countryCounts: Record<string, number> = {}
-
-    // Count countries for relevant visitor sessions
-    sessionsToCount.forEach((session: any) => {
-      const country = (session.country || 'Unknown').trim() || 'Unknown'
-      countryCounts[country] = (countryCounts[country] || 0) + 1
-    })
-
-    // Fallback: if no view-log-derived countries, fall back to counting all recent sessions
-    if (Object.keys(countryCounts).length === 0) {
-      visitorSessions.forEach((session: any) => {
-        if (session && session.country) {
-          countryCounts[session.country] = (countryCounts[session.country] || 0) + 1
-        }
-      })
-    }
-
-    // Compute total for percentage calculations
-    const totalCountryCount = Object.values(countryCounts).reduce((s, v) => s + v, 0) || visitorSessions.length || 1
-
-    // Get top countries (sorted)
-    const topCountries = Object.entries(countryCounts)
-      .map(([country, count]) => ({
-        country,
-        count: count as number,
-        percentage: ((count / totalCountryCount) * 100).toFixed(1)
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10)
-
-    // Track services checked by visitors
-    const serviceCheckedCounts: Record<string, { title: string; count: number }> = {}
-    serviceViewLogs.forEach((log: any) => {
-      const serviceTitle = log.services?.title || 'Unknown Service'
-      if (!serviceCheckedCounts[log.service_id]) {
-        serviceCheckedCounts[log.service_id] = { title: serviceTitle, count: 0 }
-      }
-      serviceCheckedCounts[log.service_id].count += 1
-    })
-
-    // Get top services checked
-    const servicesChecked = Object.entries(serviceCheckedCounts)
-      .map(([id, data]) => ({
-        id,
-        serviceName: data.title,
-        timesChecked: data.count,
-        category: '',
-        totalLikes: 0,
-        avgRating: 0
-      }))
-      .sort((a, b) => b.timesChecked - a.timesChecked)
-      .slice(0, 5)
-
-    // Get top services for this vendor (just first 5)
-    const topServices = vendorServices
-      ?.slice(0, 5)
-      .map((s: any) => ({
-        id: s.id,
-        serviceName: s.title,
-        category: '',
-        totalLikes: 0,
-        avgRating: 0
-      })) || []
-
-    // Get vendor reviews
-    const vendorReviewsList = vendorReviews
-      ?.map((r: any) => ({
-        id: r.id,
-        serviceName: r.services?.title || 'Unknown Service',
-        rating: r.rating || 0,
-        comment: r.comment || '',
-        visitorName: r.visitor_name || 'Anonymous',
-        date: r.created_at || new Date().toISOString(),
-        helpful: r.helpful_count || 0
-      })) || []
-
-    // Count reviews this month
-    const now = new Date()
-    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1)
-    const reviewsThisMonth = vendorReviews?.filter((r: any) => new Date(r.created_at) >= monthAgo).length || 0
-
-    // Calculate average rating
-    const avgRating = vendorReviews && vendorReviews.length > 0
-      ? (vendorReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / vendorReviews.length).toFixed(1)
-      : '0'
-
-    // Calculate metrics
-    const totalBookings = vendorBookings?.length || 0
-    const confirmedBookings = vendorBookings?.filter((b: any) => b.status === 'confirmed').length || 0
-    const conversionRate = totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(1) : '0'
+    const stats = data || {}
 
     return {
       vendorId,
-      totalVisitors: sessionsToCount.length,
-      uniqueVisitors: uniqueVisitorIps.size,
-      totalServices: vendorServices?.length || 0,
-      totalBookings: confirmedBookings,
-      conversionRate: parseFloat(conversionRate as string),
-      topCountries,
+      totalVisitors: stats.totalListingViews ?? 0,
+      uniqueVisitors: stats.uniqueViewers ?? 0,
+      viewsLast7Days: stats.viewsLast7Days ?? 0,
+      viewsLast30Days: stats.viewsLast30Days ?? 0,
+      totalInquiries: stats.totalInquiries ?? 0,
+      totalLikes: stats.totalLikes ?? 0,
+      totalServices: stats.totalServices ?? 0,
+      totalBookings: stats.confirmedBookings ?? 0,
+      conversionRate: Number(stats.conversionRate ?? 0),
+      inquiryRate: Number(stats.inquiryRate ?? 0),
+      topCountries: stats.topCountries ?? [],
+      topServices: stats.topServices ?? [],
+      servicesChecked: stats.servicesChecked ?? [],
+      visitorSessions: stats.visitorSessions ?? [],
+      recentReviews: stats.recentReviews ?? [],
+      reviewsThisMonth: stats.reviewsThisMonth ?? 0,
+      avgRating: Number(stats.avgRating ?? 0),
       ageGroups: [],
       genderDistribution: { male: 0, female: 0, other: 0 },
-      topServices,
-      servicesChecked,
-      visitorSessions: await enhanceVisitorSessions(visitorSessions.slice(0, 10), serviceViewLogs),
-      recentReviews: vendorReviewsList,
-      reviewsThisMonth,
-      avgRating: parseFloat(avgRating as string)
     }
   } catch (error) {
     console.error(`Error fetching vendor activity stats for ${vendorId}:`, error)
     throw error
-  }
-}
-
-/**
- * Enhance visitor sessions with session duration and pages visited
- */
-async function enhanceVisitorSessions(sessions: any[], viewLogs: any[]): Promise<any[]> {
-  try {
-    // Create a map of IP addresses to their view logs
-    const ipViewMap: Record<string, any[]> = {}
-
-    viewLogs.forEach((log: any) => {
-      const sessionId = log.visitor_session_id
-      if (!ipViewMap[sessionId]) {
-        ipViewMap[sessionId] = []
-      }
-      ipViewMap[sessionId].push(log)
-    })
-
-    // Enhance sessions with page visit info and session duration
-    const enhancedSessions = sessions.map((session: any) => {
-      const sessionViews = ipViewMap[session.id] || []
-
-      // Calculate session duration (time between first and last view)
-      let sessionDuration = 0
-      if (sessionViews.length > 1) {
-        const firstView = new Date(sessionViews[0].viewed_at).getTime()
-        const lastView = new Date(sessionViews[sessionViews.length - 1].viewed_at).getTime()
-        sessionDuration = Math.floor((lastView - firstView) / 1000 / 60) // Convert to minutes
-      }
-
-      // Get unique pages (services) visited
-      const pagesVisited = new Set(sessionViews.map((log: any) => log.service_id))
-      const pageCount = pagesVisited.size
-
-      // Calculate time since first visit
-      const firstVisit = new Date(session.first_visit_at)
-      const now = new Date()
-      const daysSinceFirstVisit = Math.floor((now.getTime() - firstVisit.getTime()) / 1000 / 60 / 60 / 24)
-
-      const locationParts = []
-      if (session.city && session.city !== '') locationParts.push(session.city)
-      if (session.country && session.country !== '') locationParts.push(session.country)
-      const location = locationParts.length > 0 ? locationParts.join(', ') : (session.ip_address || 'Unknown')
-
-      return {
-        ...session,
-        sessionDuration,
-        pagesVisited: pageCount,
-        viewCount: sessionViews.length,
-        daysSinceFirstVisit,
-        ipAddress: session.ip_address || 'Unknown',
-        location,
-        visitedAt: (session.last_visit_at || session.first_visit_at || session.created_at) ? new Date(session.last_visit_at || session.first_visit_at || session.created_at).toISOString() : null
-      }
-    })
-
-    return enhancedSessions
-  } catch (error) {
-    console.warn('Error enhancing visitor sessions:', error)
-    return sessions // Return original sessions if enhancement fails
   }
 }
 

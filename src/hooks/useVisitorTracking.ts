@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { 
-  getOrCreateVisitorSession, 
+import { supabase } from '../lib/supabaseClient'
+import {
+  getOrCreateVisitorSession,
   logServiceView,
   recordServiceLike,
   removeServiceLike,
@@ -19,64 +20,114 @@ interface ServiceReviewInput {
   comment?: string
 }
 
+let sharedSession: VisitorSession | null = null
+let sharedSessionPromise: Promise<VisitorSession | null> | null = null
+
+function getDeviceType(): string {
+  const ua = navigator.userAgent
+  if (/mobile|android|iphone|ipad|ipod/i.test(ua)) {
+    return /ipad/i.test(ua) ? 'tablet' : 'mobile'
+  }
+  return 'desktop'
+}
+
+function getBrowserInfo(): string {
+  const ua = navigator.userAgent
+  if (ua.includes('Chrome')) return 'Chrome'
+  if (ua.includes('Safari')) return 'Safari'
+  if (ua.includes('Firefox')) return 'Firefox'
+  if (ua.includes('Edge')) return 'Edge'
+  if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera'
+  return 'Unknown'
+}
+
+async function resolveVisitorSession(userId?: string): Promise<VisitorSession | null> {
+  if (sharedSession) return sharedSession
+  if (sharedSessionPromise) return sharedSessionPromise
+
+  sharedSessionPromise = (async () => {
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json')
+      const ipData = await ipResponse.json()
+      const ipAddress = ipData.ip
+
+      const { data, error } = await supabase.functions.invoke('visitor-session', {
+        body: {
+          ipAddress,
+          userId: userId || null,
+          deviceType: getDeviceType(),
+          browserInfo: getBrowserInfo(),
+          userAgent: navigator.userAgent,
+        },
+      })
+
+      if (!error && data?.session) {
+        sharedSession = data.session as VisitorSession
+        return sharedSession
+      }
+
+      // Fallback when edge function is unavailable (local dev / not yet deployed)
+      const session = await getOrCreateVisitorSession(ipAddress, {
+        userId: userId || undefined,
+        deviceType: getDeviceType(),
+        browserInfo: getBrowserInfo(),
+        userAgent: navigator.userAgent,
+      })
+      sharedSession = session
+      return sharedSession
+    } catch (err) {
+      console.error('Error initializing visitor session:', err)
+      return null
+    } finally {
+      sharedSessionPromise = null
+    }
+  })()
+
+  return sharedSessionPromise
+}
+
 /**
  * Hook to manage visitor session and track activity (likes, reviews, views)
  */
 export function useVisitorTracking() {
   const { user } = useAuth()
-  const [visitorSession, setVisitorSession] = useState<VisitorSession | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [visitorSession, setVisitorSession] = useState<VisitorSession | null>(sharedSession)
+  const [loading, setLoading] = useState(!sharedSession)
   const [error, setError] = useState<string | null>(null)
 
-  // Initialize visitor session on mount
   useEffect(() => {
+    let cancelled = false
+
     const initializeSession = async () => {
       try {
         setLoading(true)
         setError(null)
-
-        // Get visitor's IP address
-        const ipResponse = await fetch('https://api.ipify.org?format=json')
-        const ipData = await ipResponse.json()
-        const ipAddress = ipData.ip
-
-        // Get browser info
-        const userAgent = navigator.userAgent
-        const deviceType = getDeviceType()
-        const browserInfo = getBrowserInfo()
-
-        // Note: Geolocation will be fetched server-side in the RPC function
-        // to avoid CORS issues with ipapi.co
-
-        // Get or create visitor session
-        const session = await getOrCreateVisitorSession(ipAddress, {
-          userId: user?.id,
-          deviceType,
-          browserInfo,
-          userAgent,
-        })
-
-        setVisitorSession(session)
+        const session = await resolveVisitorSession(user?.id)
+        if (!cancelled) setVisitorSession(session)
       } catch (err) {
-        console.error('Error initializing visitor session:', err)
-        setError(err instanceof Error ? err.message : 'Failed to initialize visitor session')
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize visitor session')
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     initializeSession()
+    return () => {
+      cancelled = true
+    }
   }, [user?.id])
 
-  // Function to log service view
   const trackServiceView = useCallback(
     async (serviceId: string, referrer?: string) => {
-      if (!visitorSession) return
+      const session = visitorSession || sharedSession || (await resolveVisitorSession(user?.id))
+      if (!session) return
 
       try {
-        await logServiceView(serviceId, visitorSession.id, {
+        await logServiceView(serviceId, session.id, {
           userId: user?.id,
-          ipAddress: visitorSession.ip_address,
+          ipAddress: session.ip_address,
           referrer,
         })
       } catch (err) {
@@ -86,18 +137,18 @@ export function useVisitorTracking() {
     [visitorSession, user?.id]
   )
 
-  // Function to like a service
   const likeService = useCallback(
     async (serviceId: string) => {
-      if (!visitorSession) {
+      const session = visitorSession || sharedSession
+      if (!session) {
         setError('No visitor session available')
         return false
       }
 
       try {
-        await recordServiceLike(serviceId, visitorSession.id, {
+        await recordServiceLike(serviceId, session.id, {
           userId: user?.id,
-          ipAddress: visitorSession.ip_address,
+          ipAddress: session.ip_address,
         })
         return true
       } catch (err) {
@@ -109,16 +160,16 @@ export function useVisitorTracking() {
     [visitorSession, user?.id]
   )
 
-  // Function to unlike a service
   const unlikeService = useCallback(
     async (serviceId: string) => {
-      if (!visitorSession) {
+      const session = visitorSession || sharedSession
+      if (!session) {
         setError('No visitor session available')
         return false
       }
 
       try {
-        await removeServiceLike(serviceId, visitorSession.id)
+        await removeServiceLike(serviceId, session.id)
         return true
       } catch (err) {
         console.error('Error unliking service:', err)
@@ -129,13 +180,13 @@ export function useVisitorTracking() {
     [visitorSession]
   )
 
-  // Function to check if service is liked
   const isServiceLiked = useCallback(
     async (serviceId: string): Promise<boolean> => {
-      if (!visitorSession) return false
+      const session = visitorSession || sharedSession
+      if (!session) return false
 
       try {
-        return await checkServiceLiked(serviceId, visitorSession.id)
+        return await checkServiceLiked(serviceId, session.id)
       } catch (err) {
         console.error('Error checking if service is liked:', err)
         return false
@@ -144,19 +195,19 @@ export function useVisitorTracking() {
     [visitorSession]
   )
 
-  // Function to submit a review
   const submitReview = useCallback(
     async (serviceId: string, review: ServiceReviewInput) => {
-      if (!visitorSession) {
+      const session = visitorSession || sharedSession
+      if (!session) {
         setError('No visitor session available')
         return { success: false, error: 'No visitor session' }
       }
 
       try {
-        const data = await submitServiceReview(serviceId, visitorSession.id, {
+        const data = await submitServiceReview(serviceId, session.id, {
           ...review,
           userId: user?.id,
-          ipAddress: visitorSession.ip_address,
+          ipAddress: session.ip_address,
         })
         return { success: true, data }
       } catch (err) {
@@ -167,34 +218,24 @@ export function useVisitorTracking() {
     [visitorSession, user?.id]
   )
 
-  // Function to get service reviews
-  const fetchServiceReviews = useCallback(
-    async (serviceId: string, limit?: number) => {
-      try {
-        return await getServiceReviews(serviceId, {
-          limit: limit || 10,
-        })
-      } catch (err) {
-        console.error('Error fetching reviews:', err)
-        return []
-      }
-    },
-    []
-  )
+  const fetchServiceReviews = useCallback(async (serviceId: string, limit?: number) => {
+    try {
+      return await getServiceReviews(serviceId, { limit: limit || 10 })
+    } catch (err) {
+      console.error('Error fetching reviews:', err)
+      return []
+    }
+  }, [])
 
-  // Function to get likes count
-  const fetchLikesCount = useCallback(
-    async (serviceId: string) => {
-      try {
-        const likes = await getServiceLikes(serviceId)
-        return likes.length
-      } catch (err) {
-        console.error('Error fetching likes count:', err)
-        return 0
-      }
-    },
-    []
-  )
+  const fetchLikesCount = useCallback(async (serviceId: string) => {
+    try {
+      const likes = await getServiceLikes(serviceId)
+      return likes.length
+    } catch (err) {
+      console.error('Error fetching likes count:', err)
+      return 0
+    }
+  }, [])
 
   return {
     visitorSession,
@@ -208,30 +249,4 @@ export function useVisitorTracking() {
     fetchServiceReviews,
     fetchLikesCount,
   }
-}
-
-/**
- * Detect device type from user agent
- */
-function getDeviceType(): string {
-  const ua = navigator.userAgent
-  if (/mobile|android|iphone|ipad|ipod/i.test(ua)) {
-    return /ipad/i.test(ua) ? 'tablet' : 'mobile'
-  }
-  return 'desktop'
-}
-
-/**
- * Get browser info from user agent
- */
-function getBrowserInfo(): string {
-  const ua = navigator.userAgent
-  
-  if (ua.includes('Chrome')) return 'Chrome'
-  if (ua.includes('Safari')) return 'Safari'
-  if (ua.includes('Firefox')) return 'Firefox'
-  if (ua.includes('Edge')) return 'Edge'
-  if (ua.includes('Opera') || ua.includes('OPR')) return 'Opera'
-  
-  return 'Unknown'
 }

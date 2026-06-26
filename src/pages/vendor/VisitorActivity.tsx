@@ -18,12 +18,6 @@ interface CountryData {
   percentage: string
 }
 
-interface DemographicData {
-  ageGroup: string
-  count: number
-  percentage: string
-}
-
 interface LikeData {
   id: string
   serviceName: string
@@ -33,35 +27,60 @@ interface LikeData {
   timesChecked?: number
 }
 
+interface VisitorSessionRow {
+  id?: string
+  location?: string | null
+  country?: string | null
+  city?: string | null
+  deviceType?: string | null
+  serviceTitle?: string | null
+  visitedAt?: string | null
+}
+
 interface VendorStats {
   totalVisitors: number
   uniqueVisitors: number
+  viewsLast7Days: number
+  viewsLast30Days: number
+  totalInquiries: number
+  totalLikes: number
   totalServices: number
   totalBookings: number
   conversionRate: number
+  inquiryRate: number
   topCountries: CountryData[]
-  ageGroups: DemographicData[]
-  genderDistribution: { male: number; female: number; other: number }
   topServices: LikeData[]
   servicesChecked: LikeData[]
-  visitorSessions: any[]
+  visitorSessions: VisitorSessionRow[]
   recentReviews: ReviewData[]
   reviewsThisMonth: number
   avgRating: number
 }
 
+function formatVisitorLabel(session: VisitorSessionRow): string {
+  const location = session.location?.trim()
+  if (location && location.toLowerCase() !== 'unknown') return location
+
+  const parts = [session.city, session.country]
+    .map((part) => part?.trim())
+    .filter((part) => part && part.toLowerCase() !== 'unknown')
+  if (parts.length > 0) return parts.join(', ')
+
+  if (session.deviceType) return `${session.deviceType} visitor`
+  return 'Visitor'
+}
+
 export default function VendorVisitorActivity() {
   const { profile, vendor } = useAuth()
   const vendorId = vendor?.id || profile?.id
-  
+
   const [stats, setStats] = useState<VendorStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [expandedService, setExpandedService] = useState<string | null>(null)
 
   useEffect(() => {
     if (!vendorId) return
-    
+
     const fetchStats = async () => {
       try {
         setLoading(true)
@@ -92,10 +111,6 @@ export default function VendorVisitorActivity() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 h-64 bg-white rounded-xl border border-gray-200" />
-            <div className="h-64 bg-white rounded-xl border border-gray-200" />
-          </div>
         </div>
       </div>
     )
@@ -114,139 +129,92 @@ export default function VendorVisitorActivity() {
     )
   }
 
+  const hasListingViews = stats.totalVisitors > 0
+  const meaningfulCountries = stats.topCountries.filter(
+    (country) => country.country && country.country.toLowerCase() !== 'unknown'
+  )
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {/* Header */}
       <div>
         <h1 className="text-3xl md:text-4xl font-semibold text-gray-900">Visitor Activity</h1>
         <p className="text-base text-gray-500 mt-2 max-w-2xl">
-          Monitor your business performance and visitor engagement
+          Listing views, inquiries, and booking interest for your business
         </p>
       </div>
 
-      {/* Key Metrics */}
+      {!hasListingViews && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <p className="text-sm font-medium text-amber-900">No listing views yet</p>
+          <p className="text-sm text-amber-800 mt-1">
+            Share your shop and service links to start seeing visitor activity here. Views are counted when guests open your listing pages.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-blue-200 p-5 flex flex-col justify-between min-h-[110px]">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Visitors</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Listing Views</p>
           <div>
             <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalVisitors}</p>
-            <p className="mt-1 text-xs text-gray-500">{stats.uniqueVisitors} unique</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.uniqueVisitors} unique · {stats.viewsLast7Days} last 7 days</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-emerald-200 p-5 flex flex-col justify-between min-h-[110px]">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bookings</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Inquiries</p>
           <div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalBookings}</p>
-            <p className="mt-1 text-xs text-gray-500">{stats.conversionRate.toFixed(1)}% conversion</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalInquiries}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.inquiryRate.toFixed(1)}% of viewers inquired</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-violet-200 p-5 flex flex-col justify-between min-h-[110px]">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Services</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Bookings</p>
           <div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalServices}</p>
-            <p className="mt-1 text-xs text-gray-500">Active listings</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalBookings}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.conversionRate.toFixed(1)}% viewer → booking</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-amber-200 p-5 flex flex-col justify-between min-h-[110px]">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Rating</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Saves & Rating</p>
           <div>
-            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.avgRating.toFixed(1)}</p>
-            <p className="mt-1 text-xs text-gray-500">{stats.reviewsThisMonth} reviews this month</p>
+            <p className="mt-2 text-2xl font-semibold text-gray-900">{stats.totalLikes}</p>
+            <p className="mt-1 text-xs text-gray-500">{stats.avgRating.toFixed(1)} avg · {stats.reviewsThisMonth} reviews this month</p>
           </div>
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Performance Insights */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-5">Performance Insights</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
-                <p className="text-xs font-medium text-gray-500">Booking Rate</p>
-                <div>
-                  <p className="text-xl font-semibold text-gray-900 mt-1">
-                    {stats.conversionRate.toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {stats.totalBookings} of {stats.totalVisitors} visitors
-                  </p>
-                </div>
-              </div>
-              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
-                <p className="text-xs font-medium text-gray-500">Unique Visitors</p>
-                <div>
-                  <p className="text-xl font-semibold text-gray-900 mt-1">
-                    {stats.uniqueVisitors}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {((stats.uniqueVisitors / Math.max(stats.totalVisitors, 1)) * 100).toFixed(0)}% of total
-                  </p>
-                </div>
-              </div>
-              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
-                <p className="text-xs font-medium text-gray-500">Avg Rating</p>
-                <div>
-                  <p className="text-xl font-semibold text-gray-900 mt-1">
-                    {stats.avgRating.toFixed(1)} / 5
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {stats.reviewsThisMonth} reviews this month
-                  </p>
-                </div>
-              </div>
-              <div className="p-4 rounded-lg bg-gray-50 flex flex-col justify-between min-h-[100px]">
-                <p className="text-xs font-medium text-gray-500">Active Services</p>
-                <div>
-                  <p className="text-xl font-semibold text-gray-900 mt-1">
-                    {stats.totalServices}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    All services published
-                  </p>
-                </div>
-              </div>
-            </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="text-sm font-semibold text-gray-900 mb-5">Conversion Funnel</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-lg bg-gray-50">
+            <p className="text-xs font-medium text-gray-500">Listing views</p>
+            <p className="text-xl font-semibold text-gray-900 mt-1">{stats.totalVisitors}</p>
+            <p className="text-xs text-gray-500 mt-1">{stats.viewsLast30Days} in the last 30 days</p>
           </div>
+          <div className="p-4 rounded-lg bg-gray-50">
+            <p className="text-xs font-medium text-gray-500">Inquiries</p>
+            <p className="text-xl font-semibold text-gray-900 mt-1">{stats.totalInquiries}</p>
+            <p className="text-xs text-gray-500 mt-1">{stats.inquiryRate.toFixed(1)}% of unique viewers</p>
+          </div>
+          <div className="p-4 rounded-lg bg-gray-50">
+            <p className="text-xs font-medium text-gray-500">Confirmed bookings</p>
+            <p className="text-xl font-semibold text-gray-900 mt-1">{stats.totalBookings}</p>
+            <p className="text-xs text-gray-500 mt-1">{stats.conversionRate.toFixed(1)}% of unique viewers</p>
+          </div>
+        </div>
+      </div>
 
-          {/* Top Services */}
-          {stats.topServices.length > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
+        <div className="space-y-6">
+          {stats.servicesChecked.length > 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Your Services</h2>
-              <div className="space-y-2">
-                {stats.topServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition cursor-pointer"
-                    onClick={() => setExpandedService(expandedService === service.id ? null : service.id)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{service.serviceName}</p>
-                      <p className="text-xs text-gray-500">
-                        {service.avgRating > 0 ? `${service.avgRating.toFixed(1)} / 5` : 'No ratings yet'}
-                      </p>
-                    </div>
-                    {expandedService === service.id && (
-                      <span className="text-xs text-gray-400">Expanded</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Most Viewed Services */}
-          {stats.servicesChecked && stats.servicesChecked.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Most Viewed Services</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Most Viewed Listings</h2>
               <div className="space-y-2">
                 {stats.servicesChecked.map((service, idx) => (
                   <div key={service.id || idx} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{service.serviceName}</p>
-                      <p className="text-xs text-gray-500">Service views & interactions</p>
+                      <p className="text-xs text-gray-500">Listing page views</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-gray-900">{service.timesChecked || 0}</p>
@@ -256,77 +224,14 @@ export default function VendorVisitorActivity() {
                 ))}
               </div>
             </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">Most Viewed Listings</h2>
+              <p className="text-sm text-gray-500">No listing views recorded yet.</p>
+            </div>
           )}
 
-          {/* Visitor Demographics */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-5">Visitor Demographics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Age Groups */}
-              <div>
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Age Distribution</h3>
-                {stats.ageGroups.length > 0 ? (
-                  <div className="space-y-3">
-                    {stats.ageGroups.map((age, idx) => (
-                      <div key={idx}>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs text-gray-600">{age.ageGroup}</p>
-                          <p className="text-xs font-medium text-gray-900">{age.count}</p>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className="bg-blue-500 h-1.5 rounded-full"
-                            style={{ width: `${parseFloat(age.percentage)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">Age data not available</p>
-                )}
-              </div>
-
-              {/* Gender Distribution */}
-              <div>
-                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Gender Distribution</h3>
-                <div className="space-y-3">
-                  {Object.entries(stats.genderDistribution).map(([gender, count]) => {
-                    const total = Object.values(stats.genderDistribution).reduce((a: number, b: number) => a + b, 0);
-                    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
-                    const colors: Record<string, string> = {
-                      male: 'bg-blue-500',
-                      female: 'bg-emerald-500',
-                      other: 'bg-amber-400'
-                    };
-                    const labels: Record<string, string> = {
-                      male: 'Male',
-                      female: 'Female',
-                      other: 'Other'
-                    };
-
-                    return (
-                      <div key={gender}>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs text-gray-600">{labels[gender]}</p>
-                          <p className="text-xs font-medium text-gray-900">{count}</p>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5">
-                          <div
-                            className={`${colors[gender]} h-1.5 rounded-full`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Reviews */}
-          {stats.recentReviews.length > 0 && (
+          {stats.recentReviews.length > 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Reviews</h2>
               <div className="divide-y divide-gray-100">
@@ -345,85 +250,28 @@ export default function VendorVisitorActivity() {
                           {new Date(review.date).toLocaleDateString()}
                         </p>
                       </div>
-                      {review.helpful > 0 && (
-                        <span className="text-xs text-gray-500">{review.helpful} helpful</span>
-                      )}
                     </div>
                     {review.comment && (
-                      <p className="text-sm text-gray-600 mt-2 pl-0 italic">
-                        "{review.comment}"
-                      </p>
+                      <p className="text-sm text-gray-600 mt-2 italic">&ldquo;{review.comment}&rdquo;</p>
                     )}
                   </div>
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Empty Reviews */}
-          {stats.recentReviews.length === 0 && (
+          ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Reviews</h2>
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-sm text-gray-500">No reviews yet</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Reviews will appear here as visitors rate your services
-                </p>
-              </div>
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">Reviews</h2>
+              <p className="text-sm text-gray-500">No approved reviews yet.</p>
             </div>
           )}
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
-          {/* Demographics Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Demographics</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Gender</p>
-                <div className="flex gap-2">
-                  {Object.entries(stats.genderDistribution).map(([gender, count]) => {
-                    const total = Object.values(stats.genderDistribution).reduce((a: number, b: number) => a + b, 0);
-                    const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : '0';
-                    const labels: Record<string, string> = {
-                      male: 'Male',
-                      female: 'Female',
-                      other: 'Other'
-                    };
-
-                    return (
-                      <div key={gender} className="flex-1 bg-gray-50 p-3 rounded-lg text-center">
-                        <p className="text-sm font-semibold text-gray-900">{percentage}%</p>
-                        <p className="text-xs text-gray-500">{labels[gender]}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {stats.ageGroups.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Top Age Groups</p>
-                  <div className="space-y-2">
-                    {stats.ageGroups.slice(0, 3).map((age, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">{age.ageGroup}</span>
-                        <span className="font-medium text-gray-900">{age.percentage}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Visitor Countries */}
-          {stats.topCountries.length > 0 && (
+          {meaningfulCountries.length > 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h2 className="text-sm font-semibold text-gray-900 mb-4">Visitor Countries</h2>
               <div className="space-y-3">
-                {stats.topCountries.map((country, idx) => (
+                {meaningfulCountries.map((country, idx) => (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-medium text-gray-700">{country.country}</p>
@@ -439,50 +287,65 @@ export default function VendorVisitorActivity() {
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Recent Visitors */}
-          {stats.visitorSessions && stats.visitorSessions.length > 0 && (
+          ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Visitors</h2>
-                  <div className="space-y-2">
-                    {stats.visitorSessions.slice(0, 8).map((session: any, idx: number) => (
-                      <div key={idx} className="p-3 rounded-lg bg-gray-50">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {session.location || 'Unknown'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {session.visitedAt ? new Date(session.visitedAt).toLocaleString() : (session.last_visit_at ? new Date(session.last_visit_at).toLocaleString() : '')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">Visitor Countries</h2>
+              <p className="text-sm text-gray-500">
+                {hasListingViews
+                  ? 'Country data will appear as more visitors browse your listings.'
+                  : 'Available after your listings receive views.'}
+              </p>
             </div>
           )}
 
-          {/* Summary */}
+          {stats.visitorSessions.length > 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Listing Visitors</h2>
+              <div className="space-y-2">
+                {stats.visitorSessions.slice(0, 8).map((session, idx) => (
+                  <div key={session.id || idx} className="p-3 rounded-lg bg-gray-50">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {formatVisitorLabel(session)}
+                    </p>
+                    {session.serviceTitle && (
+                      <p className="text-xs text-gray-600 mt-0.5 truncate">Viewed {session.serviceTitle}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {session.visitedAt ? new Date(session.visitedAt).toLocaleString() : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">Recent Listing Visitors</h2>
+              <p className="text-sm text-gray-500">No recent visitors on your listings yet.</p>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Summary</h2>
             <div className="space-y-2.5 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Total Visitors</span>
-                <span className="font-medium text-gray-900">{stats.totalVisitors}</span>
+                <span className="text-gray-500">Active listings</span>
+                <span className="font-medium text-gray-900">{stats.totalServices}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Unique Visitors</span>
+                <span className="text-gray-500">Listing views (30d)</span>
+                <span className="font-medium text-gray-900">{stats.viewsLast30Days}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Unique viewers</span>
                 <span className="font-medium text-gray-900">{stats.uniqueVisitors}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Completed Bookings</span>
-                <span className="font-medium text-gray-900">{stats.totalBookings}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Active Services</span>
-                <span className="font-medium text-gray-900">{stats.totalServices}</span>
+                <span className="text-gray-500">Inquiries</span>
+                <span className="font-medium text-gray-900">{stats.totalInquiries}</span>
               </div>
               <div className="flex justify-between border-t border-gray-100 pt-2.5 mt-2.5">
-                <span className="text-gray-700 font-medium">Conversion Rate</span>
-                <span className="font-semibold text-gray-900">{stats.conversionRate.toFixed(1)}%</span>
+                <span className="text-gray-700 font-medium">Confirmed bookings</span>
+                <span className="font-semibold text-gray-900">{stats.totalBookings}</span>
               </div>
             </div>
           </div>

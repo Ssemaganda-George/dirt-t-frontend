@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { useServiceDetailQuery } from '../hooks/useServiceDetailQuery'
+import { useServiceViewTracking } from '../hooks/useServiceViewTracking'
 
 const ShopPurchase = lazy(() => import('./ShopPurchase'))
 
@@ -16,6 +17,7 @@ export default function ShopPurchasePage() {
   const { slug } = useParams<{ slug: string }>()
   const { data, isLoading } = useServiceDetailQuery(slug)
   const service = data?.service ?? null
+  useServiceViewTracking(service?.id)
 
   if (isLoading) return <ShopPurchaseLoading />
 

@@ -25,6 +25,7 @@ import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib
 import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
 import { useServiceDetailQuery, useServiceDetailQueryClient, serviceDetailQueryKey } from '../hooks/useServiceDetailQuery'
+import { useServiceViewTracking } from '../hooks/useServiceViewTracking'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import BookingDrawer from '../components/BookingDrawer'
 import SaveToCartHeartButton from '../components/SaveToCartHeartButton'
@@ -205,6 +206,7 @@ export default function ServiceDetail() {
   const { data, isLoading } = useServiceDetailQuery(slug)
 
   const service = (data?.service ?? null) as ServiceDetail | null
+  useServiceViewTracking(service?.id)
   const reviews = data?.reviews ?? []
   const averageRating = data?.ratingData?.average ?? 0
   const reviewCount = data?.ratingData?.count ?? 0
