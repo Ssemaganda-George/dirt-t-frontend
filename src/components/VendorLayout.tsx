@@ -176,15 +176,15 @@ export default function VendorLayout() {
   }, [vendor?.id, profile?.id])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white border-r border-slate-200">
-          <div className="flex h-14 items-center justify-between px-4 border-b border-slate-100">
-            <span className="text-sm font-semibold text-slate-900 tracking-tight">DirtTrails</span>
-            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">
-              <X className="h-4 w-4 text-slate-500" />
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white border-r border-gray-200">
+          <div className="flex h-14 items-center justify-between px-4 border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails<span className="text-emerald-500">.</span></span>
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20">
+              <X className="h-4 w-4 text-gray-500" />
             </button>
           </div>
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
@@ -192,7 +192,7 @@ export default function VendorLayout() {
               <div key={category.category} className="space-y-0.5">
                 <button
                   onClick={() => toggleCategory(category.category)}
-                  className="w-full flex items-center justify-between px-2 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider hover:text-slate-600 transition"
+                  className="w-full flex items-center justify-between px-2 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider hover:text-gray-600 transition"
                 >
                   <span>{category.category}</span>
                   <ChevronRight
@@ -211,20 +211,20 @@ export default function VendorLayout() {
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
                             isActive
-                              ? 'bg-slate-900 text-white'
-                              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                              ? 'bg-emerald-700 text-white'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           onClick={() => setSidebarOpen(false)}
                         >
                           <div className="flex items-center gap-2.5">
-                            <item.icon className={`h-4 w-4 ${isActive ? 'text-slate-200' : 'text-slate-400'}`} />
+                            <item.icon className={`h-4 w-4 ${isActive ? 'text-emerald-100' : 'text-gray-400'}`} />
                             {item.name}
                           </div>
                           {showMessageBadge && (
                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                              isActive ? 'bg-white text-slate-900' : 'bg-red-500 text-white'
+                              isActive ? 'bg-white text-emerald-800' : 'bg-red-500 text-white'
                             }`}>
                               {unreadCount > 9 ? '9+' : unreadCount}
                             </span>
@@ -244,14 +244,14 @@ export default function VendorLayout() {
       <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${
         sidebarCollapsed ? 'lg:w-16' : 'lg:w-60'
       }`}>
-        <div className="flex flex-col flex-grow bg-white border-r border-slate-200">
-          <div className="flex items-center justify-between h-14 px-4 border-b border-slate-100">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+          <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100">
             {!sidebarCollapsed && (
-              <span className="text-sm font-semibold text-slate-900 tracking-tight">DirtTrails Business</span>
+              <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails<span className="text-emerald-500">.</span> Business</span>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {sidebarCollapsed ? (
@@ -267,7 +267,7 @@ export default function VendorLayout() {
                 {!sidebarCollapsed && (
                   <button
                     onClick={() => toggleCategory(category.category)}
-                    className="w-full flex items-center justify-between px-2 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider hover:text-slate-600 transition"
+                    className="w-full flex items-center justify-between px-2 py-2 text-xs font-medium text-gray-400 uppercase tracking-wider hover:text-gray-600 transition"
                   >
                     <span>{category.category}</span>
                     <ChevronRight
@@ -278,7 +278,7 @@ export default function VendorLayout() {
                   </button>
                 )}
                 {sidebarCollapsed && (
-                  <div className="px-2 py-1.5 text-[10px] font-medium text-slate-400 text-center uppercase">
+                  <div className="px-2 py-1.5 text-[10px] font-medium text-gray-400 text-center uppercase">
                     {category.category.charAt(0)}
                   </div>
                 )}
@@ -292,22 +292,22 @@ export default function VendorLayout() {
                         <Link
                           key={item.name}
                           to={item.href}
-                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                          className={`flex items-center justify-between px-2.5 py-2 text-sm font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
                             isActive
-                              ? 'bg-slate-900 text-white'
-                              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                              ? 'bg-emerald-700 text-white'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                           title={sidebarCollapsed ? item.name : ''}
                         >
                           <div className="flex items-center gap-2.5">
                             <item.icon className={`${sidebarCollapsed ? 'mx-auto' : ''} h-4 w-4 ${
-                              isActive ? 'text-slate-200' : 'text-slate-400'
+                              isActive ? 'text-emerald-100' : 'text-gray-400'
                             }`} />
                             {!sidebarCollapsed && item.name}
                           </div>
                           {showMessageBadge && !sidebarCollapsed && (
                             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                              isActive ? 'bg-white text-slate-900' : 'bg-red-500 text-white'
+                              isActive ? 'bg-white text-emerald-800' : 'bg-red-500 text-white'
                             }`}>
                               {unreadCount > 9 ? '9+' : unreadCount}
                             </span>
@@ -328,9 +328,9 @@ export default function VendorLayout() {
         sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-60'
       }`}>
         {/* Top bar (fixed) */}
-        <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 sm:px-6 lg:px-8">
-            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-slate-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 lg:hidden">
               <Menu className="h-5 w-5" />
             </button>
 
@@ -340,20 +340,20 @@ export default function VendorLayout() {
               {/* Global Search */}
               <button
                 onClick={() => setShowGlobalSearch(true)}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                className="p-2 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                 title="Search (⌘K)"
               >
-                <Search className="h-4 w-4 text-slate-500" />
+                <Search className="h-4 w-4 text-gray-500" />
               </button>
 
               {/* Messages icon for vendor top bar */}
               {(profile || vendor) && (
                 <Link
                   to="/vendor/messages"
-                  className="p-2 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 relative"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 relative"
                   title="Messages"
                 >
-                  <MessageSquare className="h-4 w-4 text-slate-500" />
+                  <MessageSquare className="h-4 w-4 text-gray-500" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full ring-2 ring-white">
                       {unreadCount > 9 ? '9+' : unreadCount}
@@ -365,55 +365,55 @@ export default function VendorLayout() {
               {/* Preferences */}
               <button
                 onClick={() => setShowPreferences(true)}
-                className="flex min-h-[36px] items-center gap-1.5 px-2.5 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                className="flex min-h-[36px] items-center gap-1.5 px-2.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                 title="Preferences"
               >
-                <Globe className="h-3.5 w-3.5 text-slate-500" />
-                <span className="text-xs font-medium text-slate-600">{getRegionShort(selectedRegion)} · {selectedCurrency}</span>
+                <Globe className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs font-medium text-gray-600">{getRegionShort(selectedRegion)} · {selectedCurrency}</span>
               </button>
 
               {/* Account */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex min-h-[36px] items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                  className="flex min-h-[36px] items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                 >
-                  <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-full bg-emerald-700 flex items-center justify-center">
                     <span className="text-xs font-semibold text-white">{profile?.full_name?.charAt(0).toUpperCase() || 'V'}</span>
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-slate-900 leading-tight">{profile?.full_name}</p>
-                    <p className="text-[10px] text-slate-500 capitalize">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
+                    <p className="text-sm font-medium text-gray-900 leading-tight">{profile?.full_name}</p>
+                    <p className="text-[10px] text-gray-500 capitalize">{profile?.role === 'vendor' ? 'Business' : profile?.role}</p>
                   </div>
-                  <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="text-sm font-medium text-slate-900">{profile?.full_name}</p>
-                      <p className="text-xs text-slate-500 truncate" title={profile?.email}>{profile?.email}</p>
+                  <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
+                      <p className="text-xs text-gray-500 truncate" title={profile?.email}>{profile?.email}</p>
                     </div>
                     <div className="py-1">
                       <Link
                         to="/vendor/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                       >
-                        <User className="h-4 w-4 text-slate-400" />
+                        <User className="h-4 w-4 text-gray-400" />
                         Profile
                       </Link>
                       <Link
                         to="/vendor/settings"
                         onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                       >
-                        <Settings className="h-4 w-4 text-slate-400" />
+                        <Settings className="h-4 w-4 text-gray-400" />
                         Settings
                       </Link>
                     </div>
-                    <div className="border-t border-slate-100 py-1">
+                    <div className="border-t border-gray-100 py-1">
                       <button
                         onClick={() => {
                           setDropdownOpen(false)
@@ -454,12 +454,12 @@ export default function VendorLayout() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={cancelSignOut} />
           <div className="relative bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4 w-full">
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">Log out?</h3>
-            <p className="text-sm text-slate-500 mb-5">Are you sure you want to log out of your account?</p>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Log out?</h3>
+            <p className="text-sm text-gray-500 mb-5">Are you sure you want to log out of your account?</p>
             <div className="flex gap-2">
               <button
                 onClick={cancelSignOut}
-                className="flex-1 min-h-[40px] px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                className="flex-1 min-h-[40px] px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
               >
                 Cancel
               </button>

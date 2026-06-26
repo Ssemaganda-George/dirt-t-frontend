@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../../lib/supabaseClient'
@@ -45,12 +45,12 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         <div className="h-7 w-32 bg-slate-200 rounded-lg animate-pulse" />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
             <div className="h-5 w-36 bg-slate-200 rounded animate-pulse" />
             <div className="space-y-3">
               {[...Array(3)].map((_, j) => (
                 <div key={j} className="flex items-center justify-between">
-                  <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
+                  <div className="h-4 w-48 bg-gray-100 rounded animate-pulse" />
                   <div className="h-6 w-11 bg-slate-200 rounded-full animate-pulse" />
                 </div>
               ))}
@@ -350,24 +350,24 @@ export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage your notifications, preferences, and security</p>
+        <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage your notifications, preferences, and security</p>
       </div>
 
       {/* Notifications */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-900 mb-4">Notifications</h3>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Notifications</h3>
         <div className="space-y-4">
           {notificationItems.map((item) => (
             <div key={item.key} className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-700">{item.label}</p>
-                <p className="text-xs text-slate-500">{item.description}</p>
+                <p className="text-sm font-medium text-gray-700">{item.label}</p>
+                <p className="text-xs text-gray-500">{item.description}</p>
               </div>
               <button
                 onClick={() => handleNotificationChange(item.key, !(notifications as any)[item.key])}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
-                  (notifications as any)[item.key] ? 'bg-slate-900' : 'bg-slate-200'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
+                  (notifications as any)[item.key] ? 'bg-emerald-700' : 'bg-slate-200'
                 }`}
               >
                 <span
@@ -382,15 +382,15 @@ export default function Settings() {
       </div>
 
       {/* Preferences */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-900 mb-4">Preferences</h3>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Preferences</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Language</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
             <select
               value={preferences.language}
               onChange={(e) => handlePreferenceChange('language', e.target.value)}
-              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 bg-white"
             >
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -399,11 +399,11 @@ export default function Settings() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Timezone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
             <select
               value={preferences.timezone}
               onChange={(e) => handlePreferenceChange('timezone', e.target.value)}
-              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 bg-white"
             >
               <option value="UTC">UTC</option>
               <option value="EAT">East Africa Time</option>
@@ -413,11 +413,11 @@ export default function Settings() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Theme</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
             <select
               value={preferences.theme}
               onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 bg-white"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -425,11 +425,11 @@ export default function Settings() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
             <select
               value={preferences.currency}
               onChange={(e) => handlePreferenceChange('currency', e.target.value)}
-              className="w-full min-h-[40px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 bg-white"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 bg-white"
             >
               <option value="UGX">UGX (Ugandan Shilling)</option>
               <option value="USD">USD (US Dollar)</option>
@@ -441,34 +441,34 @@ export default function Settings() {
       </div>
 
       {/* Security */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-900 mb-4">Security</h3>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Security</h3>
         <div className="flex flex-wrap gap-3">
-          <button onClick={() => setShowChangePassword(true)} className="min-h-[40px] px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">
+          <button onClick={() => setShowChangePassword(true)} className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20">
             Change Password
           </button>
-          <button onClick={() => setShowTwoFactor(true)} className="min-h-[40px] px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">
+          <button onClick={() => setShowTwoFactor(true)} className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20">
             Enable Two-Factor Authentication
           </button>
-              <button onClick={() => openLoginHistory()} className="min-h-[40px] px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20">
+              <button onClick={() => openLoginHistory()} className="min-h-[40px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20">
             View Login History
           </button>
         </div>
       </div>
       {/* MFA Contacts */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h3 className="text-sm font-semibold text-slate-900 mb-4">Contact methods for MFA</h3>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Contact methods for MFA</h3>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
             <div className="sm:col-span-1">
-              <label className="block text-xs text-slate-600 mb-1">Country</label>
-              <input value={mfaPhoneCountry} onChange={(e) => setMfaPhoneCountry(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              <label className="block text-xs text-gray-600 mb-1">Country</label>
+              <input value={mfaPhoneCountry} onChange={(e) => setMfaPhoneCountry(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs text-slate-600 mb-1">Phone number</label>
+              <label className="block text-xs text-gray-600 mb-1">Phone number</label>
               <div className="flex gap-2">
-                <input value={mfaPhone} onChange={(e) => setMfaPhone(e.target.value)} placeholder="712345678" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" />
-                <button onClick={savePhoneToProfile} disabled={mfaLoading} className="px-3 py-2 rounded-lg bg-slate-900 text-white">{mfaLoading ? 'Saving...' : 'Save'}</button>
+                <input value={mfaPhone} onChange={(e) => setMfaPhone(e.target.value)} placeholder="712345678" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                <button onClick={savePhoneToProfile} disabled={mfaLoading} className="px-3 py-2 rounded-lg bg-emerald-700 text-white">{mfaLoading ? 'Saving...' : 'Save'}</button>
               </div>
             </div>
           </div>
@@ -476,14 +476,14 @@ export default function Settings() {
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <p className="text-sm font-medium">Email (primary)</p>
-              <p className="text-xs text-slate-500">{profile.email}</p>
+              <p className="text-xs text-gray-500">{profile.email}</p>
             </div>
             <div className="ml-auto flex gap-2">
               <button onClick={() => sendMfaOtp('email')} disabled={mfaLoading} className="px-3 py-2 rounded-lg bg-white border">Send test email</button>
               <button onClick={() => sendMfaOtp('sms')} disabled={mfaLoading} className="px-3 py-2 rounded-lg bg-white border">Send OTP to phone</button>
             </div>
           </div>
-          {mfaMessage && <p className="text-xs text-slate-600">{mfaMessage}</p>}
+          {mfaMessage && <p className="text-xs text-gray-600">{mfaMessage}</p>}
         </div>
       </div>
       {/* Change Password Modal */}
@@ -491,25 +491,25 @@ export default function Settings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 className="text-lg font-semibold mb-2">Change Password</h3>
-            <p className="text-xs text-slate-500 mb-4">Enter your current password and choose a new secure password.</p>
+            <p className="text-xs text-gray-500 mb-4">Enter your current password and choose a new secure password.</p>
             <div className="space-y-3">
               <div className="relative">
-                <input type={showCurrentPassword ? 'text' : 'password'} placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm pr-10" />
-                <button type="button" onClick={() => setShowCurrentPassword(v => !v)} aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                <input type={showCurrentPassword ? 'text' : 'password'} placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-10" />
+                <button type="button" onClick={() => setShowCurrentPassword(v => !v)} aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
                   {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
 
               <div className="relative">
-                <input type={showNewPassword ? 'text' : 'password'} placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm pr-10" />
-                <button type="button" onClick={() => setShowNewPassword(v => !v)} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                <input type={showNewPassword ? 'text' : 'password'} placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-10" />
+                <button type="button" onClick={() => setShowNewPassword(v => !v)} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
                   {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
 
               <div className="relative">
-                <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm pr-10" />
-                <button type="button" onClick={() => setShowConfirmPassword(v => !v)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm new password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-10" />
+                <button type="button" onClick={() => setShowConfirmPassword(v => !v)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -517,7 +517,7 @@ export default function Settings() {
             {passwordMessage && <p className="text-xs text-red-600 mt-2">{passwordMessage}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowChangePassword(false)} className="px-3 py-2 rounded-lg bg-white border">Cancel</button>
-              <button onClick={submitChangePassword} disabled={passwordLoading} className="px-4 py-2 rounded-lg bg-slate-900 text-white">{passwordLoading ? 'Saving...' : 'Save'}</button>
+              <button onClick={submitChangePassword} disabled={passwordLoading} className="px-4 py-2 rounded-lg bg-emerald-700 text-white">{passwordLoading ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
@@ -528,14 +528,14 @@ export default function Settings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h3 className="text-lg font-semibold mb-2">Two-Factor Authentication</h3>
-            <p className="text-xs text-slate-500 mb-4">Two-factor authentication adds extra security to your account. If your backend supports it, enabling will require a second factor at sign-in.</p>
+            <p className="text-xs text-gray-500 mb-4">Two-factor authentication adds extra security to your account. If your backend supports it, enabling will require a second factor at sign-in.</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">{twoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
-                <p className="text-xs text-slate-500">{twoFactorEnabled ? '2FA is enabled for your account' : '2FA is not enabled'}</p>
+                <p className="text-xs text-gray-500">{twoFactorEnabled ? '2FA is enabled for your account' : '2FA is not enabled'}</p>
               </div>
               <div>
-                <button onClick={toggleTwoFactor} disabled={twoFactorLoading} className="px-4 py-2 rounded-lg bg-slate-900 text-white">{twoFactorLoading ? '...' : twoFactorEnabled ? 'Disable' : 'Enable'}</button>
+                <button onClick={toggleTwoFactor} disabled={twoFactorLoading} className="px-4 py-2 rounded-lg bg-emerald-700 text-white">{twoFactorLoading ? '...' : twoFactorEnabled ? 'Disable' : 'Enable'}</button>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -552,23 +552,23 @@ export default function Settings() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Login History</h3>
-                <p className="text-xs text-slate-500">Recent sign-ins for this account</p>
+                <p className="text-xs text-gray-500">Recent sign-ins for this account</p>
               </div>
-              <button onClick={() => setShowLoginHistory(false)} className="text-sm text-slate-500">Close</button>
+              <button onClick={() => setShowLoginHistory(false)} className="text-sm text-gray-500">Close</button>
             </div>
             <div className="mt-4">
-              {loginHistoryLoading && <p className="text-sm text-slate-500">Loading…</p>}
+              {loginHistoryLoading && <p className="text-sm text-gray-500">Loading…</p>}
               {loginHistoryError && <p className="text-sm text-red-600">{loginHistoryError}</p>}
-              {!loginHistoryLoading && loginHistory && loginHistory.length === 0 && <p className="text-sm text-slate-500">No recent logins found</p>}
+              {!loginHistoryLoading && loginHistory && loginHistory.length === 0 && <p className="text-sm text-gray-500">No recent logins found</p>}
               {!loginHistoryLoading && loginHistory && loginHistory.length > 0 && (
                 <ul className="space-y-2 max-h-64 overflow-y-auto mt-2">
                   {loginHistory.map((h) => (
                       <li key={h.id} className="flex items-center justify-between p-2 border rounded-md">
                         <div>
                           <p className="text-sm font-medium">{h.user_agent ? h.user_agent.slice(0, 60) : 'Unknown device'}</p>
-                          <p className="text-xs text-slate-500">{new Date(h.created_at).toLocaleString()}</p>
+                          <p className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString()}</p>
                         </div>
-                        <div className="text-xs text-slate-500 text-right">
+                        <div className="text-xs text-gray-500 text-right">
                           {h.country ? h.country : ''}
                         </div>
                       </li>

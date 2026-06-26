@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+﻿import { useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Service } from '../../types'
@@ -729,7 +729,7 @@ export default function VendorServices() {
   if (vendorLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-slate-500">Loading vendor information...</div>
+        <div className="text-gray-500">Loading vendor information...</div>
       </div>
     )
   }
@@ -738,19 +738,19 @@ export default function VendorServices() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="text-slate-500 mb-2">No vendor account found</div>
-          <div className="text-sm text-slate-400">Please contact an administrator to set up your vendor account.</div>
+          <div className="text-gray-500 mb-2">No vendor account found</div>
+          <div className="text-sm text-gray-400">Please contact an administrator to set up your vendor account.</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 animate-in fade-in duration-300">
+    <div className="min-h-screen bg-gray-50 animate-in fade-in duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-in slide-in-from-top duration-500">
         {/* Header */}
         <div className="mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-8 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-8 backdrop-blur-sm">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -758,10 +758,10 @@ export default function VendorServices() {
                     <Plus className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold text-slate-900">
+                    <h1 className="text-3xl font-bold text-gray-900">
                       Services
                     </h1>
-                    <p className="text-slate-600 text-sm font-medium">
+                    <p className="text-gray-600 text-sm font-medium">
                       {services.length} total services
                       {pendingDeleteRequests.length > 0 && (
                         <span className="ml-2 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
@@ -771,7 +771,7 @@ export default function VendorServices() {
                     </p>
                   </div>
                 </div>
-                <p className="text-slate-500 text-sm leading-relaxed max-w-md">
+                <p className="text-gray-500 text-sm leading-relaxed max-w-md">
                   Manage your service offerings, track performance, and engage with your customers.
                 </p>
               </div>
@@ -790,33 +790,33 @@ export default function VendorServices() {
 
         {/* Search & Filters */}
         <div className="mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 backdrop-blur-sm">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Search */}
               <div className="flex-1">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Search Services</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Search Services</label>
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search by title, description, or category..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50/50 placeholder:text-slate-400 transition-all duration-200"
+                    className="w-full pl-12 pr-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50/50 placeholder:text-gray-400 transition-all duration-200"
                   />
                 </div>
               </div>
 
               {/* Category Filters */}
               <div className="lg:w-96">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Filter by Category</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Filter by Category</label>
                 <nav className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   <button
                     onClick={() => setSelectedCategory('all')}
                     className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                       selectedCategory === 'all'
                         ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
+                        : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
                     }`}
                   >
                     All ({categoryCounts.all})
@@ -832,7 +832,7 @@ export default function VendorServices() {
                           className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                             selectedCategory === category.id
                               ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
                           }`}
                         >
                           {category.name} ({count})
@@ -846,13 +846,13 @@ export default function VendorServices() {
         </div>
 
       {/* Services List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden backdrop-blur-sm">
         {/* Mobile Card View */}
         <div className="block lg:hidden">
           {loading ? (
             <div className="px-8 py-16 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-sm text-slate-500">Loading services...</p>
+              <p className="text-sm text-gray-500">Loading services...</p>
             </div>
           ) : error ? (
             <div className="px-8 py-16 text-center">
@@ -860,15 +860,15 @@ export default function VendorServices() {
                 <X className="h-6 w-6 text-red-600" />
               </div>
               <p className="text-sm text-red-600 font-medium">Error loading services</p>
-              <p className="text-xs text-slate-500 mt-1">{error}</p>
+              <p className="text-xs text-gray-500 mt-1">{error}</p>
             </div>
           ) : filteredServices.length === 0 ? (
             <div className="px-8 py-16 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
-                <Search className="h-8 w-8 text-slate-400" />
+              <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-6">
+                <Search className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No services found</h3>
-              <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">Get started by creating your first service offering.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No services found</h3>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Get started by creating your first service offering.</p>
               <button
                 onClick={() => { setEditing(null); setShowForm(true) }}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -880,7 +880,7 @@ export default function VendorServices() {
           ) : (
             <div>
               {paginatedServices.map(s => (
-                <div key={s.id} className="border-b border-slate-100 last:border-0 group cursor-pointer" onClick={() => handleOpenEdit(s)}>
+                <div key={s.id} className="border-b border-gray-100 last:border-0 group cursor-pointer" onClick={() => handleOpenEdit(s)}>
                   {/* Image banner — chips overlaid directly on image */}
                   <div className="relative h-36 overflow-hidden">
                     {(s.primary_image_url || s.images?.[0]) ? (
@@ -920,7 +920,7 @@ export default function VendorServices() {
                   <div className="px-4 pt-3 pb-4">
                     {/* Title + Price on same row */}
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h3 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-sm font-bold text-gray-900 leading-snug group-hover:text-blue-600 transition-colors">
                         {s.title}
                       </h3>
                       <span className="text-sm font-bold text-emerald-600 whitespace-nowrap shrink-0">
@@ -928,11 +928,11 @@ export default function VendorServices() {
                       </span>
                     </div>
                     {/* Description */}
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">{s.description}</p>
+                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed mb-3">{s.description}</p>
 
                     {/* Scan link — events only */}
                     {s.category_id === 'cat_activities' && (
-                      <div className="mb-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+                      <div className="mb-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
                         {s.scan_enabled ? (
                           <a
                             href={`${window.location.origin}/scan/${s.id}`}
@@ -944,7 +944,7 @@ export default function VendorServices() {
                           </a>
                         ) : (
                           <>
-                            <span className="text-xs text-slate-400">Scan inactive</span>
+                            <span className="text-xs text-gray-400">Scan inactive</span>
                             <button
                               onClick={async () => {
                                 try {
@@ -968,7 +968,7 @@ export default function VendorServices() {
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => { handleOpenEdit(s) }}
-                        className="flex-1 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        className="flex-1 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-slate-200 rounded-lg transition-colors"
                       >
                         Edit
                       </button>
@@ -1000,48 +1000,48 @@ export default function VendorServices() {
               <col className="w-[12%]" />
               <col className="w-[14%]" />
             </colgroup>
-            <thead className="bg-slate-50/50">
-              <tr className="border-b border-slate-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Service</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider"></th>
+            <thead className="bg-gray-50/50">
+              <tr className="border-b border-gray-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-slate-500">Loading services...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-gray-500">Loading services...</td></tr>
               ) : error ? (
                 <tr><td colSpan={5} className="px-4 py-14 text-center text-sm text-red-500">Error: {error}</td></tr>
               ) : filteredServices.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-14 text-center">
-                    <p className="text-sm text-slate-500">No services found.</p>
-                    <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-slate-900 hover:underline">Create your first service →</button>
+                    <p className="text-sm text-gray-500">No services found.</p>
+                    <button onClick={() => { setEditing(null); setShowForm(true) }} className="mt-2 text-sm font-medium text-gray-900 hover:underline">Create your first service →</button>
                   </td>
                 </tr>
               ) : (
                 paginatedServices.map(s => (
-                  <tr key={s.id} className="group hover:bg-slate-50/50 transition-colors duration-200 cursor-pointer" onClick={() => handleOpenEdit(s)}>
+                  <tr key={s.id} className="group hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer" onClick={() => handleOpenEdit(s)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {(s.primary_image_url || s.images?.[0]) ? (
                           <img
                             src={s.primary_image_url || s.images?.[0]}
                             alt={s.title}
-                            className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-slate-100"
+                            className="w-16 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-100"
                           />
                         ) : (
-                          <div className="w-16 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xl border border-slate-100">
+                          <div className="w-16 h-12 rounded-lg flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xl border border-gray-100">
                             {s.service_categories?.icon || '📦'}
                           </div>
                         )}
-                        <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{s.title}</p>
+                        <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{s.title}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-slate-600 truncate block">{s.service_categories?.name || s.category_id}</span>
+                      <span className="text-sm text-gray-600 truncate block">{s.service_categories?.name || s.category_id}</span>
                       {s.category_id === 'cat_activities' && (
                         <div className="mt-1">
                           {s.scan_enabled ? (
@@ -1057,7 +1057,7 @@ export default function VendorServices() {
                                   alert('Failed to submit request.')
                                 }
                               }}
-                              className="text-xs text-slate-400 hover:text-slate-600 hover:underline transition-colors"
+                              className="text-xs text-gray-400 hover:text-gray-600 hover:underline transition-colors"
                             >
                               Activate scan
                             </button>
@@ -1066,7 +1066,7 @@ export default function VendorServices() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-semibold text-gray-900">
                         {formatServicePrice(s, ticketTypes, selectedCurrency, selectedLanguage)}
                       </span>
                     </td>
@@ -1090,15 +1090,15 @@ export default function VendorServices() {
                         <button
                           onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}
                           onBlur={() => setTimeout(() => setOpenMenuId(null), 150)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </button>
                         {openMenuId === s.id && (
-                          <div className="absolute right-0 top-8 z-20 w-36 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-left">
+                          <div className="absolute right-0 top-8 z-20 w-36 bg-white rounded-xl shadow-lg border border-gray-200 py-1 text-left">
                             <button
                               onClick={() => { handleOpenEdit(s); setOpenMenuId(null) }}
-                              className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                              className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                             >
                               Edit
                             </button>
@@ -1126,23 +1126,23 @@ export default function VendorServices() {
 
       {/* Pending Delete Requests */}
       {pendingDeleteRequests.length > 0 && (
-        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden backdrop-blur-sm">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-            <h2 className="text-base font-semibold text-slate-900">Pending Delete Requests</h2>
-            <p className="text-sm text-slate-600 mt-1">These services are awaiting admin approval for deletion.</p>
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden backdrop-blur-sm">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h2 className="text-base font-semibold text-gray-900">Pending Delete Requests</h2>
+            <p className="text-sm text-gray-600 mt-1">These services are awaiting admin approval for deletion.</p>
           </div>
           <div className="divide-y divide-slate-100">
             {pendingDeleteRequests.map((request) => (
-              <div key={request.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors duration-200">
+              <div key={request.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors duration-200">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{request.service?.title}</p>
-                  <p className="text-sm text-slate-600 mt-1 truncate max-w-md">{request.reason}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{request.service?.title}</p>
+                  <p className="text-sm text-gray-600 mt-1 truncate max-w-md">{request.reason}</p>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0 ml-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                     Pending Review
                   </span>
-                  <span className="text-xs text-slate-500">{new Date(request.requested_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-500">{new Date(request.requested_at).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
@@ -1153,14 +1153,14 @@ export default function VendorServices() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-gray-600">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredServices.length)} of {filteredServices.length} services
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -1176,7 +1176,7 @@ export default function VendorServices() {
                     className={`px-3 py-2 text-sm font-medium rounded-lg ${
                       currentPage === pageNum
                         ? 'bg-blue-600 text-white'
-                        : 'text-slate-700 bg-white border border-slate-200 hover:bg-slate-50'
+                        : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
                     {pageNum}
@@ -1188,7 +1188,7 @@ export default function VendorServices() {
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>
@@ -1526,11 +1526,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'hotels':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Hotel Details</h4>
+            <h4 className="font-medium text-gray-900">Hotel Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Star Rating</label>
+                <label className="block text-sm font-medium text-gray-700">Star Rating</label>
                 <select value={form.star_rating || ''} onChange={(e) => update('star_rating', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select rating</option>
                   <option value="1">1 Star - Budget</option>
@@ -1541,7 +1541,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Property Type</label>
+                <label className="block text-sm font-medium text-gray-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
                   <optgroup label="→ Hotel">
@@ -1576,11 +1576,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Total Rooms</label>
+                <label className="block text-sm font-medium text-gray-700">Total Rooms</label>
                 <input type="number" value={form.total_rooms || ''} onChange={(e) => update('total_rooms', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 50" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Cancellation Policy</label>
+                <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
                 <select value={form.cancellation_policy || ''} onChange={(e) => update('cancellation_policy', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select policy</option>
                   <option value="free_24h">Free cancellation within 24 hours</option>
@@ -1593,7 +1593,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Room Types Available</label>
+              <label className="block text-sm font-medium text-gray-700">Room Types Available</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.room_types || ''}
@@ -1615,7 +1615,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Hotel Facilities & Amenities</label>
+              <label className="block text-sm font-medium text-gray-700">Hotel Facilities & Amenities</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.facilities || ''}
@@ -1657,12 +1657,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'tour packages':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Tour Package Details</h4>
+            <h4 className="font-medium text-gray-900">Tour Package Details</h4>
 
             {/* Tour Classification */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Tour Style</label>
+                <label className="block text-sm font-medium text-gray-700">Tour Style</label>
                 <select value={(form as any).tour_style || ''} onChange={(e) => update('tour_style', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select tour style</option>
                   <optgroup label="→ Wildlife Safari">
@@ -1699,7 +1699,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Group Type</label>
+                <label className="block text-sm font-medium text-gray-700">Group Type</label>
                 <select value={(form as any).group_type || ''} onChange={(e) => update('group_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select group type</option>
                   <option value="private">Private (exclusive group)</option>
@@ -1712,7 +1712,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Accommodation Standard</label>
+                <label className="block text-sm font-medium text-gray-700">Accommodation Standard</label>
                 <select value={(form as any).accommodation_standard || ''} onChange={(e) => update('accommodation_standard', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select standard</option>
                   <option value="budget">Budget / Camping</option>
@@ -1723,7 +1723,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Difficulty Level</label>
+                <label className="block text-sm font-medium text-gray-700">Difficulty Level</label>
                 <select value={form.difficulty_level || ''} onChange={(e) => update('difficulty_level', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select difficulty</option>
                   <option value="easy">Easy - Suitable for all ages</option>
@@ -1736,28 +1736,28 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Best Time to Visit</label>
+                <label className="block text-sm font-medium text-gray-700">Best Time to Visit</label>
                 <input value={form.best_time_to_visit || ''} onChange={(e) => update('best_time_to_visit', e.target.value)} placeholder="e.g., June-September (Dry season)" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Number of Days</label>
+                <label className="block text-sm font-medium text-gray-700">Number of Days</label>
                 <input type="number" min="1" value={(form as any).duration_days || ''} onChange={(e) => update('duration_days', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 5" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Minimum Age</label>
+                <label className="block text-sm font-medium text-gray-700">Minimum Age</label>
                 <input type="number" value={form.minimum_age || ''} onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Maximum Participants</label>
+                <label className="block text-sm font-medium text-gray-700">Maximum Participants</label>
                 <input type="number" value={form.max_participants || ''} onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Languages Offered</label>
+              <label className="block text-sm font-medium text-gray-700">Languages Offered</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.languages_offered || ''}
@@ -1779,7 +1779,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Detailed Itinerary</label>
+              <label className="block text-sm font-medium text-gray-700">Detailed Itinerary</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.itinerary || ''}
@@ -1801,7 +1801,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">What's Included</label>
+              <label className="block text-sm font-medium text-gray-700">What's Included</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.included_items || ''}
@@ -1823,7 +1823,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">What's Excluded</label>
+              <label className="block text-sm font-medium text-gray-700">What's Excluded</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.excluded_items || ''}
@@ -1845,7 +1845,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Tour Highlights</label>
+              <label className="block text-sm font-medium text-gray-700">Tour Highlights</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.tour_highlights || ''}
@@ -1867,7 +1867,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">What to Bring</label>
+              <label className="block text-sm font-medium text-gray-700">What to Bring</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.what_to_bring || ''}
@@ -1890,11 +1890,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Meeting Point</label>
+                <label className="block text-sm font-medium text-gray-700">Meeting Point</label>
                 <input value={form.meeting_point || ''} onChange={(e) => update('meeting_point', e.target.value)} placeholder="e.g., Hotel lobby, Airport" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">End Point</label>
+                <label className="block text-sm font-medium text-gray-700">End Point</label>
                 <input value={form.end_point || ''} onChange={(e) => update('end_point', e.target.value)} placeholder="e.g., Same as meeting point" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
@@ -1927,7 +1927,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Meals Included</label>
+              <label className="block text-sm font-medium text-gray-700">Meals Included</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.meals_included || ''}
@@ -1953,11 +1953,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'transport':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Transport Service Details</h4>
+            <h4 className="font-medium text-gray-900">Transport Service Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Vehicle Type</label>
+                <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
                 <select value={form.vehicle_type || ''} onChange={(e) => update('vehicle_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select vehicle type</option>
                   <optgroup label="Road Vehicles">
@@ -1982,14 +1982,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Vehicle Capacity</label>
+                <label className="block text-sm font-medium text-gray-700">Vehicle Capacity</label>
                 <input type="number" value={form.vehicle_capacity || ''} onChange={(e) => update('vehicle_capacity', e.target.value ? Number(e.target.value) : undefined)} placeholder="Number of passengers" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">License Requirements</label>
+                <label className="block text-sm font-medium text-gray-700">License Requirements</label>
                 <select value={form.license_required || ''} onChange={(e) => update('license_required', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select license type</option>
                   <option value="none">No license required</option>
@@ -2000,25 +2000,25 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Booking Notice Period (hours)</label>
+                <label className="block text-sm font-medium text-gray-700">Booking Notice Period (hours)</label>
                 <input type="number" value={form.booking_notice_hours || ''} onChange={(e) => update('booking_notice_hours', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 24" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Engine (make/model)</label>
+                <label className="block text-sm font-medium text-gray-700">Engine (make/model)</label>
                 <input type="text" value={form.vehicle_engine || ''} onChange={(e) => update('vehicle_engine', e.target.value)} placeholder="e.g., Toyota 1NZ-FE" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Engine CC (cc)</label>
+                <label className="block text-sm font-medium text-gray-700">Engine CC (cc)</label>
                 <input type="number" value={form.vehicle_ccs || ''} onChange={(e) => update('vehicle_ccs', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 1500" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Fuel Type</label>
+                <label className="block text-sm font-medium text-gray-700">Fuel Type</label>
                 <select value={form.fuel_type || ''} onChange={(e) => update('fuel_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select fuel type</option>
                   <option value="petrol">Petrol</option>
@@ -2028,7 +2028,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Fuel efficiency (km / L)</label>
+                <label className="block text-sm font-medium text-gray-700">Fuel efficiency (km / L)</label>
                 <input type="number" step="0.1" min="0" value={form.fuel_km_per_liter || ''} onChange={(e) => {
                     const kmPerL = e.target.value ? Number(e.target.value) : undefined
                     // Also update legacy per-100km value for storage/compatibility
@@ -2037,13 +2037,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     update('fuel_consumption_per_100km', per100km)
                   }} placeholder="e.g., 12.0" className="mt-1 w-full border rounded-md px-3 py-2" />
                 {form.fuel_km_per_liter ? (
-                  <p className="text-xs text-slate-500 mt-1">Equivalent: {Number((100 / (form.fuel_km_per_liter as any)).toFixed(2))} L / 100km</p>
+                  <p className="text-xs text-gray-500 mt-1">Equivalent: {Number((100 / (form.fuel_km_per_liter as any)).toFixed(2))} L / 100km</p>
                 ) : null}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Vehicle Features</label>
+              <label className="block text-sm font-medium text-gray-700">Vehicle Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.air_conditioning || false} onChange={(e) => update('air_conditioning', e.target.checked)} className="mr-2" />
@@ -2085,7 +2085,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div className="mt-2">
-              <label className="block text-sm font-medium text-slate-700">Additional Vehicle Features</label>
+              <label className="block text-sm font-medium text-gray-700">Additional Vehicle Features</label>
               <div className="flex gap-2 mt-2">
                 <input
                   value={arrayInputs.vehicle_features || ''}
@@ -2098,16 +2098,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.vehicle_features || []).map((feat: string, idx: number) => (
-                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-slate-100 text-slate-800">
+                  <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
                     {feat}
-                    <button type="button" onClick={() => removeFromArray('vehicle_features', idx)} className="ml-1 text-slate-600 hover:text-slate-900">×</button>
+                    <button type="button" onClick={() => removeFromArray('vehicle_features', idx)} className="ml-1 text-gray-600 hover:text-gray-900">×</button>
                   </span>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Pickup Locations</label>
+              <label className="block text-sm font-medium text-gray-700">Pickup Locations</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.pickup_locations || ''}
@@ -2129,7 +2129,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Drop-off Locations</label>
+              <label className="block text-sm font-medium text-gray-700">Drop-off Locations</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.dropoff_locations || ''}
@@ -2151,13 +2151,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Service Location</label>
+              <label className="block text-sm font-medium text-gray-700">Service Location</label>
               <div className="flex gap-2 mt-1">
                 <input
                   value={form.location ?? ''}
                   onChange={(e) => update('location', e.target.value)}
                   placeholder="Primary service location or base (optional)"
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
                   type="button"
@@ -2176,24 +2176,24 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   {(form as any).service_lat && (form as any).service_lon ? 'Edit Location' : 'Select on Map'}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Optional: mark a primary base or meeting point for this service</p>
+              <p className="text-xs text-gray-500 mt-1">Optional: mark a primary base or meeting point for this service</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Route Description</label>
+              <label className="block text-sm font-medium text-gray-700">Route Description</label>
               <textarea value={form.route_description || ''} onChange={(e) => update('route_description', e.target.value)} placeholder="Describe the route, stops, and any notable points along the way" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Fuel Included</label>
+                <label className="block text-sm font-medium text-gray-700">Fuel Included</label>
                 <select value={form.fuel_included ? 'yes' : 'no'} onChange={(e) => update('fuel_included', e.target.value === 'yes')} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="no">No - Client pays for fuel</option>
                   <option value="yes">Yes - Fuel included in price</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Tolls Included</label>
+                <label className="block text-sm font-medium text-gray-700">Tolls Included</label>
                 <select value={form.tolls_included ? 'yes' : 'no'} onChange={(e) => update('tolls_included', e.target.value === 'yes')} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="no">No - Client pays tolls</option>
                   <option value="yes">Yes - Tolls included in price</option>
@@ -2203,14 +2203,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Insurance Included</label>
+                <label className="block text-sm font-medium text-gray-700">Insurance Included</label>
                 <select value={form.insurance_included ? 'yes' : 'no'} onChange={(e) => update('insurance_included', e.target.value === 'yes')} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="no">No - Client provides insurance</option>
                   <option value="yes">Yes - Insurance included</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Driver Included</label>
+                <label className="block text-sm font-medium text-gray-700">Driver Included</label>
                 <select value={form.driver_included ? 'yes' : 'no'} onChange={(e) => update('driver_included', e.target.value === 'yes')} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="no">Self-drive available</option>
                   <option value="yes">Driver included</option>
@@ -2219,14 +2219,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Vehicle Photos Required</label>
-              <div className="mt-2 text-sm text-slate-600">
+              <label className="block text-sm font-medium text-gray-700">Vehicle Photos Required</label>
+              <div className="mt-2 text-sm text-gray-600">
                 Please upload clear photos of your vehicle from multiple angles, including interior and exterior.
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Additional Terms & Conditions</label>
+              <label className="block text-sm font-medium text-gray-700">Additional Terms & Conditions</label>
               <textarea value={form.transport_terms || ''} onChange={(e) => update('transport_terms', e.target.value)} placeholder="Any additional terms, restrictions, or requirements for transport services" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
@@ -2235,11 +2235,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'restaurants':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Restaurant Service Details</h4>
+            <h4 className="font-medium text-gray-900">Restaurant Service Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Cuisine Type</label>
+                <label className="block text-sm font-medium text-gray-700">Cuisine Type</label>
                 <select value={form.cuisine_type || ''} onChange={(e) => update('cuisine_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select cuisine type</option>
                   <option value="ugandan">Ugandan</option>
@@ -2256,7 +2256,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Price Range</label>
+                <label className="block text-sm font-medium text-gray-700">Price Range</label>
                 <select value={form.price_range || ''} onChange={(e) => update('price_range', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select price range</option>
                   <option value="budget">Budget (Under $15/person)</option>
@@ -2269,23 +2269,23 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Reservations Required</label>
+                <label className="block text-sm font-medium text-gray-700">Reservations Required</label>
                 <select value={form.reservations_required ? 'yes' : 'no'} onChange={(e) => update('reservations_required', e.target.value === 'yes')} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="no">No - Walk-ins welcome</option>
                   <option value="yes">Yes - Reservations recommended</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Advance Booking (days)</label>
+                <label className="block text-sm font-medium text-gray-700">Advance Booking (days)</label>
                 <input type="number" value={form.advance_booking_days || ''} onChange={(e) => update('advance_booking_days', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 1" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Opening Hours</label>
+              <label className="block text-sm font-medium text-gray-700">Opening Hours</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-600">Monday - Friday</label>
+                  <label className="block text-xs text-gray-600">Monday - Friday</label>
                   <input
                     type="text"
                     placeholder="9:00 AM - 10:00 PM"
@@ -2295,7 +2295,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600">Saturday - Sunday</label>
+                  <label className="block text-xs text-gray-600">Saturday - Sunday</label>
                   <input
                     type="text"
                     placeholder="10:00 AM - 11:00 PM"
@@ -2308,7 +2308,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Dress Code</label>
+              <label className="block text-sm font-medium text-gray-700">Dress Code</label>
               <select value={form.dress_code || ''} onChange={(e) => update('dress_code', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                 <option value="">Select dress code</option>
                 <option value="casual">Casual</option>
@@ -2320,7 +2320,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Dietary Options</label>
+              <label className="block text-sm font-medium text-gray-700">Dietary Options</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.dietary_options || ''}
@@ -2342,7 +2342,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Special Features</label>
+              <label className="block text-sm font-medium text-gray-700">Special Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.outdoor_seating || false} onChange={(e) => update('outdoor_seating', e.target.checked)} className="mr-2" />
@@ -2372,7 +2372,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Menu Highlights</label>
+              <label className="block text-sm font-medium text-gray-700">Menu Highlights</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.menu_highlights || ''}
@@ -2394,12 +2394,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Atmosphere & Experience</label>
+              <label className="block text-sm font-medium text-gray-700">Atmosphere & Experience</label>
               <textarea value={form.restaurant_atmosphere || ''} onChange={(e) => update('restaurant_atmosphere', e.target.value)} placeholder="Describe the ambiance, decor, and overall dining experience" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Special Notes</label>
+              <label className="block text-sm font-medium text-gray-700">Special Notes</label>
               <textarea value={form.restaurant_notes || ''} onChange={(e) => update('restaurant_notes', e.target.value)} placeholder="Any additional information tourists should know (e.g., best time to visit, local specialties, etc.)" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
@@ -2408,16 +2408,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'activities':
         return (
           <div className="space-y-6 border-t pt-6">
-            <h4 className="font-semibold text-slate-900 text-lg">Event & Activity Details</h4>
+            <h4 className="font-semibold text-gray-900 text-lg">Event & Activity Details</h4>
 
             {/* Basic Event Information */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Basic Information</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Basic Information</h5>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Event Type</label>
-                  <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <label className="block text-sm font-medium text-gray-700">Event Type</label>
+                  <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="">Select event type</option>
                     <optgroup label="→ Adventure">
                       <option value="adventure">Adventure &amp; Safari</option>
@@ -2458,21 +2458,21 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">
+                  <label className="block text-sm font-medium text-gray-700">
                     Event Date & Time <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={form.event_datetime || ''}
                     onChange={(e) => update('event_datetime', e.target.value)}
-                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700">
+                <label className="block text-sm font-medium text-gray-700">
                   Event Location <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 mt-1">
@@ -2480,7 +2480,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={form.event_location || ''}
                     onChange={(e) => update('event_location', e.target.value)}
                     placeholder="Specific venue or meeting point"
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                   <button
@@ -2507,36 +2507,36 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Capacity & Requirements */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Capacity & Requirements</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Capacity & Requirements</h5>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Maximum Participants</label>
+                  <label className="block text-sm font-medium text-gray-700">Maximum Participants</label>
                   <input
                     type="number"
                     value={form.max_participants || ''}
                     onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="e.g., 50"
-                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Minimum Age</label>
+                  <label className="block text-sm font-medium text-gray-700">Minimum Age</label>
                   <input
                     type="number"
                     value={form.minimum_age || ''}
                     onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="e.g., 8"
-                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Registration Deadline</label>
+                  <label className="block text-sm font-medium text-gray-700">Registration Deadline</label>
                   <input
                     type="datetime-local"
                     value={form.registration_deadline || ''}
                     onChange={(e) => update('registration_deadline', e.target.value)}
-                    className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -2544,39 +2544,39 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Ticketing & Pricing */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Ticketing & Pricing</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Ticketing & Pricing</h5>
 
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <label className="flex items-center gap-2 mb-3">
                   <input
                     type="checkbox"
                     checked={(form as any).internal_ticketing || false}
                     onChange={(e) => update('internal_ticketing', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
                   />
-                  <span className="text-sm font-medium text-slate-700">Enable internal ticketing</span>
+                  <span className="text-sm font-medium text-gray-700">Enable internal ticketing</span>
                 </label>
 
                 {(form as any).internal_ticketing && (
                   <div className="space-y-3">
                     {/* Ticket types list */}
                     {(form as any).ticket_types?.map((tt: any, idx: number) => (
-                      <div key={tt.id || idx} className="p-4 border border-slate-200 rounded-lg bg-white">
+                      <div key={tt.id || idx} className="p-4 border border-gray-200 rounded-lg bg-white">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
                             <input
-                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               value={tt.title || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'title', e.target.value)}
                               placeholder="e.g., General Admission"
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Price (UGX)</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Price (UGX)</label>
                             <div className="flex items-center gap-2">
                               <input
-                                className="flex-1 border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 type="number"
                                 value={(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) ? 0 : (tt.price ?? '')}
                                 onChange={(e) => {
@@ -2590,9 +2590,9 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Available Tickets</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Available Tickets</label>
                             <input
-                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               type="number"
                               value={tt.quantity ?? ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
@@ -2601,9 +2601,9 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           </div>
                         </div>
                         <div className="mb-3">
-                          <label className="block text-xs font-medium text-slate-600 mb-1">Description (optional)</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Description (optional)</label>
                           <input
-                            className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             value={tt.description || ''}
                             onChange={(e) => updateTicketTypeInForm(idx, 'description', e.target.value)}
                             placeholder="Description (optional)"
@@ -2611,18 +2611,18 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Sale starts</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Sale starts</label>
                             <input
-                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               type="datetime-local"
                               value={tt.sale_start || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'sale_start', e.target.value)}
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-slate-600 mb-1">Sale ends (deadline)</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Sale ends (deadline)</label>
                             <input
-                              className="w-full border border-slate-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               type="datetime-local"
                               value={tt.sale_end || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'sale_end', e.target.value)}
@@ -2645,7 +2645,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       <select
                         value={ticketPreset}
                         onChange={(e) => setTicketPreset(e.target.value as any)}
-                        className="border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="general">General</option>
                         <option value="vip">VIP</option>
@@ -2669,16 +2669,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Event Details */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Event Details</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Event Details</h5>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700">Event Highlights</label>
+                <label className="block text-sm font-medium text-gray-700">Event Highlights</label>
                 <div className="flex gap-2 mt-1">
                   <input
                     value={arrayInputs.event_highlights || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_highlights: e.target.value }))}
                     placeholder="e.g., Live music performance, Traditional dance, Wildlife viewing, Cultural demonstrations"
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_highlights', arrayInputs.event_highlights || ''))}
                   />
                   <button
@@ -2706,13 +2706,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700">What's Included</label>
+                <label className="block text-sm font-medium text-gray-700">What's Included</label>
                 <div className="flex gap-2 mt-1">
                   <input
                     value={arrayInputs.event_inclusions || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_inclusions: e.target.value }))}
                     placeholder="e.g., Entry ticket, Refreshments, Transportation, Guide, Equipment"
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_inclusions', arrayInputs.event_inclusions || ''))}
                   />
                   <button
@@ -2740,13 +2740,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700">Prerequisites</label>
+                <label className="block text-sm font-medium text-gray-700">Prerequisites</label>
                 <div className="flex gap-2 mt-1">
                   <input
                     value={arrayInputs.event_prerequisites || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_prerequisites: e.target.value }))}
                     placeholder="e.g., Valid ID, Medical certificate, Fitness level, Age restrictions"
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_prerequisites', arrayInputs.event_prerequisites || ''))}
                   />
                   <button
@@ -2776,45 +2776,45 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Event Features */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Event Features</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Event Features</h5>
 
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.group_discounts || false}
                       onChange={(e) => update('group_discounts', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Group Discounts</span>
+                    <span className="text-sm font-medium text-gray-700">Group Discounts</span>
                   </label>
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.photography_allowed || false}
                       onChange={(e) => update('photography_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Photography Allowed</span>
+                    <span className="text-sm font-medium text-gray-700">Photography Allowed</span>
                   </label>
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.recording_allowed || false}
                       onChange={(e) => update('recording_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Recording Allowed</span>
+                    <span className="text-sm font-medium text-gray-700">Recording Allowed</span>
                   </label>
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.transportation_included || false}
                       onChange={(e) => update('transportation_included', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Transportation Included</span>
+                    <span className="text-sm font-medium text-gray-700">Transportation Included</span>
                   </label>
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
@@ -2827,18 +2827,18 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           update('meals_included', []);
                         }
                       }}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Meals Included</span>
+                    <span className="text-sm font-medium text-gray-700">Meals Included</span>
                   </label>
                   <label className="flex items-center p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.certificates_provided || false}
                       onChange={(e) => update('certificates_provided', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
                     />
-                    <span className="text-sm font-medium text-slate-700">Certificates Provided</span>
+                    <span className="text-sm font-medium text-gray-700">Certificates Provided</span>
                   </label>
                 </div>
               </div>
@@ -2846,16 +2846,16 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Policies */}
             <div className="space-y-4">
-              <h5 className="font-medium text-slate-800 text-sm uppercase tracking-wide">Policies</h5>
+              <h5 className="font-medium text-gray-800 text-sm uppercase tracking-wide">Policies</h5>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700">Cancellation Policy</label>
+                <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
                 <textarea
                   value={form.event_cancellation_policy || ''}
                   onChange={(e) => update('event_cancellation_policy', e.target.value)}
                   placeholder="Refund policy and cancellation terms for the event"
                   rows={3}
-                  className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 />
               </div>
             </div>
@@ -2865,11 +2865,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'equipment rental':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Equipment Rental Details</h4>
+            <h4 className="font-medium text-gray-900">Equipment Rental Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Rental Duration</label>
+                <label className="block text-sm font-medium text-gray-700">Rental Duration</label>
                 <select value={form.rental_duration || ''} onChange={(e) => update('rental_duration', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select duration</option>
                   <option value="hourly">Hourly</option>
@@ -2881,24 +2881,24 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Security Deposit (UGX)</label>
+                <label className="block text-sm font-medium text-gray-700">Security Deposit (UGX)</label>
                 <input type="number" value={form.deposit_required || ''} onChange={(e) => update('deposit_required', e.target.value ? Number(e.target.value) : undefined)} placeholder="Amount held as security" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Replacement Value (UGX)</label>
+                <label className="block text-sm font-medium text-gray-700">Replacement Value (UGX)</label>
                 <input type="number" value={form.replacement_value || ''} onChange={(e) => update('replacement_value', e.target.value ? Number(e.target.value) : undefined)} placeholder="Value for replacement if damaged" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Delivery Radius (km)</label>
+                <label className="block text-sm font-medium text-gray-700">Delivery Radius (km)</label>
                 <input type="number" value={form.delivery_radius || ''} onChange={(e) => update('delivery_radius', e.target.value ? Number(e.target.value) : undefined)} placeholder="How far you deliver" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Rental Items</label>
+              <label className="block text-sm font-medium text-gray-700">Rental Items</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.rental_items || ''}
@@ -2920,7 +2920,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Usage Instructions</label>
+              <label className="block text-sm font-medium text-gray-700">Usage Instructions</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.usage_instructions || ''}
@@ -2942,7 +2942,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Maintenance Requirements</label>
+              <label className="block text-sm font-medium text-gray-700">Maintenance Requirements</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.maintenance_requirements || ''}
@@ -2964,7 +2964,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Rental Features</label>
+              <label className="block text-sm font-medium text-gray-700">Rental Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.insurance_required || false} onChange={(e) => update('insurance_required', e.target.checked)} className="mr-2" />
@@ -2995,11 +2995,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Minimum Age Requirement</label>
+                <label className="block text-sm font-medium text-gray-700">Minimum Age Requirement</label>
                 <input type="number" value={form.minimum_age || ''} onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 18" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">License Requirements</label>
+                <label className="block text-sm font-medium text-gray-700">License Requirements</label>
                 <select value={form.license_required || ''} onChange={(e) => update('license_required', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select license type</option>
                   <option value="none">No license required</option>
@@ -3012,12 +3012,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Equipment Condition</label>
+              <label className="block text-sm font-medium text-gray-700">Equipment Condition</label>
               <textarea value={form.equipment_condition || ''} onChange={(e) => update('equipment_condition', e.target.value)} placeholder="Describe the condition of equipment, age, maintenance history, etc." rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Rental Terms & Conditions</label>
+              <label className="block text-sm font-medium text-gray-700">Rental Terms & Conditions</label>
               <textarea value={form.rental_terms || ''} onChange={(e) => update('rental_terms', e.target.value)} placeholder="Late fees, damage policy, cancellation terms, etc." rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
@@ -3026,11 +3026,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'events & workshops':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Events & Workshops Details</h4>
+            <h4 className="font-medium text-gray-900">Events & Workshops Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Event Type</label>
+                <label className="block text-sm font-medium text-gray-700">Event Type</label>
                 <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select event type</option>
                   <optgroup label="→ Adventure">
@@ -3072,35 +3072,35 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Event Date & Time</label>
+                <label className="block text-sm font-medium text-gray-700">Event Date & Time</label>
                 <input type="datetime-local" value={form.event_datetime || ''} onChange={(e) => update('event_datetime', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Duration (hours)</label>
+                <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
                 <input type="number" value={form.event_duration_hours || ''} onChange={(e) => update('event_duration_hours', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 3" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Maximum Participants</label>
+                <label className="block text-sm font-medium text-gray-700">Maximum Participants</label>
                 <input type="number" value={form.max_participants || ''} onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 20" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Registration Deadline</label>
+                <label className="block text-sm font-medium text-gray-700">Registration Deadline</label>
                 <input type="datetime-local" value={form.registration_deadline || ''} onChange={(e) => update('registration_deadline', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Minimum Age</label>
+                <label className="block text-sm font-medium text-gray-700">Minimum Age</label>
                 <input type="number" value={form.minimum_age || ''} onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 16" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Prerequisites</label>
+              <label className="block text-sm font-medium text-gray-700">Prerequisites</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.prerequisites || ''}
@@ -3122,7 +3122,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">What to Bring</label>
+              <label className="block text-sm font-medium text-gray-700">What to Bring</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.what_to_bring || ''}
@@ -3144,7 +3144,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Materials Included</label>
+              <label className="block text-sm font-medium text-gray-700">Materials Included</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.materials_included || ''}
@@ -3166,7 +3166,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Learning Outcomes</label>
+              <label className="block text-sm font-medium text-gray-700">Learning Outcomes</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.learning_outcomes || ''}
@@ -3188,12 +3188,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Instructor Credentials</label>
+              <label className="block text-sm font-medium text-gray-700">Instructor Credentials</label>
               <textarea value={form.instructor_credentials || ''} onChange={(e) => update('instructor_credentials', e.target.value)} placeholder="Qualifications, experience, certifications of the instructor(s)" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Event Features</label>
+              <label className="block text-sm font-medium text-gray-700">Event Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.certificates_provided || false} onChange={(e) => update('certificates_provided', e.target.checked)} className="mr-2" />
@@ -3223,12 +3223,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Event Description</label>
+              <label className="block text-sm font-medium text-gray-700">Event Description</label>
               <textarea value={form.event_description || ''} onChange={(e) => update('event_description', e.target.value)} placeholder="Detailed description of the event, what participants will experience, and any special highlights" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Cancellation Policy</label>
+              <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
               <textarea value={form.event_cancellation_policy || ''} onChange={(e) => update('event_cancellation_policy', e.target.value)} placeholder="Refund policy, cancellation deadlines, and terms" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
@@ -3237,32 +3237,32 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'travel agencies':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Travel Agency Details</h4>
+            <h4 className="font-medium text-gray-900">Travel Agency Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Years of Experience</label>
+                <label className="block text-sm font-medium text-gray-700">Years of Experience</label>
                 <input type="number" value={form.years_experience || ''} onChange={(e) => update('years_experience', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 10" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Booking Fee (UGX)</label>
+                <label className="block text-sm font-medium text-gray-700">Booking Fee (UGX)</label>
                 <input type="number" value={form.booking_fee || ''} onChange={(e) => update('booking_fee', e.target.value ? Number(e.target.value) : undefined)} placeholder="Service fee per booking" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">License Number</label>
+                <label className="block text-sm font-medium text-gray-700">License Number</label>
                 <input value={form.license_number || ''} onChange={(e) => update('license_number', e.target.value)} placeholder="Tourism license number" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">IATA Number (if applicable)</label>
+                <label className="block text-sm font-medium text-gray-700">IATA Number (if applicable)</label>
                 <input value={form.iata_number || ''} onChange={(e) => update('iata_number', e.target.value)} placeholder="International Air Transport Association number" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Certifications</label>
+              <label className="block text-sm font-medium text-gray-700">Certifications</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.certifications || ''}
@@ -3284,7 +3284,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Specializations</label>
+              <label className="block text-sm font-medium text-gray-700">Specializations</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.specializations || ''}
@@ -3306,7 +3306,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Services Offered</label>
+              <label className="block text-sm font-medium text-gray-700">Services Offered</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.services_offered || ''}
@@ -3328,7 +3328,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Destinations Covered</label>
+              <label className="block text-sm font-medium text-gray-700">Destinations Covered</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.destinations_covered || ''}
@@ -3350,7 +3350,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Success Stories</label>
+              <label className="block text-sm font-medium text-gray-700">Success Stories</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.success_stories || ''}
@@ -3372,7 +3372,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Agency Features</label>
+              <label className="block text-sm font-medium text-gray-700">Agency Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.customization_available || false} onChange={(e) => update('customization_available', e.target.checked)} className="mr-2" />
@@ -3402,12 +3402,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Agency Description</label>
+              <label className="block text-sm font-medium text-gray-700">Agency Description</label>
               <textarea value={form.agency_description || ''} onChange={(e) => update('agency_description', e.target.value)} placeholder="Tell tourists about your agency's story, mission, and what makes you unique" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Contact Information</label>
+              <label className="block text-sm font-medium text-gray-700">Contact Information</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input value={form.emergency_phone || ''} onChange={(e) => update('emergency_phone', e.target.value)} placeholder="Emergency contact phone" className="mt-1 w-full border rounded-md px-3 py-2" />
                 <input value={form.website_url || ''} onChange={(e) => update('website_url', e.target.value)} placeholder="Website URL" className="mt-1 w-full border rounded-md px-3 py-2" />
@@ -3420,11 +3420,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'homestays':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Accommodation Details</h4>
+            <h4 className="font-medium text-gray-900">Accommodation Details</h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Property Type</label>
+                <label className="block text-sm font-medium text-gray-700">Property Type</label>
                 <select value={form.property_type || ''} onChange={(e) => update('property_type', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="">Select property type</option>
                   <option value="home">Home / Private Home → Homes &amp; Stays</option>
@@ -3438,35 +3438,35 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Total Rooms</label>
+                <label className="block text-sm font-medium text-gray-700">Total Rooms</label>
                 <input type="number" value={form.total_rooms || ''} onChange={(e) => update('total_rooms', e.target.value ? Number(e.target.value) : undefined)} placeholder="Number of rooms available" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Check-in Time</label>
+                <label className="block text-sm font-medium text-gray-700">Check-in Time</label>
                 <input type="time" value={form.check_in_time || ''} onChange={(e) => update('check_in_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Check-out Time</label>
+                <label className="block text-sm font-medium text-gray-700">Check-out Time</label>
                 <input type="time" value={form.check_out_time || ''} onChange={(e) => update('check_out_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Minimum Stay (nights)</label>
+                <label className="block text-sm font-medium text-gray-700">Minimum Stay (nights)</label>
                 <input type="number" value={form.minimum_stay || ''} onChange={(e) => update('minimum_stay', e.target.value ? Number(e.target.value) : undefined)} placeholder="Minimum nights required" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Maximum Guests</label>
+                <label className="block text-sm font-medium text-gray-700">Maximum Guests</label>
                 <input type="number" value={form.maximum_guests || ''} onChange={(e) => update('maximum_guests', e.target.value ? Number(e.target.value) : undefined)} placeholder="Maximum number of guests" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Room Types Available</label>
+              <label className="block text-sm font-medium text-gray-700">Room Types Available</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.room_types || ''}
@@ -3488,7 +3488,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Room Amenities</label>
+              <label className="block text-sm font-medium text-gray-700">Room Amenities</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.room_amenities || ''}
@@ -3510,7 +3510,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Common Area Facilities</label>
+              <label className="block text-sm font-medium text-gray-700">Common Area Facilities</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.common_facilities || ''}
@@ -3532,7 +3532,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Property Features</label>
+              <label className="block text-sm font-medium text-gray-700">Property Features</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={form.parking_available || false} onChange={(e) => update('parking_available', e.target.checked)} className="mr-2" />
@@ -3574,7 +3574,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">House Rules</label>
+              <label className="block text-sm font-medium text-gray-700">House Rules</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.house_rules || ''}
@@ -3596,7 +3596,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Nearby Attractions</label>
+              <label className="block text-sm font-medium text-gray-700">Nearby Attractions</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.nearby_attractions || ''}
@@ -3618,7 +3618,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Local Recommendations</label>
+              <label className="block text-sm font-medium text-gray-700">Local Recommendations</label>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.local_recommendations || ''}
@@ -3640,7 +3640,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Check-in Process</label>
+              <label className="block text-sm font-medium text-gray-700">Check-in Process</label>
               <textarea value={form.check_in_process || ''} onChange={(e) => update('check_in_process', e.target.value)} placeholder="Describe how guests check in, what they need to bring, any special instructions" rows={2} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
 
@@ -3650,27 +3650,27 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'flights':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Flight Booking Details</h4>
+            <h4 className="font-medium text-gray-900">Flight Booking Details</h4>
 
             {/* Basic Flight Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Flight Number</label>
+                <label className="block text-sm font-medium text-gray-700">Flight Number</label>
                 <input value={form.flight_number || ''} onChange={(e) => update('flight_number', e.target.value)} placeholder="e.g., QR123" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Airline</label>
+                <label className="block text-sm font-medium text-gray-700">Airline</label>
                 <input value={form.airline || ''} onChange={(e) => update('airline', e.target.value)} placeholder="e.g., Qatar Airways" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Aircraft Type</label>
+                <label className="block text-sm font-medium text-gray-700">Aircraft Type</label>
                 <input value={form.aircraft_type || ''} onChange={(e) => update('aircraft_type', e.target.value)} placeholder="e.g., Boeing 777" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Currency</label>
+                <label className="block text-sm font-medium text-gray-700">Currency</label>
                 <select value={form.currency || 'UGX'} onChange={(e) => update('currency', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                   <option value="UGX">UGX</option>
                   <option value="USD">USD</option>
@@ -3681,25 +3681,25 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Route Information */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Route Information</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Route Information</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Departure City</label>
+                  <label className="block text-sm font-medium text-gray-700">Departure City</label>
                   <input value={form.departure_city || ''} onChange={(e) => update('departure_city', e.target.value)} placeholder="e.g., Kampala" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Arrival City</label>
+                  <label className="block text-sm font-medium text-gray-700">Arrival City</label>
                   <input value={form.arrival_city || ''} onChange={(e) => update('arrival_city', e.target.value)} placeholder="e.g., Nairobi" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Departure Airport</label>
+                  <label className="block text-sm font-medium text-gray-700">Departure Airport</label>
                   <input value={form.departure_airport || ''} onChange={(e) => update('departure_airport', e.target.value)} placeholder="e.g., KIA" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Arrival Airport</label>
+                  <label className="block text-sm font-medium text-gray-700">Arrival Airport</label>
                   <input value={form.arrival_airport || ''} onChange={(e) => update('arrival_airport', e.target.value)} placeholder="e.g., JKA" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
@@ -3707,25 +3707,25 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Schedule */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Schedule</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Schedule</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Departure Time</label>
+                  <label className="block text-sm font-medium text-gray-700">Departure Time</label>
                   <input type="datetime-local" value={form.departure_time || ''} onChange={(e) => update('departure_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Arrival Time</label>
+                  <label className="block text-sm font-medium text-gray-700">Arrival Time</label>
                   <input type="datetime-local" value={form.arrival_time || ''} onChange={(e) => update('arrival_time', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Duration (minutes)</label>
+                  <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
                   <input type="number" value={form.duration_minutes || ''} onChange={(e) => update('duration_minutes', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 120" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Flight Status</label>
+                  <label className="block text-sm font-medium text-gray-700">Flight Status</label>
                   <select value={form.flight_status || 'active'} onChange={(e) => update('flight_status', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                     <option value="active">Active</option>
                     <option value="cancelled">Cancelled</option>
@@ -3738,18 +3738,18 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Pricing */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Pricing</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Pricing</h5>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Economy Price</label>
+                  <label className="block text-sm font-medium text-gray-700">Economy Price</label>
                   <input type="number" value={form.economy_price || ''} onChange={(e) => update('economy_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Business Price</label>
+                  <label className="block text-sm font-medium text-gray-700">Business Price</label>
                   <input type="number" value={form.business_price || ''} onChange={(e) => update('business_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">First Class Price</label>
+                  <label className="block text-sm font-medium text-gray-700">First Class Price</label>
                   <input type="number" value={form.first_class_price || ''} onChange={(e) => update('first_class_price', e.target.value ? Number(e.target.value) : undefined)} placeholder="0.00" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
@@ -3757,14 +3757,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Capacity */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Capacity</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Capacity</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Total Seats</label>
+                  <label className="block text-sm font-medium text-gray-700">Total Seats</label>
                   <input type="number" value={form.total_seats || ''} onChange={(e) => update('total_seats', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 200" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Available Seats</label>
+                  <label className="block text-sm font-medium text-gray-700">Available Seats</label>
                   <input type="number" value={form.available_seats || ''} onChange={(e) => update('available_seats', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 180" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
@@ -3772,10 +3772,10 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Additional Information */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Additional Information</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Additional Information</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Flight Class</label>
+                  <label className="block text-sm font-medium text-gray-700">Flight Class</label>
                   <select value={form.flight_class || 'economy'} onChange={(e) => update('flight_class', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2">
                     <option value="economy">Economy</option>
                     <option value="business">Business</option>
@@ -3783,20 +3783,20 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Booking Deadline (hours before)</label>
+                  <label className="block text-sm font-medium text-gray-700">Booking Deadline (hours before)</label>
                   <input type="number" value={form.booking_deadline_hours || ''} onChange={(e) => update('booking_deadline_hours', e.target.value ? Number(e.target.value) : undefined)} placeholder="e.g., 24" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700">Baggage Allowance</label>
+                <label className="block text-sm font-medium text-gray-700">Baggage Allowance</label>
                 <input value={form.baggage_allowance || ''} onChange={(e) => update('baggage_allowance', e.target.value)} placeholder="e.g., 20kg checked, 7kg carry-on" className="mt-1 w-full border rounded-md px-3 py-2" />
               </div>
             </div>
 
             {/* Flight Amenities */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Flight Amenities</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Flight Amenities</h5>
               <div className="flex gap-2">
                 <input
                   value={arrayInputs.flight_amenities || ''}
@@ -3819,20 +3819,20 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Booking Information */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Booking Information</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Booking Information</h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Booking Fee (UGX)</label>
+                  <label className="block text-sm font-medium text-gray-700">Booking Fee (UGX)</label>
                   <input type="number" value={form.booking_fee || ''} onChange={(e) => update('booking_fee', e.target.value ? Number(e.target.value) : undefined)} placeholder="Service fee per booking" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Cancellation Policy</label>
+                  <label className="block text-sm font-medium text-gray-700">Cancellation Policy</label>
                   <input value={form.cancellation_policy || ''} onChange={(e) => update('cancellation_policy', e.target.value)} placeholder="e.g., Free cancellation 24h before" className="mt-1 w-full border rounded-md px-3 py-2" />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-slate-700">Payment Methods</label>
+                <label className="block text-sm font-medium text-gray-700">Payment Methods</label>
                 <div className="flex gap-2">
                   <input
                     value={arrayInputs.payment_methods || ''}
@@ -3856,7 +3856,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Flight Features */}
             <div className="border-t pt-4">
-              <h5 className="font-medium text-slate-900 mb-3">Flight Features</h5>
+              <h5 className="font-medium text-gray-900 mb-3">Flight Features</h5>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <label className="flex items-center">
                   <input type="checkbox" checked={!!form.refund_policy} onChange={(e) => update('refund_policy', e.target.checked ? 'refundable' : '')} className="mr-2" />
@@ -3886,7 +3886,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Additional Notes</label>
+              <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
               <textarea value={form.flight_notes || ''} onChange={(e) => update('flight_notes', e.target.value)} placeholder="Any additional information about the flight booking service" rows={3} className="mt-1 w-full border rounded-md px-3 py-2" />
             </div>
           </div>
@@ -3895,11 +3895,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       case 'shops':
         return (
           <div className="space-y-4 border-t pt-4">
-            <h4 className="font-medium text-slate-900">Pricing &amp; Availability</h4>
+            <h4 className="font-medium text-gray-900">Pricing &amp; Availability</h4>
 
             {/* Product category */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Product Category</label>
+              <label className="block text-sm font-medium text-gray-700">Product Category</label>
               <select
                 value={form.shop_type || ''}
                 onChange={(e) => update('shop_type', e.target.value)}
@@ -3920,7 +3920,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
             {/* Listing type */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Listing Type</label>
+              <label className="block text-sm font-medium text-gray-700">Listing Type</label>
               <select
                 value={form.listing_type || (form.type || 'buy')}
                 onChange={(e) => { update('listing_type', e.target.value); update('type', e.target.value) }}
@@ -3935,7 +3935,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
             {/* Buy price + Rental price */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Buy Price ({form.currency || 'UGX'})</label>
+                <label className="block text-sm font-medium text-gray-700">Buy Price ({form.currency || 'UGX'})</label>
                 <input
                   type="number"
                   value={(form as any).buy_price ?? ''}
@@ -3943,10 +3943,10 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   placeholder="0.00"
                   className="mt-1 w-full border rounded-md px-3 py-2"
                 />
-                <p className="mt-1 text-xs text-slate-400">Leave blank if hire-only</p>
+                <p className="mt-1 text-xs text-gray-400">Leave blank if hire-only</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Rental Price per Day ({form.currency || 'UGX'})</label>
+                <label className="block text-sm font-medium text-gray-700">Rental Price per Day ({form.currency || 'UGX'})</label>
                 <input
                   type="number"
                   value={(form as any).rental_price_per_day ?? ''}
@@ -3954,13 +3954,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   placeholder="0.00"
                   className="mt-1 w-full border rounded-md px-3 py-2"
                 />
-                <p className="mt-1 text-xs text-slate-400">Leave blank if buy-only</p>
+                <p className="mt-1 text-xs text-gray-400">Leave blank if buy-only</p>
               </div>
             </div>
 
             {/* Deposit */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Security Deposit ({form.currency || 'UGX'})</label>
+              <label className="block text-sm font-medium text-gray-700">Security Deposit ({form.currency || 'UGX'})</label>
               <input
                 type="number"
                 value={form.deposit_required || ''}
@@ -3968,12 +3968,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 placeholder="0.00"
                 className="mt-1 w-full border rounded-md px-3 py-2"
               />
-              <p className="mt-1 text-xs text-slate-400">Required for hire items (optional)</p>
+              <p className="mt-1 text-xs text-gray-400">Required for hire items (optional)</p>
             </div>
 
             {/* Hire terms */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Hire Terms &amp; Return Instructions</label>
+              <label className="block text-sm font-medium text-gray-700">Hire Terms &amp; Return Instructions</label>
               <textarea
                 value={form.rental_terms || ''}
                 onChange={(e) => update('rental_terms', e.target.value)}
@@ -3989,14 +3989,14 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 type="checkbox"
                 checked={form.delivery_available || false}
                 onChange={(e) => update('delivery_available', e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                className="h-4 w-4 rounded border-slate-300 text-gray-900"
               />
-              <span className="text-sm text-slate-700">Delivery available</span>
+              <span className="text-sm text-gray-700">Delivery available</span>
             </label>
 
             {/* Return policy */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Return &amp; Exchange Policy</label>
+              <label className="block text-sm font-medium text-gray-700">Return &amp; Exchange Policy</label>
               <textarea
                 value={form.shop_policies || ''}
                 onChange={(e) => update('shop_policies', e.target.value)}
@@ -4015,20 +4015,20 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
-        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-gray-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
+        <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-gray-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Plus className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">{initial?.id ? 'Edit Service' : 'Create New Service'}</h3>
-              <p className="text-sm text-slate-600">Fill in the details to add your service to the platform</p>
+              <h3 className="text-xl font-bold text-gray-900">{initial?.id ? 'Edit Service' : 'Create New Service'}</h3>
+              <p className="text-sm text-gray-600">Fill in the details to add your service to the platform</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
           >
             <X className="h-5 w-5" />
           </button>
@@ -4075,8 +4075,8 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           }}
         >
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
               <option value="">Select a category</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -4087,13 +4087,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Title' : 'Title'}</label>
-            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Title' : 'Title'}</label>
+            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
-            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} required />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
+            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} required />
           </div>
 
           {/* Hide generic pricing/location/capacity fields when creating an Event (category_id === 'cat_activities')
@@ -4103,29 +4103,29 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               {form.category_id === 'cat_transport' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Within Town Price</label>
-                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
-                    <p className="text-xs text-slate-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Within Town Price</label>
+                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Upcountry Price</label>
-                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
-                    <p className="text-xs text-slate-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Upcountry Price</label>
+                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Currency</label>
-                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
-                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
                     {form.price && form.price > 0 && (
                       <PricingNotification
                         price={form.price}
@@ -4142,12 +4142,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Duration (hours)</label>
-                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
+                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Max Capacity</label>
-                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
+                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                 </div>
               </div>
             </>
@@ -4155,28 +4155,28 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
           {/* Flexible Tier Request Comment Box */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Request Flexible Pricing Tier (Optional)
             </label>
             <textarea
               value={flexibleTierComment}
               onChange={(e) => setFlexibleTierComment(e.target.value)}
               placeholder="If you'd like to request a different pricing tier or special pricing arrangement for this service, please explain your request here. Our team will review and get back to you."
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               This comment will be sent to our admin team for review. You may be contacted for more details.
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Images</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
             <div className="space-y-3">
-              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-colors">
+              <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-slate-300 hover:bg-gray-50 transition-colors">
                 <div className="text-center">
-                  <p className="text-sm text-slate-500">{uploadingImage ? 'Uploading...' : 'Click to upload an image'}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">JPG, PNG, WebP</p>
+                  <p className="text-sm text-gray-500">{uploadingImage ? 'Uploading...' : 'Click to upload an image'}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WebP</p>
                 </div>
                 <input
                   type="file"
@@ -4194,8 +4194,8 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <div className="flex flex-wrap gap-2">
                   {(form.images as string[]).map((src, idx) => (
                     <div key={idx} className="relative group">
-                      <img loading="lazy" decoding="async" src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-                      <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-slate-900 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                      <img loading="lazy" decoding="async" src={src} alt={`Service ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+                      <button type="button" onClick={() => removeImage(idx)} className="absolute -top-1.5 -right-1.5 bg-emerald-700 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">×</button>
                     </div>
                   ))}
                 </div>
@@ -4205,17 +4205,17 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
           {renderCategorySpecificFields()}
 
-          <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 border-t border-slate-200 bg-slate-50 -mx-2 sm:-mx-8 px-2 sm:px-8 py-4 sm:py-6 rounded-b-2xl">
+          <div className="flex flex-col sm:flex-row justify-end gap-4 pt-8 border-t border-gray-200 bg-gray-50 -mx-2 sm:-mx-8 px-2 sm:px-8 py-4 sm:py-6 rounded-b-2xl">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-6 py-3 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-slate-300 transition-all duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="min-h-[44px] w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-slate-900 rounded-xl hover:bg-slate-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+              className="min-h-[44px] w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-emerald-700 rounded-xl hover:bg-emerald-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
             >
               {initial?.id ? 'Save Changes' : 'Create Service'}
             </button>
@@ -4226,15 +4226,15 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       {/* Map Location Modal */}
       {showMapModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-slate-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
-            <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-slate-200 px-8 py-6 flex-shrink-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-gray-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
+            <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-gray-200 px-8 py-6 flex-shrink-0">
               <div className="flex items-center gap-4">
                 <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
                   <Map className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">Select Event Location</h3>
-                  <p className="text-sm text-slate-600">Search for and select the event location on the map (OpenStreetMap)</p>
+                  <h3 className="text-xl font-bold text-gray-900">Select Event Location</h3>
+                  <p className="text-sm text-gray-600">Search for and select the event location on the map (OpenStreetMap)</p>
                 </div>
               </div>
               <button
@@ -4242,7 +4242,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   setShowMapModal(false)
                   setMapModalInitialCoords(null)
                 }}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:shadow-sm flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
               >
                 <X className="h-5 w-5" />
               </button>

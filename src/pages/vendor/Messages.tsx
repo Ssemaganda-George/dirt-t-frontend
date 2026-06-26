@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react'
+﻿import { useEffect, useState, useRef, useMemo } from 'react'
 import { Send, X, ChevronLeft, MessageSquare, Users, Shield, Bell, Check, CheckCheck, Plus } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { getVendorMessages, sendMessage, getAdminProfileId, decryptMessages, markConversationAsRead } from '../../lib/database'
@@ -352,7 +352,7 @@ export default function VendorMessages() {
           </div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 bg-white rounded-xl border border-slate-200" />
+              <div key={i} className="h-20 bg-white rounded-xl border border-gray-200" />
             ))}
           </div>
         </div>
@@ -365,8 +365,8 @@ export default function VendorMessages() {
       {/* Header - hidden on mobile when chat is selected */}
       <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} items-start justify-between mb-4 lg:mb-6 flex-shrink-0`}>
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Messages</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage communications with customers and administrators</p>
+          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage communications with customers and administrators</p>
         </div>
         {!selectedConversation && (
           <button
@@ -392,32 +392,32 @@ export default function VendorMessages() {
               const isAdmin = selectedConversation === 'admin'
               
               return (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 8rem)' }}>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col h-full lg:h-auto" style={{ minHeight: 'min(60vh, 400px)', maxHeight: 'calc(100dvh - 8rem)' }}>
               {/* Chat Header */}
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                 <button
                   onClick={() => setSelectedConversation(null)}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                 >
-                  <ChevronLeft className="w-4 h-4 text-slate-500" />
+                  <ChevronLeft className="w-4 h-4 text-gray-500" />
                 </button>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                  isAdmin ? 'bg-blue-600' : 'bg-slate-900'
+                  isAdmin ? 'bg-blue-600' : 'bg-emerald-700'
                 }`}>
                   {isAdmin ? <Shield className="w-4 h-4" /> : (convoName?.[0]?.toUpperCase() || 'C')}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    {convoName}{!isAdmin && <span className="text-slate-500 font-normal ml-1">(Tourist)</span>}
+                  <p className="text-sm font-medium text-gray-900">
+                    {convoName}{!isAdmin && <span className="text-gray-500 font-normal ml-1">(Tourist)</span>}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-gray-500">
                     {isAdmin ? 'Admin & System Notifications' : 'Customer Account'}
                   </p>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
                 {(() => {
                   const conversationMessages = messages.filter(msg => {
                     if (selectedConversation === 'admin') {
@@ -431,8 +431,8 @@ export default function VendorMessages() {
                   return conversationMessages.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <p className="text-sm text-slate-500">No messages yet</p>
-                        <p className="text-xs text-slate-400 mt-1">Start the conversation.</p>
+                        <p className="text-sm text-gray-500">No messages yet</p>
+                        <p className="text-xs text-gray-400 mt-1">Start the conversation.</p>
                       </div>
                     </div>
                   ) : (
@@ -467,7 +467,7 @@ export default function VendorMessages() {
                             {showAvatar && (
                               <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                  isVendor ? 'bg-slate-900 text-white' : 'bg-blue-600 text-white'
+                                  isVendor ? 'bg-emerald-700 text-white' : 'bg-blue-600 text-white'
                                 }`}>
                                   {isVendor ? 'Y' : (message.sender_role === 'admin' ? 'A' : ((message.sender?.full_name || message.sender_name)?.[0]?.toUpperCase() || 'C'))}
                                 </div>
@@ -477,18 +477,18 @@ export default function VendorMessages() {
                             <div className={`flex flex-col ${isVendor ? 'items-end' : 'items-start'}`}>
                               <div className={`px-3 py-2 rounded-xl text-sm ${
                                 isVendor
-                                  ? 'bg-slate-900 text-white rounded-br-sm'
-                                  : 'bg-white text-slate-900 border border-slate-200 rounded-bl-sm'
+                                  ? 'bg-emerald-700 text-white rounded-br-sm'
+                                  : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                               }`}>
                                 <p className="whitespace-pre-wrap">{message.message}</p>
                               </div>
                               {showTimestamp && (
-                                <p className="text-[10px] text-slate-400 mt-1">
+                                <p className="text-[10px] text-gray-400 mt-1">
                                   {formatMessageTime(message.created_at)}
                                 </p>
                               )}
                               {isVendor && (
-                                <span className={`text-[10px] mt-0.5 flex items-center gap-0.5 ${message.status === 'read' ? 'text-blue-500' : 'text-slate-400'}`}>
+                                <span className={`text-[10px] mt-0.5 flex items-center gap-0.5 ${message.status === 'read' ? 'text-blue-500' : 'text-gray-400'}`}>
                                   {message.status === 'unread' ? (
                                     <Check className="w-3 h-3" />
                                   ) : (
@@ -507,7 +507,7 @@ export default function VendorMessages() {
               </div>
 
               {/* Message Input */}
-              <div className="p-3 border-t border-slate-100 bg-white">
+              <div className="p-3 border-t border-gray-100 bg-white">
                 {sendMessageError && (
                   <div className="mb-2 p-2.5 rounded-lg bg-red-50 border border-red-100 flex items-center gap-2">
                     <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
@@ -525,7 +525,7 @@ export default function VendorMessages() {
                       }
                     }}
                     placeholder="Type your message..."
-                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 resize-none"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 resize-none"
                     rows={1}
                     style={{ minHeight: '38px', maxHeight: '100px' }}
                     onInput={(e) => {
@@ -537,10 +537,10 @@ export default function VendorMessages() {
                   <button
                     onClick={handleNewMessage}
                     disabled={!newMessageContent.trim() || sendingMessage}
-                    className={`min-h-[38px] px-3 py-2 rounded-lg transition-all flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                    className={`min-h-[38px] px-3 py-2 rounded-lg transition-all flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
                       newMessageContent.trim() && !sendingMessage
-                        ? 'bg-slate-900 text-white hover:bg-slate-800'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
                     {sendingMessage ? (
@@ -571,16 +571,16 @@ export default function VendorMessages() {
                     <button
                       key={tab.key}
                       onClick={() => setFilter(tab.key as any)}
-                      className={`min-h-[40px] px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 ${
+                      className={`min-h-[40px] px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20 ${
                         isActive
-                          ? 'bg-slate-900 text-white shadow-sm'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                          ? 'bg-emerald-700 text-white shadow-sm'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-slate-300'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
                       <span>{tab.label}</span>
                       <span className={`ml-0.5 text-xs px-1.5 py-0.5 rounded-md ${
-                        isActive ? 'bg-white/20' : 'bg-slate-100'
+                        isActive ? 'bg-white/20' : 'bg-gray-100'
                       }`}>
                         {tab.count}
                       </span>
@@ -592,12 +592,12 @@ export default function VendorMessages() {
               {/* Conversation Cards */}
               <div className="space-y-2">
                 {filteredConversations.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <MessageSquare className="w-6 h-6 text-slate-400" />
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <MessageSquare className="w-6 h-6 text-gray-400" />
                     </div>
-                    <p className="text-sm font-medium text-slate-900">No conversations</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-sm font-medium text-gray-900">No conversations</p>
+                    <p className="text-xs text-gray-500 mt-1">
                       {filter === 'unread' ? 'All caught up! No unread messages.' :
                        filter === 'customer' ? 'No customer conversations yet.' :
                        filter === 'admin' ? 'No admin conversations yet.' :
@@ -606,7 +606,7 @@ export default function VendorMessages() {
                     {(filter === 'admin' || filter === 'all') && (
                       <button
                         onClick={() => handleSelectConversation('admin')}
-                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white text-sm font-medium rounded-lg hover:bg-emerald-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
                       >
                         <Plus className="w-4 h-4" />
                         Contact Support Team
@@ -618,17 +618,17 @@ export default function VendorMessages() {
                     <div
                       key={conversation.id}
                       onClick={() => handleSelectConversation(conversation.id)}
-                      className={`bg-white rounded-xl border p-4 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-slate-900/20 ${
+                      className={`bg-white rounded-xl border p-4 cursor-pointer transition-all group focus-within:ring-2 focus-within:ring-emerald-600/20 ${
                         conversation.unreadCount > 0 
                           ? 'border-slate-300 hover:border-slate-400 shadow-sm' 
-                          : 'border-slate-200 hover:bg-slate-50/50'
+                          : 'border-gray-200 hover:bg-gray-50/50'
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
                           conversation.type === 'admin' 
                             ? 'bg-blue-600 text-white' 
-                            : 'bg-slate-900 text-white'
+                            : 'bg-emerald-700 text-white'
                         }`}>
                           {conversation.type === 'admin' ? (
                             <Shield className="w-5 h-5" />
@@ -640,7 +640,7 @@ export default function VendorMessages() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
                               <p className={`text-sm truncate ${
-                                conversation.unreadCount > 0 ? 'font-semibold text-slate-900' : 'font-medium text-slate-900'
+                                conversation.unreadCount > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-900'
                               }`}>
                                 {conversation.name}
                               </p>
@@ -654,18 +654,18 @@ export default function VendorMessages() {
                                   {conversation.unreadCount}
                                 </span>
                               )}
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-gray-400">
                                 {formatMessageTime(conversation.lastMessageTime)}
                               </span>
                             </div>
                           </div>
                           <p className={`text-sm mt-0.5 line-clamp-1 ${
-                            conversation.unreadCount > 0 ? 'text-slate-700' : 'text-slate-500'
+                            conversation.unreadCount > 0 ? 'text-gray-700' : 'text-gray-500'
                           }`}>
                             {conversation.latestMessage.message}
                           </p>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-gray-400">
                               {conversation.totalMessages} message{conversation.totalMessages !== 1 ? 's' : ''}
                             </span>
                             {conversation.unreadCount === 0 && (

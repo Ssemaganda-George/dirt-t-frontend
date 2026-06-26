@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+﻿import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { usePreferences } from '../../contexts/PreferencesContext'
@@ -227,12 +227,12 @@ export default function VendorDashboard() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 h-24"></div>
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 h-24"></div>
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 h-80"></div>
-            <div className="bg-white rounded-xl border border-slate-200 h-80"></div>
+            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 h-80"></div>
+            <div className="bg-white rounded-xl border border-gray-200 h-80"></div>
           </div>
         </div>
       </div>
@@ -245,15 +245,15 @@ export default function VendorDashboard() {
       <div className="bg-white rounded-2xl shadow-md p-4 sm:bg-transparent sm:shadow-none sm:rounded-none sm:p-0">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg sm:text-2xl font-semibold text-slate-900">
+            <h1 className="text-lg sm:text-2xl font-semibold text-gray-900">
               Welcome back, {profile?.full_name || 'Vendor'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">Monitor your business performance and manage bookings</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Monitor your business performance and manage bookings</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={refresh}
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 text-white p-2 sm:px-4 sm:py-2 text-xs sm:text-sm hover:bg-slate-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-700 text-white p-2 sm:px-4 sm:py-2 text-xs sm:text-sm hover:bg-emerald-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20"
               aria-label="Refresh"
             >
               <RefreshCw size={16} />
@@ -267,60 +267,60 @@ export default function VendorDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div
           onClick={() => navigate('/vendor/transactions')}
-          className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
-          <p className="text-xs font-medium text-slate-500">Balance</p>
-          <p className="text-lg font-semibold text-slate-900 mt-2">
+          <p className="text-xs font-medium text-gray-500">Balance</p>
+          <p className="text-lg font-semibold text-gray-900 mt-2">
             {formatCurrencyWithConversion(stats.balance, stats.currency, selectedCurrency || stats.currency, selectedLanguage || 'en-US')}
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             {balanceStatus === 'critical' ? '⚠ Low' : balanceStatus === 'warning' ? '⚡ Low' : '✓ Healthy'}
           </p>
         </div>
 
         <div
           onClick={() => navigate('/vendor/services')}
-          className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
-          <p className="text-xs font-medium text-slate-500">Services</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.servicesCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Active</p>
+          <p className="text-xs font-medium text-gray-500">Services</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.servicesCount}</p>
+          <p className="text-xs text-gray-400 mt-1">Active</p>
         </div>
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
-          <p className="text-xs font-medium text-slate-500">Pending</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.pendingBookings}</p>
-          <p className="text-xs text-slate-400 mt-1">Awaiting</p>
+          <p className="text-xs font-medium text-gray-500">Pending</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.pendingBookings}</p>
+          <p className="text-xs text-gray-400 mt-1">Awaiting</p>
         </div>
 
         <div
           onClick={() => navigate('/vendor/bookings')}
-          className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
-          <p className="text-xs font-medium text-slate-500">Completed</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.completedBookings}</p>
-          <p className="text-xs text-slate-400 mt-1">Done</p>
+          <p className="text-xs font-medium text-gray-500">Completed</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.completedBookings}</p>
+          <p className="text-xs text-gray-400 mt-1">Done</p>
         </div>
 
         <div
           onClick={() => navigate('/vendor/inquiries')}
-          className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
+          className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 hover:shadow-sm transition-all cursor-pointer min-h-[72px]"
         >
-          <p className="text-xs font-medium text-slate-500">Inquiries</p>
-          <p className="text-2xl font-semibold text-slate-900 mt-2">{stats.inquiriesCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Customers</p>
+          <p className="text-xs font-medium text-gray-500">Inquiries</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-2">{stats.inquiriesCount}</p>
+          <p className="text-xs text-gray-400 mt-1">Customers</p>
         </div>
 
         {/* Tier Information Card */}
         <div className="bg-white rounded-xl border border-purple-200 p-4 hover:shadow-sm transition-all">
-          <p className="text-xs font-medium text-slate-500">Current Tier</p>
-          <p className="text-lg font-semibold text-slate-900 mt-2">
+          <p className="text-xs font-medium text-gray-500">Current Tier</p>
+          <p className="text-lg font-semibold text-gray-900 mt-2">
             {currentTier?.name || 'Loading...'}
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-gray-400 mt-1">
             {currentTier?.commission_type === 'flat' 
               ? `${currentTier.commission_value} ${currentTier.currency || 'UGX'} flat fee`
               : `${currentTier?.commission_value || 0}% commission`
@@ -333,23 +333,23 @@ export default function VendorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Bookings */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden h-full flex flex-col">
-            <div className="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden h-full flex flex-col">
+            <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Recent Bookings</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Latest booking activity</p>
+                <h3 className="text-sm font-semibold text-gray-900">Recent Bookings</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Latest booking activity</p>
               </div>
-              <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{stats.recentBookings.length}</span>
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">{stats.recentBookings.length}</span>
             </div>
             <div className="p-5 flex-1 overflow-y-auto divide-y divide-slate-100">
               {stats.recentBookings.map((b) => (
                 <div key={b.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{formatDateTime(b.created_at)}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{b.services?.title || b.service?.title || `Service ${b.service_id}`}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatDateTime(b.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-sm font-semibold text-slate-900">{formatCurrencyWithConversion(b.vendor_payout_amount ?? b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
+                    <span className="text-sm font-semibold text-gray-900">{formatCurrencyWithConversion(b.vendor_payout_amount ?? b.total_amount, b.currency, selectedCurrency || b.currency, selectedLanguage || 'en-US')}</span>
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
                       getVendorDisplayStatus(b.status, b.payment_status) === 'confirmed' || getVendorDisplayStatus(b.status, b.payment_status) === 'completed'
                         ? 'bg-emerald-50 text-emerald-700'
@@ -364,9 +364,9 @@ export default function VendorDashboard() {
               ))}
               {stats.recentBookings.length === 0 && (
                 <div className="text-center py-12">
-                  <Calendar className="h-8 w-8 text-slate-300 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-slate-900">No bookings yet</p>
-                  <p className="text-xs text-slate-500 mt-1">Your recent bookings will appear here</p>
+                  <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-900">No bookings yet</p>
+                  <p className="text-xs text-gray-500 mt-1">Your recent bookings will appear here</p>
                 </div>
               )}
             </div>
@@ -376,19 +376,19 @@ export default function VendorDashboard() {
         {/* Right Column */}
         <div className="space-y-6">
           {/* Tier Progress */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="border-b border-slate-100 px-5 py-3">
-              <h3 className="text-sm font-semibold text-slate-900">Tier Progress</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Your commission tier status</p>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="text-sm font-semibold text-gray-900">Tier Progress</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Your commission tier status</p>
             </div>
             <div className="p-5">
               {currentTier ? (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-900">
+                    <span className="text-sm font-medium text-gray-900">
                       {currentTier.name}
                     </span>
-                    <span className="text-sm text-slate-500">
+                    <span className="text-sm text-gray-500">
                       {currentTier.commission_type === 'flat' 
                         ? `${currentTier.commission_value} ${currentTier.currency || 'UGX'} flat fee`
                         : `${currentTier.commission_value}% commission`
@@ -400,35 +400,35 @@ export default function VendorDashboard() {
                   <div className="text-center py-4">
                     <TrendingUp className="h-8 w-8 text-green-500 mx-auto mb-2" />
                     <p className="text-sm font-medium text-green-700">Tier System Active</p>
-                    <p className="text-xs text-slate-500">Your commission rate is automatically managed</p>
+                    <p className="text-xs text-gray-500">Your commission rate is automatically managed</p>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                  <p className="text-sm text-slate-500 mt-2">Loading tier information...</p>
+                  <p className="text-sm text-gray-500 mt-2">Loading tier information...</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex-1 flex flex-col">
-            <div className="border-b border-slate-100 px-5 py-3">
-              <h3 className="text-sm font-semibold text-slate-900">Transactions</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Financial activity</p>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden flex-1 flex flex-col">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="text-sm font-semibold text-gray-900">Transactions</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Financial activity</p>
             </div>
             <div className="p-5 flex-1 overflow-y-auto divide-y divide-slate-100">
               {stats.recentTransactions.map((t) => (
                 <div key={t.id} className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 capitalize">
+                    <p className="text-sm font-medium text-gray-900 capitalize">
                       {t.transaction_type === 'payment' ? 'Payment Received' : 'Withdrawal'}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">{formatDateTime(t.created_at)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatDateTime(t.created_at)}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-gray-900">
                       {t.transaction_type === 'payment' ? '+' : '-'}{formatCurrencyWithConversion(t.amount, t.currency, selectedCurrency || t.currency, selectedLanguage || 'en-US')}
                     </p>
                     <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${
@@ -443,8 +443,8 @@ export default function VendorDashboard() {
               ))}
               {stats.recentTransactions.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-sm font-medium text-slate-900">No transactions yet</p>
-                  <p className="text-xs text-slate-500 mt-1">Financial activity will appear here</p>
+                  <p className="text-sm font-medium text-gray-900">No transactions yet</p>
+                  <p className="text-xs text-gray-500 mt-1">Financial activity will appear here</p>
                 </div>
               )}
             </div>
@@ -455,31 +455,31 @@ export default function VendorDashboard() {
       <nav className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[calc(100%-2rem)] max-w-md bg-white rounded-xl shadow-lg sm:hidden z-40">
         <ul className="flex justify-between items-center px-3 py-2">
           <li>
-            <button onClick={() => navigate('/vendor')} className="flex flex-col items-center text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50">
+            <button onClick={() => navigate('/vendor')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
               <Home size={18} />
               <span className="text-[10px] mt-1">Home</span>
             </button>
           </li>
           <li>
-            <button onClick={() => navigate('/vendor/bookings')} className="flex flex-col items-center text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50">
+            <button onClick={() => navigate('/vendor/bookings')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
               <FileText size={18} />
               <span className="text-[10px] mt-1">Bookings</span>
             </button>
           </li>
           <li>
-            <button onClick={() => navigate('/vendor/transactions')} className="flex flex-col items-center text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50">
+            <button onClick={() => navigate('/vendor/transactions')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
               <DollarSign size={18} />
               <span className="text-[10px] mt-1">Wallet</span>
             </button>
           </li>
           <li>
-            <button onClick={() => navigate('/vendor/messages')} className="flex flex-col items-center text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50">
+            <button onClick={() => navigate('/vendor/messages')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
               <MessageSquare size={18} />
               <span className="text-[10px] mt-1">Messages</span>
             </button>
           </li>
           <li>
-            <button onClick={() => navigate('/vendor/settings')} className="flex flex-col items-center text-xs text-slate-700 p-2 rounded-lg hover:bg-slate-50">
+            <button onClick={() => navigate('/vendor/settings')} className="flex flex-col items-center text-xs text-gray-700 p-2 rounded-lg hover:bg-gray-50">
               <Settings size={18} />
               <span className="text-[10px] mt-1">More</span>
             </button>
