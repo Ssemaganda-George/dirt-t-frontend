@@ -1,7 +1,7 @@
 ﻿import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import useUnreadMessages from '../hooks/useUnreadMessages'
-import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar } from 'lucide-react'
+import { BarChart3, ShoppingBag, CreditCard, LogOut, Menu, X, Map, ChevronLeft, MessageSquare, User, Settings, ChevronDown, Ticket, Search, Globe, ChevronRight, Eye, Calendar, Home } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import PanelSearchModal from './PanelSearchModal'
@@ -182,7 +182,7 @@ export default function VendorLayout() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white border-r border-gray-200">
           <div className="flex h-14 items-center justify-between px-4 border-b border-gray-100">
-            <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails<span className="text-emerald-500">.</span></span>
+            <Link to="/" className="text-sm font-semibold text-gray-900 tracking-tight hover:text-emerald-700 transition-colors">DirtTrails<span className="text-emerald-500">.</span></Link>
             <button onClick={() => setSidebarOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/20">
               <X className="h-4 w-4 text-gray-500" />
             </button>
@@ -236,6 +236,16 @@ export default function VendorLayout() {
                 )}
               </div>
             ))}
+            <div className="pt-2 mt-2 border-t border-gray-100">
+              <Link
+                to="/"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                <Home className="h-4 w-4 text-gray-400" />
+                View Marketplace
+              </Link>
+            </div>
           </nav>
         </div>
       </div>
@@ -247,7 +257,7 @@ export default function VendorLayout() {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center justify-between h-14 px-4 border-b border-gray-100">
             {!sidebarCollapsed && (
-              <span className="text-sm font-semibold text-gray-900 tracking-tight">DirtTrails<span className="text-emerald-500">.</span> Business</span>
+              <Link to="/" className="text-sm font-semibold text-gray-900 tracking-tight hover:text-emerald-700 transition-colors">DirtTrails<span className="text-emerald-500">.</span> Business</Link>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -319,6 +329,16 @@ export default function VendorLayout() {
                 )}
               </div>
             ))}
+            <div className="pt-2 mt-2 border-t border-gray-100">
+              <Link
+                to="/"
+                className={`flex items-center gap-2.5 px-2.5 py-2 text-sm font-medium rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
+                title={sidebarCollapsed ? 'View Marketplace' : ''}
+              >
+                <Home className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                {!sidebarCollapsed && 'View Marketplace'}
+              </Link>
+            </div>
           </nav>
         </div>
       </div>
@@ -335,6 +355,15 @@ export default function VendorLayout() {
             </button>
 
             <div className="flex-1" />
+
+            {/* Marketplace shortcut — always visible in topbar */}
+            <Link
+              to="/"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 border border-gray-200 rounded-lg transition-all mr-2"
+            >
+              <Home className="h-3.5 w-3.5" />
+              Marketplace
+            </Link>
 
             <div className="flex items-center gap-2">
               {/* Global Search */}
