@@ -921,7 +921,7 @@ export default function Home() {
         <div className="bg-white border-b border-gray-100 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-gray-900">Popular destinations</h2>
+              <h2 className="text-xl font-bold text-gray-900">Popular destinations In Uganda</h2>
               <Link
                 to="/category/tours"
                 className="text-sm text-emerald-700 hover:text-emerald-900 font-medium flex items-center gap-1"
