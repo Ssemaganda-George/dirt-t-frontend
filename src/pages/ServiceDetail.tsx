@@ -660,16 +660,18 @@ export default function ServiceDetail() {
   }, [bookingRef.current])
 
   // Get appropriate button text based on category
-  const getBookingButtonText = (categoryName: string): string => {
+  const getBookingButtonText = (categoryName: string, lt?: string): string => {
+    if (categoryName.toLowerCase() === 'shops') {
+      return lt === 'hire' ? 'Check Availability & Book' : 'Buy Now'
+    }
     const categoryTexts: { [key: string]: string } = {
       'hotels': 'Check Availability & Book',
       'transport': 'Check Availability & Book',
       'tours': 'Check Availability & Book',
-      'restaurants': 'Check Availability & Book',
+      'restaurants': 'Reserve Table',
       'activities': 'Check Availability & Book',
       'flights': 'Check Availability & Book'
     }
-
     const mappedCategory = mapCategoryToBookingFlow(categoryName)
     return categoryTexts[mappedCategory] || 'Check Availability & Book'
   }
@@ -2445,6 +2447,8 @@ export default function ServiceDetail() {
                            </div>
                          </div>
                        </>
+                     ) : service.service_categories?.name?.toLowerCase() === 'shops' && listingType !== 'hire' ? (
+                       null
                      ) : (
                        <div>
                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Date</label>
@@ -2674,7 +2678,7 @@ export default function ServiceDetail() {
 
                   {/* Action Buttons */}
                     <div className="flex gap-2 mb-3">
-                    <button onClick={handleBooking} disabled={!bookingPrefillReady()} className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service') : 'Check Availability & Book'}</button>
+                    <button onClick={handleBooking} disabled={!bookingPrefillReady()} className="flex-1 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 text-sm rounded-lg transition-colors">{service ? getBookingButtonText(service.service_categories?.name || 'Service', listingType) : 'Check Availability & Book'}</button>
                     <button onClick={handleInquiry} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 text-sm rounded-lg transition-colors border border-gray-300">Contact Provider</button>
                   </div>
 
