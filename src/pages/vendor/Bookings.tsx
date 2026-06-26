@@ -7,7 +7,6 @@ import { getAllBookings, getArchivedBookings, getDeletedBookings, createBooking 
 import { formatCurrencyWithConversion, formatDateTime, getVendorDisplayStatus } from '../../lib/utils'
 import { usePreferences } from '../../contexts/PreferencesContext'
 import { Search } from 'lucide-react'
-import { useCart } from '../../contexts/CartContext'
 import { supabase } from '../../lib/supabaseClient'
 import BookingReceipt from '../../components/BookingReceipt'
 
@@ -15,7 +14,6 @@ export default function VendorBookings() {
   const { profile, vendor } = useAuth()
   const vendorId = vendor?.id || profile?.id || 'vendor_demo'
   const { selectedCurrency, selectedLanguage } = usePreferences()
-  const { state: cartState } = useCart()
   const navigate = useNavigate()
 
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -451,44 +449,6 @@ useEffect(() => {
           </table>
         </div>
       </div>
-
-      {/* Saved Cart Items */}
-      {cartState.items.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-900">Saved Cart Items ({cartState.items.length})</h3>
-          </div>
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Service</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Category</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Amount</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Saved</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cartState.items.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5">
-                      <p className="text-sm font-medium text-gray-900">{item.service.title}</p>
-                      <p className="text-xs text-gray-500">{item.service.vendors.business_name}</p>
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500 capitalize">{item.category}</td>
-                    <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{formatCurrencyWithConversion(item.totalPrice, item.currency, selectedCurrency, selectedLanguage)}</td>
-                    <td className="px-4 py-2.5 text-sm text-gray-500">{formatDateTime(item.savedAt)}</td>
-                    <td className="px-4 py-2.5">
-                      <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">{item.status}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {showForm && (
         <BookingForm
