@@ -507,6 +507,7 @@ export default function ServiceDetail() {
     if (state.transportZone === 'within' || state.transportZone === 'upcountry') {
       setTransportZone(state.transportZone)
     }
+    if (state.listingType) setListingType(String(state.listingType))
 
     setDrawerOpen(true)
     navigate(location.pathname, { replace: true, state: {} })
@@ -2754,7 +2755,7 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      {/* Inline drawer — activities & restaurants only (hybrid booking) */}
+      {/* Inline drawer — activities, restaurants & shops (hybrid booking / purchase) */}
       {service &&
         usesInlineBookingDrawer(
           mapCategoryToBookingFlow(service.service_categories?.name || 'activities')
@@ -2771,7 +2772,12 @@ export default function ServiceDetail() {
               endDate,
               startTime,
               endTime,
-              guests: guests + children,
+              guests:
+                service.service_categories?.name?.toLowerCase() === 'shops'
+                  ? quantity
+                  : guests + children,
+              quantity,
+              listingType: listingType || undefined,
               transportZone,
             }}
           />

@@ -6,6 +6,7 @@
 export const INLINE_DRAWER_BOOKING_CATEGORIES = new Set([
   'activities',
   'restaurants',
+  'shops',
 ])
 
 export function usesInlineBookingDrawer(mappedCategory: string): boolean {
@@ -49,6 +50,8 @@ export function mapCategoryToBookingFlow(categoryName: string): string {
     flights: 'flights',
     flight: 'flights',
     'air travel': 'flights',
+    shops: 'shops',
+    shop: 'shops',
   }
   return categoryMap[categoryName.toLowerCase()] || 'activities'
 }

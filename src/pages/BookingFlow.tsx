@@ -49,8 +49,7 @@ export default function BookingFlow() {
       bookingPage = <ActivityBooking service={service as any} />
       break
     case 'shops':
-      bookingPage = <ActivityBooking service={service as any} />
-      break
+      return <Navigate to={`/service/${slug}`} replace state={{ openBookingDrawer: true }} />
     default:
       bookingPage = <ActivityBooking service={service as any} />
   }

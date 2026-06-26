@@ -39,6 +39,8 @@ interface BookingDrawerProps {
     startTime?: string
     endTime?: string
     guests?: number
+    quantity?: number
+    listingType?: string | null
     transportZone?: 'within' | 'upcountry' | ''
   }
 }
@@ -99,6 +101,11 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const isRestaurant = isRestaurantService(service)
   const isFlight = ['flights', 'flight'].includes(categoryName)
   const isTour = ['tours', 'tour'].includes(categoryName)
+  const isShop = categoryName === 'shops'
+  const shopListingType = prefill.listingType || ''
+  const isShopBuy = isShop && shopListingType === 'buy'
+  const isShopHire = isShop && shopListingType === 'hire'
+  const shopItemCount = Math.max(1, prefill.quantity ?? prefill.guests ?? 1)
 
   // Category-specific extra fields collected in the summary step
   const [flightFrom, setFlightFrom] = useState('')
@@ -133,15 +140,23 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     }
   }, [isOpen])
 
-  // Load pricing
+  // Load pricing (shop listings use buy/rental unit, not generic service.price)
   useEffect(() => {
     if (!service?.id || !isOpen) return
     let cancelled = false
-    calculatePaymentForAmount(service.id, Number(service.price || 0))
+    let unitAmount = Number(service.price || 0)
+    if (isShopHire) {
+      const rental = Number((service as any).rental_price_per_day ?? NaN)
+      if (Number.isFinite(rental) && rental > 0) unitAmount = rental
+    } else if (isShop) {
+      const buy = Number((service as any).buy_price ?? NaN)
+      if (Number.isFinite(buy) && buy > 0) unitAmount = buy
+    }
+    calculatePaymentForAmount(service.id, unitAmount)
       .then(c => { if (!cancelled) setPricingCalc(c) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [service?.id, isOpen])
+  }, [service?.id, service?.price, (service as any)?.buy_price, (service as any)?.rental_price_per_day, isOpen, isShop, isShopHire])
 
   // ─── Price calculation ───────────────────────────────────────────────────────
 
@@ -152,28 +167,66 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
         : prefill.transportZone === 'upcountry'
         ? (service as any).price_upcountry || service.price
         : service.price
+      : isShopHire
+      ? (() => {
+          const rental = Number((service as any).rental_price_per_day ?? NaN)
+          return Number.isFinite(rental) && rental > 0 ? rental : Number(service?.price || 0)
+        })()
+      : isShop
+      ? (() => {
+          const buy = Number((service as any).buy_price ?? NaN)
+          return Number.isFinite(buy) && buy > 0 ? buy : Number(service?.price || 0)
+        })()
       : service?.price || 0
   )
+
+  const hireDays = isShopHire
+    ? calcNights(prefill.startDate || '', prefill.endDate || '')
+    : 1
 
   const billableUnits = isTransport
     ? calcDays(prefill.startDate || '', prefill.startTime || '09:00', prefill.endDate || '', prefill.endTime || '17:00')
     : isHotel
     ? calcNights(prefill.checkInDate || '', prefill.checkOutDate || '')
+    : isShopHire
+    ? hireDays
+    : isShop
+    ? shopItemCount
     : (prefill.guests || 1)
 
-  const baseTotal = baseUnit * billableUnits
-  const customerTotal = isTransport
-    ? customerTotalFromUnitPricingCalc(pricingCalc, billableUnits, baseTotal)
-    : customerTotalFromUnitPricingCalc(pricingCalc, billableUnits, baseTotal)
-  const touristFee = touristFeeTotalFromUnitCalc(pricingCalc, billableUnits, 0)
+  const baseTotal = isShopHire
+    ? baseUnit * hireDays * shopItemCount
+    : baseUnit * billableUnits
 
-  // ─── Date display ─────────────────────────────────────────────────────────────
+  const feeMultiplier = isShop ? shopItemCount : billableUnits
+  const customerTotal = customerTotalFromUnitPricingCalc(pricingCalc, feeMultiplier, baseTotal)
+  const touristFee = touristFeeTotalFromUnitCalc(pricingCalc, feeMultiplier, 0)
+
+  const unitLabel = isHotel
+    ? 'night'
+    : isTransport
+    ? 'day'
+    : isShop
+    ? isShopHire
+      ? 'day'
+      : 'item'
+    : 'guest'
 
   const dateDisplay = isHotel
     ? `${prefill.checkInDate || '—'} → ${prefill.checkOutDate || '—'} · ${billableUnits} night${billableUnits !== 1 ? 's' : ''}`
     : isTransport
     ? `${prefill.startDate || '—'} → ${prefill.endDate || '—'} · ${billableUnits} day${billableUnits !== 1 ? 's' : ''}`
+    : isShopBuy
+    ? `${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
+    : isShopHire
+    ? `${prefill.startDate || '—'} → ${prefill.endDate || '—'} · ${hireDays} day${hireDays !== 1 ? 's' : ''} · ${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
+    : isShop
+    ? `${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
     : `${prefill.selectedDate || '—'} · ${prefill.guests || 1} guest${(prefill.guests || 1) !== 1 ? 's' : ''}`
+
+  const summaryTitle = isShop ? 'Order Summary' : 'Booking Summary'
+  const feeLabel = isShop ? 'Service fee' : 'Booking fee'
+  const detailsLabel = isShop ? 'Order details' : 'Dates / Guests'
 
   // ─── Booking creation ─────────────────────────────────────────────────────────
 
@@ -186,13 +239,13 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       service_id: service.id,
       vendor_id: service.vendor_id || service.vendors?.id || '',
       booking_date: new Date().toISOString(),
-      guests: isTransport ? 1 : (prefill.guests || 1),
+      guests: isTransport ? 1 : isShop ? shopItemCount : (prefill.guests || 1),
       total_amount: Math.round(customerTotal),
       currency: normalizeServiceCurrency(service.currency),
       status,
       payment_status: status === 'confirmed' ? 'paid' : 'pending',
       pricing_base_amount: baseTotal,
-      platform_fee: pricingCalc ? Math.round(pricingCalc.platform_fee * billableUnits) : 0,
+      platform_fee: pricingCalc ? Math.round(pricingCalc.platform_fee * feeMultiplier) : 0,
       ...guestContact,
     }
 
@@ -223,6 +276,17 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
         payment_status: 'not_required' as const,
       }
     }
+    if (isShopBuy) {
+      return { ...base, service_date: new Date().toISOString().split('T')[0] }
+    }
+    if (isShopHire) {
+      return {
+        ...base,
+        service_date: prefill.startDate,
+        end_date: prefill.endDate,
+        special_requests: `Rental: ${prefill.startDate} to ${prefill.endDate}`,
+      }
+    }
     return { ...base, service_date: prefill.selectedDate }
   }
 
@@ -231,7 +295,12 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const validateSummary = (): boolean => {
     const errs: FieldErrors = {}
     if (isRestaurant && !prefill.selectedDate) errs.date = 'Select a date on the listing before booking.'
-    if (!isHotel && !isTransport && !isRestaurant && !prefill.selectedDate) errs.date = 'Select a date on the listing before booking.'
+    if (!isHotel && !isTransport && !isRestaurant && !isShop && !prefill.selectedDate) {
+      errs.date = 'Select a date on the listing before booking.'
+    }
+    if (isShopHire && (!prefill.startDate || !prefill.endDate)) {
+      errs.date = 'Select rental start and end dates on the listing.'
+    }
     if (isHotel && (!prefill.checkInDate || !prefill.checkOutDate)) errs.date = 'Select check-in and check-out dates on the listing.'
     if (isTransport && (!prefill.startDate || !prefill.endDate)) errs.date = 'Select pick-up and drop-off dates on the listing.'
     if (isTransport && prefill.startDate && prefill.endDate && !prefill.transportZone) errs.transportZone = 'Select Within Town or Upcountry on the listing.'
@@ -279,7 +348,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     const phone = formatPhone(contact.phone)
     setError(null)
     setProcessing(true)
-    setPollingMessage('Creating booking…')
+    setPollingMessage(isShop ? 'Creating order…' : 'Creating booking…')
 
     let pending: any = null
     try {
@@ -300,7 +369,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
           amount: Math.round(customerTotal),
           phone_number: phone,
           booking_id: pending.id,
-          description: `${service.title} booking`,
+          description: isShop ? `${service.title} order` : `${service.title} booking`,
           user_id: userId,
         }),
       })
@@ -405,7 +474,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Book this service"
+        aria-label={isShop ? 'Purchase from shop' : 'Book this service'}
         className={[
           'fixed z-50 bg-white shadow-2xl flex flex-col',
           // Mobile: bottom sheet, full width, max 92vh
@@ -431,10 +500,10 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
             )}
             <div>
               <h2 className="font-semibold text-gray-900 text-base leading-tight">
-                {step === 'summary' && 'Booking Summary'}
+                {step === 'summary' && summaryTitle}
                 {step === 'contact' && 'Your Details'}
                 {step === 'payment' && (isRestaurant ? 'Confirm Reservation' : 'Payment')}
-                {step === 'done' && (isRestaurant ? 'Reservation Confirmed!' : 'Booking Confirmed!')}
+                {step === 'done' && (isRestaurant ? 'Reservation Confirmed!' : isShop ? 'Order Confirmed!' : 'Booking Confirmed!')}
               </h2>
               <p className="text-xs text-gray-500 leading-tight truncate max-w-[240px]">{service?.title}</p>
             </div>
@@ -467,7 +536,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               {/* Booking details */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-600">
-                  <span className="font-medium text-gray-700">Dates / Guests</span>
+                  <span className="font-medium text-gray-700">{detailsLabel}</span>
                   <span className="text-right">{dateDisplay}</span>
                 </div>
                 {isTransport && prefill.transportZone && (
@@ -477,12 +546,16 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   </div>
                 )}
                 <div className="border-t pt-2 flex justify-between text-gray-600">
-                  <span>{formatCurrencyWithConversion(baseUnit, service.currency)} × {billableUnits} {isHotel ? 'night' : isTransport ? 'day' : 'guest'}{billableUnits !== 1 ? 's' : ''}</span>
+                  <span>
+                    {isShopHire
+                      ? `${formatCurrencyWithConversion(baseUnit, service.currency)} × ${hireDays} day${hireDays !== 1 ? 's' : ''} × ${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
+                      : `${formatCurrencyWithConversion(baseUnit, service.currency)} × ${billableUnits} ${unitLabel}${billableUnits !== 1 ? 's' : ''}`}
+                  </span>
                   <span>{formatCurrencyWithConversion(baseTotal, service.currency)}</span>
                 </div>
                 {touristFee > 0 && (
                   <div className="flex justify-between text-gray-500 text-xs">
-                    <span>Booking fee</span>
+                    <span>{feeLabel}</span>
                     <span>{formatCurrencyWithConversion(touristFee, service.currency)}</span>
                   </div>
                 )}
@@ -500,9 +573,14 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               </div>
 
               {/* Missing dates / zone warnings */}
-              {!isHotel && !isTransport && !prefill.selectedDate && (
+              {!isHotel && !isTransport && !isShopBuy && !isShopHire && !prefill.selectedDate && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
                   Please select a date on the listing before booking.
+                </div>
+              )}
+              {isShopHire && (!prefill.startDate || !prefill.endDate) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                  Please select rental start and end dates on the listing before continuing.
                 </div>
               )}
               {isHotel && (!prefill.checkInDate || !prefill.checkOutDate) && (
@@ -559,7 +637,11 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               )}
 
               <div className="text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2">
-                Pending bookings can be cancelled from your account. For confirmed bookings, contact us at <span className="font-medium text-gray-600">safaris.dirttrails@gmail.com</span>.
+                {isShop
+                  ? 'Orders can be cancelled before fulfillment. Questions? Contact us at '
+                  : 'Pending bookings can be cancelled from your account. For confirmed bookings, contact us at '}
+                <span className="font-medium text-gray-600">safaris.dirttrails@gmail.com</span>
+                {!isShop && '.'}
               </div>
             </div>
           )}
@@ -673,11 +755,13 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   <CheckCircle className="w-9 h-9 text-green-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">
-                  {isRestaurant ? 'Reservation Confirmed!' : 'Payment Successful!'}
+                  {isRestaurant ? 'Reservation Confirmed!' : isShop ? 'Order Confirmed!' : 'Payment Successful!'}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {isRestaurant
                     ? 'Your table has been reserved. See you soon!'
+                    : isShop
+                    ? 'Your order is confirmed. The vendor will be in touch about pickup or delivery.'
                     : 'Your booking is confirmed. A confirmation email is on its way.'}
                 </p>
               </div>
@@ -688,17 +772,17 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   <span className="font-medium text-right max-w-[60%] line-clamp-2">{service.title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Dates</span>
+                  <span className="text-gray-500">{isShop ? 'Order details' : 'Dates'}</span>
                   <span className="text-right">{dateDisplay}</span>
                 </div>
                 {!isRestaurant && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Amount paid</span>
+                    <span className="text-gray-500">{isShop ? 'Amount paid' : 'Amount paid'}</span>
                     <span className="font-semibold">{formatCurrencyWithConversion(customerTotal, service.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Booking ref</span>
+                  <span className="text-gray-500">{isShop ? 'Order ref' : 'Booking ref'}</span>
                   <span className="font-mono text-xs">{completedBooking.id?.slice(0, 8).toUpperCase()}</span>
                 </div>
               </div>
