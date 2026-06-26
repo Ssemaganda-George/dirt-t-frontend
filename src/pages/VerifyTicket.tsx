@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { verifyTicketByCode } from '../lib/database'
 
@@ -106,7 +106,7 @@ export default function VerifyTicket() {
           {result?.serviceSlug && (
             <button
               onClick={handleViewService}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              className="w-full bg-emerald-700 text-white py-2 px-4 rounded-md hover:bg-emerald-800 transition-colors"
             >
               View Service
             </button>

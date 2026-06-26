@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, User, Camera, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -326,7 +326,7 @@ export default function EditProfile() {
                     className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
-                  <div className="h-24 w-24 bg-blue-600 flex items-center justify-center text-white text-3xl font-bold rounded-full">
+                  <div className="h-24 w-24 bg-emerald-700 flex items-center justify-center text-white text-3xl font-bold rounded-full">
                     {formData.full_name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                 )}
@@ -340,7 +340,7 @@ export default function EditProfile() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 hover:bg-blue-700 transition-colors rounded-full"
+                  className="absolute bottom-0 right-0 bg-emerald-700 text-white p-2 hover:bg-emerald-800 transition-colors rounded-full"
                 >
                   <Camera className="h-4 w-4" />
                 </button>
@@ -380,7 +380,7 @@ export default function EditProfile() {
                     required
                     value={formData.first_name}
                     onChange={handleInputChange}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                     placeholder="Enter your first name"
                   />
                 </div>
@@ -399,7 +399,7 @@ export default function EditProfile() {
                     required
                     value={formData.last_name}
                     onChange={handleInputChange}
-                    className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-10 w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                     placeholder="Enter your last name"
                   />
                 </div>
@@ -446,7 +446,7 @@ export default function EditProfile() {
                   name="emergency_contact"
                   value={formData.emergency_contact}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="Enter full name of emergency contact"
                 />
               </div>
@@ -460,7 +460,7 @@ export default function EditProfile() {
                   name="emergency_relationship"
                   value={formData.emergency_relationship}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                 >
                   <option value="">Select relationship</option>
                   <option value="spouse">Spouse</option>
@@ -497,7 +497,7 @@ export default function EditProfile() {
                   name="emergency_email"
                   value={formData.emergency_email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="Enter email address"
                 />
               </div>
@@ -512,7 +512,7 @@ export default function EditProfile() {
                   rows={3}
                   value={formData.emergency_address}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="Enter complete address of emergency contact"
                 />
               </div>
@@ -545,7 +545,7 @@ export default function EditProfile() {
                         type="checkbox"
                         checked={formData.travel_preferences.includes(preference)}
                         onChange={(e) => handleTravelPreferenceChange(preference, e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-blue-600 focus:ring-emerald-600 border-gray-300 rounded"
                       />
                       <span className="text-sm text-gray-700">{preference}</span>
                     </label>
@@ -563,7 +563,7 @@ export default function EditProfile() {
                   rows={2}
                   value={formData.dietary_restrictions}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="List any dietary restrictions or preferences"
                 />
               </div>
@@ -578,7 +578,7 @@ export default function EditProfile() {
                   rows={2}
                   value={formData.medical_conditions}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="List any medical conditions or allergies (optional)"
                 />
               </div>
@@ -597,7 +597,7 @@ export default function EditProfile() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-6 py-3 bg-emerald-700 text-white hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               <Save className="h-5 w-5 mr-2" />
               {loading ? 'Saving...' : 'Save Changes'}

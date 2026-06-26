@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { calculatePaymentForAmount, customerTotalFromUnitPricingCalc, touristFeeTotalFromUnitCalc } from '../lib/pricingService'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard } from 'lucide-react'
@@ -292,7 +292,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
               </div>
 
-              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
+              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
                 Continue
               </button>
             </>
@@ -315,7 +315,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                   <FieldError message={fieldErrors.contactEmail} />
                 </div>
               </div>
-              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
+              <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
                 Continue to Payment
               </button>
             </>
@@ -348,7 +348,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Free cancellation up to 24 hours before your tour — contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a>.
               </div>
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with Mobile Money`}
               </button>
             </>

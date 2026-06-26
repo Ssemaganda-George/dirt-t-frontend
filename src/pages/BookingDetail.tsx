@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, ChevronLeft, ChevronRight, Edit3, Star } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -218,7 +218,7 @@ export default function BookingDetail() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white shadow-sm border border-gray-200 p-6 text-center">
         <p className="text-gray-700 mb-4">{error}</p>
-        <button onClick={() => navigate(-1)} className="px-4 py-2 bg-blue-600 text-white rounded-md">Go back</button>
+        <button onClick={() => navigate(-1)} className="px-4 py-2 bg-emerald-700 text-white rounded-md">Go back</button>
       </div>
   <BookingDetailChat booking={booking} isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} chatMessage={chatMessage} setChatMessage={setChatMessage} sendingChat={sendingChat} onSend={handleSendChat} chatError={chatError} />
     </div>
@@ -418,9 +418,9 @@ export default function BookingDetail() {
 
               <div className="mt-6">
                 {booking.payment_status === 'paid' && booking.vendors?.user_id ? (
-                  <button onClick={handleContactProvider} className="w-full inline-flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-md font-semibold">Contact Provider</button>
+                  <button onClick={handleContactProvider} className="w-full inline-flex items-center justify-center px-4 py-3 bg-emerald-700 text-white rounded-md font-semibold">Contact Provider</button>
                 ) : (
-                  <button disabled className="w-full px-4 py-3 bg-blue-600 text-white rounded-md font-semibold opacity-60 cursor-not-allowed">Contact Provider</button>
+                  <button disabled className="w-full px-4 py-3 bg-emerald-700 text-white rounded-md font-semibold opacity-60 cursor-not-allowed">Contact Provider</button>
                 )}
               </div>
 
@@ -494,7 +494,7 @@ export function BookingDetailChat({
 
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
-          <button onClick={onSend} disabled={sendingChat || !chatMessage.trim()} className={`px-4 py-2 rounded ${chatMessage.trim() && !sendingChat ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-700 cursor-not-allowed'}`}>
+          <button onClick={onSend} disabled={sendingChat || !chatMessage.trim()} className={`px-4 py-2 rounded ${chatMessage.trim() && !sendingChat ? 'bg-emerald-700 text-white' : 'bg-gray-300 text-gray-700 cursor-not-allowed'}`}>
             Send Message
           </button>
         </div>
@@ -523,7 +523,7 @@ export function BookingEditModal({ isOpen, onClose, guests, setGuests, special, 
 
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
-          <button onClick={onSave} disabled={saving} className={`px-4 py-2 rounded ${saving ? 'bg-gray-300 text-gray-700' : 'bg-blue-600 text-white'}`}>Save</button>
+          <button onClick={onSave} disabled={saving} className={`px-4 py-2 rounded ${saving ? 'bg-gray-300 text-gray-700' : 'bg-emerald-700 text-white'}`}>Save</button>
         </div>
       </div>
     </div>

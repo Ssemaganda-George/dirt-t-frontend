@@ -371,7 +371,7 @@ export default function VendorMessages() {
         {!selectedConversation && (
           <button
             onClick={() => handleSelectConversation('admin')}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+            className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white text-sm font-medium rounded-lg hover:bg-emerald-800 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
           >
             <Shield className="w-4 h-4" />
             <span className="hidden sm:inline">Contact Support</span>
@@ -402,7 +402,7 @@ export default function VendorMessages() {
                   <ChevronLeft className="w-4 h-4 text-gray-500" />
                 </button>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                  isAdmin ? 'bg-blue-600' : 'bg-emerald-700'
+                  isAdmin ? 'bg-emerald-700' : 'bg-emerald-700'
                 }`}>
                   {isAdmin ? <Shield className="w-4 h-4" /> : (convoName?.[0]?.toUpperCase() || 'C')}
                 </div>
@@ -467,7 +467,7 @@ export default function VendorMessages() {
                             {showAvatar && (
                               <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                  isVendor ? 'bg-emerald-700 text-white' : 'bg-blue-600 text-white'
+                                  isVendor ? 'bg-emerald-700 text-white' : 'bg-emerald-700 text-white'
                                 }`}>
                                   {isVendor ? 'Y' : (message.sender_role === 'admin' ? 'A' : ((message.sender?.full_name || message.sender_name)?.[0]?.toUpperCase() || 'C'))}
                                 </div>
@@ -627,7 +627,7 @@ export default function VendorMessages() {
                       <div className="flex items-start gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
                           conversation.type === 'admin' 
-                            ? 'bg-blue-600 text-white' 
+                            ? 'bg-emerald-700 text-white' 
                             : 'bg-emerald-700 text-white'
                         }`}>
                           {conversation.type === 'admin' ? (

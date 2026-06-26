@@ -224,7 +224,7 @@ export default function VendorEvents() {
             <Link
               to="/vendor/services"
               state={{ preselectCategory: 'cat_activities' }}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span className="text-sm font-medium">Create event</span>
@@ -242,14 +242,14 @@ export default function VendorEvents() {
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
             />
           </div>
           <div className="w-full md:w-48">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -352,7 +352,7 @@ export default function VendorEvents() {
                 {!event.scan_enabled && (
                   <button
                     onClick={() => handleActivationRequest(event.id)}
-                    className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full bg-emerald-700 text-white px-3 py-2 rounded text-sm font-medium hover:bg-emerald-800 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />
                     Request activation

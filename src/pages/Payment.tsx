@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrencyWithConversion } from '../lib/utils'
@@ -387,7 +387,7 @@ export default function PaymentPage() {
                         setPaymentSuccess(false)
                         navigate('/')
                       }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
+                      className="px-4 py-2 bg-emerald-700 text-white rounded-md font-medium"
                     >
                       OK
                     </button>
@@ -398,7 +398,7 @@ export default function PaymentPage() {
 
             {!paymentSuccess && (
               <div className="mt-4 flex items-center justify-center gap-3">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md" disabled>
+                <button className="px-4 py-2 bg-emerald-700 text-white rounded-md" disabled>
                   Processing…
                 </button>
               </div>
@@ -427,7 +427,7 @@ export default function PaymentPage() {
                   setPaymentSuccess(false)
                   navigate(`/tickets/${orderId}`)
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium"
+                className="px-4 py-2 bg-emerald-700 text-white rounded-md font-medium"
               >
                 OK
               </button>
@@ -455,11 +455,11 @@ export default function PaymentPage() {
           <div className="px-4 py-3 border-b bg-gray-50">
             <div className="flex items-center justify-center gap-4 text-sm text-gray-700">
               <div className="flex items-center gap-2 text-xs md:text-sm">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">✓</div>
+                <div className="w-6 h-6 rounded-full bg-emerald-700 text-white flex items-center justify-center font-semibold">✓</div>
                 <div className="hidden md:block font-light">Tickets</div>
               </div>
               <div className="flex items-center gap-2 text-xs md:text-sm">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">✓</div>
+                <div className="w-6 h-6 rounded-full bg-emerald-700 text-white flex items-center justify-center font-semibold">✓</div>
                 <div className="hidden md:block font-light text-blue-600">Details</div>
               </div>
               <div className="flex items-center gap-2 text-xs md:text-sm">

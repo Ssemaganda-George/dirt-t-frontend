@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import QrScanner from 'qr-scanner'
 import { getServiceById, createEventOTP, verifyEventOTP, verifyPassword, verifyTicketByCode, getActiveScanSession } from '../lib/database'
@@ -713,7 +713,7 @@ export default function ScanEventPage() {
             {/* Scan Icon */}
             <button
               onClick={startScanning}
-              className="group flex flex-col items-center justify-center w-32 h-32 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+              className="group flex flex-col items-center justify-center w-32 h-32 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
             >
               <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 15h4.01M12 21h4.01" />
@@ -771,7 +771,7 @@ export default function ScanEventPage() {
                         value={manualCode}
                         onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                         placeholder="ABC123"
-                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-mono text-lg"
+                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500 text-center font-mono text-lg"
                         disabled={isManualProcessing}
                         autoFocus
                       />
@@ -861,7 +861,7 @@ export default function ScanEventPage() {
                     <button
                       onClick={handleCloseScanDialog}
                       className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                        scanResult.success ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-600 text-white hover:bg-gray-700'
+                        scanResult.success ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-gray-600 text-white hover:bg-gray-700'
                       }`}
                     >
                       OK
@@ -932,7 +932,7 @@ export default function ScanEventPage() {
                   type="password"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500"
                   placeholder="Enter password"
                 />
               </div>
@@ -944,7 +944,7 @@ export default function ScanEventPage() {
                 <input 
                   value={otp} 
                   onChange={(e) => setOtp(e.target.value)} 
-                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-blue-500" 
                   placeholder="Enter OTP"
                 />
               </div>

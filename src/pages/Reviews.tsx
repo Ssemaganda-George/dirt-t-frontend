@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Star, ArrowLeft, MessageSquare } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -82,7 +82,7 @@ export default function Reviews() {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={fetchUserReviews}
-            className="bg-blue-600 text-white px-4 py-2 hover:bg-blue-700 transition-colors"
+            className="bg-emerald-700 text-white px-4 py-2 hover:bg-emerald-800 transition-colors"
           >
             Try Again
           </button>
@@ -117,7 +117,7 @@ export default function Reviews() {
             </p>
             <Link
               to="/"
-              className="bg-blue-600 text-white px-6 py-3 hover:bg-blue-700 transition-colors inline-block"
+              className="bg-emerald-700 text-white px-6 py-3 hover:bg-emerald-800 transition-colors inline-block"
             >
               Explore Services
             </Link>

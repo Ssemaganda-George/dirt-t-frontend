@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Building, User, Send, ArrowLeft, CheckCircle } from 'lucide-react'
 import { createBusinessReferral } from '../lib/database'
@@ -144,7 +144,7 @@ export default function ReferralForm() {
           </p>
           <Link
             to="/refer-business"
-            className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="inline-flex items-center bg-emerald-700 text-white px-6 py-3 rounded-md hover:bg-emerald-800 transition-colors font-medium"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to Referrals
@@ -195,7 +195,7 @@ export default function ReferralForm() {
                     required
                     value={formData.referrerName}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.referrerName ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Enter your name"
@@ -215,7 +215,7 @@ export default function ReferralForm() {
                     required
                     value={formData.referrerEmail}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.referrerEmail ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="your.email@example.com"
@@ -235,7 +235,7 @@ export default function ReferralForm() {
                     required
                     value={formData.referrerPhone}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     placeholder="+256 XXX XXX XXX"
                   />
                 </div>
@@ -260,7 +260,7 @@ export default function ReferralForm() {
                     required
                     value={formData.businessName}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.businessName ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Enter business name"
@@ -280,7 +280,7 @@ export default function ReferralForm() {
                     required
                     value={formData.businessLocation}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.businessLocation ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="City, District, Uganda"
@@ -310,7 +310,7 @@ export default function ReferralForm() {
                     required
                     value={formData.contactPerson}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.contactPerson ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Person to contact"
@@ -330,7 +330,7 @@ export default function ReferralForm() {
                     required
                     value={formData.contactEmail}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                       errors.contactEmail ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="contact@business.com"
@@ -350,7 +350,7 @@ export default function ReferralForm() {
                     required
                     value={formData.contactPhone}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     placeholder="+256 XXX XXX XXX"
                   />
                 </div>
@@ -371,7 +371,7 @@ export default function ReferralForm() {
                   rows={4}
                   value={formData.businessDescription}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent ${
                     errors.businessDescription ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="What does this business do? What services do they offer? Why would they be a good fit for DirtTrails?"
@@ -387,7 +387,7 @@ export default function ReferralForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-emerald-700 text-white px-6 py-3 rounded-md hover:bg-emerald-800 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isSubmitting ? (
                   <>

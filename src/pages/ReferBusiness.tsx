@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { Users, DollarSign, TrendingUp, Phone, Mail, Share } from 'lucide-react'
 
 export default function ReferBusiness() {
@@ -111,11 +111,11 @@ export default function ReferBusiness() {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <Link to="/referral-form" className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium">
+                <Link to="/referral-form" className="inline-flex items-center bg-emerald-700 text-white px-4 py-2 rounded-md hover:bg-emerald-800 transition-colors font-medium">
                   <Share className="h-5 w-5 mr-3" />
                   Submit Referral
                 </Link>
-                <Link to="/help" className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors font-medium">
+                <Link to="/help" className="inline-flex items-center bg-emerald-700 text-white px-4 py-2 rounded-md hover:bg-emerald-800 transition-colors font-medium">
                   <Users className="h-5 w-5 mr-3" />
                   Learn More
                 </Link>

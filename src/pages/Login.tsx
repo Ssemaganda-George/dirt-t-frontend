@@ -198,7 +198,7 @@ export default function Login() {
 
               <button
                 type="submit" disabled={loading}
-                className="w-full min-h-[44px] rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors duration-150"
+                className="w-full min-h-[44px] rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 transition-colors duration-150"
               >
                 {loading ? 'Creating account…' : 'Create account'}
               </button>
@@ -258,7 +258,7 @@ export default function Login() {
 
               <button
                 type="submit" disabled={loading}
-                className="w-full min-h-[44px] rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors duration-150"
+                className="w-full min-h-[44px] rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 transition-colors duration-150"
               >
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>

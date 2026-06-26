@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { getSession } from '../../services/AuthService';
 import { TreePine, Smartphone, QrCode } from "lucide-react";
@@ -713,7 +713,7 @@ const GeotaggingPage = () => {
                       setIsPickingLocation(false);
                     }, { enableHighAccuracy: true, timeout: 20000 });
                   }}
-                  className="px-3 py-2 rounded bg-blue-600 text-white"
+                  className="px-3 py-2 rounded bg-emerald-700 text-white"
                 >
                   {isPickingLocation ? 'Picking…' : 'Use current location'}
                 </button>

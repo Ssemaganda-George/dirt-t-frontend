@@ -82,11 +82,11 @@ export default function VendorPending() {
         }
       default:
         return {
-          icon: <Clock className="h-12 w-12 text-blue-500" />,
+          icon: <Clock className="h-12 w-12 text-gray-400" />,
           title: 'Business Account Status',
           message: 'Your business account is being reviewed. Please check back later or contact support if you need assistance.',
-          bgColor: 'bg-blue-50',
-          borderColor: 'border-blue-200'
+          bgColor: 'bg-gray-50',
+          borderColor: 'border-gray-200'
         }
     }
   }
@@ -95,7 +95,7 @@ export default function VendorPending() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center">
           <div className={`mx-auto flex items-center justify-center h-20 w-20 rounded-full ${statusInfo.bgColor} border-4 ${statusInfo.borderColor} mb-6`}>
             {statusInfo.icon}
@@ -136,14 +136,14 @@ export default function VendorPending() {
             {profile?.status === 'approved' ? (
               <button
                 onClick={() => navigate('/vendor')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-medium text-white bg-emerald-700 hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 transition-colors"
               >
                 Go to Business Dashboard
               </button>
             ) : (
               <button
                 onClick={() => navigate('/')}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="w-full flex justify-center py-3 px-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
               >
                 Return to Home
               </button>
@@ -153,14 +153,14 @@ export default function VendorPending() {
               <button
                 onClick={handleRefreshStatus}
                 disabled={refreshing}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-3 px-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {refreshing ? 'Checking…' : 'Check Approval Status'}
               </button>
             )}
             <button
               onClick={handleSignOut}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              className="w-full flex justify-center py-3 px-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
             >
               Sign Out
             </button>
@@ -168,7 +168,7 @@ export default function VendorPending() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              Need help? <a href="mailto:safaris.dirttrails@gmail.com" className="font-medium text-primary-600 hover:text-primary-500">
+              Need help? <a href="mailto:safaris.dirttrails@gmail.com" className="font-medium text-emerald-700 hover:text-emerald-800">
                 Contact Support
               </a>
             </p>

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 
 type Props = { children: React.ReactNode }
 type State = { hasError: boolean; error?: Error }
@@ -28,7 +28,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
             <p className="text-sm text-gray-600 mb-4">A page failed to load. Try refreshing, or check the dev server console for details.</p>
             <pre className="text-xs text-left bg-gray-50 p-2 rounded overflow-auto text-red-600">{String(this.state.error?.message || '')}</pre>
             <div className="mt-4">
-              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">Reload</button>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-700 text-white rounded">Reload</button>
             </div>
           </div>
         </div>

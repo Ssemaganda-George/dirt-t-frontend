@@ -25,11 +25,13 @@ export function formatCurrency(amount: number, currency: string = 'UGX'): string
     const validCurrencies = VALID_SERVICE_CURRENCIES as readonly string[]
     const safeCurrency = validCurrencies.includes(currency) ? currency : 'UGX'
     
+    const noDecimals = ['UGX', 'KES', 'TZS', 'RWF', 'NGN', 'GHS', 'EGP', 'MAD']
+    const decimals = noDecimals.includes(safeCurrency) ? 0 : 2
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
       currency: safeCurrency,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: decimals,
     }).format(amount);
   } catch (error) {
     // Fallback to simple formatting if Intl.NumberFormat fails

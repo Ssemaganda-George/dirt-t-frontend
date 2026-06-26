@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+﻿import { useState, useRef, useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { searchCities, type CityEntry } from '../lib/cities'
 
@@ -96,7 +96,7 @@ export default function CitySearchInput({
 
   const inputClassName = inline
     ? `w-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent${city ? ' pr-6' : ''}`
-    : `w-full ${padding} ${textSize} border border-gray-300 rounded-${compact ? 'md' : 'lg'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors${city ? ' pr-8' : ''}`
+    : `w-full ${padding} ${textSize} border border-gray-300 rounded-${compact ? 'md' : 'lg'} focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-colors${city ? ' pr-8' : ''}`
 
   return (
     <div ref={wrapperRef} className="relative">

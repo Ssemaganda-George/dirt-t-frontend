@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, MessageSquare, AlertCircle } from 'lucide-react'
 import { getServiceBySlug, createUnifiedInquiry } from '../lib/database'
@@ -180,7 +180,7 @@ export default function ServiceInquiry() {
                   Preferred Room Type
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.roomType || ''}
                   onChange={(e) => handleInputChange('roomType', e.target.value)}
                 >
@@ -203,7 +203,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="e.g., Late check-out, extra bed"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.specialRequests || ''}
                   onChange={(e) => handleInputChange('specialRequests', e.target.value)}
                 />
@@ -224,7 +224,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="e.g., Vegetarian, Gluten-free"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.dietaryRestrictions || ''}
                   onChange={(e) => handleInputChange('dietaryRestrictions', e.target.value)}
                 />
@@ -234,7 +234,7 @@ export default function ServiceInquiry() {
                   Accommodation Preference
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.accommodationPreference || ''}
                   onChange={(e) => handleInputChange('accommodationPreference', e.target.value)}
                 >
@@ -260,7 +260,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="Specific pickup address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.pickupLocation || ''}
                   onChange={(e) => handleInputChange('pickupLocation', e.target.value)}
                 />
@@ -272,7 +272,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="Specific drop-off address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.dropoffLocation || ''}
                   onChange={(e) => handleInputChange('dropoffLocation', e.target.value)}
                 />
@@ -291,7 +291,7 @@ export default function ServiceInquiry() {
                   Seat Preference
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.seatPreference || ''}
                   onChange={(e) => handleInputChange('seatPreference', e.target.value)}
                 >
@@ -306,7 +306,7 @@ export default function ServiceInquiry() {
                   Meal Preference
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.mealPreference || ''}
                   onChange={(e) => handleInputChange('mealPreference', e.target.value)}
                 >
@@ -333,7 +333,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="e.g., Allergies, preferences"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.dietaryRestrictions || ''}
                   onChange={(e) => handleInputChange('dietaryRestrictions', e.target.value)}
                 />
@@ -343,7 +343,7 @@ export default function ServiceInquiry() {
                   Special Occasion
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.specialOccasion || ''}
                   onChange={(e) => handleInputChange('specialOccasion', e.target.value)}
                 >
@@ -368,7 +368,7 @@ export default function ServiceInquiry() {
                   Experience Level
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.experienceLevel || ''}
                   onChange={(e) => handleInputChange('experienceLevel', e.target.value)}
                 >
@@ -386,7 +386,7 @@ export default function ServiceInquiry() {
                 <input
                   type="text"
                   placeholder="e.g., Accessibility needs, equipment size"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   value={formData.specialRequirements || ''}
                   onChange={(e) => handleInputChange('specialRequirements', e.target.value)}
                 />
@@ -439,7 +439,7 @@ export default function ServiceInquiry() {
             <div className="space-y-4">
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors mr-4"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium py-2 px-6 rounded-lg transition-colors mr-4"
               >
                 Back to Service
               </button>
@@ -531,7 +531,7 @@ export default function ServiceInquiry() {
                     <input
                       type="text"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                     />
@@ -543,7 +543,7 @@ export default function ServiceInquiry() {
                     <input
                       type="email"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
                     />
@@ -554,7 +554,7 @@ export default function ServiceInquiry() {
                     </label>
                     <input
                       type="tel"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                     />
@@ -564,7 +564,7 @@ export default function ServiceInquiry() {
                       Preferred Contact Method
                     </label>
                     <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.contactMethod}
                       onChange={(e) => handleInputChange('contactMethod', e.target.value)}
                     >
@@ -582,7 +582,7 @@ export default function ServiceInquiry() {
                     </label>
                     <input
                       type="date"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.preferredDate}
                       onChange={(e) => handleInputChange('preferredDate', e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
@@ -593,7 +593,7 @@ export default function ServiceInquiry() {
                       Number of Guests (Optional)
                     </label>
                     <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       value={formData.numberOfGuests}
                       onChange={(e) => handleInputChange('numberOfGuests', parseInt(e.target.value))}
                     >
@@ -611,7 +611,7 @@ export default function ServiceInquiry() {
                   <textarea
                     required
                     rows={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     placeholder="Tell us about your interests, questions, or special requirements..."
                     value={formData.message}
                     onChange={(e) => handleInputChange('message', e.target.value)}
@@ -624,7 +624,7 @@ export default function ServiceInquiry() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
                 >
                   {submitting ? (
                     <>

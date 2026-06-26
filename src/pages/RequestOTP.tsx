@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { createEventOTP, getServiceById, verifyPassword } from '../lib/database'
 
@@ -157,7 +157,7 @@ export default function RequestOTPPage() {
           <button
             onClick={requestOTP}
             disabled={loading || success}
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-500 text-white font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -190,7 +190,7 @@ export default function RequestOTPPage() {
                   type="password"
                   value={securePassword}
                   onChange={(e) => setSecurePassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   placeholder={
                     secureConfirmations === 0 ? 'Enter password' :
                     secureConfirmations === 1 ? 'Enter password again' :

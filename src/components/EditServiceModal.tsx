@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import type { Service } from '../types';
 
@@ -289,7 +289,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   value={formData.max_participants || ''}
                   onChange={(e) => handleInputChange('max_participants' as keyof Service, e.target.value ? Number(e.target.value) : undefined)}
                   placeholder="e.g., 50"
-                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               <div>
@@ -300,7 +300,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   value={formData.minimum_age || ''}
                   onChange={(e) => handleInputChange('minimum_age' as keyof Service, e.target.value ? Number(e.target.value) : undefined)}
                   placeholder="e.g., 18"
-                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               <div>
@@ -310,7 +310,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   id="registration_deadline"
                   value={formData.registration_deadline ? new Date(formData.registration_deadline).toISOString().slice(0,16) : ''}
                   onChange={(e) => handleInputChange('registration_deadline' as keyof Service, e.target.value)}
-                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                 />
               </div>
             </div>
@@ -325,7 +325,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   id="title"
                   value={formData.title || ''}
                   onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                   required
                 />
               </div>
@@ -339,7 +339,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   value={formData.description || ''}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   rows={3}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                   required
                 />
               </div>
@@ -357,7 +357,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       onChange={(e) => handleInputChange('price_within_town' as any, e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       min="0"
                       step="0.01"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     />
                     <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
                   </div>
@@ -373,7 +373,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       onChange={(e) => handleInputChange('price_upcountry' as any, e.target.value === '' ? undefined : parseFloat(e.target.value))}
                       min="0"
                       step="0.01"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     />
                     <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
                   </div>
@@ -386,7 +386,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       id="currency"
                       value={formData.currency || 'USD'}
                       onChange={(e) => handleInputChange('currency' as any, e.target.value)}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     >
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -406,7 +406,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       onChange={(e) => handleInputChange('price' as any, parseFloat(e.target.value))}
                       min="0"
                       step="0.01"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       required
                     />
                   </div>
@@ -416,7 +416,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       id="currency"
                       value={formData.currency || 'USD'}
                       onChange={(e) => handleInputChange('currency' as any, e.target.value)}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     >
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -435,7 +435,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <label htmlFor="event_type" className="block text-sm font-medium text-gray-700">Event Type</label>
-                          <select id="event_type" value={(formData.event_type as any) || ''} onChange={(e) => handleInputChange('event_type' as keyof Service, e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                          <select id="event_type" value={(formData.event_type as any) || ''} onChange={(e) => handleInputChange('event_type' as keyof Service, e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm">
                             <option value="">Select event type</option>
                             <option value="adventure_activity">Adventure Activity</option>
                             <option value="cultural_experience">Cultural Experience</option>
@@ -455,7 +455,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                             id="event_datetime"
                             value={formData.event_datetime ? new Date(formData.event_datetime).toISOString().slice(0,16) : ''}
                             onChange={(e) => handleInputChange('event_datetime' as keyof Service, e.target.value)}
-                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                           />
                         </div>
                   </div>
@@ -467,7 +467,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                           value={(formData.event_location as any) || ''}
                           onChange={(e) => handleInputChange('event_location' as keyof Service, e.target.value)}
                           placeholder="Venue or meeting point"
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                         />
                       </div>
 
@@ -523,7 +523,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                           ))}
 
                           <div>
-                            <button type="button" onClick={addTicketType} className="px-3 py-2 bg-blue-600 text-white rounded-md">Add Ticket Type</button>
+                            <button type="button" onClick={addTicketType} className="px-3 py-2 bg-emerald-700 text-white rounded-md">Add Ticket Type</button>
                           </div>
                         </div>
                       </div>
@@ -556,7 +556,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   id="location"
                   value={formData.location || ''}
                   onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                 />
               </div>
 
@@ -571,7 +571,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                     value={formData.duration_hours || ''}
                     onChange={(e) => handleInputChange('duration_hours', parseInt(e.target.value))}
                     min="0"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                   />
                 </div>
 
@@ -585,7 +585,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                     value={formData.max_capacity || ''}
                     onChange={(e) => handleInputChange('max_capacity', parseInt(e.target.value))}
                     min="0"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                   />
                 </div>
               </div>
@@ -600,7 +600,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                   value={formData.amenities?.join(', ') || ''}
                   onChange={(e) => handleAmenitiesChange(e.target.value)}
                   placeholder="WiFi, Parking, Breakfast..."
-                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                 />
               </div>
 
@@ -618,7 +618,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="vehicle_type"
                         value={formData.vehicle_type || ''}
                         onChange={(e) => handleInputChange('vehicle_type', e.target.value)}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="">Select vehicle type</option>
                         <option value="sedan">Sedan Car</option>
@@ -643,7 +643,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         onChange={(e) => handleInputChange('vehicle_capacity', parseInt(e.target.value) || undefined)}
                         min="1"
                         placeholder="Number of passengers"
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -657,7 +657,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="license_required"
                         value={formData.license_required || ''}
                         onChange={(e) => handleInputChange('license_required', e.target.value)}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="">Select license type</option>
                         <option value="none">No license required</option>
@@ -678,7 +678,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         onChange={(e) => handleInputChange('booking_notice_hours', parseInt(e.target.value) || undefined)}
                         min="0"
                         placeholder="e.g., 24"
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       />
                     </div>
                   </div>
@@ -782,7 +782,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         value={arrayInputs.pickup_locations}
                         onChange={(e) => setArrayInputs(prev => ({ ...prev, pickup_locations: e.target.value }))}
                         placeholder="e.g., Entebbe Airport, Kampala City Center"
-                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('pickup_locations', arrayInputs.pickup_locations))}
                       />
                       <button
@@ -819,7 +819,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         value={arrayInputs.dropoff_locations}
                         onChange={(e) => setArrayInputs(prev => ({ ...prev, dropoff_locations: e.target.value }))}
                         placeholder="e.g., Queen Elizabeth National Park, Bwindi Forest"
-                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="flex-1 mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('dropoff_locations', arrayInputs.dropoff_locations))}
                       />
                       <button
@@ -856,7 +856,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       onChange={(e) => handleInputChange('route_description', e.target.value)}
                       rows={3}
                       placeholder="Describe the route, stops, and any notable points along the way"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     />
                   </div>
 
@@ -869,7 +869,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="fuel_included"
                         value={formData.fuel_included ? 'yes' : 'no'}
                         onChange={(e) => handleInputChange('fuel_included', e.target.value === 'yes')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="no">No - Client pays for fuel</option>
                         <option value="yes">Yes - Fuel included in price</option>
@@ -883,7 +883,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="tolls_included"
                         value={formData.tolls_included ? 'yes' : 'no'}
                         onChange={(e) => handleInputChange('tolls_included', e.target.value === 'yes')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="no">No - Client pays tolls</option>
                         <option value="yes">Yes - Tolls included in price</option>
@@ -900,7 +900,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="insurance_included"
                         value={formData.insurance_included ? 'yes' : 'no'}
                         onChange={(e) => handleInputChange('insurance_included', e.target.value === 'yes')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="no">No - Client provides insurance</option>
                         <option value="yes">Yes - Insurance included</option>
@@ -914,7 +914,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                         id="driver_included"
                         value={formData.driver_included ? 'yes' : 'no'}
                         onChange={(e) => handleInputChange('driver_included', e.target.value === 'yes')}
-                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                       >
                         <option value="no">Self-drive available</option>
                         <option value="yes">Driver included</option>
@@ -932,7 +932,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
                       onChange={(e) => handleInputChange('transport_terms', e.target.value)}
                       rows={3}
                       placeholder="Any additional terms, restrictions, or requirements for transport services"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-emerald-600 focus:border-blue-500 sm:text-sm"
                     />
                   </div>
                 </div>
@@ -945,7 +945,7 @@ export function EditServiceModal({ service, isOpen, onClose, onSave, isLoading, 
               type="submit"
               onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+              className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-emerald-700 text-base font-medium text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
             >
               {isLoading ? 'Saving...' : 'Save Changes'}
             </button>

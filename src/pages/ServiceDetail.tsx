@@ -1,4 +1,4 @@
-// ...existing imports...
+﻿// ...existing imports...
 // Hide nav bar when lightbox is open
 // (must be inside the component, after imports)
 import { useState, useEffect, useRef } from 'react'
@@ -2077,7 +2077,7 @@ export default function ServiceDetail() {
                         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
                       }}
                       aria-label="Buy Tickets"
-                      className="mt-1 w-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 rounded shadow-md transition-colors md:hidden sticky bottom-0"
+                      className="mt-1 w-20 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium py-1 rounded shadow-md transition-colors md:hidden sticky bottom-0"
                     >
                       Buy Tickets
                     </button>
@@ -2323,7 +2323,7 @@ export default function ServiceDetail() {
                     <button
                       onClick={handleBuyTickets}
                       disabled={ticketsTotal <= 0 || creatingOrder}
-                      className={`flex-1 ${(ticketsTotal > 0 && !creatingOrder) ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-500 cursor-not-allowed'} font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300`}
+                      className={`flex-1 ${(ticketsTotal > 0 && !creatingOrder) ? 'bg-emerald-700 hover:bg-emerald-800 text-white' : 'bg-gray-100 text-gray-500 cursor-not-allowed'} font-medium py-3 px-4 rounded-lg transition-colors border border-gray-300`}
                     >
                       {creatingOrder ? 'Creating...' : 'Buy Tickets'}
                     </button>

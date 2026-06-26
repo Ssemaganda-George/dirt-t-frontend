@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Heart, MessageSquare, Star } from 'lucide-react'
 import { useVisitorTracking } from '../hooks/useVisitorTracking'
 import type { ServiceReview } from '../lib/database'
@@ -178,7 +178,7 @@ export function ServiceReviewsWidget({ serviceId, onReviewSubmit }: ServiceRevie
           </div>
           <button
             onClick={() => setShowReviewForm(!showReviewForm)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors text-sm font-medium"
           >
             Write Review
           </button>
@@ -196,7 +196,7 @@ export function ServiceReviewsWidget({ serviceId, onReviewSubmit }: ServiceRevie
                 required
                 value={formData.visitorName}
                 onChange={(e) => setFormData({ ...formData, visitorName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 placeholder="Enter your name"
               />
             </div>
@@ -209,7 +209,7 @@ export function ServiceReviewsWidget({ serviceId, onReviewSubmit }: ServiceRevie
                 type="email"
                 value={formData.visitorEmail}
                 onChange={(e) => setFormData({ ...formData, visitorEmail: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 placeholder="Enter your email"
               />
             </div>
@@ -242,7 +242,7 @@ export function ServiceReviewsWidget({ serviceId, onReviewSubmit }: ServiceRevie
               <textarea
                 value={formData.comment}
                 onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 placeholder="Share your experience..."
                 rows={4}
               />
@@ -258,7 +258,7 @@ export function ServiceReviewsWidget({ serviceId, onReviewSubmit }: ServiceRevie
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors"
               >
                 Submit Review
               </button>

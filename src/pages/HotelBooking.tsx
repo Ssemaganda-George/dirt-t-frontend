@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
 import { formatCurrencyWithConversion } from '../lib/utils'
@@ -511,7 +511,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   max={service.max_capacity || 10}
                   value={bookingData.guests}
                   onChange={(e) => handleInputChange('guests', parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -522,7 +522,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   max={10}
                   value={bookingData.rooms}
                   onChange={(e) => handleInputChange('rooms', parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 />
               </div>
             </div>
@@ -581,7 +581,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 Special Requests <span className="font-light text-gray-500">(Optional)</span>
               </label>
               <textarea
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-sm font-light"
                 rows={3}
                 placeholder="e.g., high floor, late check-in, extra pillows..."
                 value={bookingData.specialRequests}
@@ -638,7 +638,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <div className="relative country-dropdown" style={{width: '120px'}}>
                       <button
                         type="button"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-sm font-light flex items-center justify-between"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent bg-gray-50 text-sm font-light flex items-center justify-between"
                         onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                       >
                         <span>
@@ -654,7 +654,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                             <input
                               type="text"
                               placeholder="Search..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-light focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-light focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                               value={countrySearch}
                               onChange={(e) => setCountrySearch(e.target.value)}
                             />
@@ -682,7 +682,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     </div>
                     <input
                       type="tel"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-light"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-sm font-light"
                       placeholder="700 000 000"
                       value={bookingData.contactPhone}
                       onChange={(e) => handleInputChange('contactPhone', e.target.value)}
@@ -961,7 +961,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               </button>
               <button
                 onClick={() => navigate(`/service/${service.slug || service.id}/inquiry`)}
-                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
+                className="flex-1 sm:flex-none bg-emerald-700 hover:bg-emerald-800 text-white font-medium py-1.5 sm:py-2 px-2 sm:px-6 rounded-lg transition-colors text-xs sm:text-sm"
               >
                 Message Provider
               </button>
@@ -1042,7 +1042,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               <button
                 onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                className="flex-1 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
               >
                 {isSubmitting
                   ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')

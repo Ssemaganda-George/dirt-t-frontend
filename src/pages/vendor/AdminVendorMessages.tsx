@@ -269,7 +269,7 @@ export default function AdminVendorMessages() {
                       <ChevronLeft className="w-4 h-4 text-gray-500" />
                     </button>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                      isAdmin ? 'bg-blue-600' : 'bg-emerald-700'
+                      isAdmin ? 'bg-emerald-700' : 'bg-emerald-700'
                     }`}>
                       {isAdmin ? <Shield className="w-4 h-4" /> : (convoName?.[0]?.toUpperCase() || 'C')}
                     </div>
@@ -328,7 +328,7 @@ export default function AdminVendorMessages() {
                                 {showAvatar && (
                                   <div className={`flex-shrink-0 ${isVendor ? 'ml-2' : 'mr-2'}`}>
                                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                      isVendor ? 'bg-blue-600 text-white' : 'bg-green-600 text-white'
+                                      isVendor ? 'bg-emerald-700 text-white' : 'bg-green-600 text-white'
                                     }`}>
                                       {isVendor ? 'V' : (message.sender?.full_name?.[0] || message.sender_name?.[0] || 'C')}
                                     </div>
@@ -343,7 +343,7 @@ export default function AdminVendorMessages() {
                                   )}
                                   <div className={`px-3 py-2 rounded-xl text-sm ${
                                     isVendor
-                                      ? 'bg-blue-600 text-white rounded-br-sm'
+                                      ? 'bg-emerald-700 text-white rounded-br-sm'
                                       : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
                                   }`}>
                                     <p className="whitespace-pre-wrap">{message.message}</p>
@@ -433,7 +433,7 @@ export default function AdminVendorMessages() {
                     >
                       <div className="flex items-start gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          convo.type === 'admin' ? 'bg-blue-600' : 'bg-green-600'
+                          convo.type === 'admin' ? 'bg-emerald-700' : 'bg-green-600'
                         } text-white`}>
                           {convo.type === 'admin' ? (
                             <Shield className="w-5 h-5" />
@@ -490,7 +490,7 @@ export default function AdminVendorMessages() {
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-semibold">
+              <div className="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center text-white text-lg font-semibold">
                 {vendor.business_name?.[0]?.toUpperCase() || 'V'}
               </div>
               <div>

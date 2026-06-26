@@ -722,7 +722,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   onClick={goFromSummary}
                   disabled={processing}
                   className={`w-full py-3 rounded-xl font-semibold text-base transition ${
-                    processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+                    processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
                   }`}
                 >
                   {processing
@@ -735,7 +735,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <button
                   type="button"
                   onClick={goFromSummary}
-                  className="w-full py-3 rounded-xl font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700"
+                  className="w-full py-3 rounded-xl font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800"
                 >
                   Continue to {user ? 'Payment' : 'Your Details'}
                 </button>
@@ -756,7 +756,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               }}
               disabled={processing}
               className={`w-full py-3 rounded-xl font-semibold text-base transition ${
-                processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+                processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
               }`}
             >
               {isRestaurant ? (processing ? 'Confirming…' : 'Confirm Reservation') : 'Continue to Payment'}
@@ -769,7 +769,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   type="button"
                   disabled={processing}
                   onClick={handlePay}
-                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
                 >
                   {processing
                     ? (pollingMessage || 'Processing…')

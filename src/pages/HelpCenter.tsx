@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Search, MessageCircle, Phone, Mail, BookOpen, Users, CreditCard, MapPin } from 'lucide-react'
 import { useState } from 'react'
 
@@ -136,7 +136,7 @@ export default function HelpCenter() {
             <div className="mt-6">
               <Link
                 to="/contact"
-                className="px-6 py-3 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
+                className="px-6 py-3 bg-emerald-700 text-white font-semibold border border-blue-600 hover:bg-emerald-800 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
               >
                 Contact Support
               </Link>
@@ -193,7 +193,7 @@ export default function HelpCenter() {
                 </div>
                 <Link
                   to="/contact"
-                  className="mt-3 inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
+                  className="mt-3 inline-flex items-center px-4 py-2 bg-emerald-700 text-white font-semibold border border-blue-600 hover:bg-emerald-800 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
                 >
                   Contact Support
                 </Link>
@@ -288,7 +288,7 @@ export default function HelpCenter() {
               </p>
               <Link
                 to="/contact"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold border border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
+                className="inline-flex items-center px-4 py-2 bg-emerald-700 text-white font-semibold border border-blue-600 hover:bg-emerald-800 hover:border-blue-700 transition-all duration-200 text-sm cursor-pointer shadow-sm hover:shadow-md"
               >
                 Contact Support
               </Link>

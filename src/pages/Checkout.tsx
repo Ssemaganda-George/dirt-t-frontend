@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
@@ -234,7 +234,7 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => { setPaymentSuccess(false); navigate(`/tickets/${orderId}`) }}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium"
+              className="w-full py-2.5 bg-emerald-700 text-white rounded-lg font-medium"
             >
               View tickets
             </button>
@@ -252,7 +252,7 @@ export default function CheckoutPage() {
           <h2 className="text-xl md:text-2xl font-semibold">Checkout</h2>
           <div className="mt-3 flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">✓</div>
+              <div className="w-7 h-7 rounded-full bg-emerald-700 text-white flex items-center justify-center text-sm font-semibold">✓</div>
               <span className="text-sm font-medium text-gray-700">Tickets</span>
             </div>
             <div className="flex items-center gap-2">
@@ -367,7 +367,7 @@ export default function CheckoutPage() {
             type="button"
             disabled={processing}
             onClick={handlePay}
-            className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:opacity-90'}`}
+            className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-700 hover:opacity-90'}`}
           >
             {processing ? (pollingMessage || 'Processing payment…') : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
           </button>

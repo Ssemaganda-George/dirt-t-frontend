@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { Search, X, MapPin, HelpCircle, Shield, FileText, Globe } from 'lucide-react'
 import { useServices } from '../hooks/hook'
 import { Link } from 'react-router-dom'
@@ -683,7 +683,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
                   <Link
                     to={`/services?q=${encodeURIComponent(query)}`}
                     onClick={onClose}
-                    className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 touch-manipulation"
+                    className="inline-flex items-center px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg shadow-sm transition-colors duration-200 touch-manipulation"
                   >
                     View all results for "{query}"
                     <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

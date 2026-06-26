@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -213,7 +213,7 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
               </div>
 
               <button type="button" onClick={() => { if (validateStep(1)) setCurrentStep(2) }}
-                className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
+                className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
                 Continue
               </button>
             </>
@@ -262,7 +262,7 @@ export default function RestaurantBooking({ service }: { service: ServiceDetail 
               </div>
 
               <button type="button" disabled={isSubmitting} onClick={handleReserve}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? 'Confirming reservation…' : 'Confirm Reservation'}
               </button>
               <p className="text-xs text-center text-gray-500">No payment required — reservations are free. Pay at the restaurant.</p>

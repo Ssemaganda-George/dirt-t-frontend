@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { calculatePaymentForAmount } from '../lib/pricingService'
@@ -327,7 +327,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
               </div>
 
               <button type="button" onClick={() => { if (validateStep(1)) setCurrentStep(2) }}
-                className="w-full py-3 rounded-lg font-semibold text-base transition bg-blue-600 text-white hover:bg-blue-700">
+                className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
                 Continue to Payment
               </button>
             </>
@@ -366,7 +366,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
               </div>
 
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
-                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : `Pay ${formatCurrencyWithConversion(grandTotal, service.currency)} with Mobile Money`}
               </button>
             </>

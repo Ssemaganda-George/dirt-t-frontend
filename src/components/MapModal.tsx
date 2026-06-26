@@ -1,4 +1,4 @@
-// modal wrapper for MapPicker — requests user location when opened to center the map
+﻿// modal wrapper for MapPicker — requests user location when opened to center the map
 import { useEffect, useState } from 'react'
 import MapPicker from './MapPicker'
 
@@ -87,7 +87,7 @@ export default function MapModal({ isOpen, onClose, onSelect, initialMarker }: M
                     (err) => setGeoError(err.message || 'Location permission denied'),
                     { enableHighAccuracy: true, timeout: 5000 }
                   )
-                }} className="px-3 py-1 bg-blue-600 text-white rounded">Allow location</button>
+                }} className="px-3 py-1 bg-emerald-700 text-white rounded">Allow location</button>
                 <button onClick={() => setGeoError(null)} className="ml-2 px-3 py-1 border rounded">Ignore</button>
               </div>
             </div>

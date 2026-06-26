@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Hotel, Map, Utensils, Car, Target, Plane, Search, MapPin, Star, ShoppingBag } from 'lucide-react'
 import { getServiceCategories, getServiceAverageRating } from '../lib/database'
@@ -183,7 +183,7 @@ export default function Services() {
                 placeholder="I want ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
               />
             </div>
 

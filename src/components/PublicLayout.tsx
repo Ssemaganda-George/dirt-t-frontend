@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Twitter, Instagram, Facebook, Linkedin } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
@@ -411,7 +411,7 @@ export default function PublicLayout() {
                           <Link
                             to="/"
                             onClick={() => setShowGuestDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <Home className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('home')}
@@ -419,7 +419,7 @@ export default function PublicLayout() {
                           <Link
                             to="/saved"
                             onClick={() => setShowGuestDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             Your cart
@@ -435,7 +435,7 @@ export default function PublicLayout() {
                               setShowGuestDropdown(false)
                               setShowLoginModal(true)
                             }}
-                            className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <User className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('log_in')}
@@ -445,7 +445,7 @@ export default function PublicLayout() {
                               setShowGuestDropdown(false)
                               setShowPreferences(true)
                             }}
-                            className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center w-full px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <Globe className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('currency_region')}
@@ -453,7 +453,7 @@ export default function PublicLayout() {
                           <Link
                             to="/help"
                             onClick={() => setShowGuestDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <HelpCircle className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('help_center')}
@@ -469,7 +469,7 @@ export default function PublicLayout() {
                           <Link
                             to="/vendor-login"
                             onClick={() => setShowGuestDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('list_my_business')}
@@ -477,7 +477,7 @@ export default function PublicLayout() {
                           <Link
                             to="/partner"
                             onClick={() => setShowGuestDropdown(false)}
-                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors cursor-pointer rounded"
+                            className="flex items-center px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 transition-colors cursor-pointer rounded"
                           >
                             <ShoppingBag className="h-3.5 w-3.5 mr-2 text-emerald-600" />
                             {t('partner_with')}

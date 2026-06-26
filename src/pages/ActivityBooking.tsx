@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import {
   calculatePaymentForAmount,
   customerTotalFromUnitPricingCalc,
@@ -521,7 +521,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Number of Participants</label>
                       <select
-                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-base"
                         value={bookingData.guests}
                         onChange={(e) => handleInputChange('guests', parseInt(e.target.value))}
                       >
@@ -539,7 +539,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 Special Requests (Optional)
               </label>
               <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 rows={3}
                 placeholder="Any special requirements or requests..."
                 value={bookingData.specialRequests}
@@ -594,7 +594,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   <div className="relative country-dropdown">
                     <button
                       type="button"
-                      className="px-3 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base bg-gray-50 border-r-0 flex items-center justify-between min-w-[120px]"
+                      className="px-3 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-base bg-gray-50 border-r-0 flex items-center justify-between min-w-[120px]"
                       onClick={() => setCountryDropdownOpen(!countryDropdownOpen)}
                       style={{ width: '140px' }}
                     >
@@ -611,7 +611,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                           <input
                             type="text"
                             placeholder="Search countries..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                             value={countrySearch}
                             onChange={(e) => setCountrySearch(e.target.value)}
                           />
@@ -639,7 +639,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   </div>
                   <input
                     type="tel"
-                    className="flex-1 px-3 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                    className="flex-1 px-3 py-3 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-base"
                     value={bookingData.contactPhone}
                     onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                     placeholder="700 000 000"
@@ -852,7 +852,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             ].map(({ n, label }) => (
               <div key={n} className="flex items-center gap-2 flex-shrink-0">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                  currentStep > n ? 'bg-blue-600 text-white' :
+                  currentStep > n ? 'bg-emerald-700 text-white' :
                   currentStep === n ? 'border-2 border-blue-600 text-blue-600 bg-white' :
                   'bg-gray-200 text-gray-500'
                 }`}>
@@ -888,7 +888,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
               <button
                 onClick={currentStep === 3 ? handleCompleteBooking : handleNext}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base"
+                className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 {isSubmitting
                   ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')

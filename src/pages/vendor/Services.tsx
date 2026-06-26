@@ -754,7 +754,7 @@ export default function VendorServices() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-700 flex items-center justify-center">
                     <Plus className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -778,7 +778,7 @@ export default function VendorServices() {
               <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
                 <button
                   onClick={() => { setEditing(null); setShowForm(true) }}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 text-white font-semibold rounded-xl hover:bg-emerald-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Plus className="h-5 w-5" />
                   Create New Service
@@ -802,7 +802,7 @@ export default function VendorServices() {
                     placeholder="Search by title, description, or category..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50/50 placeholder:text-gray-400 transition-all duration-200"
+                    className="w-full pl-12 pr-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent bg-gray-50/50 placeholder:text-gray-400 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -815,7 +815,7 @@ export default function VendorServices() {
                     onClick={() => setSelectedCategory('all')}
                     className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                       selectedCategory === 'all'
-                        ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
+                        ? 'bg-emerald-700 text-white shadow-lg transform scale-[1.02]'
                         : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
                     }`}
                   >
@@ -831,7 +831,7 @@ export default function VendorServices() {
                           onClick={() => setSelectedCategory(category.id)}
                           className={`px-4 py-2 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                             selectedCategory === category.id
-                              ? 'bg-blue-600 text-white shadow-lg transform scale-[1.02]'
+                              ? 'bg-emerald-700 text-white shadow-lg transform scale-[1.02]'
                               : 'bg-gray-100 text-gray-600 hover:bg-slate-200 hover:text-gray-800'
                           }`}
                         >
@@ -871,7 +871,7 @@ export default function VendorServices() {
               <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">Get started by creating your first service offering.</p>
               <button
                 onClick={() => { setEditing(null); setShowForm(true) }}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-700 text-white font-semibold rounded-xl hover:bg-emerald-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <Plus className="h-5 w-5" />
                 Create Your First Service
@@ -1175,7 +1175,7 @@ export default function VendorServices() {
                     onClick={() => setCurrentPage(pageNum)}
                     className={`px-3 py-2 text-sm font-medium rounded-lg ${
                       currentPage === pageNum
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-emerald-700 text-white'
                         : 'text-gray-700 bg-white border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
@@ -1602,7 +1602,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('room_types', arrayInputs.room_types || ''))}
                 />
-                <button type="button" onClick={() => addToArray('room_types', arrayInputs.room_types || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('room_types', arrayInputs.room_types || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.room_types || []).map((room, idx) => (
@@ -1624,7 +1624,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('facilities', arrayInputs.facilities || ''))}
                 />
-                <button type="button" onClick={() => addToArray('facilities', arrayInputs.facilities || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('facilities', arrayInputs.facilities || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.facilities || []).map((facility, idx) => (
@@ -1766,7 +1766,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('languages_offered', arrayInputs.languages_offered || ''))}
                 />
-                <button type="button" onClick={() => addToArray('languages_offered', arrayInputs.languages_offered || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('languages_offered', arrayInputs.languages_offered || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.languages_offered || []).map((lang, idx) => (
@@ -1788,7 +1788,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('itinerary', arrayInputs.itinerary || ''))}
                 />
-                <button type="button" onClick={() => addToArray('itinerary', arrayInputs.itinerary || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('itinerary', arrayInputs.itinerary || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.itinerary || []).map((item, idx) => (
@@ -1810,7 +1810,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('included_items', arrayInputs.included_items || ''))}
                 />
-                <button type="button" onClick={() => addToArray('included_items', arrayInputs.included_items || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('included_items', arrayInputs.included_items || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.included_items || []).map((item, idx) => (
@@ -1832,7 +1832,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('excluded_items', arrayInputs.excluded_items || ''))}
                 />
-                <button type="button" onClick={() => addToArray('excluded_items', arrayInputs.excluded_items || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('excluded_items', arrayInputs.excluded_items || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.excluded_items || []).map((item, idx) => (
@@ -1854,7 +1854,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('tour_highlights', arrayInputs.tour_highlights || ''))}
                 />
-                <button type="button" onClick={() => addToArray('tour_highlights', arrayInputs.tour_highlights || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('tour_highlights', arrayInputs.tour_highlights || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.tour_highlights || []).map((highlight, idx) => (
@@ -1876,7 +1876,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('what_to_bring', arrayInputs.what_to_bring || ''))}
                 />
-                <button type="button" onClick={() => addToArray('what_to_bring', arrayInputs.what_to_bring || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('what_to_bring', arrayInputs.what_to_bring || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.what_to_bring || []).map((item, idx) => (
@@ -1936,7 +1936,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('meals_included', arrayInputs.meals_included || ''))}
                 />
-                <button type="button" onClick={() => addToArray('meals_included', arrayInputs.meals_included || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('meals_included', arrayInputs.meals_included || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.meals_included || []).map((meal, idx) => (
@@ -2094,7 +2094,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('vehicle_features', arrayInputs.vehicle_features || ''))}
                 />
-                <button type="button" onClick={() => addToArray('vehicle_features', arrayInputs.vehicle_features || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('vehicle_features', arrayInputs.vehicle_features || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.vehicle_features || []).map((feat: string, idx: number) => (
@@ -2116,7 +2116,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('pickup_locations', arrayInputs.pickup_locations || ''))}
                 />
-                <button type="button" onClick={() => addToArray('pickup_locations', arrayInputs.pickup_locations || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('pickup_locations', arrayInputs.pickup_locations || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.pickup_locations || []).map((location, idx) => (
@@ -2138,7 +2138,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('dropoff_locations', arrayInputs.dropoff_locations || ''))}
                 />
-                <button type="button" onClick={() => addToArray('dropoff_locations', arrayInputs.dropoff_locations || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('dropoff_locations', arrayInputs.dropoff_locations || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.dropoff_locations || []).map((location, idx) => (
@@ -2157,7 +2157,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   value={form.location ?? ''}
                   onChange={(e) => update('location', e.target.value)}
                   placeholder="Primary service location or base (optional)"
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                 />
                 <button
                   type="button"
@@ -2170,7 +2170,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     }
                     setShowMapModal(true)
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors border border-blue-600"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors border border-blue-600"
                 >
                   <Map size={16} />
                   {(form as any).service_lat && (form as any).service_lon ? 'Edit Location' : 'Select on Map'}
@@ -2329,7 +2329,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('dietary_options', arrayInputs.dietary_options || ''))}
                 />
-                <button type="button" onClick={() => addToArray('dietary_options', arrayInputs.dietary_options || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('dietary_options', arrayInputs.dietary_options || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.dietary_options || []).map((option, idx) => (
@@ -2381,7 +2381,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('menu_highlights', arrayInputs.menu_highlights || ''))}
                 />
-                <button type="button" onClick={() => addToArray('menu_highlights', arrayInputs.menu_highlights || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('menu_highlights', arrayInputs.menu_highlights || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.menu_highlights || []).map((highlight, idx) => (
@@ -2417,7 +2417,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Event Type</label>
-                  <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <select value={form.event_type || ''} onChange={(e) => update('event_type', e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent">
                     <option value="">Select event type</option>
                     <optgroup label="→ Adventure">
                       <option value="adventure">Adventure &amp; Safari</option>
@@ -2465,7 +2465,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     type="datetime-local"
                     value={form.event_datetime || ''}
                     onChange={(e) => update('event_datetime', e.target.value)}
-                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     required
                   />
                 </div>
@@ -2480,7 +2480,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={form.event_location || ''}
                     onChange={(e) => update('event_location', e.target.value)}
                     placeholder="Specific venue or meeting point"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     required
                   />
                   <button
@@ -2496,7 +2496,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       }
                       setShowMapModal(true)
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors border border-blue-600"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors border border-blue-600"
                   >
                     <Map size={16} />
                     {(form as any).event_lat && (form as any).event_lon ? 'Edit Location' : 'Select on Map'}
@@ -2517,7 +2517,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={form.max_participants || ''}
                     onChange={(e) => update('max_participants', e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="e.g., 50"
-                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -2527,7 +2527,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={form.minimum_age || ''}
                     onChange={(e) => update('minimum_age', e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="e.g., 8"
-                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -2536,7 +2536,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     type="datetime-local"
                     value={form.registration_deadline || ''}
                     onChange={(e) => update('registration_deadline', e.target.value)}
-                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -2552,7 +2552,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     type="checkbox"
                     checked={(form as any).internal_ticketing || false}
                     onChange={(e) => update('internal_ticketing', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2"
                   />
                   <span className="text-sm font-medium text-gray-700">Enable internal ticketing</span>
                 </label>
@@ -2566,7 +2566,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
                             <input
-                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                               value={tt.title || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'title', e.target.value)}
                               placeholder="e.g., General Admission"
@@ -2576,7 +2576,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                             <label className="block text-xs font-medium text-gray-600 mb-1">Price (UGX)</label>
                             <div className="flex items-center gap-2">
                               <input
-                                className="flex-1 border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                                 type="number"
                                 value={(Boolean(tt?.metadata?.free) || ((tt.title || '').toLowerCase().includes('free'))) ? 0 : (tt.price ?? '')}
                                 onChange={(e) => {
@@ -2592,7 +2592,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Available Tickets</label>
                             <input
-                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                               type="number"
                               value={tt.quantity ?? ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
@@ -2603,7 +2603,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                         <div className="mb-3">
                           <label className="block text-xs font-medium text-gray-600 mb-1">Description (optional)</label>
                           <input
-                            className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                             value={tt.description || ''}
                             onChange={(e) => updateTicketTypeInForm(idx, 'description', e.target.value)}
                             placeholder="Description (optional)"
@@ -2613,7 +2613,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Sale starts</label>
                             <input
-                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                               type="datetime-local"
                               value={tt.sale_start || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'sale_start', e.target.value)}
@@ -2622,7 +2622,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Sale ends (deadline)</label>
                             <input
-                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full border border-gray-200 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                               type="datetime-local"
                               value={tt.sale_end || ''}
                               onChange={(e) => updateTicketTypeInForm(idx, 'sale_end', e.target.value)}
@@ -2645,7 +2645,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       <select
                         value={ticketPreset}
                         onChange={(e) => setTicketPreset(e.target.value as any)}
-                        className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                       >
                         <option value="general">General</option>
                         <option value="vip">VIP</option>
@@ -2657,7 +2657,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       <button
                         type="button"
                         onClick={addTicketTypeToForm}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                       >
                         <Plus size={16} /> Add Ticket Type
                       </button>
@@ -2678,13 +2678,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={arrayInputs.event_highlights || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_highlights: e.target.value }))}
                     placeholder="e.g., Live music performance, Traditional dance, Wildlife viewing, Cultural demonstrations"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_highlights', arrayInputs.event_highlights || ''))}
                   />
                   <button
                     type="button"
                     onClick={() => addToArray('event_highlights', arrayInputs.event_highlights || '')}
-                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                   >
                     Add
                   </button>
@@ -2712,13 +2712,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={arrayInputs.event_inclusions || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_inclusions: e.target.value }))}
                     placeholder="e.g., Entry ticket, Refreshments, Transportation, Guide, Equipment"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_inclusions', arrayInputs.event_inclusions || ''))}
                   />
                   <button
                     type="button"
                     onClick={() => addToArray('event_inclusions', arrayInputs.event_inclusions || '')}
-                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                   >
                     Add
                   </button>
@@ -2746,13 +2746,13 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     value={arrayInputs.event_prerequisites || ''}
                     onChange={(e) => setArrayInputs(prev => ({ ...prev, event_prerequisites: e.target.value }))}
                     placeholder="e.g., Valid ID, Medical certificate, Fitness level, Age restrictions"
-                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('event_prerequisites', arrayInputs.event_prerequisites || ''))}
                   />
                   <button
                     type="button"
                     onClick={() => addToArray('event_prerequisites', arrayInputs.event_prerequisites || '')}
-                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors"
                   >
                     Add
                   </button>
@@ -2785,7 +2785,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.group_discounts || false}
                       onChange={(e) => update('group_discounts', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Group Discounts</span>
                   </label>
@@ -2794,7 +2794,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.photography_allowed || false}
                       onChange={(e) => update('photography_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Photography Allowed</span>
                   </label>
@@ -2803,7 +2803,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.recording_allowed || false}
                       onChange={(e) => update('recording_allowed', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Recording Allowed</span>
                   </label>
@@ -2812,7 +2812,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.transportation_included || false}
                       onChange={(e) => update('transportation_included', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Transportation Included</span>
                   </label>
@@ -2827,7 +2827,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                           update('meals_included', []);
                         }
                       }}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Meals Included</span>
                   </label>
@@ -2836,7 +2836,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                       type="checkbox"
                       checked={form.certificates_provided || false}
                       onChange={(e) => update('certificates_provided', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2 mr-3"
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-slate-300 rounded focus:ring-emerald-600 focus:ring-2 mr-3"
                     />
                     <span className="text-sm font-medium text-gray-700">Certificates Provided</span>
                   </label>
@@ -2855,7 +2855,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   onChange={(e) => update('event_cancellation_policy', e.target.value)}
                   placeholder="Refund policy and cancellation terms for the event"
                   rows={3}
-                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent resize-none"
                 />
               </div>
             </div>
@@ -2907,7 +2907,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('rental_items', arrayInputs.rental_items || ''))}
                 />
-                <button type="button" onClick={() => addToArray('rental_items', arrayInputs.rental_items || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('rental_items', arrayInputs.rental_items || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.rental_items || []).map((item, idx) => (
@@ -2929,7 +2929,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('usage_instructions', arrayInputs.usage_instructions || ''))}
                 />
-                <button type="button" onClick={() => addToArray('usage_instructions', arrayInputs.usage_instructions || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('usage_instructions', arrayInputs.usage_instructions || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.usage_instructions || []).map((instruction, idx) => (
@@ -2951,7 +2951,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('maintenance_requirements', arrayInputs.maintenance_requirements || ''))}
                 />
-                <button type="button" onClick={() => addToArray('maintenance_requirements', arrayInputs.maintenance_requirements || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('maintenance_requirements', arrayInputs.maintenance_requirements || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.maintenance_requirements || []).map((req, idx) => (
@@ -3109,7 +3109,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('prerequisites', arrayInputs.prerequisites || ''))}
                 />
-                <button type="button" onClick={() => addToArray('prerequisites', arrayInputs.prerequisites || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('prerequisites', arrayInputs.prerequisites || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.prerequisites || []).map((prereq, idx) => (
@@ -3131,7 +3131,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('what_to_bring', arrayInputs.what_to_bring || ''))}
                 />
-                <button type="button" onClick={() => addToArray('what_to_bring', arrayInputs.what_to_bring || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('what_to_bring', arrayInputs.what_to_bring || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.what_to_bring || []).map((item, idx) => (
@@ -3153,7 +3153,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('materials_included', arrayInputs.materials_included || ''))}
                 />
-                <button type="button" onClick={() => addToArray('materials_included', arrayInputs.materials_included || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('materials_included', arrayInputs.materials_included || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.materials_included || []).map((material, idx) => (
@@ -3175,7 +3175,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('learning_outcomes', arrayInputs.learning_outcomes || ''))}
                 />
-                <button type="button" onClick={() => addToArray('learning_outcomes', arrayInputs.learning_outcomes || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('learning_outcomes', arrayInputs.learning_outcomes || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.learning_outcomes || []).map((outcome, idx) => (
@@ -3271,7 +3271,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('certifications', arrayInputs.certifications || ''))}
                 />
-                <button type="button" onClick={() => addToArray('certifications', arrayInputs.certifications || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('certifications', arrayInputs.certifications || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.certifications || []).map((cert, idx) => (
@@ -3293,7 +3293,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('specializations', arrayInputs.specializations || ''))}
                 />
-                <button type="button" onClick={() => addToArray('specializations', arrayInputs.specializations || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('specializations', arrayInputs.specializations || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.specializations || []).map((spec, idx) => (
@@ -3315,7 +3315,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('services_offered', arrayInputs.services_offered || ''))}
                 />
-                <button type="button" onClick={() => addToArray('services_offered', arrayInputs.services_offered || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('services_offered', arrayInputs.services_offered || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.services_offered || []).map((service, idx) => (
@@ -3337,7 +3337,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('destinations_covered', arrayInputs.destinations_covered || ''))}
                 />
-                <button type="button" onClick={() => addToArray('destinations_covered', arrayInputs.destinations_covered || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('destinations_covered', arrayInputs.destinations_covered || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.destinations_covered || []).map((destination, idx) => (
@@ -3359,7 +3359,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('success_stories', arrayInputs.success_stories || ''))}
                 />
-                <button type="button" onClick={() => addToArray('success_stories', arrayInputs.success_stories || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('success_stories', arrayInputs.success_stories || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.success_stories || []).map((story, idx) => (
@@ -3475,7 +3475,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('room_types', arrayInputs.room_types || ''))}
                 />
-                <button type="button" onClick={() => addToArray('room_types', arrayInputs.room_types || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('room_types', arrayInputs.room_types || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.room_types || []).map((type, idx) => (
@@ -3497,7 +3497,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('room_amenities', arrayInputs.room_amenities || ''))}
                 />
-                <button type="button" onClick={() => addToArray('room_amenities', arrayInputs.room_amenities || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('room_amenities', arrayInputs.room_amenities || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.room_amenities || []).map((amenity, idx) => (
@@ -3519,7 +3519,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('common_facilities', arrayInputs.common_facilities || ''))}
                 />
-                <button type="button" onClick={() => addToArray('common_facilities', arrayInputs.common_facilities || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('common_facilities', arrayInputs.common_facilities || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.common_facilities || []).map((facility, idx) => (
@@ -3583,7 +3583,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('house_rules', arrayInputs.house_rules || ''))}
                 />
-                <button type="button" onClick={() => addToArray('house_rules', arrayInputs.house_rules || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('house_rules', arrayInputs.house_rules || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.house_rules || []).map((rule, idx) => (
@@ -3605,7 +3605,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('nearby_attractions', arrayInputs.nearby_attractions || ''))}
                 />
-                <button type="button" onClick={() => addToArray('nearby_attractions', arrayInputs.nearby_attractions || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('nearby_attractions', arrayInputs.nearby_attractions || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.nearby_attractions || []).map((attraction, idx) => (
@@ -3627,7 +3627,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('local_recommendations', arrayInputs.local_recommendations || ''))}
                 />
-                <button type="button" onClick={() => addToArray('local_recommendations', arrayInputs.local_recommendations || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('local_recommendations', arrayInputs.local_recommendations || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.local_recommendations || []).map((rec, idx) => (
@@ -3805,7 +3805,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                   className="flex-1 border rounded-md px-3 py-2"
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('flight_amenities', arrayInputs.flight_amenities || ''))}
                 />
-                <button type="button" onClick={() => addToArray('flight_amenities', arrayInputs.flight_amenities || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                <button type="button" onClick={() => addToArray('flight_amenities', arrayInputs.flight_amenities || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.flight_amenities || []).map((amenity, idx) => (
@@ -3841,7 +3841,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                     className="flex-1 border rounded-md px-3 py-2"
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('payment_methods', arrayInputs.payment_methods || ''))}
                   />
-                  <button type="button" onClick={() => addToArray('payment_methods', arrayInputs.payment_methods || '')} className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">Add</button>
+                  <button type="button" onClick={() => addToArray('payment_methods', arrayInputs.payment_methods || '')} className="px-3 py-2 bg-emerald-700 text-white rounded-md hover:bg-emerald-800 transition">Add</button>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(form.payment_methods || []).map((method, idx) => (
@@ -4018,7 +4018,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-gray-200/60 animate-in zoom-in-95 duration-300 flex flex-col overflow-hidden sm:mx-0 mx-1">
         <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-gray-200 px-4 sm:px-8 py-4 sm:py-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-emerald-700 flex items-center justify-center">
               <Plus className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -4076,7 +4076,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <select value={form.category_id as any} onChange={(e) => update('category_id', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" required>
               <option value="">Select a category</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -4088,12 +4088,12 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Title' : 'Title'}</label>
-            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+            <input value={form.title as any} onChange={(e) => update('title', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" required />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{form.category_id === 'cat_activities' ? 'Event Description' : 'Description'}</label>
-            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows={3} required />
+            <textarea value={form.category_id === 'cat_activities' ? (form.event_description as any) || '' : (form.description as any)} onChange={(e) => update(form.category_id === 'cat_activities' ? 'event_description' as any : 'description' as any, e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" rows={3} required />
           </div>
 
           {/* Hide generic pricing/location/capacity fields when creating an Event (category_id === 'cat_activities')
@@ -4104,28 +4104,28 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Within Town Price</label>
-                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <input type="number" value={(form as any).price_within_town ?? ''} onChange={(e) => update('price_within_town' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" placeholder="e.g., 0" />
                     <p className="text-xs text-gray-500 mt-1">Within Town price applies to short/city trips (e.g., airport → city).</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Upcountry Price</label>
-                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 0" />
+                    <input type="number" value={(form as any).price_upcountry ?? ''} onChange={(e) => update('price_upcountry' as any, e.target.value === '' ? undefined : Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" placeholder="e.g., 0" />
                     <p className="text-xs text-gray-500 mt-1">Upcountry price applies to longer inter-city or rural trips.</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <input value={form.currency as any} onChange={(e) => update('currency', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                    <input type="number" value={form.price as any} onChange={(e) => update('price', Number(e.target.value))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" required />
                     {form.price && form.price > 0 && (
                       <PricingNotification
                         price={form.price}
@@ -4143,11 +4143,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
-                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input type="number" value={form.duration_hours as any} onChange={(e) => update('duration_hours', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
-                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  <input type="number" value={form.max_capacity as any} onChange={(e) => update('max_capacity', e.target.value ? Number(e.target.value) : undefined)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent" />
                 </div>
               </div>
             </>
@@ -4162,7 +4162,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               value={flexibleTierComment}
               onChange={(e) => setFlexibleTierComment(e.target.value)}
               placeholder="If you'd like to request a different pricing tier or special pricing arrangement for this service, please explain your request here. Our team will review and get back to you."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
               rows={3}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -4229,7 +4229,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] border border-gray-200/60 animate-in zoom-in-95 duration-300 flex flex-col">
             <div className="sticky top-0 bg-white backdrop-blur-sm z-10 flex items-center justify-between border-b border-gray-200 px-8 py-6 flex-shrink-0">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-emerald-700 flex items-center justify-center">
                   <Map className="h-5 w-5 text-white" />
                 </div>
                 <div>

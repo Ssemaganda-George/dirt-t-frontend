@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -255,14 +255,14 @@ export default function SearchMap({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for a location..."
-              className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
           </div>
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+            className="px-6 py-3 bg-emerald-700 text-white font-medium rounded-lg hover:bg-emerald-800 transition-colors disabled:opacity-60"
           >
             {loading ? 'Searching...' : 'Search'}
           </button>
@@ -341,7 +341,7 @@ export default function SearchMap({
                 value={editableLocation}
                 onChange={(e) => setEditableLocation(e.target.value)}
                 placeholder="Edit location name"
-                className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
               />
             </div>
             <a className="text-xs text-slate-600 hover:text-slate-800 inline-block" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lon}#map=16/${coords.lat}/${coords.lon}`}>View on OpenStreetMap ↗</a>
@@ -367,7 +367,7 @@ export default function SearchMap({
           </button>
           <button
             onClick={handleConfirm}
-            className="px-8 py-3 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="px-8 py-3 text-sm font-semibold text-white bg-emerald-700 rounded-xl hover:bg-emerald-800 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Confirm Location
           </button>

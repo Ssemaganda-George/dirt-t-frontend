@@ -1129,7 +1129,7 @@ ${filteredTxs.length > 10 ? `\n... and ${filteredTxs.length - 10} more transacti
                   <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Today's Action Items</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {dailyRecs.actions.map((item, i) => {
-                      const colors = ['bg-blue-600', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-500']
+                      const colors = ['bg-emerald-700', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-500']
                       return (
                         <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                           <span className={`flex-shrink-0 w-6 h-6 ${colors[i % colors.length]} text-white rounded-full flex items-center justify-center text-xs font-bold`}>
