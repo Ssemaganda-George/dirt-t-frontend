@@ -1,17 +1,8 @@
 ﻿import React from 'react'
+import { isChunkLoadError, reloadForStaleChunk } from '../lib/chunkRecovery'
 
 type Props = { children: React.ReactNode }
 type State = { hasError: boolean; error?: Error; isChunkError?: boolean }
-
-const CHUNK_RELOAD_KEY = 'dt_chunk_reload'
-
-function isChunkLoadError(error: Error) {
-  return (
-    error.message.includes('Failed to fetch dynamically imported module') ||
-    error.message.includes('Importing a module script failed') ||
-    error.name === 'ChunkLoadError'
-  )
-}
 
 export default class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
@@ -27,17 +18,9 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     console.error('ErrorBoundary caught an error:', error, info)
 
     if (isChunkLoadError(error)) {
-      // Auto-reload once on stale chunk after a new deploy. The session flag
-      // prevents an infinite reload loop if the new chunks also fail to load.
-      if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
-        sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
-        window.location.reload()
-      } else {
-        sessionStorage.removeItem(CHUNK_RELOAD_KEY)
-      }
+      reloadForStaleChunk()
     }
   }
-
   render() {
     if (!this.state.hasError) return this.props.children
 
@@ -46,13 +29,21 @@ export default class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="max-w-xl w-full bg-white rounded-lg shadow p-6 text-center">
-            <h2 className="text-xl font-semibold mb-2">Updating…</h2>
-            <p className="text-sm text-gray-600">A newer version is available. Reloading automatically.</p>
+            <h2 className="text-xl font-semibold mb-2">New version available</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              The site was updated while you had this tab open. Reload to get the latest version.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-medium"
+            >
+              Reload
+            </button>
           </div>
         </div>
       )
     }
-
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-xl w-full bg-white rounded-lg shadow p-6 text-center">
