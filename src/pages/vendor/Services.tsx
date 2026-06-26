@@ -337,7 +337,11 @@ export default function VendorServices() {
         delivery_fee: data.delivery_fee || undefined,
         shop_policies: data.shop_policies || '',
         shop_notes: data.shop_notes || '',
-        listing_type: data.listing_type || (data as any).type || 'experience',
+        listing_type: (() => {
+          const lt = (data as any).listing_type || (data as any).type
+          if (lt === 'experience') return 'buy_and_hire'
+          return lt || 'buy'
+        })(),
         buy_price: (data as any).buy_price ?? undefined,
         rental_price_per_day: (data as any).rental_price_per_day ?? undefined,
 
@@ -1382,7 +1386,11 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
 
     // Shop / rental fields
     shop_type: (initial as any)?.shop_type || '',
-    listing_type: (initial as any)?.listing_type || (initial as any)?.type || 'experience',
+    listing_type: (() => {
+      const lt = (initial as any)?.listing_type || (initial as any)?.type
+      if (lt === 'experience') return 'buy_and_hire'
+      return lt || 'buy'
+    })(),
     buy_price: (initial as any)?.buy_price ?? undefined,
     rental_price_per_day: (initial as any)?.rental_price_per_day ?? undefined,
     deposit_required: initial?.deposit_required ?? undefined,
@@ -3928,7 +3936,7 @@ function ServiceForm({ initial, vendorId, selectedCurrency, selectedLanguage, ca
               >
                 <option value="buy">Buy — one-time purchase</option>
                 <option value="hire">Hire — daily rental</option>
-                <option value="experience">Buy &amp; Hire — offer both</option>
+                <option value="buy_and_hire">Buy &amp; Hire — offer both</option>
               </select>
             </div>
 

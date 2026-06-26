@@ -1,3 +1,5 @@
+import type { ShopListingType } from '../lib/shopListingMode';
+
 export type ServiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'inactive';
 
 export interface ServiceCategory {
@@ -28,8 +30,8 @@ export interface Service {
   approved_by?: string;
   created_at: string;
   updated_at: string;
-  type?: 'experience' | 'buy' | 'hire';
-  listing_type?: 'experience' | 'buy' | 'hire';
+  type?: ShopListingType | 'experience';
+  listing_type?: ShopListingType | 'experience';
   buy_price?: number;
   rental_price_per_day?: number;
 

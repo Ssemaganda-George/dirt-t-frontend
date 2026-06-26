@@ -34,6 +34,10 @@ import {
   mapCategoryToBookingFlow,
   usesInlineBookingDrawer,
 } from '../lib/bookingFlow'
+import {
+  defaultShopCheckoutListingType,
+  isShopDualListing,
+} from '../lib/shopListingMode'
 import type { Service } from '../types'
 
 interface ServiceDetail {
@@ -289,20 +293,11 @@ export default function ServiceDetail() {
   useEffect(() => {
     if (!service) return
     const isShop = service.service_categories?.name?.toLowerCase() === 'shops'
-    const buy = Number((service as any)?.buy_price || (isShop ? service.price : NaN))
-    const rent = Number((service as any)?.rental_price_per_day ?? NaN)
-    const hasBuy = Number.isFinite(buy) && buy > 0
-    const hasRent = Number.isFinite(rent) && rent > 0
-
-    // Both prices: default to buy
-    if (hasBuy && hasRent) { setListingType('buy'); return }
-    // Hire-only
-    if (hasRent && !hasBuy) { setListingType('hire'); return }
-
-    const lt = (service as any)?.listing_type || (service as any)?.type || null
-    if (lt && lt !== 'hire') { setListingType(lt); return }
-
-    setListingType('experience')
+    if (!isShop) {
+      setListingType(null)
+      return
+    }
+    setListingType(defaultShopCheckoutListingType(service as any))
   }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day, service?.price, service?.service_categories?.name])
   const { user, profile } = useAuth()
   const { selectedLanguage } = usePreferences()
@@ -2346,13 +2341,9 @@ export default function ServiceDetail() {
                        </div>
                    </div>
 
-                   {service.service_categories?.name?.toLowerCase() === 'shops' && (() => {
+                   {service.service_categories?.name?.toLowerCase() === 'shops' && isShopDualListing(service as any) && (() => {
                      const buy = Number((service as any).buy_price || (service as any).price)
                      const rent = Number((service as any).rental_price_per_day ?? NaN)
-                     const hasBuy = Number.isFinite(buy) && buy > 0
-                     const hasRent = Number.isFinite(rent) && rent > 0
-                     // Only show the option picker when BOTH buy and hire prices are set
-                     if (!hasBuy || !hasRent) return null
                      return (
                        <div className="mb-4">
                          <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Option</label>
