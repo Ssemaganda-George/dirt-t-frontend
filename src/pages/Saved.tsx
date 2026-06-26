@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCart, type CartItem } from '../contexts/CartContext'
 import {
   buildBookingStateFromCartItem,
+  buildShopPurchaseStateFromCart,
   getCartBookingPath,
   usesInlineBookingDrawer,
   mapCategoryToBookingFlow,
@@ -57,6 +58,13 @@ export default function Saved() {
   const handleContinueBooking = async (item: CartItem) => {
     const slug = item.service?.slug || item.serviceId
     const mappedCategory = mapCategoryToBookingFlow(item.category)
+
+    if (mappedCategory === 'shops') {
+      navigate(getCartBookingPath(slug, item.category), {
+        state: buildShopPurchaseStateFromCart(item.bookingData),
+      })
+      return
+    }
 
     if (usesInlineBookingDrawer(mappedCategory)) {
       navigate(`/service/${slug}`, {

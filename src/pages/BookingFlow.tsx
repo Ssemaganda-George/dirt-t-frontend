@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate, useLocation } from 'react-router-dom'
 import { useServiceDetailQuery } from '../hooks/useServiceDetailQuery'
 
 const HotelBooking = lazy(() => import('./HotelBooking'))
@@ -18,6 +18,7 @@ function BookingLoading() {
 
 export default function BookingFlow() {
   const { slug } = useParams<{ slug: string }>()
+  const location = useLocation()
   const { data, isLoading } = useServiceDetailQuery(slug)
   const service = data?.service ?? null
 
@@ -49,7 +50,7 @@ export default function BookingFlow() {
       bookingPage = <ActivityBooking service={service as any} />
       break
     case 'shops':
-      return <Navigate to={`/service/${slug}`} replace state={{ openBookingDrawer: true }} />
+      return <Navigate to={`/service/${slug}/purchase`} replace state={location.state} />
     default:
       bookingPage = <ActivityBooking service={service as any} />
   }

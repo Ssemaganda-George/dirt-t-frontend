@@ -15,6 +15,7 @@ import { AppVisitorTracker } from './components/AppVisitorTracker'
 const Home = lazy(() => import('./pages/Home'))
 const ServiceDetail = lazy(() => import('./pages/ServiceDetail'))
 const BookingFlow = lazy(() => import('./pages/BookingFlow'))
+const ShopPurchasePage = lazy(() => import('./pages/ShopPurchasePage'))
 const ServiceInquiry = lazy(() => import('./pages/ServiceInquiry'))
 const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const ServiceCategories = lazy(() => import('./pages/Services'))
@@ -171,6 +172,7 @@ function App() {
             <Route path="checkout/:orderId" element={<Checkout />} />
             <Route path="checkout/:orderId/payment" element={<Payment />} />
             <Route path="service/:slug" element={<ServiceDetail />} />
+            <Route path="service/:slug/purchase" element={<ShopPurchasePage />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />
             <Route path="service/:slug/inquiry" element={<ServiceInquiry />} />
             <Route path="vendor/:vendorId" element={<VendorPublicProfile />} />

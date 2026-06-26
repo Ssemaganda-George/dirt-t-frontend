@@ -1,12 +1,13 @@
 /**
  * Hybrid booking: simple categories use inline drawer on ServiceDetail;
  * complex categories navigate to full /service/:slug/book/:category pages.
+ * Shops use /service/:slug/purchase (retail order flow).
  */
 
+import { getShopPurchasePath, type ShopPurchasePrefill } from './shopListingMode'
 export const INLINE_DRAWER_BOOKING_CATEGORIES = new Set([
   'activities',
   'restaurants',
-  'shops',
 ])
 
 export function usesInlineBookingDrawer(mappedCategory: string): boolean {
@@ -77,8 +78,20 @@ export function buildBookingStateFromCartItem(
   })
 }
 
+export function buildShopPurchaseStateFromCart(
+  bookingData: Record<string, unknown>
+): ShopPurchasePrefill {
+  return {
+    listingType: bookingData.listingType === 'hire' ? 'hire' : 'buy',
+    quantity: Number(bookingData.quantity || bookingData.guests || 1),
+    startDate: String(bookingData.startDate || ''),
+    endDate: String(bookingData.endDate || ''),
+  }
+}
+
 export function getCartBookingPath(serviceSlug: string, category: string): string {
   const mappedCategory = mapCategoryToBookingFlow(category)
+  if (mappedCategory === 'shops') return getShopPurchasePath(serviceSlug)
   return `/service/${serviceSlug}/book/${mappedCategory}`
 }
 
@@ -112,6 +125,13 @@ export function buildBookingNavigateState(
       return {
         departureDate: prefill.selectedDate,
         passengers: prefill.guests,
+      }
+    case 'shops':
+      return {
+        listingType: prefill.listingType === 'hire' ? 'hire' : 'buy',
+        quantity: prefill.quantity,
+        startDate: prefill.startDate,
+        endDate: prefill.endDate,
       }
     default:
       if (prefill.listingType) {

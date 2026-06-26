@@ -36,6 +36,7 @@ import {
 } from '../lib/bookingFlow'
 import {
   defaultShopCheckoutListingType,
+  getShopPurchasePath,
   isShopDualListing,
 } from '../lib/shopListingMode'
 import type { Service } from '../types'
@@ -504,9 +505,23 @@ export default function ServiceDetail() {
     }
     if (state.listingType) setListingType(String(state.listingType))
 
+    const isShop = service?.service_categories?.name?.toLowerCase() === 'shops'
+    if (isShop && service?.slug) {
+      navigate(getShopPurchasePath(service.slug), {
+        replace: true,
+        state: {
+          listingType: state.listingType === 'hire' ? 'hire' : 'buy',
+          quantity: state.quantity ? Number(state.quantity) : quantity,
+          startDate: state.startDate ? String(state.startDate) : startDate,
+          endDate: state.endDate ? String(state.endDate) : endDate,
+        },
+      })
+      return
+    }
+
     setDrawerOpen(true)
     navigate(location.pathname, { replace: true, state: {} })
-  }, [location.pathname, location.state, navigate])
+  }, [location.pathname, location.state, navigate, service, quantity, startDate, endDate])
 
   // Map service category names to booking flow categories — see bookingFlow.ts
 
@@ -541,6 +556,19 @@ export default function ServiceDetail() {
     if (!service?.slug) return
     if (!bookingPrefillReady()) {
       scrollToBookingPanel()
+      return
+    }
+
+    const cat = service.service_categories?.name?.toLowerCase() || ''
+    if (cat === 'shops') {
+      navigate(getShopPurchasePath(service.slug), {
+        state: {
+          listingType: listingType === 'hire' ? 'hire' : 'buy',
+          quantity,
+          startDate,
+          endDate,
+        },
+      })
       return
     }
 
@@ -2746,8 +2774,9 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      {/* Inline drawer — activities, restaurants & shops (hybrid booking / purchase) */}
+      {/* Inline drawer — activities & restaurants (hybrid booking) */}
       {service &&
+        service.service_categories?.name?.toLowerCase() !== 'shops' &&
         usesInlineBookingDrawer(
           mapCategoryToBookingFlow(service.service_categories?.name || 'activities')
         ) && (
@@ -2763,12 +2792,7 @@ export default function ServiceDetail() {
               endDate,
               startTime,
               endTime,
-              guests:
-                service.service_categories?.name?.toLowerCase() === 'shops'
-                  ? quantity
-                  : guests + children,
-              quantity,
-              listingType: listingType || undefined,
+              guests: guests + children,
               transportZone,
             }}
           />

@@ -54,3 +54,27 @@ export function defaultShopCheckoutListingType(service: ShopListingService): 'bu
   if (mode === 'hire') return 'hire'
   return 'buy'
 }
+
+export function getShopPurchasePath(slug: string): string {
+  return `/service/${slug}/purchase`
+}
+
+export function getShopUnitPrice(service: ShopListingService, checkoutMode: 'buy' | 'hire'): number {
+  if (checkoutMode === 'hire') {
+    return positiveNum(service.rental_price_per_day) ?? positiveNum(service.price) ?? 0
+  }
+  return positiveNum(service.buy_price) ?? positiveNum(service.price) ?? 0
+}
+
+export function calcShopRentalDays(startDate: string, endDate: string): number {
+  if (!startDate || !endDate) return 1
+  return Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000))
+}
+
+export interface ShopPurchasePrefill {
+  listingType?: 'buy' | 'hire'
+  quantity?: number
+  startDate?: string
+  endDate?: string
+  deliveryNote?: string
+}
