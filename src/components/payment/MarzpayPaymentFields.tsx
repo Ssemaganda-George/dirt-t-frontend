@@ -102,7 +102,7 @@ export default function MarzpayPaymentFields({
           <CreditCard className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
           <span className="min-w-0">
             <span className="block text-sm font-medium text-gray-900">Debit or credit card</span>
-            <span className="block text-xs text-gray-500 mt-0.5">Visa or Mastercard. No Ugandan number needed.</span>
+            <span className="block text-xs text-gray-500 mt-0.5">Visa or Mastercard.</span>
           </span>
         </label>
       </div>
