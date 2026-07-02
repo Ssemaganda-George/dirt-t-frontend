@@ -1,5 +1,4 @@
-﻿import { CreditCard, Shield, Smartphone } from 'lucide-react'
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,6 +7,9 @@ import { useOrderPaymentFlow } from '../hooks/useOrderPaymentFlow'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import { calculatePaymentForAmount } from '../lib/pricingService'
 import { formatCurrencyWithConversion } from '../lib/utils'
+import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
+import { getMarzpayMobileValidationErrors, isMobileUiMethod, normalizeMarzpayPhone, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
+import type { MarzpayMethod } from '../lib/marzpayApi'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
   type FieldErrors,
@@ -15,22 +17,10 @@ import {
   clearFieldError,
   fieldInputClass,
   isValidEmail,
-  isValidUgMobileMoneyPhone,
 } from '../lib/bookingFormValidation'
-import type { MarzpayMethod } from '../lib/marzpayApi'
 
-function detectMobileProvider(digits: string): 'MTN' | 'Airtel' | '' {
-  const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
-  if (local.length < 2) return ''
-  const p = local.slice(0, 2)
-  if (['76', '77', '78', '39', '46', '31'].includes(p)) return 'MTN'
-  if (['70', '74', '75', '20', '50'].includes(p)) return 'Airtel'
-  return ''
-}
-
-function formatPhone(raw: string): string {
-  const trimmed = raw.trim().replace(/^\+256/, '')
-  return trimmed.startsWith('+') ? trimmed : `+256${trimmed.replace(/^0/, '')}`
+function toMarzpayMethod(method: MarzpayPaymentFieldsValue['method']): MarzpayMethod {
+  return method === 'card' ? 'card' : 'mobile_money'
 }
 
 export default function CheckoutPage() {
@@ -42,8 +32,7 @@ export default function CheckoutPage() {
   const items = data?.items ?? []
   const allTicketTypes = data?.allTicketTypes ?? []
   const [buyer, setBuyer] = useState({ fullName: '', email: '', phone: '' })
-  const [paymentMethod, setPaymentMethod] = useState<MarzpayMethod>('mobile_money')
-  const [mobileProvider, setMobileProvider] = useState('')
+  const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
   const [showAllTickets, setShowAllTickets] = useState(false)
   const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -69,8 +58,12 @@ export default function CheckoutPage() {
       phone: b.phone || profilePhone,
     }))
     if (profilePhone) {
-      const provider = detectMobileProvider(profilePhone.replace(/\D/g, ''))
-      if (provider) setMobileProvider(provider)
+      const detected = detectMarzpayProvider(profilePhone)
+      setPaymentFields(p => ({
+        ...p,
+        phone: p.phone || profilePhone,
+        provider: p.provider || detected || p.provider,
+      }))
     }
   }, [data?.order, profile])
 
@@ -115,10 +108,14 @@ export default function CheckoutPage() {
     if (!buyer.fullName.trim()) errs.fullName = 'Full name is required.'
     if (!buyer.email.trim()) errs.email = 'Email is required.'
     else if (!isValidEmail(buyer.email)) errs.email = 'Enter a valid email address.'
-    if (paymentMethod === 'mobile_money') {
-      if (!buyer.phone.trim()) errs.phone = 'Mobile money number is required.'
-      else if (!isValidUgMobileMoneyPhone(buyer.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
-      if (!mobileProvider) errs.mobileProvider = 'Select MTN or Airtel (use a recognized number prefix).'
+    if (isMobileUiMethod(paymentFields.method)) {
+      if (!paymentFields.phone.trim() && !buyer.phone.trim()) {
+        errs.phone = 'Mobile money number is required.'
+      } else {
+        const phoneValue = paymentFields.phone.trim() || buyer.phone.trim()
+        setPaymentFields(p => ({ ...p, phone: phoneValue }))
+        Object.assign(errs, getMarzpayMobileValidationErrors({ ...paymentFields, phone: phoneValue }))
+      }
     }
     if (!hasTickets) errs.tickets = 'Select at least one ticket.'
     if (!ticketPricingReady) errs.tickets = 'Total is still calculating — try again in a moment.'
@@ -180,7 +177,8 @@ export default function CheckoutPage() {
     if (!validateCheckout()) return
     setCheckoutError(null)
     setPaymentError(null)
-    const phone = paymentMethod === 'mobile_money' ? formatPhone(buyer.phone) : undefined
+    const phoneRaw = paymentFields.phone.trim() || buyer.phone.trim()
+    const phone = isMobileUiMethod(paymentFields.method) ? normalizeMarzpayPhone(phoneRaw) : undefined
     await payOrder({
       order,
       items,
@@ -190,19 +188,22 @@ export default function CheckoutPage() {
       phone,
       guestEmail: buyer.email.trim(),
       guestName: buyer.fullName.trim(),
-      method: paymentMethod,
+      method: toMarzpayMethod(paymentFields.method),
     })
   }
 
-  const handlePhoneChange = (val: string) => {
-    setBuyer(s => ({ ...s, phone: val }))
-    setFieldErrors(p => clearFieldError(p, 'phone'))
-    setFormBanner(null)
-    const provider = detectMobileProvider(val.replace(/\D/g, ''))
-    if (provider) {
-      setMobileProvider(provider)
-      setFieldErrors(p => clearFieldError(p, 'mobileProvider'))
+  const handlePaymentFieldsChange = (value: MarzpayPaymentFieldsValue) => {
+    setPaymentFields(value)
+    if (value.phone) {
+      setBuyer(s => ({ ...s, phone: value.phone }))
     }
+    setFieldErrors(p => {
+      const next = { ...p }
+      delete next.phone
+      delete next.mobileProvider
+      return next
+    })
+    setFormBanner(null)
   }
 
   const setBuyerField = (field: 'fullName' | 'email', value: string) => {
@@ -287,84 +288,13 @@ export default function CheckoutPage() {
                     <FieldError message={fieldErrors.email} />
                   </div>
 
-                  <fieldset>
-                    <legend className="block text-sm font-medium text-gray-700 mb-2">Payment method</legend>
-                    <div className="grid gap-2">
-                      <label
-                        className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border cursor-pointer transition-colors ${
-                          paymentMethod === 'mobile_money'
-                            ? 'border-emerald-700 bg-emerald-50/60'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="checkoutPaymentMethod"
-                          value="mobile_money"
-                          checked={paymentMethod === 'mobile_money'}
-                          onChange={() => {
-                            setPaymentMethod('mobile_money')
-                            setPaymentError(null)
-                          }}
-                          className="mt-1 shrink-0"
-                        />
-                        <Smartphone className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium text-gray-900">Mobile Money</span>
-                          <span className="block text-xs text-gray-500 mt-0.5">MTN or Airtel. Approve the charge on your phone.</span>
-                        </span>
-                      </label>
-                      <label
-                        className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border cursor-pointer transition-colors ${
-                          paymentMethod === 'card'
-                            ? 'border-emerald-700 bg-emerald-50/60'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="checkoutPaymentMethod"
-                          value="card"
-                          checked={paymentMethod === 'card'}
-                          onChange={() => {
-                            setPaymentMethod('card')
-                            setPaymentError(null)
-                            setFieldErrors(p => {
-                              const next = { ...p }
-                              delete next.phone
-                              delete next.mobileProvider
-                              return next
-                            })
-                          }}
-                          className="mt-1 shrink-0"
-                        />
-                        <CreditCard className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
-                        <span className="min-w-0">
-                          <span className="block text-sm font-medium text-gray-900">Debit or credit card</span>
-                          <span className="block text-xs text-gray-500 mt-0.5">Visa or Mastercard. No Ugandan number needed.</span>
-                        </span>
-                      </label>
-                    </div>
-                  </fieldset>
-
-                  {paymentMethod === 'mobile_money' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money number *</label>
-                      {mobileProvider && (
-                        <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{mobileProvider}</span> (auto-detected)</p>
-                      )}
-                      <input type="tel" className={fieldInputClass(Boolean(fieldErrors.phone))} value={buyer.phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="0712345678" autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
-                      <FieldError message={fieldErrors.phone} />
-                      <FieldError message={fieldErrors.mobileProvider} />
-                    </div>
-                  )}
-
-                  {paymentMethod === 'card' && (
-                    <p className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
-                      <Shield className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" strokeWidth={1.75} aria-hidden />
-                      <span>You will be redirected to MarzPay&apos;s secure checkout to enter card details. We never store your card number.</span>
-                    </p>
-                  )}
+                  <MarzpayPaymentFields
+                    name="checkoutPaymentMethod"
+                    value={paymentFields}
+                    onChange={handlePaymentFieldsChange}
+                    errors={fieldErrors}
+                    onClearError={(field) => setFieldErrors(p => clearFieldError(p, field))}
+                  />
 
                   <FieldError message={fieldErrors.tickets} />
                 </div>
@@ -447,8 +377,8 @@ export default function CheckoutPage() {
             className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-700 hover:opacity-90'}`}
           >
             {processing
-              ? (pollingMessage || (paymentMethod === 'card' ? 'Redirecting to secure checkout…' : 'Processing payment…'))
-              : paymentMethod === 'card'
+              ? (pollingMessage || (paymentFields.method === 'card' ? 'Redirecting to secure checkout…' : 'Processing payment…'))
+              : paymentFields.method === 'card'
               ? `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with card`
               : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
           </button>

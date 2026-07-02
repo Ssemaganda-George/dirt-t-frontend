@@ -5,9 +5,10 @@ import { ArrowLeft, Calendar, Users, CreditCard } from 'lucide-react'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
-import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
-import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
+import { useMarzpayCollect } from '../hooks/useMarzpayCollect'
+import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
+import { getMarzpayMobileValidationErrors, isMobileUiMethod, normalizeMarzpayPhone, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import BookingReceipt from '../components/BookingReceipt'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -16,7 +17,6 @@ import {
   clearFieldError,
   fieldInputClass,
   isValidEmail,
-  isValidUgMobileMoneyPhone,
 } from '../lib/bookingFormValidation'
 
 interface ServiceDetail {
@@ -31,21 +31,36 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
   const location = useLocation()
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [phoneNumber, setPhoneNumber] = useState('')
-  const [pollingMessage, setPollingMessage] = useState('')
   const [completedBooking, setCompletedBooking] = useState<any | null>(null)
-  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
+  const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
   const finaliseInFlightRef = useRef(false)
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+  const pendingRef = useRef<any>(null)
+
+  const {
+    pay,
+    processing: isSubmitting,
+    pollingMessage,
+    setPollingMessage,
+    error: paymentError,
+    setError: setPaymentError,
+  } = useMarzpayCollect({
+    channelPrefix: 'payment_tour',
+    onCompleted: () => {
+      if (finaliseInFlightRef.current || !pendingRef.current) return
+      finaliseInFlightRef.current = true
+      setCompletedBooking({ ...pendingRef.current, status: 'confirmed', payment_status: 'paid' })
+      setPollingMessage('')
+      setCurrentStep(5)
+    },
+    onFailed: () => {
+      if (pendingRef.current?.id) cancelBookingOnPaymentFailure(pendingRef.current.id).catch(console.error)
+    },
+  })
 
   const [formData, setFormData] = useState({
     tourDate: '', travelers: 1, pickupLocation: '', specialRequests: '',
     contactName: '', contactEmail: '', contactPhone: '',
-    mobileProvider: '', paymentMethod: 'mobile',
   })
-  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formBanner, setFormBanner] = useState<string | null>(null)
   const [pricingCalc, setPricingCalc] = useState<any | null>(null)
@@ -85,10 +100,8 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
       if (!formData.contactEmail.trim()) errs.contactEmail = 'Email is required.'
       else if (!isValidEmail(formData.contactEmail)) errs.contactEmail = 'Enter a valid email address.'
     }
-    if (step === 3 && formData.paymentMethod === 'mobile') {
-      if (!phoneNumber.trim()) errs.phone = 'Mobile money number is required.'
-      else if (!isValidUgMobileMoneyPhone(phoneNumber)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
-      if (!formData.mobileProvider) errs.mobileProvider = 'Select MTN or Airtel.'
+    if (step === 3 && isMobileUiMethod(paymentFields.method)) {
+      Object.assign(errs, getMarzpayMobileValidationErrors(paymentFields))
     }
     return applyFieldErrors(errs, setFieldErrors, setFormBanner)
   }
@@ -104,21 +117,13 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
     else navigate(`/service/${service.slug || service.id}`)
   }
 
-  const detectProvider = (val: string) => {
-    const d = val.replace(/\D/g, '').replace(/^256/, '').replace(/^0/, '')
-    const p = d.slice(0, 2)
-    if (['76','77','78','39','46','31'].includes(p)) set('mobileProvider', 'MTN')
-    else if (['70','74','75','20','50'].includes(p)) set('mobileProvider', 'Airtel')
-  }
-
   const handleCompleteBooking = async () => {
     if (isSubmitting) return
-    if (formData.paymentMethod === 'mobile') {
+    if (paymentFields.method === 'mobile' || paymentFields.method === 'card') {
       if (!validateStep(3)) return
-      const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
-      const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+      const phone = isMobileUiMethod(paymentFields.method) ? normalizeMarzpayPhone(paymentFields.phone) : ''
       setPaymentError(null)
-      setIsSubmitting(true)
+      finaliseInFlightRef.current = false
       setPollingMessage('Creating booking…')
 
       let pendingBooking: any = null
@@ -136,45 +141,22 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           pricing_base_amount: totalPrice,
           platform_fee: pricingCalc ? Math.round(pricingCalc.platform_fee * formData.travelers) : 0,
         })
-      } catch (e) { setPaymentError('Failed to create booking. Please try again.'); setIsSubmitting(false); return }
+      } catch (e) { setPaymentError('Failed to create booking. Please try again.'); return }
 
-      setPollingMessage('Initiating payment…')
+      pendingRef.current = pendingBooking
       try {
-        const userId = await getOptionalUserId()
-        const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
-          body: JSON.stringify({ amount: Math.round(customerPaysTotal), phone_number: phone, booking_id: pendingBooking.id, description: `${service.title} tour — ${formData.travelers} traveler${formData.travelers > 1 ? 's' : ''}`, user_id: userId }),
+        await pay({
+          amount: Math.round(customerPaysTotal),
+          method: paymentFields.method,
+          phone: paymentFields.phone,
+          booking_id: pendingBooking.id,
+          description: `${service.title} tour — ${formData.travelers} traveler${formData.travelers > 1 ? 's' : ''}`,
         })
-        const result = await collectRes.json().catch(() => ({})) as { success?: boolean; error?: string; data?: { reference: string } }
-        if (!collectRes.ok || !result?.success || !result?.data?.reference) throw new Error(result?.error || 'Payment initiation failed')
-        const ref = result.data.reference
-        setPollingMessage('Check your phone for the USSD prompt…')
-
-        const onSuccess = () => {
-          paymentWatchRef.current?.cleanup()
-          finaliseBooking(pendingBooking)
-        }
-        const onFail = () => {
-          paymentWatchRef.current?.cleanup()
-          cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
-          setPollingMessage(''); setIsSubmitting(false)
-          setPaymentError('Payment was not completed or was declined. Please try again.')
-        }
-
-        paymentWatchRef.current?.cleanup()
-        paymentWatchRef.current = watchMarzpayPayment(ref, {
-          channelPrefix: 'payment_tour',
-          onCompleted: onSuccess,
-          onFailed: onFail,
-        })
-      } catch (err) {
+      } catch {
         cancelBookingOnPaymentFailure(pendingBooking.id).catch(console.error)
-        setPollingMessage(''); setIsSubmitting(false)
-        setPaymentError((err as Error).message || 'Payment failed. Please try again.')
       }
       return
     }
-    setIsSubmitting(true)
     await finaliseBooking(null)
   }
 
@@ -201,7 +183,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
     } catch (err) {
       finaliseInFlightRef.current = false
       setPaymentError('Failed to complete booking. Please try again.')
-    } finally { setIsSubmitting(false) }
+    }
   }
 
   if (currentStep === 5 && completedBooking) {
@@ -220,7 +202,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={handleBack} className="p-2 border border-gray-300 rounded hover:bg-gray-50"><ArrowLeft className="w-5 h-5" /></button>
           <div>
@@ -229,7 +210,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           </div>
         </div>
 
-        {/* Steps */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
           {[1,2,3].map(n => (
             <div key={n} className="flex items-center gap-2 flex-shrink-0">
@@ -244,7 +224,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
 
-          {/* Step 1 — Tour Details */}
           {currentStep === 1 && (
             <>
               <BookingFormBanner message={formBanner} />
@@ -276,7 +255,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                   value={formData.specialRequests} onChange={e => set('specialRequests', e.target.value)} />
               </div>
 
-              {/* Pricing summary */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>{formatCurrencyWithConversion(service.price, service.currency)} × {formData.travelers} traveler{formData.travelers > 1 ? 's' : ''}</span>
@@ -298,7 +276,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
             </>
           )}
 
-          {/* Step 2 — Contact Details */}
           {currentStep === 2 && (
             <>
               <BookingFormBanner message={formBanner} />
@@ -321,7 +298,6 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
             </>
           )}
 
-          {/* Step 3 — Payment */}
           {currentStep === 3 && (
             <>
               <BookingFormBanner message={formBanner || paymentError} />
@@ -330,26 +306,22 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 <div className="flex justify-between text-gray-600"><span>{formData.tourDate} · {formData.travelers} traveler{formData.travelers !== 1 ? 's' : ''}</span></div>
                 <div className="flex justify-between font-semibold"><span>Total</span><span>{formatCurrencyWithConversion(customerPaysTotal, service.currency)}</span></div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <div className="flex gap-3 mb-3">
-                  {['MTN','Airtel'].map(p => (
-                    <button key={p} type="button" onClick={() => set('mobileProvider', p)} className={`flex-1 py-2.5 rounded-lg border font-medium text-sm ${formData.mobileProvider === p ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{p}</button>
-                  ))}
-                </div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
-                {formData.mobileProvider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{formData.mobileProvider}</span> (auto-detected)</p>}
-                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone))}
-                  value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setFieldErrors(p => clearFieldError(p, 'phone')); detectProvider(e.target.value) }} autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
-                <FieldError message={fieldErrors.phone} />
-                <FieldError message={fieldErrors.mobileProvider} />
-              </div>
+              <MarzpayPaymentFields
+                name="tourPaymentMethod"
+                value={paymentFields}
+                onChange={setPaymentFields}
+                errors={fieldErrors}
+                onClearError={(field) => setFieldErrors(p => clearFieldError(p, field))}
+                showMoMoHint={false}
+              />
               <div className="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Free cancellation up to 24 hours before your tour — contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a>.
               </div>
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
                 className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
-                {isSubmitting ? (pollingMessage || 'Processing…') : `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with Mobile Money`}
+                {isSubmitting ? (pollingMessage || 'Processing…') : paymentFields.method === 'card'
+                  ? `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with card`
+                  : `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with Mobile Money`}
               </button>
             </>
           )}

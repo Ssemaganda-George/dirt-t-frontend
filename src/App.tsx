@@ -71,6 +71,7 @@ const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
 const VerifyTicket = lazy(() => import('./pages/VerifyTicket'))
 const Checkout = lazy(() => import('./pages/Checkout'))
 const Payment = lazy(() => import('./pages/Payment'))
+const PaymentReturn = lazy(() => import('./pages/PaymentReturn'))
 const AdminTickets = lazy(() => import('./pages/admin/Tickets'))
 const BookingDetail = lazy(() => import('./pages/BookingDetail'))
 const Tourists = lazy(() => import('./pages/admin/Tourists'))
@@ -171,6 +172,7 @@ function App() {
             <Route path="verify-ticket/:ticketCode" element={<VerifyTicket />} />
             <Route path="checkout/:orderId" element={<Checkout />} />
             <Route path="checkout/:orderId/payment" element={<Payment />} />
+            <Route path="payment/return" element={<PaymentReturn />} />
             <Route path="service/:slug" element={<ServiceDetail />} />
             <Route path="service/:slug/purchase" element={<ShopPurchasePage />} />
             <Route path="service/:slug/book/:category" element={<BookingFlow />} />

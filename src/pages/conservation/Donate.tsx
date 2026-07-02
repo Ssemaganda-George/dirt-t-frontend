@@ -5,9 +5,15 @@ import { usePreferences } from '../../contexts/PreferencesContext'
 import { convertCurrency } from '../../lib/utils'
 import { supabase } from '../../lib/supabaseClient'
 import { getOptionalUserId } from '../../services/AuthService'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+import MarzpayPaymentFields from '../../components/payment/MarzpayPaymentFields'
+import {
+  getMarzpayMobileValidationErrors,
+  initiateMarzpayCollect,
+  isMobileUiMethod,
+  redirectMarzpayIfNeeded,
+  toMarzpayMethod,
+  type MarzpayPaymentFieldsValue,
+} from '../../lib/marzpayApi'
 
 const DonatePage = () => {
   const navigate = useNavigate();
@@ -16,13 +22,10 @@ const DonatePage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const errors: { [key: string]: string } = {};
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'mobile' | 'card' | ''>('');
-  const [mobileProvider, setMobileProvider] = useState<'mtn' | 'airtel' | ''>('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-
-  // (Add Tree UI removed) no local tree state required here
+  const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' });
+  const [fieldErrors, setFieldErrors] = useState<{ phone?: string; mobileProvider?: string }>({});
+  const [processing, setProcessing] = useState(false);
 
   const projects = [
     { value: 'wildlife-protection', label: 'Wildlife Protection Fund' },
@@ -34,11 +37,72 @@ const DonatePage = () => {
 
   const { selectedCurrency } = usePreferences()
 
-  
+  const registerDonationRpc = async (ref: string, amountInUGX: number, method: string) => {
+    try {
+      const touristId = await getOptionalUserId()
+      await supabase.rpc('create_transaction_with_meta_atomic', {
+        p_booking_id: null,
+        p_vendor_id: null,
+        p_tourist_id: touristId ?? null,
+        p_amount: amountInUGX,
+        p_currency: 'UGX',
+        p_transaction_type: 'donation',
+        p_status: 'pending',
+        p_payment_method: method,
+        p_reference: ref,
+        p_payout_meta: null,
+      });
+    } catch (rpcErr) {
+      console.warn('Failed to register donation transaction:', rpcErr);
+    }
+  }
 
-  
+  const handleProceed = async () => {
+    if (!paymentFields.method) {
+      alert('Select a payment method');
+      return
+    }
+    if (!amount || Number(amount) <= 0) {
+      alert('Enter a valid amount');
+      return
+    }
+    if (isMobileUiMethod(paymentFields.method)) {
+      const errs = getMarzpayMobileValidationErrors(paymentFields)
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs)
+        return
+      }
+    }
 
-  
+    const orderId = `donate-${Date.now()}`
+    setProcessing(true)
+    try {
+      const userId = await getOptionalUserId()
+      const userCurrency = selectedCurrency || 'UGX'
+      const amountInUGX = Math.round(convertCurrency(Number(amount || 0), userCurrency, 'UGX'))
+      const isCard = paymentFields.method === 'card'
+
+      const result = await initiateMarzpayCollect({
+        amount: amountInUGX,
+        method: toMarzpayMethod(paymentFields.method),
+        ...(isCard ? {} : { phone_number: paymentFields.phone }),
+        order_id: orderId,
+        description: `Donation to ${project || 'conservation'}`,
+        user_id: userId ?? undefined,
+      })
+
+      await registerDonationRpc(result.reference, amountInUGX, isCard ? 'card' : 'mobile')
+
+      if (redirectMarzpayIfNeeded(result)) return
+
+      navigate(`/checkout/${orderId}/payment?reference=${encodeURIComponent(result.reference)}`)
+    } catch (err) {
+      console.error('Donation payment initiation error:', err)
+      alert((err as Error).message || 'Payment initiation failed. Please try again.')
+    } finally {
+      setProcessing(false)
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -75,7 +139,6 @@ const DonatePage = () => {
                 <option value="">Select a project</option>
                 {projects.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
-              {errors.project && <p className="text-red-600 text-sm">{errors.project}</p>}
             </div>
 
             <div>
@@ -84,7 +147,6 @@ const DonatePage = () => {
                 <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <input id="amount" type="number" value={amount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)} placeholder="Enter amount" min={1} className="w-full border rounded px-3 py-2 pl-10" />
               </div>
-              {errors.amount && <p className="text-red-600 text-sm">{errors.amount}</p>}
             </div>
 
             <div className="flex items-center gap-2">
@@ -95,12 +157,11 @@ const DonatePage = () => {
             {!isAnonymous && (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-1" htmlFor="name">Donor's Name</label>
+                  <label className="block text-sm font-medium mb-1" htmlFor="name">Donor&apos;s Name</label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <input id="name" type="text" value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="Enter your full name" className="w-full border rounded px-3 py-2 pl-10" />
                   </div>
-                  {errors.name && <p className="text-red-600 text-sm">{errors.name}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1" htmlFor="email">Email Address</label>
@@ -108,142 +169,38 @@ const DonatePage = () => {
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <input id="email" type="email" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Enter your email" className="w-full border rounded px-3 py-2 pl-10" />
                   </div>
-                  {errors.email && <p className="text-red-600 text-sm">{errors.email}</p>}
                 </div>
               </>
             )}
 
-            
-
             <div>
               <button onClick={() => { if (!project || !amount) { alert('Please select project and amount before paying.'); return;} setShowPayment(true); }} className="w-full bg-green-600 text-white rounded py-2 px-3">Donate Now</button>
             </div>
-
-            
           </div>
+
           {showPayment && (
             <div className="mt-6 bg-white border rounded p-4">
               <h3 className="text-lg font-semibold mb-3">Select Payment Method</h3>
-              <div className="space-y-3">
-                <div className="border p-3 rounded">
-                  <label className="flex items-center gap-3">
-                    <input type="radio" name="pm" checked={paymentMethod==='mobile'} onChange={() => setPaymentMethod('mobile')} />
-                    <div>
-                      <div className="font-medium">Mobile Money</div>
-                      <div className="text-sm text-gray-600">Select provider to continue</div>
-                    </div>
-                    <div className="ml-auto text-sm text-gray-500">→</div>
-                  </label>
-                </div>
-
-                {paymentMethod === 'mobile' && (
-                  <div className="pl-3">
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium">Provider</label>
-                      <div className="flex gap-2">
-                        <button className={`px-3 py-1 rounded ${mobileProvider==='mtn' ? 'bg-green-600 text-white' : 'border'}`} onClick={() => setMobileProvider('mtn')}>MTN</button>
-                        <button className={`px-3 py-1 rounded ${mobileProvider==='airtel' ? 'bg-green-600 text-white' : 'border'}`} onClick={() => setMobileProvider('airtel')}>Airtel</button>
-                      </div>
-                      <label className="text-sm font-medium">Phone number</label>
-                      <input value={phoneNumber} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhoneNumber(e.target.value)} placeholder="0712345678 or +256712345678" className="border rounded px-3 py-2" />
-                    </div>
-                  </div>
-                )}
-
-                <div className="border p-3 rounded">
-                  <label className="flex items-center gap-3">
-                    <input type="radio" name="pm" checked={paymentMethod==='card'} onChange={() => setPaymentMethod('card')} />
-                    <div>
-                      <div className="font-medium">Credit/Debit Card (coming soon)</div>
-                      <div className="text-sm text-gray-600">VISA · AMEX · DISC</div>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="flex gap-2 mt-3">
-                  <button onClick={async () => {
-                    if (paymentMethod === 'mobile') {
-                      if (!mobileProvider || !phoneNumber) { alert('Choose provider and enter phone number'); return; }
-                      if (!amount || Number(amount) <= 0) { alert('Enter a valid amount'); return }
-                      const rawPhone = phoneNumber.trim().replace(/^\+256/, '')
-                      const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
-                      if (!phone || phone.length < 10) { alert('Please enter a valid mobile money phone number (e.g. 0712345678 or +256712345678).'); return }
-
-                      const orderId = `donate-${Date.now()}`
-                      try {
-                        const userId = await getOptionalUserId()
-                        // amount is provided by user in their selected currency; convert to UGX for MarzPay which uses UGX
-                        const userCurrency = selectedCurrency || 'UGX'
-                        const numericAmount = Number(amount || 0)
-                        const amountInUGX = Math.round(convertCurrency(numericAmount, userCurrency, 'UGX'))
-
-                        const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${supabaseAnonKey}`,
-                          },
-                          body: JSON.stringify({
-                            amount: amountInUGX,
-                            phone_number: phone,
-                            order_id: orderId,
-                            description: `Donation to ${project || 'conservation'}`,
-                            user_id: userId,
-                          }),
-                        })
-
-                        const result = await collectRes.json().catch(() => ({}))
-                        if (!collectRes.ok) {
-                          const msg = result?.error || `Payment initiation failed (${collectRes.status})`
-                          throw new Error(msg)
-                        }
-                        if (!result?.success || !result?.data?.reference) {
-                          throw new Error(result?.error || 'Payment initiation failed')
-                        }
-
-                        const ref = result.data.reference
-                        // Register a pending donation transaction so it appears in the Conservation Wallet.
-                        try {
-                          const touristId = await getOptionalUserId()
-                          // amountInUGX already computed above
-                          await supabase.rpc('create_transaction_with_meta_atomic', {
-                            p_booking_id: null,
-                            p_vendor_id: null,
-                            p_tourist_id: touristId ?? null,
-                            p_amount: amountInUGX,
-                            p_currency: 'UGX',
-                            p_transaction_type: 'donation',
-                            p_status: 'pending',
-                            p_payment_method: 'mobile',
-                            p_reference: ref,
-                            p_payout_meta: null
-                          });
-                        } catch (rpcErr) {
-                          console.warn('Failed to register donation transaction:', rpcErr);
-                        }
-
-                        // Navigate to the payment page and include the reference so the payment page can start polling/subscription
-                        navigate(`/checkout/${orderId}/payment?reference=${encodeURIComponent(ref)}`)
-                      } catch (err) {
-                        console.error('Donation payment initiation error:', err)
-                        alert((err as Error).message || 'Payment initiation failed. Please try again.')
-                      }
-                    } else if (paymentMethod === 'card') {
-                      alert('Card payments coming soon');
-                    } else {
-                      alert('Select a payment method');
-                    }
-                  }} className="bg-green-600 text-white rounded px-4 py-2">Proceed</button>
-                  <button onClick={() => setShowPayment(false)} className="border rounded px-4 py-2">Cancel</button>
-                </div>
+              <MarzpayPaymentFields
+                name="donatePaymentMethod"
+                value={paymentFields}
+                onChange={(value) => {
+                  setPaymentFields(value)
+                  setFieldErrors({})
+                }}
+                errors={fieldErrors}
+                onClearError={(field) => setFieldErrors(p => { const n = { ...p }; delete n[field]; return n })}
+              />
+              <div className="flex gap-2 mt-4">
+                <button onClick={handleProceed} disabled={processing} className="bg-green-600 text-white rounded px-4 py-2 disabled:opacity-60">
+                  {processing ? 'Processing…' : 'Proceed'}
+                </button>
+                <button onClick={() => setShowPayment(false)} className="border rounded px-4 py-2">Cancel</button>
               </div>
             </div>
           )}
         </div>
       </div>
-
-      
-
     </div>
   );
 };

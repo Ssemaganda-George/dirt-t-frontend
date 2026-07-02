@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { X, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
-import { getOptionalUserId } from '../services/AuthService'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
-import { watchMarzpayPayment, type MarzpayWatchHandles } from '../hooks/watchMarzpayPayment'
+import { useMarzpayCollect } from '../hooks/useMarzpayCollect'
+import MarzpayPaymentFields from './payment/MarzpayPaymentFields'
+import { getMarzpayMobileValidationErrors, isMobileUiMethod, normalizeMarzpayPhone, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import {
   calculatePaymentForAmount,
   customerTotalFromUnitPricingCalc,
@@ -45,22 +46,8 @@ interface BookingDrawerProps {
   }
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
-// ─── Provider detection ───────────────────────────────────────────────────────
-
-function detectMobileProvider(val: string): 'MTN' | 'Airtel' | '' {
-  const d = val.replace(/\D/g, '').replace(/^256/, '').replace(/^0/, '')
-  const p = d.slice(0, 2)
-  if (['76', '77', '78', '39', '46', '31'].includes(p)) return 'MTN'
-  if (['70', '74', '75', '20', '50'].includes(p)) return 'Airtel'
-  return ''
-}
-
 function formatPhone(raw: string): string {
-  const t = raw.trim().replace(/^\+256/, '')
-  return t.startsWith('+') ? t : `+256${t.replace(/^0/, '')}`
+  return normalizeMarzpayPhone(raw)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,16 +71,36 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
   const [step, setStep] = useState<'summary' | 'contact' | 'payment' | 'done'>('summary')
   const [contact, setContact] = useState({ name: '', email: '', phone: '' })
-  const [provider, setProvider] = useState<'MTN' | 'Airtel' | ''>('')
-  const [pollingMessage, setPollingMessage] = useState('')
+  const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formBanner, setFormBanner] = useState<string | null>(null)
-  const [processing, setProcessing] = useState(false)
   const [completedBooking, setCompletedBooking] = useState<any>(null)
   const [pricingCalc, setPricingCalc] = useState<any>(null)
-  const paymentWatchRef = useRef<MarzpayWatchHandles | null>(null)
   const finaliseRef = useRef(false)
+  const pendingRef = useRef<any>(null)
+  const [reserving, setReserving] = useState(false)
+
+  const {
+    pay,
+    processing,
+    pollingMessage,
+    setPollingMessage,
+    setError: setPaymentError,
+  } = useMarzpayCollect({
+    channelPrefix: 'drawer',
+    onCompleted: () => {
+      if (finaliseRef.current || !pendingRef.current) return
+      finaliseRef.current = true
+      setCompletedBooking({ ...pendingRef.current, status: 'confirmed', payment_status: 'paid' })
+      setPollingMessage('')
+      setStep('done')
+    },
+    onFailed: () => {
+      if (pendingRef.current?.id) cancelBookingOnPaymentFailure(pendingRef.current.id).catch(console.error)
+      setError('Payment was not completed. Please try again.')
+    },
+  })
 
   const categoryName = (service?.service_categories?.name ?? '').toLowerCase()
   const isHotel = ['hotels', 'hotel', 'accommodation'].includes(categoryName)
@@ -131,7 +138,6 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       setFieldErrors({})
       setFormBanner(null)
       setPollingMessage('')
-      setProcessing(false)
       finaliseRef.current = false
       setFlightFrom('')
       setFlightTo('')
@@ -335,19 +341,24 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   }
 
   const validatePayment = (): boolean => {
+    if (!isMobileUiMethod(paymentFields.method)) return true
     const errs: FieldErrors = {}
-    if (!provider) errs.mobileProvider = 'Select MTN or Airtel.'
-    if (!contact.phone.trim()) errs.phone = 'Mobile money number is required.'
-    else if (!isValidUgMobileMoneyPhone(contact.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+    Object.assign(errs, getMarzpayMobileValidationErrors(paymentFields))
+    if (!paymentFields.phone.trim() && contact.phone.trim()) {
+      // fall back to contact phone collected on prior step
+    } else if (!paymentFields.phone.trim() && !contact.phone.trim()) {
+      errs.phone = errs.phone || 'Mobile money number is required.'
+    }
     return applyFieldErrors(errs, setFieldErrors, setFormBanner)
   }
 
   const handlePay = useCallback(async () => {
     if (processing) return
     if (!validatePayment()) return
-    const phone = formatPhone(contact.phone)
+    const phoneForPay = paymentFields.phone.trim() || contact.phone
     setError(null)
-    setProcessing(true)
+    setPaymentError(null)
+    finaliseRef.current = false
     setPollingMessage(isShop ? 'Creating order…' : 'Creating booking…')
 
     let pending: any = null
@@ -355,67 +366,30 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
       pending = await createBooking(buildBookingPayload('pending') as any)
     } catch (e) {
       setError('Failed to create booking. Please try again.')
-      setProcessing(false)
       return
     }
 
-    setPollingMessage('Initiating payment…')
+    pendingRef.current = pending
     try {
-      const userId = await getOptionalUserId()
-      const res = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseAnonKey}` },
-        body: JSON.stringify({
-          amount: Math.round(customerTotal),
-          phone_number: phone,
-          booking_id: pending.id,
-          description: isShop ? `${service.title} order` : `${service.title} booking`,
-          user_id: userId,
-        }),
-      })
-      const result = await res.json().catch(() => ({})) as { success?: boolean; error?: string; data?: { reference: string } }
-      if (!res.ok || !result?.success || !result?.data?.reference) throw new Error(result?.error || 'Payment initiation failed')
-      const ref = result.data.reference
-      setPollingMessage('Check your phone for the USSD prompt…')
-
-      const onSuccess = () => {
-        if (finaliseRef.current) return
-        finaliseRef.current = true
-        paymentWatchRef.current?.cleanup()
-        setCompletedBooking({ ...pending, status: 'confirmed', payment_status: 'paid' })
-        setPollingMessage('')
-        setProcessing(false)
-        setStep('done')
-      }
-
-      const onFail = () => {
-        paymentWatchRef.current?.cleanup()
-        cancelBookingOnPaymentFailure(pending.id).catch(console.error)
-        setPollingMessage('')
-        setProcessing(false)
-        setError('Payment was not completed. Please try again.')
-      }
-
-      paymentWatchRef.current?.cleanup()
-      paymentWatchRef.current = watchMarzpayPayment(ref, {
-        channelPrefix: 'drawer',
-        onCompleted: onSuccess,
-        onFailed: onFail,
+      await pay({
+        amount: Math.round(customerTotal),
+        method: paymentFields.method,
+        phone: phoneForPay,
+        booking_id: pending.id,
+        description: isShop ? `${service.title} order` : `${service.title} booking`,
       })
     } catch (err) {
       cancelBookingOnPaymentFailure(pending.id).catch(console.error)
-      setProcessing(false)
-      setPollingMessage('')
       setError((err as Error).message || 'Payment failed. Please try again.')
     }
-  }, [processing, contact, provider, service, prefill, customerTotal, buildBookingPayload])
+  }, [processing, contact, paymentFields, service, customerTotal, buildBookingPayload, pay, isShop, setPaymentError, setPollingMessage])
 
   // Restaurant reservations need no payment
   const handleRestaurantReserve = useCallback(async () => {
-    if (processing) return
+    if (reserving || processing) return
     if (!user && !validateRestaurantContact()) return
     if (user && !validateSummary()) return
-    setProcessing(true)
+    setReserving(true)
     setError(null)
     try {
       const booking = await createBooking(buildBookingPayload('reserved') as any)
@@ -424,9 +398,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
     } catch (e) {
       setError('Reservation failed. Please try again.')
     } finally {
-      setProcessing(false)
+      setReserving(false)
     }
-  }, [processing, buildBookingPayload])
+  }, [reserving, processing, buildBookingPayload, user])
 
   // ─── Panel visibility ─────────────────────────────────────────────────────────
 
@@ -670,13 +644,8 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isRestaurant ? 'Contact Phone *' : 'Mobile Money Number *'}
+                  {isRestaurant ? 'Contact Phone *' : 'Contact Phone *'}
                 </label>
-                {!isRestaurant && provider && (
-                  <p className="text-xs text-gray-500 mb-1">
-                    Provider: <span className="font-medium">{provider}</span> (auto-detected)
-                  </p>
-                )}
                 {isRestaurant && (
                   <p className="text-xs text-gray-500 mb-1">For the restaurant to confirm your table — not charged.</p>
                 )}
@@ -686,10 +655,6 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                     setContact(c => ({ ...c, phone: e.target.value }))
                     setFieldErrors(p => clearFieldError(p, 'phone'))
                     setFormBanner(null)
-                    if (!isRestaurant) {
-                      const detected = detectMobileProvider(e.target.value)
-                      if (detected) setProvider(detected)
-                    }
                   }}
                   autoComplete="tel"
                   aria-invalid={Boolean(fieldErrors.phone)}
@@ -713,36 +678,20 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 </div>
               </div>
 
-              {/* Provider */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
-                <div className={`flex gap-3 ${fieldErrors.mobileProvider ? 'ring-1 ring-red-500 rounded-xl p-1' : ''}`}>
-                  {(['MTN', 'Airtel'] as const).map(p => (
-                    <button key={p} type="button" onClick={() => { setProvider(p); setFieldErrors(prev => clearFieldError(prev, 'mobileProvider')); setFormBanner(null) }} className={`flex-1 py-2.5 rounded-xl border font-medium text-sm ${provider === p ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200'}`}>{p}</button>
-                  ))}
-                </div>
-                <FieldError message={fieldErrors.mobileProvider} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
-                {provider && <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{provider}</span></p>}
-                <input type="tel" placeholder="0712345678" className={fieldInputClass(Boolean(fieldErrors.phone), 'w-full px-3 py-3 border rounded-xl text-base')}
-                  value={contact.phone}
-                  onChange={e => {
-                    setContact(c => ({ ...c, phone: e.target.value }))
-                    setFieldErrors(prev => clearFieldError(prev, 'phone'))
-                    setFormBanner(null)
-                    const detected = detectMobileProvider(e.target.value)
-                    if (detected) setProvider(detected)
-                  }}
-                  aria-invalid={Boolean(fieldErrors.phone)}
-                />
-                <FieldError message={fieldErrors.phone} />
-              </div>
+              <MarzpayPaymentFields
+                name="drawerPaymentMethod"
+                value={paymentFields}
+                onChange={setPaymentFields}
+                errors={fieldErrors}
+                onClearError={(field) => setFieldErrors(p => clearFieldError(p, field))}
+                className="mb-3"
+                inputClassName="w-full px-3 py-3 border rounded-xl text-base"
+                showMoMoHint={false}
+              />
 
               <div className="text-xs text-gray-500 bg-gray-50 border rounded-xl px-3 py-2">
-                <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> You will receive a USSD prompt on your phone.
+                <span className="font-medium text-gray-600">Secure payment via MarzPay.</span>{' '}
+                {isMobileUiMethod(paymentFields.method) ? 'You will receive a USSD prompt on your phone.' : 'You will be redirected to secure checkout.'}
               </div>
             </div>
           )}
@@ -804,12 +753,12 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <button
                   type="button"
                   onClick={goFromSummary}
-                  disabled={processing}
+                  disabled={reserving}
                   className={`w-full py-3 rounded-xl font-semibold text-base transition ${
-                    processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
+                    reserving ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
                   }`}
                 >
-                  {processing
+                  {reserving
                     ? 'Confirming…'
                     : user
                     ? 'Confirm Reservation'
@@ -835,15 +784,21 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 if (isRestaurant) {
                   if (validateRestaurantContact()) void handleRestaurantReserve()
                 } else if (validateContact()) {
+                  const detected = detectMarzpayProvider(contact.phone)
+                  setPaymentFields(p => ({
+                    ...p,
+                    phone: p.phone || contact.phone,
+                    provider: p.provider || detected || p.provider,
+                  }))
                   setStep('payment')
                 }
               }}
-              disabled={processing}
+              disabled={reserving || processing}
               className={`w-full py-3 rounded-xl font-semibold text-base transition ${
-                processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
+                reserving || processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
               }`}
             >
-              {isRestaurant ? (processing ? 'Confirming…' : 'Confirm Reservation') : 'Continue to Payment'}
+              {isRestaurant ? (reserving ? 'Confirming…' : 'Confirm Reservation') : 'Continue to Payment'}
             </button>
           )}
 
@@ -857,7 +812,9 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 >
                   {processing
                     ? (pollingMessage || 'Processing…')
-                    : `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with Mobile Money`}
+                    : paymentFields.method === 'card'
+                      ? `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with card`
+                      : `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with Mobile Money`}
                 </button>
               {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl">{error}</div>}
             </>

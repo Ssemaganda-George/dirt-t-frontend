@@ -3,7 +3,8 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { formatCurrencyWithConversion } from '../lib/utils'
 import { calculatePaymentForAmount } from '../lib/pricingService'
-import { initiateMarzpayCollect } from '../lib/marzpayApi'
+import { initiateMarzpayCollect, redirectMarzpayIfNeeded, toMarzpayMethod, isMobileUiMethod, getMarzpayMobileValidationErrors, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
+import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
 import { getOptionalUserId } from '../services/AuthService'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from '../hooks/useMarzpayPaymentWatch'
@@ -16,8 +17,8 @@ export default function PaymentPage() {
   const order = data?.order ?? null
   const items = data?.items ?? []
   const [processing, setProcessing] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState('mobile_money')
-  const [mobileProvider, setMobileProvider] = useState('')
+  const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
+  const [fieldErrors, setFieldErrors] = useState<{ phone?: string; mobileProvider?: string }>({})
   const [ticketEmail, setTicketEmail] = useState('')
   const [showEdit, setShowEdit] = useState(false)
   const queryClient = useOrderQueryClient()
@@ -106,7 +107,6 @@ export default function PaymentPage() {
     : subtotalAmount
   // summary toggle removed — details always visible
   const [paymentError, setPaymentError] = useState<string | null>(null)
-  const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentReference, setPaymentReference] = useState<string | null>(null)
   const [pollingMessage, setPollingMessage] = useState('')
   const [paymentSuccess, setPaymentSuccess] = useState(false)
@@ -201,14 +201,8 @@ export default function PaymentPage() {
   useEffect(() => {
     if (!order?.guest_phone) return
     const raw = String(order.guest_phone).replace(/^\+256/, '')
-    setPhoneNumber(raw.startsWith('+') ? raw : raw)
-    const digits = String(order.guest_phone).replace(/\D/g, '')
-    const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
-    if (local.length >= 2) {
-      const p = local.slice(0, 2)
-      if (['76', '77', '78', '39', '46', '31'].includes(p)) setMobileProvider('MTN')
-      else if (['70', '74', '75', '20', '50'].includes(p)) setMobileProvider('Airtel')
-    }
+    const phone = raw.startsWith('+') ? raw : raw
+    setPaymentFields(p => ({ ...p, phone: p.phone || phone, provider: p.provider || detectMarzpayProvider(String(order.guest_phone)) || p.provider }))
   }, [order?.guest_phone])
 
   // Compute per-ticket pricing calculations (mirrors Checkout/TransportBooking logic)
@@ -253,14 +247,18 @@ export default function PaymentPage() {
     setPaymentError('Pricing is still loading. Please wait a moment and try again.')
     return
   }
-  // Use derived totals from items (keeps payment amount in sync with edits)
+  const isCard = paymentFields.method === 'card'
   const totalWithFee = Math.round(totalAmount)
-    const rawPhone = (phoneNumber || order?.guest_phone || '').trim().replace(/^\+256/, '')
-    const phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
-
-    if (!phone || phone.length < 10) {
-      setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
-      return
+    let phone = ''
+    if (!isCard) {
+      const rawPhone = (paymentFields.phone || order?.guest_phone || '').trim().replace(/^\+256/, '')
+      phone = rawPhone.startsWith('+') ? rawPhone : `+256${rawPhone.replace(/^0/, '')}`
+      const mobileErrs = getMarzpayMobileValidationErrors({ ...paymentFields, phone: paymentFields.phone || String(order?.guest_phone || '') })
+      if (Object.keys(mobileErrs).length > 0 || !phone || phone.length < 10) {
+        setFieldErrors(mobileErrs)
+        setPaymentError(mobileErrs.phone || 'Please enter a valid mobile money phone number (e.g. 0712345678).')
+        return
+      }
     }
 
     // Persist tier/pricing breakdown on the order before collect so admin finance (Dirt Trails Wallet)
@@ -315,14 +313,16 @@ export default function PaymentPage() {
     setPollingMessage('')
     setPaymentReference(null)
     try {
-      const { reference } = await initiateMarzpayCollect({
+      const collectResult = await initiateMarzpayCollect({
         amount: Math.round(totalWithFee),
-        phone_number: phone,
+        method: toMarzpayMethod(paymentFields.method),
+        ...(isCard ? {} : { phone_number: phone }),
         order_id: orderId,
         description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
         user_id: await getOptionalUserId(),
       })
-      await startWatchingReference(reference)
+      if (redirectMarzpayIfNeeded(collectResult)) return
+      await startWatchingReference(collectResult.reference)
     } catch (err) {
       stopWatch()
       console.error('Payment error:', err)
@@ -334,7 +334,7 @@ export default function PaymentPage() {
   }, [
     orderId,
     order,
-    phoneNumber,
+    paymentFields,
     ticketPricingReady,
     totalAmount,
     ticketEmail,
@@ -544,72 +544,18 @@ export default function PaymentPage() {
           <div className="px-6 py-6">
             <h3 className="text-lg font-light text-gray-900 mb-4">Select Payment Method</h3>
             
-            <div className="space-y-3">
-              {/* Mobile Money Option (compact) */}
-              <div className={`flex items-center justify-between p-2 rounded border ${paymentMethod === 'mobile_money' ? 'border-blue-500' : 'border-gray-200'}`}>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="mobile_money"
-                    checked={paymentMethod === 'mobile_money'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-4 h-4"
-                  />
-                  <div className="text-sm font-medium">Mobile Money</div>
-                </label>
-                <div className="text-sm text-gray-400">→</div>
-              </div>
-
-              {/* Mobile Money inputs (compact) */}
-              {paymentMethod === 'mobile_money' && (
-                <div className="mt-2 grid grid-cols-1 gap-2">
-                  <div>
-                    <div className="text-sm text-gray-600 mb-1">
-                      {mobileProvider ? (
-                        <span>Provider: <span className="font-medium text-gray-800">{mobileProvider}</span> <span className="text-gray-400 text-xs">(auto-detected — tap to change)</span></span>
-                      ) : (
-                        'Select provider or enter your number below to auto-detect'
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setMobileProvider('MTN')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'MTN' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                          <rect width="18" height="14" rx="2" fill="#FFD200" />
-                          <text x="9" y="10" fill="#000" fontSize="7" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">MTN</text>
-                        </svg>
-                        <span className="text-sm font-medium">MTN</span>
-                      </button>
-                      <button type="button" onClick={() => setMobileProvider('Airtel')} className={`flex-1 py-2 rounded border flex items-center justify-center gap-2 ${mobileProvider === 'Airtel' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                        <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                          <rect width="18" height="14" rx="2" fill="#E60000" />
-                          <text x="9" y="10" fill="#fff" fontSize="6" fontWeight="700" textAnchor="middle" fontFamily="sans-serif">A</text>
-                        </svg>
-                        <span className="text-sm font-medium">Airtel</span>
-                      </button>
-                    </div>
-                  </div>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setPhoneNumber(val)
-                      const digits = val.replace(/\D/g, '')
-                      const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
-                      if (local.length >= 2) {
-                        const p = local.slice(0, 2)
-                        if (['76', '77', '78', '39', '46', '31'].includes(p)) setMobileProvider('MTN')
-                        else if (['70', '74', '75', '20', '50'].includes(p)) setMobileProvider('Airtel')
-                      }
-                    }}
-                    placeholder="0712345678 or +256712345678"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none text-sm"
-                  />
-                </div>
-              )}
-
-            </div>
+            <MarzpayPaymentFields
+              name="ticketPaymentMethod"
+              value={paymentFields}
+              onChange={(value) => {
+                setPaymentFields(value)
+                setFieldErrors({})
+                if (value.method === 'card') setPaymentError(null)
+              }}
+              errors={fieldErrors}
+              onClearError={(field) => setFieldErrors(p => { const n = { ...p }; delete n[field]; return n })}
+              className="mb-3"
+            />
           </div>
 
           {/* Email for Tickets — only if not already captured at checkout */}
@@ -651,17 +597,14 @@ export default function PaymentPage() {
               onClick={handlePayment}
               disabled={
                 processing ||
-                paymentMethod === 'card' ||
                 !ticketPricingReady ||
-                (paymentMethod === 'mobile_money' && (!mobileProvider || !phoneNumber.trim()))
+                (isMobileUiMethod(paymentFields.method) && (!paymentFields.provider || !paymentFields.phone.trim()))
               }
               style={{
                 backgroundColor:
                   processing ||
-                  paymentMethod === 'card' ||
                   !ticketPricingReady ||
-                  !mobileProvider ||
-                  !phoneNumber.trim()
+                  (isMobileUiMethod(paymentFields.method) && (!paymentFields.provider || !paymentFields.phone.trim()))
                     ? '#d1d5db'
                     : '#3B82F6',
               }}
@@ -676,6 +619,8 @@ export default function PaymentPage() {
                   </svg>
                   <span className="text-white text-sm">{pollingMessage || 'Processing...'}</span>
                 </span>
+              ) : paymentFields.method === 'card' ? (
+                'Pay with card'
               ) : (
                 'Pay with Mobile Money'
               )}
