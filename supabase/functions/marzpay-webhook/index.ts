@@ -127,7 +127,7 @@ serve(async (req) => {
 
   const { data: payments, error: payErr } = await supabase
     .from("payments")
-    .select("id, order_id, booking_id, amount, phone_number")
+    .select("id, order_id, booking_id, amount, phone_number, provider")
     .eq("reference", reference)
 
   const payment = payments?.[0]
@@ -248,6 +248,7 @@ serve(async (req) => {
   // ── Order-linked payment (event tickets) ─────────────────────────────────
   if (paymentStatus === "completed" && payment.order_id) {
     const orderId = payment.order_id
+    const orderPaymentMethod = payment.provider === "card" ? "card" : "mobile_money"
 
     // HIGH-3: Status precondition prevents webhook from reviving expired or already-paid orders.
     const { error: orderUpdateErr } = await supabase
@@ -255,7 +256,7 @@ serve(async (req) => {
       .update({
         status: "paid",
         reference,
-        payment_method: "mobile_money",
+        payment_method: orderPaymentMethod,
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId)

@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { CreditCard, Shield, Smartphone } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
@@ -16,6 +17,7 @@ import {
   isValidEmail,
   isValidUgMobileMoneyPhone,
 } from '../lib/bookingFormValidation'
+import type { MarzpayMethod } from '../lib/marzpayApi'
 
 function detectMobileProvider(digits: string): 'MTN' | 'Airtel' | '' {
   const local = digits.startsWith('256') ? digits.slice(3) : digits.startsWith('0') ? digits.slice(1) : digits
@@ -40,6 +42,7 @@ export default function CheckoutPage() {
   const items = data?.items ?? []
   const allTicketTypes = data?.allTicketTypes ?? []
   const [buyer, setBuyer] = useState({ fullName: '', email: '', phone: '' })
+  const [paymentMethod, setPaymentMethod] = useState<MarzpayMethod>('mobile_money')
   const [mobileProvider, setMobileProvider] = useState('')
   const [showAllTickets, setShowAllTickets] = useState(false)
   const [ticketCalculations, setTicketCalculations] = useState<Record<string, any>>({})
@@ -112,9 +115,11 @@ export default function CheckoutPage() {
     if (!buyer.fullName.trim()) errs.fullName = 'Full name is required.'
     if (!buyer.email.trim()) errs.email = 'Email is required.'
     else if (!isValidEmail(buyer.email)) errs.email = 'Enter a valid email address.'
-    if (!buyer.phone.trim()) errs.phone = 'Mobile money number is required.'
-    else if (!isValidUgMobileMoneyPhone(buyer.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
-    if (!mobileProvider) errs.mobileProvider = 'Select MTN or Airtel (use a recognized number prefix).'
+    if (paymentMethod === 'mobile_money') {
+      if (!buyer.phone.trim()) errs.phone = 'Mobile money number is required.'
+      else if (!isValidUgMobileMoneyPhone(buyer.phone)) errs.phone = 'Enter a valid number (e.g. 0712345678).'
+      if (!mobileProvider) errs.mobileProvider = 'Select MTN or Airtel (use a recognized number prefix).'
+    }
     if (!hasTickets) errs.tickets = 'Select at least one ticket.'
     if (!ticketPricingReady) errs.tickets = 'Total is still calculating — try again in a moment.'
     return applyFieldErrors(errs, setFieldErrors, setFormBanner)
@@ -175,7 +180,7 @@ export default function CheckoutPage() {
     if (!validateCheckout()) return
     setCheckoutError(null)
     setPaymentError(null)
-    const phone = formatPhone(buyer.phone)
+    const phone = paymentMethod === 'mobile_money' ? formatPhone(buyer.phone) : undefined
     await payOrder({
       order,
       items,
@@ -185,6 +190,7 @@ export default function CheckoutPage() {
       phone,
       guestEmail: buyer.email.trim(),
       guestName: buyer.fullName.trim(),
+      method: paymentMethod,
     })
   }
 
@@ -267,7 +273,7 @@ export default function CheckoutPage() {
             <div className="md:col-span-1">
               <div className="bg-white p-4 rounded border border-gray-200">
                 <h3 className="font-semibold text-lg">Your details</h3>
-                <p className="text-xs text-gray-500 mt-1">One step — pay with mobile money on this page.</p>
+                <p className="text-xs text-gray-500 mt-1">Name, email, and how you want to pay.</p>
                 <BookingFormBanner message={formBanner} />
                 <div className="grid gap-3 mt-4">
                   <div>
@@ -280,15 +286,86 @@ export default function CheckoutPage() {
                     <input type="email" className={fieldInputClass(Boolean(fieldErrors.email))} value={buyer.email} onChange={(e) => setBuyerField('email', e.target.value)} autoComplete="email" aria-invalid={Boolean(fieldErrors.email)} />
                     <FieldError message={fieldErrors.email} />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money number *</label>
-                    {mobileProvider && (
-                      <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{mobileProvider}</span> (auto-detected)</p>
-                    )}
-                    <input type="tel" className={fieldInputClass(Boolean(fieldErrors.phone))} value={buyer.phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="0712345678" autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
-                    <FieldError message={fieldErrors.phone} />
-                    <FieldError message={fieldErrors.mobileProvider} />
-                  </div>
+
+                  <fieldset>
+                    <legend className="block text-sm font-medium text-gray-700 mb-2">Payment method</legend>
+                    <div className="grid gap-2">
+                      <label
+                        className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border cursor-pointer transition-colors ${
+                          paymentMethod === 'mobile_money'
+                            ? 'border-emerald-700 bg-emerald-50/60'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="checkoutPaymentMethod"
+                          value="mobile_money"
+                          checked={paymentMethod === 'mobile_money'}
+                          onChange={() => {
+                            setPaymentMethod('mobile_money')
+                            setPaymentError(null)
+                          }}
+                          className="mt-1 shrink-0"
+                        />
+                        <Smartphone className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-gray-900">Mobile Money</span>
+                          <span className="block text-xs text-gray-500 mt-0.5">MTN or Airtel. Approve the charge on your phone.</span>
+                        </span>
+                      </label>
+                      <label
+                        className={`flex items-start gap-3 p-3 min-h-[44px] rounded-lg border cursor-pointer transition-colors ${
+                          paymentMethod === 'card'
+                            ? 'border-emerald-700 bg-emerald-50/60'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="checkoutPaymentMethod"
+                          value="card"
+                          checked={paymentMethod === 'card'}
+                          onChange={() => {
+                            setPaymentMethod('card')
+                            setPaymentError(null)
+                            setFieldErrors(p => {
+                              const next = { ...p }
+                              delete next.phone
+                              delete next.mobileProvider
+                              return next
+                            })
+                          }}
+                          className="mt-1 shrink-0"
+                        />
+                        <CreditCard className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-gray-900">Debit or credit card</span>
+                          <span className="block text-xs text-gray-500 mt-0.5">Visa or Mastercard. No Ugandan number needed.</span>
+                        </span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {paymentMethod === 'mobile_money' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile money number *</label>
+                      {mobileProvider && (
+                        <p className="text-xs text-gray-500 mb-1">Provider: <span className="font-medium">{mobileProvider}</span> (auto-detected)</p>
+                      )}
+                      <input type="tel" className={fieldInputClass(Boolean(fieldErrors.phone))} value={buyer.phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="0712345678" autoComplete="tel" aria-invalid={Boolean(fieldErrors.phone)} />
+                      <FieldError message={fieldErrors.phone} />
+                      <FieldError message={fieldErrors.mobileProvider} />
+                    </div>
+                  )}
+
+                  {paymentMethod === 'card' && (
+                    <p className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                      <Shield className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" strokeWidth={1.75} aria-hidden />
+                      <span>You will be redirected to MarzPay&apos;s secure checkout to enter card details. We never store your card number.</span>
+                    </p>
+                  )}
+
                   <FieldError message={fieldErrors.tickets} />
                 </div>
               </div>
@@ -369,7 +446,11 @@ export default function CheckoutPage() {
             onClick={handlePay}
             className={`max-w-6xl mx-auto w-full py-3 rounded-lg font-semibold text-base text-white transition-opacity ${processing ? 'bg-gray-300 cursor-not-allowed' : 'bg-emerald-700 hover:opacity-90'}`}
           >
-            {processing ? (pollingMessage || 'Processing payment…') : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
+            {processing
+              ? (pollingMessage || (paymentMethod === 'card' ? 'Redirecting to secure checkout…' : 'Processing payment…'))
+              : paymentMethod === 'card'
+              ? `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with card`
+              : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
           </button>
         </div>
       </div>

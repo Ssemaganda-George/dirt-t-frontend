@@ -315,14 +315,14 @@ export default function PaymentPage() {
     setPollingMessage('')
     setPaymentReference(null)
     try {
-      const ref = await initiateMarzpayCollect({
+      const { reference } = await initiateMarzpayCollect({
         amount: Math.round(totalWithFee),
         phone_number: phone,
         order_id: orderId,
         description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
         user_id: await getOptionalUserId(),
       })
-      await startWatchingReference(ref)
+      await startWatchingReference(reference)
     } catch (err) {
       stopWatch()
       console.error('Payment error:', err)

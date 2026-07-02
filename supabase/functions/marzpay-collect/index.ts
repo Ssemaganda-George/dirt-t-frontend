@@ -81,7 +81,8 @@ serve(async (req) => {
 
     let body: {
       amount: number
-      phone_number: string
+      method?: "mobile_money" | "card"
+      phone_number?: string
       order_id?: string
       booking_id?: string
       description?: string
@@ -98,9 +99,11 @@ serve(async (req) => {
     }
 
     const { amount, phone_number, order_id, booking_id, description, user_id, metadata } = body
-    if (!amount || !phone_number) {
+    const method = body.method === "card" ? "card" : "mobile_money"
+
+    if (!amount) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: amount, phone_number" }),
+        JSON.stringify({ error: "Missing required field: amount" }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
@@ -113,28 +116,45 @@ serve(async (req) => {
       )
     }
 
-    let formattedPhone = String(phone_number).trim()
-    if (!formattedPhone.startsWith("+")) {
-      formattedPhone = formattedPhone.replace(/^0/, "")
-      formattedPhone = `+256${formattedPhone}`
-    }
-    if (!/^\+256[0-9]{9}$/.test(formattedPhone)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone number. Use 10 digits e.g. 0712345678 or +256712345678" }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      )
-    }
-    const prefix = formattedPhone.charAt(4)
-    if (!["7", "3"].includes(prefix)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone. Must be (07...) or (03...)" }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      )
-    }
-
     const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
     const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
     const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+
+    let formattedPhone: string | null = null
+    if (method === "mobile_money") {
+      if (!phone_number) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field: phone_number" }),
+          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+      formattedPhone = String(phone_number).trim()
+      if (!formattedPhone.startsWith("+")) {
+        formattedPhone = formattedPhone.replace(/^0/, "")
+        formattedPhone = `+256${formattedPhone}`
+      }
+      if (!/^\+256[0-9]{9}$/.test(formattedPhone)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid phone number. Use 10 digits e.g. 0712345678 or +256712345678" }),
+          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+      const prefix = formattedPhone.charAt(4)
+      if (!["7", "3"].includes(prefix)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid phone. Must be (07...) or (03...)" }),
+          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+    } else {
+      const amountInt = parseInt(String(amount), 10)
+      if (amountInt < 500 || amountInt > 10_000_000) {
+        return new Response(
+          JSON.stringify({ error: "Card payment amount must be between 500 and 10,000,000 UGX" }),
+          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+    }
 
     // Supabase client created once and reused for all pre-payment checks + insert.
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -145,7 +165,7 @@ serve(async (req) => {
       // Prevents duplicate charges when user double-clicks or browser retries.
       const { data: existingPayment } = await supabase
         .from("payments")
-        .select("id, reference, status, amount")
+        .select("id, reference, status, amount, provider, marzpay_response")
         .eq("order_id", paymentOrderId)
         .in("status", ["pending", "processing"])
         .order("created_at", { ascending: false })
@@ -153,6 +173,10 @@ serve(async (req) => {
         .maybeSingle()
 
       if (existingPayment) {
+        const existingRedirect =
+          existingPayment.provider === "card"
+            ? existingPayment.marzpay_response?.data?.redirect_url ?? null
+            : null
         return new Response(
           JSON.stringify({
             success: true,
@@ -162,7 +186,8 @@ serve(async (req) => {
               reference: existingPayment.reference,
               status: existingPayment.status,
               amount: existingPayment.amount,
-              provider: "existing",
+              provider: existingPayment.provider || "existing",
+              ...(existingRedirect ? { redirect_url: existingRedirect } : {}),
             },
           }),
           { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
@@ -261,6 +286,13 @@ serve(async (req) => {
       ? `${supabaseBase}/functions/v1/marzpay-webhook?secret=${encodeURIComponent(webhookSecret)}`
       : `${supabaseBase}/functions/v1/marzpay-webhook`
 
+    const appBase = APP_URL.split(",")[0].trim() || "http://localhost:5173"
+    const cardReturnUrl = paymentOrderId
+      ? `${appBase}/checkout/${paymentOrderId}/payment?reference=${reference}`
+      : paymentBookingId
+      ? `${appBase}/payment/return?reference=${reference}&booking_id=${paymentBookingId}`
+      : `${appBase}/payment/return?reference=${reference}`
+
     let paymentDescription = description
     if (!paymentDescription) {
       if (isWalletTopup) {
@@ -272,14 +304,24 @@ serve(async (req) => {
       }
     }
 
-    const marzpayRequest = {
-      amount: parseInt(String(amount), 10),
-      phone_number: formattedPhone,
-      country: "UG",
-      reference,
-      description: paymentDescription,
-      callback_url: webhookUrl,
-    }
+    const marzpayRequest =
+      method === "card"
+        ? {
+            amount: parseInt(String(amount), 10),
+            method: "card",
+            country: "UG",
+            reference,
+            description: paymentDescription,
+            callback_url: cardReturnUrl,
+          }
+        : {
+            amount: parseInt(String(amount), 10),
+            phone_number: formattedPhone,
+            country: "UG",
+            reference,
+            description: paymentDescription,
+            callback_url: webhookUrl,
+          }
 
     const marzpayResponse = await fetch(`${MARZPAY_API_URL}/collect-money`, {
       method: "POST",
@@ -327,12 +369,16 @@ serve(async (req) => {
     else if (paymentStatus === "failed" || paymentStatus === "cancelled") paymentStatus = "failed"
     else if (paymentStatus !== "processing") paymentStatus = "processing"
 
-    const provider = (collectionData.provider || "mtn").toLowerCase().includes("airtel")
-      ? "airtel"
-      : "mtn"
+    const provider =
+      method === "card"
+        ? "card"
+        : (collectionData.provider || "mtn").toLowerCase().includes("airtel")
+        ? "airtel"
+        : "mtn"
 
     const amountInt = amountData.raw ?? parseInt(String(amount), 10)
     const ref = transactionData.reference || reference
+    const redirectUrl = method === "card" ? marzpayData.data?.redirect_url ?? null : null
 
     const { data: paymentRow, error: insertError } = await supabase
       .from("payments")
@@ -370,6 +416,7 @@ serve(async (req) => {
           status: paymentRow?.status || paymentStatus,
           amount: amountInt,
           provider,
+          ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
         },
       }),
       { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }

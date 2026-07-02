@@ -20,17 +20,25 @@ export async function fetchMarzpayPaymentStatus(
   }
 }
 
+export type MarzpayMethod = 'mobile_money' | 'card'
+
 export type MarzpayCollectPayload = {
   amount: number
-  phone_number: string
+  method?: MarzpayMethod
+  phone_number?: string
   description: string
   user_id?: string
   booking_id?: string
   order_id?: string
 }
 
-/** Start MarzPay collect; returns payment reference. */
-export async function initiateMarzpayCollect(payload: MarzpayCollectPayload): Promise<string> {
+export type MarzpayCollectResult = {
+  reference: string
+  redirect_url?: string
+}
+
+/** Start MarzPay collect; returns reference and optional card redirect URL. */
+export async function initiateMarzpayCollect(payload: MarzpayCollectPayload): Promise<MarzpayCollectResult> {
   const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
     method: 'POST',
     headers: {
@@ -44,7 +52,7 @@ export async function initiateMarzpayCollect(payload: MarzpayCollectPayload): Pr
     success?: boolean
     error?: string
     details?: unknown
-    data?: { reference: string }
+    data?: { reference: string; redirect_url?: string }
   }
 
   if (!collectRes.ok) {
@@ -56,5 +64,8 @@ export async function initiateMarzpayCollect(payload: MarzpayCollectPayload): Pr
     throw new Error(result?.error || 'Payment initiation failed')
   }
 
-  return result.data.reference
+  return {
+    reference: result.data.reference,
+    redirect_url: result.data.redirect_url,
+  }
 }

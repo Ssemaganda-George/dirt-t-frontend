@@ -87,6 +87,13 @@ async function settlePaymentWithCommission(supabase: any, params: SettlementPara
   const total = Number(params.totalAmount) || 0
   const vendorNet = Math.max(0, total - commission)
 
+  const { data: payRow } = await supabase
+    .from("payments")
+    .select("provider")
+    .eq("reference", params.reference)
+    .maybeSingle()
+  const paymentMethod = payRow?.provider === "card" ? "card" : "mobile_money"
+
   if (params.adminId) {
     const { data, error } = await supabase.rpc("process_payment_with_commission", {
       p_vendor_id: params.vendorId,
@@ -96,7 +103,7 @@ async function settlePaymentWithCommission(supabase: any, params: SettlementPara
       p_booking_id: params.bookingId,
       p_tourist_id: params.touristId,
       p_currency: params.currency,
-      p_payment_method: "mobile_money",
+      p_payment_method: paymentMethod,
       p_reference: params.reference,
     })
 
@@ -114,7 +121,7 @@ async function settlePaymentWithCommission(supabase: any, params: SettlementPara
     p_booking_id: params.bookingId,
     p_tourist_id: params.touristId,
     p_currency: params.currency,
-    p_payment_method: "mobile_money",
+    p_payment_method: paymentMethod,
     p_reference: params.reference,
   })
 

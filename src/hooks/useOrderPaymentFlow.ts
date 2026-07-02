@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { initiateMarzpayCollect } from '../lib/marzpayApi'
+import { initiateMarzpayCollect, type MarzpayMethod } from '../lib/marzpayApi'
 import { getOptionalUserId } from '../services/AuthService'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from './useMarzpayPaymentWatch'
 
@@ -37,12 +37,22 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
       ticketCalculations: Record<string, any>
       totalAmount: number
       ticketPricingReady: boolean
-      phone: string
+      phone?: string
       guestEmail: string
       guestName: string
+      method?: MarzpayMethod
     }) => {
-      const { order, items, ticketCalculations, totalAmount, ticketPricingReady, phone, guestEmail, guestName } =
-        params
+      const {
+        order,
+        items,
+        ticketCalculations,
+        totalAmount,
+        ticketPricingReady,
+        phone,
+        guestEmail,
+        guestName,
+        method = 'mobile_money',
+      } = params
       if (!orderId || !order) return
 
       setPaymentError(null)
@@ -50,9 +60,11 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
         setPaymentError('Pricing is still loading. Please wait a moment and try again.')
         return
       }
-      if (!phone || phone.length < 10) {
-        setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
-        return
+      if (method === 'mobile_money') {
+        if (!phone || phone.length < 10) {
+          setPaymentError('Please enter a valid mobile money phone number (e.g. 0712345678).')
+          return
+        }
       }
 
       const totalWithFee = Math.round(totalAmount)
@@ -62,7 +74,7 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
         updated_at: new Date().toISOString(),
         guest_name: guestName.trim() || order.guest_name || null,
         guest_email: guestEmail.trim() || order.guest_email || null,
-        guest_phone: phone,
+        guest_phone: method === 'mobile_money' && phone ? phone : order.guest_phone || null,
       }
 
       if (activeItems.length > 0) {
@@ -109,15 +121,22 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
       }
 
       setProcessing(true)
-      setPollingMessage('')
+      setPollingMessage(method === 'card' ? 'Redirecting to secure checkout…' : '')
       try {
-        const reference = await initiateMarzpayCollect({
+        const { reference, redirect_url } = await initiateMarzpayCollect({
           amount: totalWithFee,
-          phone_number: phone,
+          method,
+          ...(method === 'mobile_money' && phone ? { phone_number: phone } : {}),
           order_id: orderId,
           description: `Order #${order.reference || orderId.slice(0, 8)} payment`,
           user_id: await getOptionalUserId(),
         })
+
+        if (redirect_url) {
+          window.location.assign(redirect_url)
+          return
+        }
+
         await startWatchingReference(reference)
       } catch (err) {
         stopWatch()
