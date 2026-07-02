@@ -1,4 +1,4 @@
-import { CreditCard, Shield, Smartphone } from 'lucide-react'
+import { CreditCard, Smartphone } from 'lucide-react'
 import { FieldError } from '../booking/BookingFormFeedback'
 import { fieldInputClass } from '../../lib/bookingFormValidation'
 import {
@@ -106,13 +106,6 @@ export default function MarzpayPaymentFields({
           </span>
         </label>
       </div>
-
-      {cardSelected && (
-        <p className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 mt-2">
-          <Shield className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" strokeWidth={1.75} aria-hidden />
-          <span>You will be redirected to MarzPay&apos;s secure checkout. We never store your card number.</span>
-        </p>
-      )}
 
       {mobileSelected && (
         <div className="mt-3 space-y-3">
