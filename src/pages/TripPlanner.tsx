@@ -3,46 +3,15 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AlertCircle, CheckCircle, Compass, MapPin } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
-import { useVisitorTracking } from '../hooks/useVisitorTracking'
+import { usePlanTripSubmit } from '../hooks/usePlanTripSubmit'
 import Money from '../components/Money'
 import type { ReconciledSlot } from '../lib/tripPlanner/types'
 import {
   fetchTripPlan,
-  generateTripPlan,
   getPlannerVisitorId,
   requestWishSlot,
   type SavedTripPlan,
 } from '../lib/tripPlannerClient'
-
-const COUNTRIES = ['Tanzania', 'Kenya', 'Uganda', 'Zanzibar', 'Rwanda']
-const ACTIVITIES = [
-  'Adventure Safaris',
-  'Gorilla / Chimpanzee',
-  'Great Migration',
-  'Beach Holidays',
-  'Cultural / Eco Tours',
-  'Combined Safaris',
-]
-
-type FormState = {
-  countries: string[]
-  activities: string[]
-  days: number
-  startDate: string
-  adults: number
-  children: number
-  extraInfo: string
-}
-
-const emptyForm: FormState = {
-  countries: [],
-  activities: [],
-  days: 7,
-  startDate: '',
-  adults: 1,
-  children: 0,
-  extraInfo: '',
-}
 
 function SlotCard({
   slot,
@@ -160,13 +129,12 @@ export default function TripPlanner() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { visitorSession, loading: visitorLoading } = useVisitorTracking()
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [submitting, setSubmitting] = useState(false)
+  const { submitStatement, submitting, error, visitorId } = usePlanTripSubmit()
+  const [statement, setStatement] = useState('')
   const [loadingPlan, setLoadingPlan] = useState(Boolean(id))
-  const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saved, setSaved] = useState<SavedTripPlan | null>(null)
-  const visitorId = visitorSession?.id || (!visitorLoading ? getPlannerVisitorId(null) : null)
+  const resolvedVisitorId = visitorId || getPlannerVisitorId(null)
 
   useEffect(() => {
     if (!id) {
@@ -181,7 +149,7 @@ export default function TripPlanner() {
         if (!cancelled) setSaved(plan)
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load plan')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Could not load plan')
       })
       .finally(() => {
         if (!cancelled) setLoadingPlan(false)
@@ -191,42 +159,12 @@ export default function TripPlanner() {
     }
   }, [id, visitorId, user?.id])
 
-  const toggle = (field: 'countries' | 'activities', value: string) => {
-    setForm((f) => ({
-      ...f,
-      [field]: f[field].includes(value) ? f[field].filter((v) => v !== value) : [...f[field], value],
-    }))
-  }
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-    if (!visitorId && !user?.id) {
-      setError('Visitor session is still starting. Wait a moment and try again.')
-      return
-    }
-    setSubmitting(true)
-    try {
-      const result = await generateTripPlan(
-        {
-          countries: form.countries,
-          activities: form.activities,
-          days: form.days,
-          start_date: form.startDate || null,
-          adults: Number(form.adults) || 1,
-          children: Number(form.children) || 0,
-          extra_info: form.extraInfo || null,
-        },
-        { visitor_id: visitorId, user_id: user?.id }
-      )
-      setSaved(result)
-      navigate(`/plan/${result.id}`, { replace: true })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not generate a plan')
-    } finally {
-      setSubmitting(false)
-    }
+    await submitStatement(statement)
   }
+
+  const displayError = loadError || error
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-emerald-50">
@@ -247,116 +185,31 @@ export default function TripPlanner() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-emerald-800">Plan a trip</h1>
-                <p className="text-sm text-gray-600">Gemma picks a real DirtTrails package. Gaps show as requests, not fake bookings.</p>
+                <p className="text-sm text-gray-600">One sentence is enough — budget, country, what you want to do.</p>
               </div>
             </div>
 
-            {error ? (
+            {displayError ? (
               <div className="mb-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                {error}
+                {displayError}
               </div>
             ) : null}
 
-            <form onSubmit={(e) => void onSubmit(e)} className="space-y-7">
-              <div>
-                <label className="font-semibold">Where do you want to go?</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {COUNTRIES.map((c) => (
-                    <button
-                      type="button"
-                      key={c}
-                      onClick={() => toggle('countries', c)}
-                      className={`rounded-full border px-3 py-1 text-sm ${
-                        form.countries.includes(c)
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-400'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="font-semibold">What do you want to do?</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {ACTIVITIES.map((a) => (
-                    <button
-                      type="button"
-                      key={a}
-                      onClick={() => toggle('activities', a)}
-                      className={`rounded-full border px-3 py-1 text-sm ${
-                        form.activities.includes(a)
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-400'
-                      }`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="font-semibold">How many days?</label>
-                <div className="mt-2 flex items-center gap-4">
-                  <input
-                    type="range"
-                    min={1}
-                    max={30}
-                    value={form.days}
-                    onChange={(e) => setForm((f) => ({ ...f, days: Number(e.target.value) }))}
-                    className="w-full accent-emerald-600"
-                  />
-                  <span className="w-16 text-right font-medium text-emerald-700">{form.days}d</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-xs">Start date</label>
-                  <input
-                    type="date"
-                    className="w-full rounded border px-3 py-2"
-                    value={form.startDate}
-                    onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs">Adults</label>
-                  <input
-                    type="number"
-                    min={1}
-                    className="w-full rounded border px-3 py-2"
-                    value={form.adults}
-                    onChange={(e) => setForm((f) => ({ ...f, adults: Number(e.target.value) }))}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs">Children</label>
-                  <input
-                    type="number"
-                    min={0}
-                    className="w-full rounded border px-3 py-2"
-                    value={form.children}
-                    onChange={(e) => setForm((f) => ({ ...f, children: Number(e.target.value) }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs">Anything else?</label>
-                <textarea
-                  className="w-full rounded border px-3 py-2"
-                  rows={3}
-                  value={form.extraInfo}
-                  onChange={(e) => setForm((f) => ({ ...f, extraInfo: e.target.value }))}
-                />
-              </div>
+            <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
+              <textarea
+                rows={4}
+                value={statement}
+                onChange={(e) => setStatement(e.target.value)}
+                placeholder="I have $1000 and I want to tour Uganda"
+                className="w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-600 focus:outline-none"
+              />
               <button
                 type="submit"
                 disabled={submitting}
                 className="flex w-full items-center justify-center rounded-lg bg-emerald-700 py-3 font-semibold text-white shadow hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
-                {submitting ? 'Building your trip…' : 'Generate plan'}
+                {submitting ? 'Drafting…' : 'Draft my trip'}
               </button>
               <p className="text-center text-xs text-gray-500">
                 Need a human instead?{' '}
@@ -370,7 +223,7 @@ export default function TripPlanner() {
           <div>
             <h1 className="text-2xl font-bold text-emerald-800">{saved.plan.title}</h1>
             <p className="mt-1 text-sm text-gray-600">Prices come from DirtTrails listings. Checkout is not wired yet — open the package to book the existing way.</p>
-            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+            {loadError ? <p className="mt-3 text-sm text-red-600">{loadError}</p> : null}
             <div className="mt-6 space-y-6">
               {saved.plan.days.map((day) => (
                 <section key={`${day.day}-${day.date || ''}`}>
@@ -389,7 +242,7 @@ export default function TripPlanner() {
                           slot={slot}
                           location={day.location}
                           planId={saved.id}
-                          visitorId={visitorId}
+                          visitorId={resolvedVisitorId}
                           userId={user?.id}
                         />
                       ))

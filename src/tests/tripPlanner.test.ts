@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isPlannerCatalogService } from '../lib/tripPlanner/catalog'
+import { requestFromStatement } from '../lib/tripPlanner/intent'
 import { extractJsonObject } from '../lib/tripPlanner/parse'
 import { reconcilePlan } from '../lib/tripPlanner/reconcile'
 import type { CatalogService } from '../lib/tripPlanner/types'
@@ -157,5 +158,19 @@ describe('reconcilePlan', () => {
     expect(plan.days[0].slots[0].kind).toBe('wish')
     expect(plan.days[0].slots[0].price).toBeNull()
     expect(plan.days[0].slots[0].wish_title).toBe('Mara balloon flight')
+  })
+})
+
+describe('requestFromStatement', () => {
+  it('keeps the sentence and pulls Uganda out of a budget prompt', () => {
+    const req = requestFromStatement('I have $1000 and I want to tour Uganda')
+    expect(req.extra_info).toBe('I have $1000 and I want to tour Uganda')
+    expect(req.countries).toEqual(['Uganda'])
+    expect(req.days).toBe(7)
+  })
+
+  it('reads an explicit day count', () => {
+    expect(requestFromStatement('5 days in Kenya').days).toBe(5)
+    expect(requestFromStatement('5 days in Kenya').countries).toEqual(['Kenya'])
   })
 })

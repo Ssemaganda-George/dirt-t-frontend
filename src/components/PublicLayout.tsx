@@ -7,6 +7,7 @@ import MobileBottomNav from './MobileBottomNav'
 import GlobalSearchModal from './GlobalSearchModal'
 import SupportModal from './SupportModal'
 import LoginModal from './LoginModal'
+import PlanTripFab from './PlanTripFab'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -535,6 +536,8 @@ export default function PublicLayout() {
             onSearchClick={() => setShowGlobalSearch(true)}
           />
       )}
+
+      <PlanTripFab />
 
       {/* Footer */}
       <footer className="hidden md:block text-gray-900">
