@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useVisitorTracking } from '../hooks/useVisitorTracking'
+import { usePreferences } from '../contexts/PreferencesContext'
+import { countryCodeFromSessionCountry } from '../lib/geoPreferences'
 import { supabase } from '../lib/supabaseClient'
 
 /**
@@ -10,6 +12,12 @@ import { supabase } from '../lib/supabaseClient'
 export function AppVisitorTracker() {
   const location = useLocation()
   const { visitorSession } = useVisitorTracking()
+  const { applyDetectedCountry } = usePreferences()
+
+  useEffect(() => {
+    const code = countryCodeFromSessionCountry(visitorSession?.country)
+    if (code) applyDetectedCountry(code)
+  }, [visitorSession?.country, applyDetectedCountry])
 
   // Log page visits to app_visits table
   useEffect(() => {

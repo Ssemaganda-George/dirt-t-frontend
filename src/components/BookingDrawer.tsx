@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { useMarzpayCollect } from '../hooks/useMarzpayCollect'
@@ -71,6 +72,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const { formatPrice } = useDisplayPrice()
+  const { t } = usePreferences()
 
   const [step, setStep] = useState<'summary' | 'contact' | 'payment' | 'done'>('summary')
   const [contact, setContact] = useState({ name: '', email: '', phone: '' })
@@ -801,7 +803,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 reserving || processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'
               }`}
             >
-              {isRestaurant ? (reserving ? 'Confirming…' : 'Confirm Reservation') : 'Continue to Payment'}
+              {isRestaurant ? (reserving ? t('confirming') : t('confirm_reservation')) : t('continue_to_payment')}
             </button>
           )}
 
@@ -815,10 +817,10 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   className={`w-full py-3 rounded-xl font-semibold text-base transition ${processing ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
                 >
                   {processing
-                    ? (pollingMessage || 'Processing…')
+                    ? (pollingMessage || t('processing'))
                     : paymentFields.method === 'card'
-                      ? `Pay ${formatPrice(customerTotal, service.currency)} with card`
-                      : `Pay ${formatPrice(customerTotal, service.currency)} with Mobile Money`}
+                      ? t('pay_with_card', { amount: formatPrice(customerTotal, service.currency) })
+                      : t('pay_with_momo', { amount: formatPrice(customerTotal, service.currency) })}
                 </button>
               {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl">{error}</div>}
             </>
@@ -826,12 +828,12 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
           {step === 'done' && (
             <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-300 font-medium text-gray-700 hover:bg-gray-50">Close</button>
+              <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-300 font-medium text-gray-700 hover:bg-gray-50">{t('close')}</button>
               <button
                 onClick={() => { onClose(); navigate('/') }}
                 className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800"
               >
-                Back to Home
+                {t('back_to_home')}
               </button>
             </div>
           )}

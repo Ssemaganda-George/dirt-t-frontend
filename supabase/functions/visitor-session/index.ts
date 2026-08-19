@@ -7,28 +7,48 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-async function lookupGeo(ip: string): Promise<{ country: string | null; city: string | null }> {
+function headerCountryCode(req: Request): string | null {
+  const raw =
+    req.headers.get('cf-ipcountry') ||
+    req.headers.get('x-vercel-ip-country') ||
+    req.headers.get('x-country-code')
+  const code = String(raw || '').trim().toUpperCase()
+  if (!/^[A-Z]{2}$/.test(code) || code === 'XX' || code === 'T1') return null
+  return code
+}
+
+async function lookupGeo(
+  ip: string,
+  req: Request
+): Promise<{ country: string | null; countryCode: string | null; city: string | null }> {
+  const headerCode = headerCountryCode(req)
   const trimmed = String(ip || '').trim()
   if (!trimmed || trimmed === '127.0.0.1' || trimmed.startsWith('192.168.') || trimmed.startsWith('10.')) {
-    return { country: null, city: null }
+    return { country: headerCode, countryCode: headerCode, city: null }
   }
 
   try {
-    const response = await fetch(`https://ipapi.co/${encodeURIComponent(trimmed)}/json/`, {
+    const response = await fetch(`https://ipwho.is/${encodeURIComponent(trimmed)}?fields=success,country,country_code,city`, {
       headers: { Accept: 'application/json' },
     })
-    if (!response.ok) return { country: null, city: null }
-
-    const data = await response.json()
-    const country = data?.country_name || data?.country || null
-    const city = data?.city || null
-    return {
-      country: country ? String(country).trim() : null,
-      city: city ? String(city).trim() : null,
+    if (response.ok) {
+      const data = await response.json()
+      if (data?.success !== false) {
+        const countryCode = String(data?.country_code || headerCode || '').trim().toUpperCase() || null
+        const country = data?.country ? String(data.country).trim() : countryCode
+        const city = data?.city ? String(data.city).trim() : null
+        return {
+          country: country || null,
+          countryCode: /^[A-Z]{2}$/.test(countryCode || '') ? countryCode : headerCode,
+          city,
+        }
+      }
     }
   } catch {
-    return { country: null, city: null }
+    // Fall through
   }
+
+  return { country: headerCode, countryCode: headerCode, city: null }
 }
 
 function isUnknownGeo(value: string | null | undefined): boolean {
@@ -57,7 +77,7 @@ serve(async (req: Request) => {
       })
     }
 
-    const geo = await lookupGeo(ipAddress)
+    const geo = await lookupGeo(ipAddress, req)
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -67,7 +87,7 @@ serve(async (req: Request) => {
     const { data: sessionId, error: rpcError } = await supabaseAdmin.rpc('get_or_create_visitor_session', {
       p_ip_address: ipAddress,
       p_user_id: body?.userId || null,
-      p_country: geo.country,
+      p_country: geo.country || geo.countryCode,
       p_city: geo.city,
       p_device_type: body?.deviceType || null,
       p_browser_info: body?.browserInfo || null,
@@ -97,13 +117,13 @@ serve(async (req: Request) => {
         .single()
 
       if (!updateError && updated) {
-        return new Response(JSON.stringify({ session: updated }), {
+        return new Response(JSON.stringify({ session: updated, countryCode: geo.countryCode }), {
           headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
         })
       }
     }
 
-    return new Response(JSON.stringify({ session }), {
+    return new Response(JSON.stringify({ session, countryCode: geo.countryCode }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
   } catch (error) {

@@ -203,3 +203,88 @@ export function writeStoredPreferences(
   }
   localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(payload))
 }
+
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  uganda: 'UG',
+  'united states': 'US',
+  usa: 'US',
+  'united kingdom': 'GB',
+  'great britain': 'GB',
+  england: 'GB',
+  kenya: 'KE',
+  tanzania: 'TZ',
+  rwanda: 'RW',
+  france: 'FR',
+  germany: 'DE',
+  portugal: 'PT',
+  brazil: 'BR',
+  canada: 'CA',
+  australia: 'AU',
+  india: 'IN',
+  'south africa': 'ZA',
+  nigeria: 'NG',
+  ghana: 'GH',
+  netherlands: 'NL',
+  belgium: 'BE',
+  ireland: 'IE',
+  spain: 'ES',
+  italy: 'IT',
+  switzerland: 'CH',
+  sweden: 'SE',
+  norway: 'NO',
+  denmark: 'DK',
+  poland: 'PL',
+  japan: 'JP',
+  china: 'CN',
+  singapore: 'SG',
+  'united arab emirates': 'AE',
+  uae: 'AE',
+}
+
+export function parseCloudflareTraceLoc(trace: string): string | null {
+  const loc = trace.split('\n').find((line) => line.startsWith('loc='))?.slice(4)?.trim().toUpperCase()
+  if (!loc || loc === 'XX' || loc === 'T1' || !/^[A-Z]{2}$/.test(loc)) return null
+  return loc
+}
+
+export function countryCodeFromSessionCountry(country: string | undefined | null): string | null {
+  if (!country) return null
+  const trimmed = country.trim()
+  if (/^[A-Za-z]{2}$/.test(trimmed)) return trimmed.toUpperCase()
+  return COUNTRY_NAME_TO_CODE[trimmed.toLowerCase()] || null
+}
+
+export function preferencesFromCountryCode(
+  countryCode: string,
+  language: ChromeLanguage
+): GeoPreferences | null {
+  const code = countryCode.trim().toUpperCase()
+  if (!/^[A-Z]{2}$/.test(code)) return null
+  const region = canadaRegion(language, code)
+  const currency = CURRENCY_BY_REGION[region]
+  if (!currency) return null
+  return { region, currency, language }
+}
+
+export async function detectCountryCodeFromNetwork(): Promise<string | null> {
+  try {
+    const res = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { cache: 'no-store' })
+    if (res.ok) {
+      const loc = parseCloudflareTraceLoc(await res.text())
+      if (loc) return loc
+    }
+  } catch {
+    // Continue to ipwho.is
+  }
+
+  try {
+    const res = await fetch('https://ipwho.is/?fields=country_code,success', { cache: 'no-store' })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data?.success === false) return null
+    const code = String(data?.country_code || '').toUpperCase()
+    return /^[A-Z]{2}$/.test(code) ? code : null
+  } catch {
+    return null
+  }
+}

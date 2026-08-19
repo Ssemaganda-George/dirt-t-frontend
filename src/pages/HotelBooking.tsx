@@ -14,6 +14,7 @@ import {
 } from '../lib/bookingFormValidation'
 import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
 import {
   calculatePaymentForAmount,
@@ -68,6 +69,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const location = useLocation()
   const { user, profile } = useAuth()
   const { formatPrice } = useDisplayPrice()
+  const { t } = usePreferences()
   const [currentStep, setCurrentStep] = useState(1)
   const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
   const finaliseInFlightRef = useRef(false)
@@ -452,7 +454,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Guests</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('guests')}</label>
                 <input
                   type="number"
                   min={1}
@@ -463,7 +465,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rooms</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('rooms')}</label>
                 <input
                   type="number"
                   min={1}
@@ -483,7 +485,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             <BookingFormBanner message={formBanner} />
             {/* Room Details */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Room Selection</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">{t('room_selection')}</h3>
               <div className="space-y-3">
                 {service.room_types?.map((roomType, index) => (
                   <label key={index} className="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-500 transition-colors" style={{backgroundColor: bookingData.roomType === roomType ? '#EFF6FF' : 'transparent'}}>
@@ -498,7 +500,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <div className="flex-1">
                       <span className="font-medium text-gray-900">{roomType}</span>
                       <span className="text-gray-600 ml-2 text-sm font-light">
-                        {formatPrice(service.price, service.currency)} per night
+                        {formatPrice(service.price, service.currency)} {t('per_night')}
                       </span>
                     </div>
                   </label>
@@ -515,7 +517,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <div className="flex-1">
                       <span className="font-medium text-gray-900">Standard Room</span>
                       <span className="text-gray-600 ml-2 text-sm font-light">
-                        {formatPrice(service.price, service.currency)} per night
+                        {formatPrice(service.price, service.currency)} {t('per_night')}
                       </span>
                     </div>
                   </label>
@@ -642,7 +644,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
 
             {/* Payment */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Method</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">{t('payment_method')}</h3>
               <div className="bg-blue-50 p-4 rounded-lg mb-4 space-y-2">
                 <div className="flex justify-between items-center text-sm text-gray-700 font-light">
                   <span>Room subtotal ({nights} night{nights !== 1 ? 's' : ''})</span>
@@ -655,7 +657,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 border-t border-blue-100">
-                  <span className="text-gray-800 font-medium">Total amount due</span>
+                  <span className="text-gray-800 font-medium">{t('total_due')}</span>
                   <span className="text-2xl font-semibold text-blue-600">{formatPrice(hotelGrandTotal, service.currency)}</span>
                 </div>
               </div>
@@ -931,7 +933,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 onClick={handleBack}
                 className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
               >
-                Back
+                {t('back')}
               </button>
               <button
                 onClick={currentStep === 2 ? handleCompleteBooking : handleNext}
@@ -942,9 +944,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   ? (pollingMessage || 'Processing...')
                   : currentStep === 2
                     ? paymentFields.method === 'card'
-                      ? `Pay ${formatPrice(hotelGrandTotal, service.currency)} with card`
-                      : 'Pay with Mobile Money'
-                    : 'Next'}
+                      ? t('pay_with_card', { amount: formatPrice(hotelGrandTotal, service.currency) })
+                      : t('pay_momo')
+                    : t('next')}
               </button>
             </div>
           </div>

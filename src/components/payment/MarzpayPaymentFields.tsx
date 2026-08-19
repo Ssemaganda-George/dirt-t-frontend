@@ -1,6 +1,7 @@
 import { CreditCard, Smartphone } from 'lucide-react'
 import { FieldError } from '../booking/BookingFormFeedback'
 import { fieldInputClass } from '../../lib/bookingFormValidation'
+import { usePreferences } from '../../contexts/PreferencesContext'
 import {
   detectMarzpayProvider,
   isMobileUiMethod,
@@ -31,6 +32,7 @@ export default function MarzpayPaymentFields({
   inputClassName = '',
   showMoMoHint = true,
 }: Props) {
+  const { t } = usePreferences()
   const mobileSelected = isMobileUiMethod(value.method)
   const cardSelected = value.method === 'card'
 
@@ -82,8 +84,8 @@ export default function MarzpayPaymentFields({
           />
           <Smartphone className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
           <span className="min-w-0">
-            <span className="block text-sm font-medium text-gray-900">Mobile Money</span>
-            <span className="block text-xs text-gray-500 mt-0.5">MTN or Airtel. Approve on your phone.</span>
+            <span className="block text-sm font-medium text-gray-900">{t('mobile_money')}</span>
+            <span className="block text-xs text-gray-500 mt-0.5">{t('mobile_money_hint')}</span>
           </span>
         </label>
         <label
@@ -101,8 +103,8 @@ export default function MarzpayPaymentFields({
           />
           <CreditCard className="w-5 h-5 text-gray-600 mt-0.5 shrink-0" strokeWidth={1.75} aria-hidden />
           <span className="min-w-0">
-            <span className="block text-sm font-medium text-gray-900">Debit or credit card</span>
-            <span className="block text-xs text-gray-500 mt-0.5">Visa or Mastercard.</span>
+            <span className="block text-sm font-medium text-gray-900">{t('card')}</span>
+            <span className="block text-xs text-gray-500 mt-0.5">{t('card_hint')}</span>
           </span>
         </label>
       </div>
@@ -110,7 +112,7 @@ export default function MarzpayPaymentFields({
       {mobileSelected && (
         <div className="mt-3 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Money Provider</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('momo_provider')}</label>
             <div className={`flex gap-2 ${errors.mobileProvider ? 'ring-1 ring-red-500 rounded-lg p-1' : ''}`}>
               {(['MTN', 'Airtel'] as const).map(p => (
                 <button
@@ -128,7 +130,7 @@ export default function MarzpayPaymentFields({
             <FieldError message={errors.mobileProvider} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Money Number *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('momo_number')}</label>
             {value.provider && (
               <p className="text-xs text-gray-500 mb-1">
                 Provider: <span className="font-medium">{value.provider}</span> (auto-detected)
@@ -146,7 +148,7 @@ export default function MarzpayPaymentFields({
             <FieldError message={errors.phone} />
           </div>
           {showMoMoHint && (
-            <p className="text-xs text-gray-500">Secure payment via MarzPay. You will receive a USSD prompt on your phone.</p>
+            <p className="text-xs text-gray-500">{t('momo_ussd')}</p>
           )}
         </div>
       )}

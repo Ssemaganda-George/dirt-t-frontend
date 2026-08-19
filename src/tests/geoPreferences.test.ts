@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   detectGeoPreferences,
   languageFromNavigator,
+  parseCloudflareTraceLoc,
+  preferencesFromCountryCode,
   regionFromLocale,
   regionFromTimeZone,
 } from '../lib/geoPreferences'
@@ -51,12 +53,24 @@ describe('geoPreferences', () => {
     expect(regionFromTimeZone('Africa/Nairobi')).toBe('KE')
     expect(regionFromLocale('en-US')).toBe('US')
   })
+
+  it('maps ISO country codes to display currency without changing language', () => {
+    expect(preferencesFromCountryCode('US', 'en')).toEqual({ region: 'US', currency: 'USD', language: 'en' })
+    expect(preferencesFromCountryCode('FR', 'fr')).toEqual({ region: 'FR', currency: 'EUR', language: 'fr' })
+    expect(preferencesFromCountryCode('ZZ', 'en')).toBeNull()
+  })
+
+  it('parses Cloudflare trace loc= lines', () => {
+    expect(parseCloudflareTraceLoc('ip=1.1.1.1\nloc=GB\ntls=TLSv1.3\n')).toBe('GB')
+    expect(parseCloudflareTraceLoc('loc=XX\n')).toBeNull()
+  })
 })
 
 describe('translations', () => {
   it('returns French chrome copy and falls unknown langs to English', () => {
     expect(translate('fr', 'currency_region')).toBe('Devise et région')
     expect(translate('pt', 'bookings')).toBe('Reservas')
+    expect(translate('fr', 'pay_with_card')).toBe('Payer {{amount}} par carte')
     expect(translate('de', 'home')).toBe('Home')
     expect(translate('en', 'missing_key')).toBe('')
   })

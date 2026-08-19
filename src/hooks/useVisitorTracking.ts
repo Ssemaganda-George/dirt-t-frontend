@@ -62,7 +62,10 @@ async function resolveVisitorSession(userId?: string): Promise<VisitorSession | 
       })
 
       if (!error && data?.session) {
-        sharedSession = data.session as VisitorSession
+        sharedSession = {
+          ...(data.session as VisitorSession),
+          country: data.countryCode || data.session.country,
+        }
         return sharedSession
       }
 

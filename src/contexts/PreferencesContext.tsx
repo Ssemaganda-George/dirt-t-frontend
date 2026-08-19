@@ -5,8 +5,12 @@ import type { UserPreferences } from '../types'
 import { translate, SupportedLang } from '../i18n/translations'
 import {
   detectGeoPreferences,
+  detectCountryCodeFromNetwork,
+  languageFromNavigator,
+  preferencesFromCountryCode,
   readStoredPreferences,
   writeStoredPreferences,
+  type ChromeLanguage,
   type GeoPreferences,
 } from '../lib/geoPreferences'
 
@@ -19,6 +23,7 @@ interface PreferencesContextType {
   loading: boolean
   updatePreferences: (region: string, currency: string, language: string) => Promise<void>
   loadPreferences: () => Promise<void>
+  applyDetectedCountry: (countryCode: string) => void
 }
 
 const DEFAULT_REGION = 'UG'
@@ -138,6 +143,18 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     }
   }
 
+  const applyDetectedCountry = (countryCode: string) => {
+    const stored = readStoredPreferences()
+    if (stored?.source === 'user') return
+    const language = (stored?.language === 'fr' || stored?.language === 'pt'
+      ? stored.language
+      : languageFromNavigator(typeof navigator !== 'undefined' ? navigator.language : 'en')) as ChromeLanguage
+    const next = preferencesFromCountryCode(countryCode, language)
+    if (!next) return
+    if (stored?.region === next.region && stored?.currency === next.currency) return
+    applyLocal(next, 'geo', user?.id || 'local')
+  }
+
   useEffect(() => {
     if (user?.id) {
       void loadPreferences()
@@ -150,6 +167,18 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       return
     }
     detectAndApply('local')
+  }, [user?.id])
+
+  useEffect(() => {
+    const stored = readStoredPreferences()
+    if (stored?.source === 'user') return
+    let cancelled = false
+    detectCountryCodeFromNetwork().then((code) => {
+      if (!cancelled && code) applyDetectedCountry(code)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [user?.id])
 
   useEffect(() => {
@@ -176,7 +205,8 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       },
     loading,
     updatePreferences,
-    loadPreferences
+    loadPreferences,
+    applyDetectedCountry,
   }
 
   return (

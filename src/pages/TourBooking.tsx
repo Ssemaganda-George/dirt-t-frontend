@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, Users, CreditCard } from 'lucide-react'
 import { useDisplayPrice } from '../hooks/useDisplayPrice'
 import SettlementChargeNote from '../components/SettlementChargeNote'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { createBooking } from '../lib/database'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
 import { useMarzpayCollect } from '../hooks/useMarzpayCollect'
@@ -30,6 +31,7 @@ interface ServiceDetail {
 export default function TourBooking({ service }: { service: ServiceDetail }) {
   const navigate = useNavigate()
   const { formatPrice } = useDisplayPrice()
+  const { t } = usePreferences()
   const location = useLocation()
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
@@ -199,7 +201,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
     )
   }
 
-  const steps = ['Tour Details', 'Your Details', 'Payment', 'Processing', 'Confirmation']
+  const steps = [t('tour_details'), t('your_details'), t('payment'), t('processing'), t('confirmation')]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -229,16 +231,16 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           {currentStep === 1 && (
             <>
               <BookingFormBanner message={formBanner} />
-              <h2 className="text-lg font-semibold flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-600" />Tour Details</h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2"><Calendar className="w-5 h-5 text-blue-600" />{t('tour_details')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tour Date *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('tour_date')} *</label>
                   <input type="date" className={fieldInputClass(Boolean(fieldErrors.tourDate))}
                     value={formData.tourDate} onChange={e => set('tourDate', e.target.value)} min={new Date().toISOString().split('T')[0]} aria-invalid={Boolean(fieldErrors.tourDate)} />
                   <FieldError message={fieldErrors.tourDate} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Travelers *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('travelers')} *</label>
                   <div className="flex items-center gap-3">
                     <button type="button" onClick={() => set('travelers', Math.max(1, formData.travelers - 1))} className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-lg hover:bg-gray-50">−</button>
                     <span className="text-xl font-semibold w-8 text-center">{formData.travelers}</span>
@@ -247,12 +249,12 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Location <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('pickup_location')} <span className="text-gray-400 font-normal">{t('optional')}</span></label>
                 <input type="text" placeholder="e.g. Kampala city centre, specific hotel name…" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-base"
                   value={formData.pickupLocation} onChange={e => set('pickupLocation', e.target.value)} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Special Requests <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('special_requests')} <span className="text-gray-400 font-normal">{t('optional')}</span></label>
                 <textarea rows={3} placeholder="Dietary requirements, accessibility needs, anything we should know…" className="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm resize-none"
                   value={formData.specialRequests} onChange={e => set('specialRequests', e.target.value)} />
               </div>
@@ -264,16 +266,16 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
                 {touristFeeTotal > 0 && (
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>Booking fee</span><span>{formatPrice(touristFeeTotal, service.currency)}</span>
+                    <span>{t('booking_fee')}</span><span>{formatPrice(touristFeeTotal, service.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
-                  <span>Total</span><span>{formatPrice(customerPaysTotal, service.currency)}</span>
+                  <span>{t('total')}</span><span>{formatPrice(customerPaysTotal, service.currency)}</span>
                 </div>
               </div>
 
               <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
-                Continue
+                {t('continue')}
               </button>
             </>
           )}
@@ -295,7 +297,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
                 </div>
               </div>
               <button type="button" onClick={handleNext} className="w-full py-3 rounded-lg font-semibold text-base transition bg-emerald-700 text-white hover:bg-emerald-800">
-                Continue to Payment
+                {t('continue_to_payment')}
               </button>
             </>
           )}
@@ -303,10 +305,10 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
           {currentStep === 3 && (
             <>
               <BookingFormBanner message={formBanner || paymentError} />
-              <h2 className="text-lg font-semibold flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-600" />Payment</h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-600" />{t('payment')}</h2>
               <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between text-gray-600"><span>{formData.tourDate} · {formData.travelers} traveler{formData.travelers !== 1 ? 's' : ''}</span></div>
-                <div className="flex justify-between font-semibold"><span>Total</span><span>{formatPrice(customerPaysTotal, service.currency)}</span></div>
+                <div className="flex justify-between font-semibold"><span>{t('total')}</span><span>{formatPrice(customerPaysTotal, service.currency)}</span></div>
               </div>
               <MarzpayPaymentFields
                 name="tourPaymentMethod"
@@ -323,8 +325,8 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
                 className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : paymentFields.method === 'card'
-                  ? `Pay ${formatPrice(customerPaysTotal, service.currency)} with card`
-                  : `Pay ${formatPrice(customerPaysTotal, service.currency)} with Mobile Money`}
+                  ? t('pay_with_card', { amount: formatPrice(customerPaysTotal, service.currency) })
+                  : t('pay_with_momo', { amount: formatPrice(customerPaysTotal, service.currency) })}
               </button>
             </>
           )}

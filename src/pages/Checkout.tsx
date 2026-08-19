@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
+import { usePreferences } from '../contexts/PreferencesContext'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { useOrderPaymentFlow } from '../hooks/useOrderPaymentFlow'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -28,6 +29,7 @@ export default function CheckoutPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
   const { formatPrice } = useDisplayPrice()
+  const { t } = usePreferences()
   const queryClient = useOrderQueryClient()
   const { data, isLoading, error } = useOrderQuery(orderId)
   const order = data?.order ?? null
@@ -305,7 +307,7 @@ export default function CheckoutPage() {
 
             <div className="md:col-span-2">
               <div className="bg-white p-4 rounded border border-gray-200">
-                <h3 className="font-semibold text-lg mb-3">Order summary</h3>
+                <h3 className="font-semibold text-lg mb-3">{t('order_summary')}</h3>
                 <div className="flex items-center gap-3 mb-4">
                   {order._service?.images?.[0] ? (
                     <img src={order._service.images[0]} alt="" className="w-16 h-16 object-cover rounded" />
@@ -319,8 +321,8 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Tickets</span>
-                  <button type="button" onClick={() => setShowAllTickets(s => !s)} className="text-sm text-blue-600 underline">{showAllTickets ? 'Done' : 'Edit'}</button>
+                  <span className="text-sm font-medium text-gray-700">{t('tickets')}</span>
+                  <button type="button" onClick={() => setShowAllTickets(s => !s)} className="text-sm text-blue-600 underline">{showAllTickets ? t('done') : t('edit')}</button>
                 </div>
                 <div className="space-y-2 mb-4">
                   {allTicketTypes
@@ -352,12 +354,12 @@ export default function CheckoutPage() {
                 {!ticketPricingReady && <p className="text-xs text-amber-700 mb-2">Calculating total…</p>}
                 {effectiveServiceFees > 0 && (
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Includes booking fee</span>
+                    <span>{t('includes_booking_fee')}</span>
                     <span>{formatPrice(effectiveServiceFees, order.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-3">
-                  <span className="text-lg font-semibold">Total</span>
+                  <span className="text-lg font-semibold">{t('total')}</span>
                   <span className="text-xl font-extrabold">{formatPrice(totalAmount, order.currency)}</span>
                 </div>
               </div>
@@ -367,7 +369,7 @@ export default function CheckoutPage() {
 
         <div className="fixed md:sticky bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-sm px-4 md:px-6 py-3 flex flex-col gap-2">
           <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2 max-w-6xl mx-auto w-full">
-            <span><span className="font-medium text-gray-600">Secure checkout via MarzPay.</span> Pending bookings can be cancelled from your account dashboard.</span>
+            <span><span className="font-medium text-gray-600">{t('secure_checkout_marzpay')}</span> Pending bookings can be cancelled from your account dashboard.</span>
           </div>
           {order && (
             <div className="max-w-6xl mx-auto w-full">
@@ -386,8 +388,8 @@ export default function CheckoutPage() {
             {processing
               ? (pollingMessage || (paymentFields.method === 'card' ? 'Redirecting to secure checkout…' : 'Processing payment…'))
               : paymentFields.method === 'card'
-              ? `Pay ${formatPrice(totalAmount, order.currency)} with card`
-              : `Pay ${formatPrice(totalAmount, order.currency)} with Mobile Money`}
+              ? t('pay_with_card', { amount: formatPrice(totalAmount, order.currency) })
+              : t('pay_with_momo', { amount: formatPrice(totalAmount, order.currency) })}
           </button>
         </div>
       </div>

@@ -75,7 +75,7 @@ interface PreferencesModalProps {
 }
 
 export default function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
-  const { selectedRegion, selectedCurrency, updatePreferences, loading } = usePreferences()
+  const { selectedRegion, selectedCurrency, updatePreferences, loading, t } = usePreferences()
   const [activeTab, setActiveTab] = useState('region')
   const [saving, setSaving] = useState(false)
   const [tempRegion, setTempRegion] = useState(selectedRegion)
@@ -140,7 +140,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
   <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('preferences')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -160,7 +160,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Region and Language
+              {t('region_and_language')}
             </button>
             <button
               onClick={() => setActiveTab('currency')}
@@ -170,7 +170,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Currency
+              {t('currency')}
             </button>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
           {activeTab === 'region' ? (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Choose a region and language
+                {t('choose_region_language')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {regions.map((region) => (
@@ -202,7 +202,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
           ) : (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Choose a currency
+                {t('choose_currency')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {currencies.map((currency) => (
@@ -236,7 +236,7 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
                 className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 disabled={saving}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -246,11 +246,11 @@ export default function PreferencesModal({ isOpen, onClose }: PreferencesModalPr
                 {saving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="sr-only">Saving</span>
-                    <span className="hidden sm:inline">Saving...</span>
+                    <span className="sr-only">{t('saving')}</span>
+                    <span className="hidden sm:inline">{t('saving')}</span>
                   </>
                 ) : (
-                  'Save Preferences'
+                  t('save_preferences')
                 )}
               </button>
             </div>

@@ -9,14 +9,14 @@ export default function SettlementChargeNote({
   amount: number
   settlementCurrency: string
 }) {
-  const { selectedCurrency } = usePreferences()
+  const { selectedCurrency, t } = usePreferences()
   const settlement = normalizeServiceCurrency(settlementCurrency)
   const display = normalizeServiceCurrency(selectedCurrency || 'UGX')
   if (settlement === display) return null
 
   return (
     <p className="text-xs text-gray-500">
-      You will be charged {formatCurrency(amount, settlement)} via MarzPay.
+      {t('charged_via_marzpay', { amount: formatCurrency(amount, settlement) })}
     </p>
   )
 }
