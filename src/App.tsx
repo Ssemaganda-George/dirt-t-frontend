@@ -63,6 +63,7 @@ const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Tre
 
 // Create Safari Page
 const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
+const TripPlanner = lazy(() => import('./pages/TripPlanner'));
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
 const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
@@ -182,6 +183,8 @@ function App() {
             <Route path="profile" element={<UserDashboard />} />
             <Route path="category/:category" element={<PageTransition delay={300} skeletonType="service"><CategoryPage /></PageTransition>} />
             <Route path="create-safari" element={<CreateSafariPage />} />
+            <Route path="plan" element={<TripPlanner />} />
+            <Route path="plan/:id" element={<TripPlanner />} />
             {/* Support Pages */}
             <Route path="help" element={<HelpCenter />} />
             <Route path="contact" element={<ContactUs />} />

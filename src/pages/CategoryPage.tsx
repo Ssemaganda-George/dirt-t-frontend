@@ -618,7 +618,7 @@ export default function CategoryPage() {
             {/* Tours: custom safari CTA */}
             {category === 'tours' && (
               <Link
-                to="/create-safari"
+                to="/plan"
                 className="flex items-center gap-4 bg-emerald-700 hover:bg-emerald-800 rounded-xl p-4 mb-4 transition-colors group"
               >
                 <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -626,7 +626,7 @@ export default function CategoryPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-semibold text-sm">Plan a custom safari</p>
-                  <p className="text-emerald-200 text-xs mt-0.5">Tell us where you want to go and we will design the trip</p>
+                  <p className="text-emerald-200 text-xs mt-0.5">Instant itinerary from live packages — request what we do not sell yet</p>
                 </div>
                 <span className="text-white/70 text-xs font-medium group-hover:text-white transition-colors flex-shrink-0">
                   Get started →
