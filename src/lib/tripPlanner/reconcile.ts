@@ -1,6 +1,7 @@
 import { RESTAURANT_CATEGORY } from './types'
 import type {
   CatalogService,
+  PlanSource,
   RawPlan,
   ReconciledDay,
   ReconciledPlan,
@@ -88,7 +89,7 @@ function reconcileSlot(
   }
 }
 
-export function reconcilePlan(raw: RawPlan, catalog: CatalogService[]): ReconciledPlan {
+export function reconcilePlan(raw: RawPlan, catalog: CatalogService[], sources: PlanSource[] = []): ReconciledPlan {
   const index = byId(catalog)
   const days: ReconciledDay[] = []
   for (const day of raw.days || []) {
@@ -99,11 +100,28 @@ export function reconcilePlan(raw: RawPlan, catalog: CatalogService[]): Reconcil
       day: typeof day.day === 'number' ? day.day : days.length + 1,
       date: day.date ? String(day.date) : null,
       location: day.location ? String(day.location) : null,
+      narrative: day.narrative ? String(day.narrative).trim() : null,
       slots,
     })
   }
+
+  const totals = new Map<string, number>()
+  for (const day of days) {
+    for (const slot of day.slots) {
+      if (slot.kind !== 'bookable' || slot.price == null || !slot.currency) continue
+      totals.set(slot.currency, (totals.get(slot.currency) || 0) + slot.price)
+    }
+  }
+  const cost_summary = Array.from(totals.entries()).map(([currency, bookable_total]) => ({
+    currency,
+    bookable_total,
+  }))
+
   return {
     title: String(raw.title || 'Your DirtTrails trip').trim() || 'Your DirtTrails trip',
+    advisor_note: raw.advisor_note ? String(raw.advisor_note).trim() : null,
+    cost_summary,
+    sources,
     days,
   }
 }

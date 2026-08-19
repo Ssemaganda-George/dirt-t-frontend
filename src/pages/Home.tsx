@@ -695,7 +695,6 @@ export default function Home() {
                   loop
                   playsInline
                   preload="auto"
-                  poster="/hero-video-poster.jpg"
                   className="w-full h-full object-cover bg-black"
                   onLoadedData={e => {
                     // Force play on load for mobile browsers

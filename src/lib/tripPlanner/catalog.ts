@@ -24,6 +24,7 @@ export function catalogToPromptText(services: CatalogService[]): string {
       const days = s.duration_days ? `${s.duration_days}d` : 'duration unknown'
       const itinerary = (s.itinerary || []).slice(0, 14).join(' | ')
       const highlights = (s.tour_highlights || []).slice(0, 6).join(', ')
+      const bannerNotes = (s.banner_ocr_text || '').trim().slice(0, 500)
       return [
         `id=${s.id}`,
         `category=${s.category_id}`,
@@ -33,6 +34,7 @@ export function catalogToPromptText(services: CatalogService[]): string {
         `price=${s.price} ${s.currency}`,
         highlights ? `highlights=${highlights}` : null,
         itinerary ? `itinerary=${itinerary}` : null,
+        bannerNotes ? `banner_notes=${bannerNotes}` : null,
       ]
         .filter(Boolean)
         .join('\n')

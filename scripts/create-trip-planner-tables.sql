@@ -7,6 +7,7 @@ create table if not exists public.trip_plans (
   visitor_id text,
   request jsonb not null,
   plan jsonb not null,
+  messages jsonb not null default '[]'::jsonb,
   status text not null default 'draft'
     check (status in ('draft', 'booked', 'abandoned')),
   created_at timestamptz not null default now()

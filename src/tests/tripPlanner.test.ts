@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isPlannerCatalogService } from '../lib/tripPlanner/catalog'
+import { catalogToPromptText, isPlannerCatalogService } from '../lib/tripPlanner/catalog'
 import { requestFromStatement } from '../lib/tripPlanner/intent'
 import { extractJsonObject } from '../lib/tripPlanner/parse'
 import { reconcilePlan } from '../lib/tripPlanner/reconcile'
@@ -70,6 +70,22 @@ describe('isPlannerCatalogService', () => {
   })
 })
 
+describe('catalogToPromptText', () => {
+  it('includes banner_notes when banner_ocr_text is set', () => {
+    const withBanner: CatalogService = {
+      ...kenya,
+      banner_ocr_text: 'Day 4: Optional hot air balloon safari, extra $450 per person',
+    }
+    expect(catalogToPromptText([withBanner])).toContain(
+      'banner_notes=Day 4: Optional hot air balloon safari, extra $450 per person'
+    )
+  })
+
+  it('omits banner_notes when banner_ocr_text is absent', () => {
+    expect(catalogToPromptText([kenya])).not.toContain('banner_notes=')
+  })
+})
+
 describe('extractJsonObject', () => {
   it('parses a fenced JSON object', () => {
     const raw = 'Here you go\n```json\n{"title":"Kenya week","days":[]}\n```'
@@ -105,6 +121,56 @@ describe('reconcilePlan', () => {
     expect(plan.days[0].slots[0].price).toBe(4250)
     expect(plan.days[0].slots[0].currency).toBe('USD')
     expect(plan.days[0].slots[0].title).toBe(kenya.title)
+  })
+
+  it('carries day narrative and plan advisor_note through', () => {
+    const plan = reconcilePlan(
+      {
+        title: '7 days Kenya',
+        advisor_note: "We've built a Mara-focused week — want to adjust the budget?",
+        days: [
+          {
+            day: 1,
+            location: 'Kenya',
+            narrative: '8:00 AM — depart Nairobi, lunch en route, evening arrival at the Mara.',
+            slots: [{ kind: 'bookable', service_id: kenya.id }],
+          },
+        ],
+      },
+      catalog
+    )
+    expect(plan.advisor_note).toBe("We've built a Mara-focused week — want to adjust the budget?")
+    expect(plan.days[0].narrative).toBe('8:00 AM — depart Nairobi, lunch en route, evening arrival at the Mara.')
+  })
+
+  it('defaults sources to an empty array and passes through grounding sources when provided', () => {
+    const withoutSources = reconcilePlan({ title: 'x', days: [] }, catalog)
+    expect(withoutSources.sources).toEqual([])
+
+    const withSources = reconcilePlan({ title: 'x', days: [] }, catalog, [
+      { title: 'Uganda Wildlife Authority', uri: 'https://ugandawildlife.org' },
+    ])
+    expect(withSources.sources).toEqual([{ title: 'Uganda Wildlife Authority', uri: 'https://ugandawildlife.org' }])
+  })
+
+  it('sums bookable prices per currency into cost_summary, excluding wish/reservation', () => {
+    const plan = reconcilePlan(
+      {
+        title: 'x',
+        days: [
+          {
+            day: 1,
+            slots: [
+              { kind: 'bookable', service_id: kenya.id },
+              { kind: 'bookable', service_id: restaurant.id },
+              { kind: 'wish', wish_title: 'Mara balloon flight', wish_cost_band: 'mid' },
+            ],
+          },
+        ],
+      },
+      catalog
+    )
+    expect(plan.cost_summary).toEqual([{ currency: 'USD', bookable_total: 4250 }])
   })
 
   it('drops hallucinated service ids', () => {

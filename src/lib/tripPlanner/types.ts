@@ -18,6 +18,7 @@ export type CatalogService = {
   slug?: string | null
   vendor_id?: string | null
   status: string
+  banner_ocr_text?: string | null
 }
 
 export type TripRequest = {
@@ -45,12 +46,22 @@ export type RawDay = {
   day?: number
   date?: string | null
   location?: string | null
+  narrative?: string | null
   slots?: RawSlot[]
 }
 
 export type RawPlan = {
   title?: string
+  advisor_note?: string | null
   days?: RawDay[]
+}
+
+export type ConversationRole = 'user' | 'advisor'
+
+export type ConversationMessage = {
+  role: ConversationRole
+  content: string
+  created_at?: string
 }
 
 export type ReconciledSlot = {
@@ -73,10 +84,24 @@ export type ReconciledDay = {
   day: number
   date: string | null
   location: string | null
+  narrative: string | null
   slots: ReconciledSlot[]
+}
+
+export type CostSummaryLine = {
+  currency: string
+  bookable_total: number
+}
+
+export type PlanSource = {
+  title: string
+  uri: string
 }
 
 export type ReconciledPlan = {
   title: string
+  advisor_note: string | null
+  cost_summary: CostSummaryLine[]
+  sources: PlanSource[]
   days: ReconciledDay[]
 }
