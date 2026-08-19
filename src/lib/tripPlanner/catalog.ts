@@ -1,6 +1,8 @@
+import { type NamedBudget, serviceFitsBudget } from './budget'
 import {
   RESTAURANT_CATEGORY,
   SHOP_CATEGORY,
+  TOUR_CATEGORY,
   type CatalogService,
 } from './types'
 
@@ -17,25 +19,31 @@ export function filterPlannerCatalog(services: CatalogService[]): CatalogService
   return services.filter(isPlannerCatalogService)
 }
 
-export function catalogToPromptText(services: CatalogService[]): string {
-  return services
+export function catalogToPromptText(services: CatalogService[], budget?: NamedBudget | null): string {
+  const sorted = [...services].sort((a, b) => {
+    const aFit = serviceFitsBudget(a, budget || null) ? 0 : 1
+    const bFit = serviceFitsBudget(b, budget || null) ? 0 : 1
+    return aFit - bFit
+  })
+  return sorted
     .map((s) => {
+      const inBudget = serviceFitsBudget(s, budget || null)
       const loc = s.meeting_point || s.location || 'unspecified'
-      const days = s.duration_days ? `${s.duration_days}d` : 'duration unknown'
-      const itinerary = (s.itinerary || []).slice(0, 14).join(' | ')
-      const highlights = (s.tour_highlights || []).slice(0, 6).join(', ')
+      const days = s.duration_days ? `${s.duration_days}d` : null
+      const itinerary =
+        inBudget && s.category_id === TOUR_CATEGORY ? (s.itinerary || []).slice(0, 4).join(' | ') : null
       return [
+        inBudget ? 'IN_BUDGET' : 'OVER_BUDGET',
         `id=${s.id}`,
         `category=${s.category_id}`,
         `title=${s.title.trim()}`,
         `location=${loc}`,
-        `duration=${days}`,
+        days ? `duration=${days}` : null,
         `price=${s.price} ${s.currency}`,
-        highlights ? `highlights=${highlights}` : null,
         itinerary ? `itinerary=${itinerary}` : null,
       ]
         .filter(Boolean)
-        .join('\n')
+        .join(' | ')
     })
-    .join('\n\n')
+    .join('\n')
 }

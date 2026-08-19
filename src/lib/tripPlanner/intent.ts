@@ -2,7 +2,7 @@ import type { TripRequest } from './types'
 
 const COUNTRIES = ['Tanzania', 'Kenya', 'Uganda', 'Zanzibar', 'Rwanda']
 
-export function daysFromStatement(text: string, fallback = 7): number {
+export function daysFromStatement(text: string, fallback = 0): number {
   const match = text.match(/(\d+)\s*-?\s*days?\b/i)
   if (!match) return fallback
   return Math.max(1, Math.min(30, Number(match[1])))

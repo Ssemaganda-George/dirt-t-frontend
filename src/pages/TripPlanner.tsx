@@ -234,7 +234,7 @@ export default function TripPlanner() {
                   </div>
                   <div className="space-y-3">
                     {day.slots.length === 0 ? (
-                      <p className="rounded-xl border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">Nothing bookable for this day.</p>
+                      <p className="rounded-xl border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">No listing for this day.</p>
                     ) : (
                       day.slots.map((slot, i) => (
                         <SlotCard
