@@ -2,7 +2,8 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { calculatePaymentForAmount } from '../lib/pricingService'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
@@ -33,6 +34,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, profile } = useAuth()
+  const { formatPrice } = useDisplayPrice()
   const [currentStep, setCurrentStep] = useState(1)
   const [completedBooking, setCompletedBooking] = useState<any | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -298,8 +300,8 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
 
               {/* Price summary */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600"><span>{formatCurrencyWithConversion(service.price, service.currency)} × {formData.passengers} passenger{formData.passengers !== 1 ? 's' : ''}</span><span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span></div>
-                <div className="flex justify-between font-semibold pt-2 border-t border-gray-200"><span>Total</span><span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span></div>
+                <div className="flex justify-between text-sm text-gray-600"><span>{formatPrice(service.price, service.currency)} × {formData.passengers} passenger{formData.passengers !== 1 ? 's' : ''}</span><span>{formatPrice(grandTotal, service.currency)}</span></div>
+                <div className="flex justify-between font-semibold pt-2 border-t border-gray-200"><span>Total</span><span>{formatPrice(grandTotal, service.currency)}</span></div>
               </div>
 
               <button type="button" onClick={() => { if (validateStep(1)) setCurrentStep(2) }}
@@ -319,7 +321,7 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
                 <div className="flex justify-between text-gray-600"><span>{formData.departureFrom} → {formData.destination}</span></div>
                 <div className="flex justify-between text-gray-600"><span>{formData.departureDate}{formData.tripType === 'Round-trip' && formData.returnDate ? ` · Return ${formData.returnDate}` : ''}</span></div>
                 <div className="flex justify-between text-gray-600"><span>{formData.passengers} passenger{formData.passengers !== 1 ? 's' : ''} · {formData.flightClass}</span></div>
-                <div className="flex justify-between font-semibold pt-2 border-t border-gray-200 mt-2"><span>Total</span><span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span></div>
+                <div className="flex justify-between font-semibold pt-2 border-t border-gray-200 mt-2"><span>Total</span><span>{formatPrice(grandTotal, service.currency)}</span></div>
               </div>
 
               <MarzpayPaymentFields
@@ -334,12 +336,12 @@ export default function FlightBooking({ service }: { service: ServiceDetail }) {
               <div className="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a> for cancellations or changes.
               </div>
-
+              <SettlementChargeNote amount={grandTotal} settlementCurrency={service.currency} />
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
                 className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : paymentFields.method === 'card'
-                  ? `Pay ${formatCurrencyWithConversion(grandTotal, service.currency)} with card`
-                  : `Pay ${formatCurrencyWithConversion(grandTotal, service.currency)} with Mobile Money`}
+                  ? `Pay ${formatPrice(grandTotal, service.currency)} with card`
+                  : `Pay ${formatPrice(grandTotal, service.currency)} with Mobile Money`}
               </button>
             </>
           )}

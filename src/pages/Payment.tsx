@@ -1,7 +1,8 @@
 ﻿import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { calculatePaymentForAmount } from '../lib/pricingService'
 import { initiateMarzpayCollect, redirectMarzpayIfNeeded, toMarzpayMethod, isMobileUiMethod, getMarzpayMobileValidationErrors, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
@@ -13,6 +14,7 @@ import { PageSkeleton } from '../components/SkeletonLoader'
 export default function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
+  const { formatPrice } = useDisplayPrice()
   const { data, isLoading, error } = useOrderQuery(orderId)
   const order = data?.order ?? null
   const items = data?.items ?? []
@@ -514,7 +516,7 @@ export default function PaymentPage() {
                             </button>
                           </div>
                         ) : (
-                          <div className="text-sm font-medium">{formatCurrencyWithConversion(item.unit_price * item.quantity, order.currency)}</div>
+                          <div className="text-sm font-medium">{formatPrice(item.unit_price * item.quantity, order.currency)}</div>
                         )}
                       </div>
                     </div>
@@ -528,12 +530,12 @@ export default function PaymentPage() {
           {effectiveServiceFees > 0 && (
             <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
               <span>Includes booking fee</span>
-              <span>{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
+              <span>{formatPrice(effectiveServiceFees, order.currency)}</span>
             </div>
           )}
                   <div className="flex justify-between items-center border-t pt-3">
                     <span className="text-gray-700 text-sm font-medium">Total</span>
-                    <span className="text-lg font-semibold text-gray-900">{formatCurrencyWithConversion(totalAmount, order.currency)}</span>
+                    <span className="text-lg font-semibold text-gray-900">{formatPrice(totalAmount, order.currency)}</span>
                   </div>
                 </div>
               </div>
@@ -591,6 +593,9 @@ export default function PaymentPage() {
             </div>
             {paymentError && (
               <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{paymentError}</div>
+            )}
+            {order && (
+              <SettlementChargeNote amount={totalAmount} settlementCurrency={order.currency} />
             )}
             <button
               type="button"

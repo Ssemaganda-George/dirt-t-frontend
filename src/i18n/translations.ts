@@ -35,11 +35,75 @@ const en: TranslationMap = {
   reviews_given: 'Reviews',
 }
 
-const pt: TranslationMap = { ...en }
-const fr: TranslationMap = { ...en }
+const pt: TranslationMap = {
+  search: 'Pesquisar',
+  messages: 'Mensagens',
+  preferences: 'Preferências',
+  my_account: 'Minha conta',
+  home: 'Início',
+  profile: 'Perfil',
+  bookings: 'Reservas',
+  saved_items: 'Itens salvos',
+  settings: 'Definições',
+  help_center: 'Central de ajuda',
+  sign_out: 'Sair',
+  log_in: 'Entrar',
+  currency_region: 'Moeda e região',
+  for_businesses: 'Para empresas',
+  list_my_business: 'Cadastrar meu negócio',
+  partner_with: 'Seja nosso parceiro',
+  all_listings: 'Todos os anúncios',
+  hero_title: 'Descubra a África Oriental',
+  hero_subtitle: 'Reserve hotéis, tours, transporte e mais',
+  no_results: 'Nenhum resultado',
+  adjust_search: 'Tente ajustar a pesquisa ou os filtros',
+  search_placeholder: 'Pesquisar…',
+  global_search_tooltip: 'Pesquisar',
+  logout: 'Sair',
+  welcome_to_app: 'Bem-vindo ao DirtTrails',
+  sign_in_prompt: 'Entre para acessar seu perfil, reservas e recomendações.',
+  sign_in: 'Entrar',
+  vendor_sign_in: 'Entrar como parceiro',
+  my_bookings: 'Minhas reservas',
+  reviews_given: 'Avaliações',
+}
+
+const fr: TranslationMap = {
+  search: 'Rechercher',
+  messages: 'Messages',
+  preferences: 'Préférences',
+  my_account: 'Mon compte',
+  home: 'Accueil',
+  profile: 'Profil',
+  bookings: 'Réservations',
+  saved_items: 'Favoris',
+  settings: 'Paramètres',
+  help_center: 'Centre d’aide',
+  sign_out: 'Se déconnecter',
+  log_in: 'Se connecter',
+  currency_region: 'Devise et région',
+  for_businesses: 'Pour les entreprises',
+  list_my_business: 'Inscrire mon établissement',
+  partner_with: 'Devenir partenaire',
+  all_listings: 'Toutes les offres',
+  hero_title: 'Découvrez l’Afrique de l’Est',
+  hero_subtitle: 'Réservez hôtels, safaris, transport et plus',
+  no_results: 'Aucun résultat',
+  adjust_search: 'Essayez de modifier votre recherche ou vos filtres',
+  search_placeholder: 'Rechercher…',
+  global_search_tooltip: 'Rechercher',
+  logout: 'Se déconnecter',
+  welcome_to_app: 'Bienvenue sur DirtTrails',
+  sign_in_prompt: 'Connectez-vous pour accéder à votre profil, vos réservations et vos recommandations.',
+  sign_in: 'Se connecter',
+  vendor_sign_in: 'Connexion partenaire',
+  my_bookings: 'Mes réservations',
+  reviews_given: 'Avis',
+}
 
 const catalogs: Record<SupportedLang, TranslationMap> = { en, pt, fr }
 
-export function translate(lang: SupportedLang, key: string): string {
-  return catalogs[lang]?.[key] ?? catalogs.en[key] ?? ''
+export function translate(lang: string, key: string): string {
+  const resolved = (lang === 'pt' || lang === 'fr' ? lang : 'en') as SupportedLang
+  return catalogs[resolved]?.[key] ?? catalogs.en[key] ?? ''
 }

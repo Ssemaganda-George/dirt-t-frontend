@@ -6,7 +6,8 @@ import {
 } from '../lib/pricingService'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard, CheckCircle } from 'lucide-react'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { COUNTRIES } from '../lib/countries'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
@@ -60,6 +61,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, profile } = useAuth()
+  const { formatPrice } = useDisplayPrice()
   const [currentStep, setCurrentStep] = useState(1)
   const [completedBooking, setCompletedBooking] = useState<any | null>(null)
   const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
@@ -604,24 +606,24 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   <span className="text-gray-600">Activity: {service.title}</span>
                   <span className="font-medium">
                     {bookingData.listingType === 'hire'
-                      ? `${formatCurrencyWithConversion((service as any).rental_price_per_day, service.currency)} × ${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); })()} day${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); const d = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); return d > 1 ? 's' : ''; })()}`
-                      : `${formatCurrencyWithConversion(service.price, service.currency)} × ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`}
+                      ? `${formatPrice((service as any).rental_price_per_day, service.currency)} × ${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); })()} day${(() => { const s = new Date(bookingData.startDate); const e = new Date(bookingData.endDate); const d = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24))); return d > 1 ? 's' : ''; })()}`
+                      : `${formatPrice(service.price, service.currency)} × ${bookingData.guests} guest${bookingData.guests > 1 ? 's' : ''}`}
                   </span>
                 </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>Subtotal</span>
-                  <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  <span>{formatPrice(totalPrice, service.currency)}</span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm text-gray-700">
                   <span>{touristFeeTotal > 0 ? 'Includes booking fee' : 'Fees'}</span>
-                  <span>{formatCurrencyWithConversion(touristFeeTotal, service.currency)}</span>
+                  <span>{formatPrice(touristFeeTotal, service.currency)}</span>
                 </div>
 
                 <div className="flex justify-between items-center text-lg font-semibold mt-1 pt-2 border-t border-gray-200">
                   <span>Total Amount</span>
-                  <span>{formatCurrencyWithConversion(grandTotal, service.currency)}</span>
+                  <span>{formatPrice(grandTotal, service.currency)}</span>
                 </div>
               </div>
             </div>
@@ -711,7 +713,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
             </div>
                <div className="text-left sm:text-right flex-shrink-0">
                  <div className="text-lg sm:text-xl font-bold text-gray-900">
-                   {formatCurrencyWithConversion(totalPrice, service.currency)}
+                   {formatPrice(totalPrice, service.currency)}
                  </div>
                   {bookingData.listingType === 'hire' && bookingData.startDate && bookingData.endDate ? (
                     <div className="text-sm text-gray-500">
@@ -762,6 +764,9 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                 {paymentError}
               </div>
             )}
+            {currentStep === 3 && (
+              <SettlementChargeNote amount={grandTotal} settlementCurrency={service.currency} />
+            )}
             <div className="space-y-3 sm:space-y-0 sm:flex sm:justify-between sm:gap-4">
               <button
                 onClick={handleBack}
@@ -778,7 +783,7 @@ export default function ActivityBooking({ service }: ActivityBookingProps) {
                   ? (pollingMessage ? 'Waiting for payment…' : 'Processing...')
                   : currentStep === 3
                     ? paymentFields.method === 'card'
-                      ? `Pay ${formatCurrencyWithConversion(grandTotal, service.currency)} with card`
+                      ? `Pay ${formatPrice(grandTotal, service.currency)} with card`
                       : 'Pay with Mobile Money'
                     : 'Next'}
               </button>

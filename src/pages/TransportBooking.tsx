@@ -14,7 +14,8 @@ import {
   type PaymentCalculation
 } from '../lib/pricingService'
 import { COUNTRIES } from '../lib/countries'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { fetchVendorBlockedDates } from '../lib/blockedDates'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -78,6 +79,7 @@ interface TransportBookingProps {
 export default function TransportBooking({ service }: TransportBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { formatPrice } = useDisplayPrice()
   
   const { user, profile } = useAuth()
 
@@ -791,12 +793,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-700">{service.title}</span>
-                    <span className="font-medium">{formatCurrencyWithConversion(basePrice, service.currency)}</span>
+                    <span className="font-medium">{formatPrice(basePrice, service.currency)}</span>
                   </div>
                   {driverCost > 0 && (
                     <div className="flex justify-between text-gray-600">
                       <span>Driver service (30%)</span>
-                      <span className="font-medium">{formatCurrencyWithConversion(driverCost, service.currency)}</span>
+                      <span className="font-medium">{formatPrice(driverCost, service.currency)}</span>
                     </div>
                   )}
 
@@ -805,12 +807,12 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       {Number(pricingCalc.tourist_fee || 0) > 0 && (
                         <div className="flex justify-between text-gray-600">
                           <span>Includes booking fee</span>
-                          <span className="font-medium">{formatCurrencyWithConversion(pricingCalc.tourist_fee, service.currency)}</span>
+                          <span className="font-medium">{formatPrice(pricingCalc.tourist_fee, service.currency)}</span>
                         </div>
                       )}
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                         <span>Total</span>
-                        <span>{formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}</span>
+                        <span>{formatPrice(transportCustomerPaysTotal, service.currency)}</span>
                       </div>
                     </>
                   ) : (
@@ -818,7 +820,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                       <div className="text-xs text-gray-500">Service fee calculation unavailable — using default totals.</div>
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-gray-900">
                         <span>Total</span>
-                        <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                        <span>{formatPrice(totalPrice, service.currency)}</span>
                       </div>
                     </>
                   )}
@@ -945,7 +947,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg sm:text-xl font-bold text-gray-900">
-                    {formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)}
+                    {formatPrice(transportCustomerPaysTotal, service.currency)}
                   </div>
                   <div className="text-xs text-gray-500">
                     {service.service_categories?.name?.toLowerCase() === 'transport'
@@ -963,13 +965,13 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   {(service as any).price_within_town !== undefined && (
                     <label className="inline-flex items-center">
                       <input type="radio" name="transportZoneTop" value="within" checked={transportZone === 'within'} onChange={() => { setTransportZone('within'); setFieldErrors(p => clearFieldError(p, 'transportZone')); setStepError(null) }} className="mr-2" />
-                      <span>Within Town {typeof (service as any).price_within_town === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_within_town, service.currency)}` : ''}</span>
+                      <span>Within Town {typeof (service as any).price_within_town === 'number' ? `· ${formatPrice((service as any).price_within_town, service.currency)}` : ''}</span>
                     </label>
                   )}
                   {(service as any).price_upcountry !== undefined && (
                     <label className="inline-flex items-center">
                       <input type="radio" name="transportZoneTop" value="upcountry" checked={transportZone === 'upcountry'} onChange={() => { setTransportZone('upcountry'); setFieldErrors(p => clearFieldError(p, 'transportZone')); setStepError(null) }} className="mr-2" />
-                      <span>Upcountry {typeof (service as any).price_upcountry === 'number' ? `· ${formatCurrencyWithConversion((service as any).price_upcountry, service.currency)}` : ''}</span>
+                      <span>Upcountry {typeof (service as any).price_upcountry === 'number' ? `· ${formatPrice((service as any).price_upcountry, service.currency)}` : ''}</span>
                     </label>
                   )}
                 </div>
@@ -1010,6 +1012,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                     {stepError}
                   </div>
                 )}
+                <SettlementChargeNote amount={transportCustomerPaysTotal} settlementCurrency={service.currency} />
                 <button
                   onClick={handleNext}
                   disabled={isPaymentProcessing}
@@ -1018,7 +1021,7 @@ export default function TransportBooking({ service }: TransportBookingProps) {
                   {isPaymentProcessing
                     ? (isReceiptFinalizing ? 'Preparing receipt…' : (pollingMessage || 'Processing...'))
                     : paymentFields.method === 'card'
-                    ? `Pay ${formatCurrencyWithConversion(transportCustomerPaysTotal, service.currency)} with card`
+                    ? `Pay ${formatPrice(transportCustomerPaysTotal, service.currency)} with card`
                     : 'Pay with Mobile Money'}
                 </button>
               </div>

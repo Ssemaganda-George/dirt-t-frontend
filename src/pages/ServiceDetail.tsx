@@ -19,8 +19,8 @@ import {
 } from 'lucide-react'
 import { createServiceReview, createOrder } from '../lib/database'
 import { getDisplayPrice } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
 import { useAuth } from '../contexts/AuthContext'
-import { usePreferences } from '../contexts/PreferencesContext'
 import { getKpisForCategory, calculateOverallFromKpis, getKpiIcon } from '../lib/reviewKpis'
 import type { KpiRatings } from '../lib/reviewKpis'
 import CitySearchInput from '../components/CitySearchInput'
@@ -303,76 +303,7 @@ export default function ServiceDetail() {
     setListingType(defaultShopCheckoutListingType(service as any))
   }, [(service as any)?.listing_type, (service as any)?.type, (service as any)?.buy_price, (service as any)?.rental_price_per_day, service?.price, service?.service_categories?.name])
   const { user, profile } = useAuth()
-  const { selectedLanguage } = usePreferences()
-
-  // Currency conversion functions
-  const convertCurrency = (amount: number, fromCurrency: string, toCurrency: string) => {
-    const exchangeRates: { [key: string]: number } = {
-      'UGX': 1,
-      'USD': 0.00027,
-      'EUR': 0.00025,
-      'GBP': 0.00021,
-      'KES': 0.0023,
-      'TZS': 0.00064,
-      'BRL': 0.0014,
-      'MXN': 0.0054,
-      'EGP': 0.0084,
-      'MAD': 0.0025,
-      'TRY': 0.0089,
-      'THB': 0.0077,
-      'KRW': 0.33,
-      'RUB': 0.019,
-      'INR': 0.022,
-      'CNY': 0.0019,
-      'JPY': 0.039,
-      'CAD': 0.00036,
-      'AUD': 0.00037,
-      'CHF': 0.00024,
-      'SEK': 0.0024,
-      'NOK': 0.0024,
-      'DKK': 0.0017,
-      'PLN': 0.0011,
-      'CZK': 0.0064,
-      'HUF': 0.088,
-      'ZAR': 0.0048,
-      'NGN': 0.11,
-      'GHS': 0.0037,
-      'XAF': 0.16,
-      'XOF': 0.16
-    }
-
-    if (fromCurrency === toCurrency) return amount
-    const amountInUGX = fromCurrency === 'UGX' ? amount : amount / exchangeRates[fromCurrency]
-    return amountInUGX * (exchangeRates[toCurrency] || 1)
-  }
-
-  const formatAmount = (amount: number | string, currency: string) => {
-    // Coerce to a finite number; fall back to 0 if invalid so we never render NaN
-    let value = Number(amount)
-    if (!Number.isFinite(value)) value = 0
-    try {
-      return new Intl.NumberFormat(selectedLanguage || 'en-US', {
-        style: 'currency',
-        currency: currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(value)
-    } catch (error) {
-      return `${currency} ${value.toLocaleString()}`
-    }
-  }
-
-  const formatCurrencyWithConversion = (amount: number | string, serviceCurrency: string) => {
-    const numeric = Number(amount)
-    const safe = Number.isFinite(numeric) ? numeric : 0
-    // Always display in UGX as default
-    const displayCurrency = 'UGX';
-    if (displayCurrency === serviceCurrency) {
-      return formatAmount(safe, displayCurrency);
-    }
-    const convertedAmount = convertCurrency(safe, serviceCurrency, displayCurrency);
-    return formatAmount(convertedAmount, displayCurrency);
-  }
+  const { formatPrice: formatCurrencyWithConversion } = useDisplayPrice()
 
   const ticketsTotal = ticketTypes.reduce((sum: number, t: any) => sum + (Number(t.price || 0) * (ticketQuantities[t.id] || 0)), 0)
 

@@ -10,6 +10,7 @@ const SUPPORTED = [
   'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'INR', 'CNY', 'JPY',
   'CAD', 'AUD', 'CHF', 'ZAR', 'NGN', 'GHS', 'BRL', 'MXN', 'EGP',
   'MAD', 'TRY', 'THB', 'KRW', 'SEK', 'NOK', 'DKK', 'PLN',
+  'SGD', 'HKD', 'NZD', 'ARS', 'RUB', 'AED', 'SAR', 'MYR', 'IDR',
 ]
 
 // Static fallback rates — used when the API is unreachable or a currency is missing
@@ -24,6 +25,9 @@ export const FALLBACK_RATES: Record<string, number> = {
   MAD: 0.0025,  TRY: 0.0089,  THB: 0.0094,
   KRW: 0.36,    SEK: 0.0028,  NOK: 0.0028,
   DKK: 0.0018,  PLN: 0.0011,
+  SGD: 0.00036, HKD: 0.0021,  NZD: 0.00045,
+  ARS: 0.27,    RUB: 0.024,   AED: 0.00099,
+  SAR: 0.0010,  MYR: 0.0013,  IDR: 4.3,
 }
 
 let cachedRates: Record<string, number> = { ...FALLBACK_RATES }

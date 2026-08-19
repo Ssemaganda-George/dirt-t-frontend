@@ -3,31 +3,51 @@ import { useAuth } from './AuthContext'
 import { getUserPreferences, saveUserPreferences } from '../lib/database'
 import type { UserPreferences } from '../types'
 import { translate, SupportedLang } from '../i18n/translations'
+import {
+  detectGeoPreferences,
+  readStoredPreferences,
+  writeStoredPreferences,
+  type GeoPreferences,
+} from '../lib/geoPreferences'
 
-// Types
 interface PreferencesContextType {
   preferences: UserPreferences | null
   selectedRegion: string
   selectedCurrency: string
   selectedLanguage: string
-  // t now supports optional interpolation variables
   t: (key: string, vars?: Record<string, string | number>) => string
   loading: boolean
   updatePreferences: (region: string, currency: string, language: string) => Promise<void>
   loadPreferences: () => Promise<void>
 }
 
-// Default preferences
 const DEFAULT_REGION = 'UG'
 const DEFAULT_CURRENCY = 'UGX'
 const DEFAULT_LANGUAGE = 'en'
 
-// Create context
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
 
-// Provider component
 interface PreferencesProviderProps {
   children: ReactNode
+}
+
+function toUserPreferences(
+  prefs: { region: string; currency: string; language: string },
+  userId: string
+): UserPreferences {
+  return {
+    id: 'local',
+    user_id: userId,
+    region: prefs.region,
+    currency: prefs.currency,
+    language: prefs.language,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
+
+function fromGeoOrStored(prefs: GeoPreferences | { region: string; currency: string; language: string }, userId: string) {
+  return toUserPreferences(prefs, userId)
 }
 
 export function PreferencesProvider({ children }: PreferencesProviderProps) {
@@ -35,12 +55,25 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Computed values from preferences
   const selectedRegion = preferences?.region || DEFAULT_REGION
   const selectedCurrency = preferences?.currency || DEFAULT_CURRENCY
   const selectedLanguage = preferences?.language || DEFAULT_LANGUAGE
 
-  // Load user preferences
+  const applyLocal = (
+    prefs: { region: string; currency: string; language: string },
+    source: 'geo' | 'user',
+    userId: string
+  ) => {
+    writeStoredPreferences(prefs, source)
+    setPreferences(fromGeoOrStored(prefs, userId))
+  }
+
+  const detectAndApply = (userId: string) => {
+    const detected = detectGeoPreferences()
+    applyLocal(detected, 'geo', userId)
+    return detected
+  }
+
   const loadPreferences = async () => {
     if (!user?.id) return
     try {
@@ -49,25 +82,43 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         getUserPreferences(),
         new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Preferences load timed out')), 8000))
       ])
-      setPreferences(userPrefs)
+      if (userPrefs?.currency) {
+        setPreferences(userPrefs)
+        writeStoredPreferences(
+          {
+            region: userPrefs.region || DEFAULT_REGION,
+            currency: userPrefs.currency,
+            language: userPrefs.language || DEFAULT_LANGUAGE,
+          },
+          'user'
+        )
+        return
+      }
+
+      const stored = readStoredPreferences()
+      const next = stored ?? detectGeoPreferences()
+      applyLocal(next, stored?.source === 'user' ? 'user' : 'geo', user.id)
+      await saveUserPreferences(user.id, {
+        region: next.region,
+        currency: next.currency,
+        language: next.language,
+      }).catch(() => undefined)
     } catch (error) {
       console.error('Error loading preferences:', error)
-      setPreferences({
-        id: 'local',
-        user_id: user?.id || 'local',
-        region: DEFAULT_REGION,
-        currency: DEFAULT_CURRENCY,
-        language: DEFAULT_LANGUAGE,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      const stored = readStoredPreferences()
+      if (stored) {
+        setPreferences(fromGeoOrStored(stored, user.id))
+      } else {
+        detectAndApply(user.id)
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  // Update user preferences
   const updatePreferences = async (region: string, currency: string, language: string) => {
+    applyLocal({ region, currency, language }, 'user', user?.id || 'local')
+
     if (!user?.id) return
 
     try {
@@ -78,14 +129,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         language
       })
       setPreferences(updatedPrefs)
-
-      // Store in localStorage as backup
-      localStorage.setItem('user_preferences', JSON.stringify({
-        region,
-        currency,
-        language,
-        timestamp: Date.now()
-      }))
+      writeStoredPreferences({ region, currency, language }, 'user')
     } catch (error) {
       console.error('Error updating preferences:', error)
       throw error
@@ -94,39 +138,24 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     }
   }
 
-  // Load preferences when user changes
   useEffect(() => {
     if (user?.id) {
-      loadPreferences()
-    } else {
-      // Clear preferences when user logs out
-      setPreferences(null)
+      void loadPreferences()
+      return
     }
+
+    const stored = readStoredPreferences()
+    if (stored) {
+      setPreferences(fromGeoOrStored(stored, 'local'))
+      return
+    }
+    detectAndApply('local')
   }, [user?.id])
 
-  // Load from localStorage on mount (for non-authenticated users or as fallback)
   useEffect(() => {
-    const stored = localStorage.getItem('user_preferences')
-    if (stored && !user?.id) {
-      try {
-        const parsed = JSON.parse(stored)
-        // Only use if less than 24 hours old
-        if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-          setPreferences({
-            id: 'local',
-            user_id: 'local',
-            region: parsed.region || DEFAULT_REGION,
-            currency: parsed.currency || DEFAULT_CURRENCY,
-            language: parsed.language || DEFAULT_LANGUAGE,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-        }
-      } catch (error) {
-        console.error('Error parsing stored preferences:', error)
-      }
-    }
-  }, [])
+    if (typeof document === 'undefined') return
+    document.documentElement.lang = selectedLanguage || DEFAULT_LANGUAGE
+  }, [selectedLanguage])
 
   const value: PreferencesContextType = {
     preferences,
@@ -137,7 +166,6 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
         const lang = (selectedLanguage || DEFAULT_LANGUAGE) as SupportedLang
         let str = translate(lang, key)
         if (!str) return key
-        // Simple interpolation: replace {{var}} with provided vars
         if (vars) {
           Object.keys(vars).forEach(k => {
             const re = new RegExp(`{{\\s*${k}\\s*}}`, 'g')
@@ -158,7 +186,6 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
   )
 }
 
-// Hook to use preferences context
 export function usePreferences() {
   const context = useContext(PreferencesContext)
   if (context === undefined) {
@@ -167,7 +194,6 @@ export function usePreferences() {
   return context
 }
 
-// Export default preferences for use throughout the app
 export const DEFAULT_PREFERENCES = {
   region: DEFAULT_REGION,
   currency: DEFAULT_CURRENCY,

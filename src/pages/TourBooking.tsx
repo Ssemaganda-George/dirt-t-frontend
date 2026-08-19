@@ -2,7 +2,8 @@
 import { calculatePaymentForAmount, customerTotalFromUnitPricingCalc, touristFeeTotalFromUnitCalc } from '../lib/pricingService'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, Users, CreditCard } from 'lucide-react'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { useAuth } from '../contexts/AuthContext'
 import { createBooking } from '../lib/database'
 import { cancelBookingOnPaymentFailure } from '../services/BookingService'
@@ -28,6 +29,7 @@ interface ServiceDetail {
 
 export default function TourBooking({ service }: { service: ServiceDetail }) {
   const navigate = useNavigate()
+  const { formatPrice } = useDisplayPrice()
   const location = useLocation()
   const { user, profile } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
@@ -257,16 +259,16 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
 
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>{formatCurrencyWithConversion(service.price, service.currency)} × {formData.travelers} traveler{formData.travelers > 1 ? 's' : ''}</span>
-                  <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  <span>{formatPrice(service.price, service.currency)} × {formData.travelers} traveler{formData.travelers > 1 ? 's' : ''}</span>
+                  <span>{formatPrice(totalPrice, service.currency)}</span>
                 </div>
                 {touristFeeTotal > 0 && (
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>Booking fee</span><span>{formatCurrencyWithConversion(touristFeeTotal, service.currency)}</span>
+                    <span>Booking fee</span><span>{formatPrice(touristFeeTotal, service.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
-                  <span>Total</span><span>{formatCurrencyWithConversion(customerPaysTotal, service.currency)}</span>
+                  <span>Total</span><span>{formatPrice(customerPaysTotal, service.currency)}</span>
                 </div>
               </div>
 
@@ -304,7 +306,7 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
               <h2 className="text-lg font-semibold flex items-center gap-2"><CreditCard className="w-5 h-5 text-blue-600" />Payment</h2>
               <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between text-gray-600"><span>{formData.tourDate} · {formData.travelers} traveler{formData.travelers !== 1 ? 's' : ''}</span></div>
-                <div className="flex justify-between font-semibold"><span>Total</span><span>{formatCurrencyWithConversion(customerPaysTotal, service.currency)}</span></div>
+                <div className="flex justify-between font-semibold"><span>Total</span><span>{formatPrice(customerPaysTotal, service.currency)}</span></div>
               </div>
               <MarzpayPaymentFields
                 name="tourPaymentMethod"
@@ -317,11 +319,12 @@ export default function TourBooking({ service }: { service: ServiceDetail }) {
               <div className="text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2">
                 <span className="font-medium text-gray-600">Secure payment via MarzPay.</span> Free cancellation up to 24 hours before your tour — contact <a href="mailto:safaris.dirttrails@gmail.com" className="underline">safaris.dirttrails@gmail.com</a>.
               </div>
+              <SettlementChargeNote amount={customerPaysTotal} settlementCurrency={service.currency} />
               <button type="button" disabled={isSubmitting} onClick={handleCompleteBooking}
                 className={`w-full py-3 rounded-lg font-semibold text-base transition ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
                 {isSubmitting ? (pollingMessage || 'Processing…') : paymentFields.method === 'card'
-                  ? `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with card`
-                  : `Pay ${formatCurrencyWithConversion(customerPaysTotal, service.currency)} with Mobile Money`}
+                  ? `Pay ${formatPrice(customerPaysTotal, service.currency)} with card`
+                  : `Pay ${formatPrice(customerPaysTotal, service.currency)} with Mobile Money`}
               </button>
             </>
           )}

@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Calendar, CheckCircle, Bed } from 'lucide-react'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import { fetchVendorBlockedDates } from '../lib/blockedDates'
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 import {
@@ -66,6 +67,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, profile } = useAuth()
+  const { formatPrice } = useDisplayPrice()
   const [currentStep, setCurrentStep] = useState(1)
   const [paymentFields, setPaymentFields] = useState<MarzpayPaymentFieldsValue>({ method: 'mobile', phone: '', provider: '' })
   const finaliseInFlightRef = useRef(false)
@@ -496,7 +498,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <div className="flex-1">
                       <span className="font-medium text-gray-900">{roomType}</span>
                       <span className="text-gray-600 ml-2 text-sm font-light">
-                        {formatCurrencyWithConversion(service.price, service.currency)} per night
+                        {formatPrice(service.price, service.currency)} per night
                       </span>
                     </div>
                   </label>
@@ -513,7 +515,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                     <div className="flex-1">
                       <span className="font-medium text-gray-900">Standard Room</span>
                       <span className="text-gray-600 ml-2 text-sm font-light">
-                        {formatCurrencyWithConversion(service.price, service.currency)} per night
+                        {formatPrice(service.price, service.currency)} per night
                       </span>
                     </div>
                   </label>
@@ -644,17 +646,17 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               <div className="bg-blue-50 p-4 rounded-lg mb-4 space-y-2">
                 <div className="flex justify-between items-center text-sm text-gray-700 font-light">
                   <span>Room subtotal ({nights} night{nights !== 1 ? 's' : ''})</span>
-                  <span>{formatCurrencyWithConversion(totalPrice, service.currency)}</span>
+                  <span>{formatPrice(totalPrice, service.currency)}</span>
                 </div>
                 {hotelTouristFeeTotal > 0 && (
                   <div className="flex justify-between items-center text-sm text-gray-700 font-light">
                     <span>Includes booking fee</span>
-                    <span>{formatCurrencyWithConversion(hotelTouristFeeTotal, service.currency)}</span>
+                    <span>{formatPrice(hotelTouristFeeTotal, service.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-2 border-t border-blue-100">
                   <span className="text-gray-800 font-medium">Total amount due</span>
-                  <span className="text-2xl font-semibold text-blue-600">{formatCurrencyWithConversion(hotelGrandTotal, service.currency)}</span>
+                  <span className="text-2xl font-semibold text-blue-600">{formatPrice(hotelGrandTotal, service.currency)}</span>
                 </div>
               </div>
               <MarzpayPaymentFields
@@ -825,7 +827,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
               <div className="space-y-3 text-xs sm:text-sm mb-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Rate per night:</span>
-                  <span className="font-medium">{formatCurrencyWithConversion(service.price, service.currency)}</span>
+                  <span className="font-medium">{formatPrice(service.price, service.currency)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Number of nights:</span>
@@ -835,7 +837,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t">
                   <span className="text-base sm:text-lg font-semibold text-gray-900">Total Amount:</span>
-                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatCurrencyWithConversion(hotelGrandTotal, service.currency)}</span>
+                  <span className="text-lg sm:text-2xl font-bold text-blue-600">{formatPrice(hotelGrandTotal, service.currency)}</span>
                 </div>
               </div>
             </div>
@@ -899,7 +901,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
             </div>
             <div className="text-right flex-shrink-0">
               <div className="text-xl font-semibold text-blue-600">
-                {formatCurrencyWithConversion(totalPrice, service.currency)}
+                {formatPrice(totalPrice, service.currency)}
               </div>
               <div className="text-xs font-light text-gray-500">
                 {nights} night{nights > 1 ? 's' : ''}
@@ -921,6 +923,9 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                 {paymentError}
               </div>
             )}
+            {currentStep === 2 && (
+              <SettlementChargeNote amount={hotelGrandTotal} settlementCurrency={service.currency} />
+            )}
             <div className="flex gap-3">
               <button
                 onClick={handleBack}
@@ -937,7 +942,7 @@ export default function HotelBooking({ service }: HotelBookingProps) {
                   ? (pollingMessage || 'Processing...')
                   : currentStep === 2
                     ? paymentFields.method === 'card'
-                      ? `Pay ${formatCurrencyWithConversion(hotelGrandTotal, service.currency)} with card`
+                      ? `Pay ${formatPrice(hotelGrandTotal, service.currency)} with card`
                       : 'Pay with Mobile Money'
                     : 'Next'}
               </button>

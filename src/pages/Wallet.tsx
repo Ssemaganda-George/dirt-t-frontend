@@ -47,6 +47,7 @@ export default function Wallet() {
   const pendingTopUpRef = useRef<{ amount: number; note: string; reference: string; payment_method: 'card' | 'mobile_money' } | null>(null)
 
   const displayCurrency = selectedCurrency || 'UGX'
+  const topUpCurrency = 'UGX'
   const storageKey = user ? `dt_wallet_topups_${user.id}` : ''
 
   const persistTopUps = (nextTopUps: WalletTopUp[]) => {
@@ -107,7 +108,7 @@ export default function Wallet() {
     const nextTopUp: WalletTopUp = {
       id: crypto.randomUUID(),
       amount: pending.amount,
-      currency: displayCurrency,
+      currency: topUpCurrency,
       note: pending.note,
       payment_method: pending.payment_method,
       reference: pending.reference,
@@ -123,7 +124,7 @@ export default function Wallet() {
       vendor_id: null,
       tourist_id: user.id,
       amount: pending.amount,
-      currency: displayCurrency,
+      currency: topUpCurrency,
       transaction_type: 'payment',
       status: 'completed',
       payment_method: pending.payment_method,
@@ -132,7 +133,7 @@ export default function Wallet() {
 
     if (!insertError) await fetchTopUpsFromDatabase()
     pendingTopUpRef.current = null
-  }, [user, topUps, displayCurrency, storageKey])
+  }, [user, topUps, topUpCurrency, storageKey])
 
   const {
     pay,
@@ -374,8 +375,9 @@ export default function Wallet() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Add funds</h2>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount ({displayCurrency})</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (UGX)</label>
                 <input type="number" min="0" step="0.01" value={amountInput} onChange={(e) => setAmountInput(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="0.00" />
+                <p className="mt-1 text-xs text-gray-500">MarzPay collects Ugandan Shillings. Your wallet totals above follow your display currency.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>

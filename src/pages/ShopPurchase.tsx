@@ -34,7 +34,9 @@ import {
 
 } from '../lib/pricingService'
 
-import { formatCurrencyWithConversion, normalizeServiceCurrency } from '../lib/utils'
+import { normalizeServiceCurrency } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 
 import { BookingFormBanner, FieldError } from '../components/booking/BookingFormFeedback'
 
@@ -123,6 +125,7 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
   const location = useLocation()
 
   const { user, profile } = useAuth()
+  const { formatPrice } = useDisplayPrice()
 
   const prefill = (location.state as ShopPurchasePrefill | null) ?? {}
 
@@ -431,9 +434,9 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
 
   const orderSummaryLine = isHire
 
-    ? `${formatCurrencyWithConversion(unitPrice, service.currency)}/day × ${rentalDays} day${rentalDays !== 1 ? 's' : ''} × ${quantity} item${quantity !== 1 ? 's' : ''}`
+    ? `${formatPrice(unitPrice, service.currency)}/day × ${rentalDays} day${rentalDays !== 1 ? 's' : ''} × ${quantity} item${quantity !== 1 ? 's' : ''}`
 
-    : `${formatCurrencyWithConversion(unitPrice, service.currency)} × ${quantity} item${quantity !== 1 ? 's' : ''}`
+    : `${formatPrice(unitPrice, service.currency)} × ${quantity} item${quantity !== 1 ? 's' : ''}`
 
 
 
@@ -461,7 +464,7 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
 
             <div className="flex justify-between"><span className="text-gray-500">Quantity</span><span>{quantity}</span></div>
 
-            <div className="flex justify-between"><span className="text-gray-500">Total paid</span><span className="font-semibold">{formatCurrencyWithConversion(customerTotal, service.currency)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Total paid</span><span className="font-semibold">{formatPrice(customerTotal, service.currency)}</span></div>
 
             <div className="flex justify-between"><span className="text-gray-500">Order ref</span><span className="font-mono text-xs">{completedOrder.id?.slice(0, 8).toUpperCase()}</span></div>
 
@@ -633,15 +636,15 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
 
             <div className="border-t pt-3 space-y-1 text-sm">
 
-              <div className="flex justify-between text-gray-600"><span>{orderSummaryLine}</span><span>{formatCurrencyWithConversion(baseTotal, service.currency)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{orderSummaryLine}</span><span>{formatPrice(baseTotal, service.currency)}</span></div>
 
               {serviceFee > 0 && (
 
-                <div className="flex justify-between text-gray-500"><span>Service fee</span><span>{formatCurrencyWithConversion(serviceFee, service.currency)}</span></div>
+                <div className="flex justify-between text-gray-500"><span>Service fee</span><span>{formatPrice(serviceFee, service.currency)}</span></div>
 
               )}
 
-              <div className="flex justify-between font-semibold text-gray-900 pt-1"><span>Total</span><span>{formatCurrencyWithConversion(customerTotal, service.currency)}</span></div>
+              <div className="flex justify-between font-semibold text-gray-900 pt-1"><span>Total</span><span>{formatPrice(customerTotal, service.currency)}</span></div>
 
             </div>
 
@@ -701,7 +704,7 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
 
             <div className="bg-gray-50 rounded-lg p-3 text-sm">
 
-              <div className="flex justify-between font-semibold"><span>Total due</span><span>{formatCurrencyWithConversion(customerTotal, service.currency)}</span></div>
+              <div className="flex justify-between font-semibold"><span>Total due</span><span>{formatPrice(customerTotal, service.currency)}</span></div>
 
               <p className="text-xs text-gray-500 mt-1">{quantity} item{quantity !== 1 ? 's' : ''}{isHire ? ` · ${rentalDays} day rental` : ''}</p>
 
@@ -745,15 +748,18 @@ export default function ShopPurchase({ service }: { service: ShopService }) {
 
           ) : (
 
+            <>
+            <SettlementChargeNote amount={customerTotal} settlementCurrency={service.currency} />
             <button type="button" onClick={handlePay} disabled={isSubmitting} className={`w-full py-3 rounded-xl font-semibold ${isSubmitting ? 'bg-gray-200 text-gray-400' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}>
 
               {isSubmitting ? (pollingMessage || 'Processing…') : paymentFields.method === 'card'
 
-                ? `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with card`
+                ? `Pay ${formatPrice(customerTotal, service.currency)} with card`
 
-                : `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)}`}
+                : `Pay ${formatPrice(customerTotal, service.currency)}`}
 
             </button>
+            </>
 
           )}
 

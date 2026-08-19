@@ -12,7 +12,9 @@ import {
   customerTotalFromUnitPricingCalc,
   touristFeeTotalFromUnitCalc,
 } from '../lib/pricingService'
-import { formatCurrencyWithConversion, normalizeServiceCurrency } from '../lib/utils'
+import { normalizeServiceCurrency } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from './SettlementChargeNote'
 import { BookingFormBanner, FieldError } from './booking/BookingFormFeedback'
 import {
   type FieldErrors,
@@ -68,6 +70,7 @@ function calcDays(sd: string, st: string, ed: string, et: string) {
 export default function BookingDrawer({ isOpen, onClose, service, prefill }: BookingDrawerProps) {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const { formatPrice } = useDisplayPrice()
 
   const [step, setStep] = useState<'summary' | 'contact' | 'payment' | 'done'>('summary')
   const [contact, setContact] = useState({ name: '', email: '', phone: '' })
@@ -522,15 +525,15 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <div className="border-t pt-2 flex justify-between text-gray-600">
                   <span>
                     {isShopHire
-                      ? `${formatCurrencyWithConversion(baseUnit, service.currency)} × ${hireDays} day${hireDays !== 1 ? 's' : ''} × ${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
-                      : `${formatCurrencyWithConversion(baseUnit, service.currency)} × ${billableUnits} ${unitLabel}${billableUnits !== 1 ? 's' : ''}`}
+                      ? `${formatPrice(baseUnit, service.currency)} × ${hireDays} day${hireDays !== 1 ? 's' : ''} × ${shopItemCount} item${shopItemCount !== 1 ? 's' : ''}`
+                      : `${formatPrice(baseUnit, service.currency)} × ${billableUnits} ${unitLabel}${billableUnits !== 1 ? 's' : ''}`}
                   </span>
-                  <span>{formatCurrencyWithConversion(baseTotal, service.currency)}</span>
+                  <span>{formatPrice(baseTotal, service.currency)}</span>
                 </div>
                 {touristFee > 0 && (
                   <div className="flex justify-between text-gray-500 text-xs">
                     <span>{feeLabel}</span>
-                    <span>{formatCurrencyWithConversion(touristFee, service.currency)}</span>
+                    <span>{formatPrice(touristFee, service.currency)}</span>
                   </div>
                 )}
                 <div className="border-t pt-2 flex justify-between font-semibold text-gray-900">
@@ -538,7 +541,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   <span>
                     {isRestaurant
                       ? 'At restaurant'
-                      : formatCurrencyWithConversion(customerTotal, service.currency)}
+                      : formatPrice(customerTotal, service.currency)}
                   </span>
                 </div>
                 {isRestaurant && (
@@ -674,7 +677,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 <div className="flex justify-between text-gray-500 text-xs"><span>{dateDisplay}</span></div>
                 <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t mt-2">
                   <span>Total</span>
-                  <span>{formatCurrencyWithConversion(customerTotal, service.currency)}</span>
+                  <span>{formatPrice(customerTotal, service.currency)}</span>
                 </div>
               </div>
 
@@ -727,7 +730,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                 {!isRestaurant && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">{isShop ? 'Amount paid' : 'Amount paid'}</span>
-                    <span className="font-semibold">{formatCurrencyWithConversion(customerTotal, service.currency)}</span>
+                    <span className="font-semibold">{formatPrice(customerTotal, service.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -804,6 +807,7 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
 
           {step === 'payment' && !isRestaurant && (
             <>
+              <SettlementChargeNote amount={customerTotal} settlementCurrency={service.currency} />
               <button
                   type="button"
                   disabled={processing}
@@ -813,8 +817,8 @@ export default function BookingDrawer({ isOpen, onClose, service, prefill }: Boo
                   {processing
                     ? (pollingMessage || 'Processing…')
                     : paymentFields.method === 'card'
-                      ? `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with card`
-                      : `Pay ${formatCurrencyWithConversion(customerTotal, service.currency)} with Mobile Money`}
+                      ? `Pay ${formatPrice(customerTotal, service.currency)} with card`
+                      : `Pay ${formatPrice(customerTotal, service.currency)} with Mobile Money`}
                 </button>
               {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-xl">{error}</div>}
             </>

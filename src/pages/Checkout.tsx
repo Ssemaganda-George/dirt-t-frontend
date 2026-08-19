@@ -6,7 +6,8 @@ import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useO
 import { useOrderPaymentFlow } from '../hooks/useOrderPaymentFlow'
 import { PageSkeleton } from '../components/SkeletonLoader'
 import { calculatePaymentForAmount } from '../lib/pricingService'
-import { formatCurrencyWithConversion } from '../lib/utils'
+import { useDisplayPrice } from '../hooks/useDisplayPrice'
+import SettlementChargeNote from '../components/SettlementChargeNote'
 import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
 import { getMarzpayMobileValidationErrors, isMobileUiMethod, normalizeMarzpayPhone, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import type { MarzpayMethod } from '../lib/marzpayApi'
@@ -26,6 +27,7 @@ function toMarzpayMethod(method: MarzpayPaymentFieldsValue['method']): MarzpayMe
 export default function CheckoutPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
+  const { formatPrice } = useDisplayPrice()
   const queryClient = useOrderQueryClient()
   const { data, isLoading, error } = useOrderQuery(orderId)
   const order = data?.order ?? null
@@ -330,7 +332,7 @@ export default function CheckoutPage() {
                         <div key={ticketType.id} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded text-sm">
                           <div>
                             <div>{ticketType.title}</div>
-                            <div className="text-xs text-gray-500">{formatCurrencyWithConversion(ticketType.price, order.currency)}</div>
+                            <div className="text-xs text-gray-500">{formatPrice(ticketType.price, order.currency)}</div>
                           </div>
                           {showAllTickets ? (
                             <div className="flex items-center gap-2">
@@ -341,7 +343,7 @@ export default function CheckoutPage() {
                           ) : (
                             <span>× {quantity}</span>
                           )}
-                          <span className="font-medium">{formatCurrencyWithConversion(ticketType.price * quantity, order.currency)}</span>
+                          <span className="font-medium">{formatPrice(ticketType.price * quantity, order.currency)}</span>
                         </div>
                       )
                     })}
@@ -351,12 +353,12 @@ export default function CheckoutPage() {
                 {effectiveServiceFees > 0 && (
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
                     <span>Includes booking fee</span>
-                    <span>{formatCurrencyWithConversion(effectiveServiceFees, order.currency)}</span>
+                    <span>{formatPrice(effectiveServiceFees, order.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t pt-3">
                   <span className="text-lg font-semibold">Total</span>
-                  <span className="text-xl font-extrabold">{formatCurrencyWithConversion(totalAmount, order.currency)}</span>
+                  <span className="text-xl font-extrabold">{formatPrice(totalAmount, order.currency)}</span>
                 </div>
               </div>
             </div>
@@ -367,6 +369,11 @@ export default function CheckoutPage() {
           <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border rounded px-3 py-2 max-w-6xl mx-auto w-full">
             <span><span className="font-medium text-gray-600">Secure checkout via MarzPay.</span> Pending bookings can be cancelled from your account dashboard.</span>
           </div>
+          {order && (
+            <div className="max-w-6xl mx-auto w-full">
+              <SettlementChargeNote amount={totalAmount} settlementCurrency={order.currency} />
+            </div>
+          )}
           {displayError && (
             <div className="max-w-6xl mx-auto w-full rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{displayError}</div>
           )}
@@ -379,8 +386,8 @@ export default function CheckoutPage() {
             {processing
               ? (pollingMessage || (paymentFields.method === 'card' ? 'Redirecting to secure checkout…' : 'Processing payment…'))
               : paymentFields.method === 'card'
-              ? `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with card`
-              : `Pay ${formatCurrencyWithConversion(totalAmount, order.currency)} with Mobile Money`}
+              ? `Pay ${formatPrice(totalAmount, order.currency)} with card`
+              : `Pay ${formatPrice(totalAmount, order.currency)} with Mobile Money`}
           </button>
         </div>
       </div>
