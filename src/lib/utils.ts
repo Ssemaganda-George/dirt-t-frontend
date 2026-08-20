@@ -7,6 +7,7 @@ export const VALID_SERVICE_CURRENCIES = [
   'UGX', 'USD', 'EUR', 'GBP', 'KES', 'TZS', 'RWF', 'INR', 'CNY', 'JPY',
   'CAD', 'AUD', 'CHF', 'ZAR', 'NGN', 'GHS', 'BRL', 'MXN', 'EGP',
   'MAD', 'TRY', 'THB', 'KRW', 'SEK', 'NOK', 'DKK', 'PLN',
+  'SGD', 'HKD', 'NZD', 'ARS', 'RUB', 'AED', 'SAR', 'MYR', 'IDR',
 ] as const
 
 /** Vendors sometimes store labels (e.g. "Hand made") in currency — coerce to UGX. */
