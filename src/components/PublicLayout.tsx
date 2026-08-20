@@ -707,7 +707,7 @@ export default function PublicLayout() {
                 <Linkedin className="h-4 w-4" />
               </a>
 
-              <a href="https://www.tiktok.com/@dirttrailssafaris" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="TikTok">
+              <a href="https://www.tiktok.com/@dirttrails.safari" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="TikTok">
                 <TikTok className="h-4 w-4" />
               </a>
 
