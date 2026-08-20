@@ -1,5 +1,5 @@
 ﻿import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Twitter, Instagram, Facebook, Linkedin } from 'lucide-react'
+import { User, Heart, ShoppingBag, Globe, ChevronDown, Settings, LogOut, Home, HelpCircle, Search, Wallet, MessageSquare, Twitter, Instagram, Facebook, Linkedin, Youtube } from 'lucide-react'
 import useUnreadMessages from '../hooks/useUnreadMessages'
 import { useState, useEffect, useRef } from 'react'
 import PreferencesModal from './PreferencesModal'
@@ -14,6 +14,14 @@ import { useAuth } from '../contexts/AuthContext'
 import { getActivePartners, Partner } from '../lib/database'
 // import '../i18n';
 // import { useTranslation } from 'react-i18next';
+
+function TikTok({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.88-2.89 2.89 2.89 0 0 1 2.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.16 15.3a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.84a8.18 8.18 0 0 0 4.75 1.52V6.91a4.84 4.84 0 0 1-1-.22Z" />
+    </svg>
+  )
+}
 
 const getRegionName = (code: string) => {
   const regionMap: { [key: string]: string } = {
@@ -698,6 +706,14 @@ export default function PublicLayout() {
               <a href="https://www.linkedin.com/company/dirt-trails-safaris/" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="LinkedIn">
                 <Linkedin className="h-4 w-4" />
               </a>
+
+              <a href="https://www.tiktok.com/@dirttrailssafaris" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="TikTok">
+                <TikTok className="h-4 w-4" />
+              </a>
+
+              <a href="https://www.youtube.com/@dirttrailssafaris" target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-gray-500 hover:text-gray-900 transition-colors" aria-label="YouTube">
+                <Youtube className="h-4 w-4" />
+                </a>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm text-gray-500">
               <p className="text-center sm:text-left">&copy; {new Date().getFullYear()} DirtTrails. All rights reserved.</p>
