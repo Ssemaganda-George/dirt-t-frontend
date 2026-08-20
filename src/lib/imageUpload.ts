@@ -104,6 +104,17 @@ export async function deleteServiceImage(imageUrl: string): Promise<ImageUploadR
 }
 
 /**
+ * Best-effort trigger for OCR'ing a service's banner image after it changes.
+ * Fires and forgets — the trip planner will simply see stale/no banner notes
+ * for this service until the scan completes, it should never block or fail
+ * the image upload flow itself.
+ */
+function triggerBannerScan(serviceId: string): void {
+  supabase.functions.invoke('scan-service-banner', { body: { service_id: serviceId } })
+    .catch((err) => console.warn('Banner OCR scan failed to trigger:', err))
+}
+
+/**
  * Update service images array in database
  * @param serviceId - The service ID
  * @param images - Array of image URLs
@@ -137,6 +148,7 @@ export async function updateServiceImages(
     }
 
     console.log('Service updated successfully:', data[0])
+    if (images.length > 0) triggerBannerScan(serviceId)
     return { success: true }
   } catch (error) {
     console.error('Update failed:', error)

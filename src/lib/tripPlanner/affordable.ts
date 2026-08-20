@@ -105,6 +105,7 @@ export function buildAffordablePlan(catalog: CatalogService[], request: TripRequ
       day: 1,
       date: null,
       location: tour.meeting_point || tour.location,
+      narrative: null,
       slots: [bookableSlot(tour, why)],
     })
   } else {
@@ -116,6 +117,7 @@ export function buildAffordablePlan(catalog: CatalogService[], request: TripRequ
         day: 1,
         date: null,
         location: hotel?.location || restaurant?.location || null,
+        narrative: null,
         slots: day1,
       })
     }
@@ -127,6 +129,7 @@ export function buildAffordablePlan(catalog: CatalogService[], request: TripRequ
         day: days.length + 1,
         date: null,
         location: activity?.location || transport?.location || null,
+        narrative: null,
         slots: day2,
       })
     }
@@ -155,6 +158,7 @@ export function buildAffordablePlan(catalog: CatalogService[], request: TripRequ
       day: 1,
       date: null,
       location: null,
+      narrative: null,
       slots: [
         {
           kind: 'wish',
@@ -176,13 +180,27 @@ export function buildAffordablePlan(catalog: CatalogService[], request: TripRequ
   }
 
   const maxDays = request.days > 0 ? Math.min(request.days, 3) : 3
+  const trimmedDays = days.slice(0, maxDays).map((day, i) => ({ ...day, day: i + 1 }))
+  const totals = new Map<string, number>()
+  for (const day of trimmedDays) {
+    for (const slot of day.slots) {
+      if (slot.kind !== 'bookable' || slot.price == null || !slot.currency) continue
+      totals.set(slot.currency, (totals.get(slot.currency) || 0) + slot.price)
+    }
+  }
+  const title = tour
+    ? tour.title.trim()
+    : budget
+      ? `What ${formatBudget(budget)} can book on DirtTrails`
+      : 'Your DirtTrails trip'
   return {
-    title: tour
-      ? tour.title.trim()
-      : budget
-        ? `What ${formatBudget(budget)} can book on DirtTrails`
-        : 'Your DirtTrails trip',
-    days: days.slice(0, maxDays).map((day, i) => ({ ...day, day: i + 1 })),
+    title,
+    advisor_note: budget
+      ? `We stayed inside ${formatBudget(budget)} using what DirtTrails actually sells. Want a different city or dates?`
+      : 'Here is what we can book from the live catalog. Want to adjust destination or dates?',
+    cost_summary: Array.from(totals.entries()).map(([currency, bookable_total]) => ({ currency, bookable_total })),
+    sources: [],
+    days: trimmedDays,
   }
 }
 

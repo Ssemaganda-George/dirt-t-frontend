@@ -11,6 +11,8 @@ const SHOP_CATEGORY = 'cat_shops'
 const RESTAURANT_CATEGORY = 'cat_restaurants'
 const TOUR_CATEGORY = 'cat_tour_packages'
 const MAX_PLANS_PER_DAY = 5
+const MAX_REFINEMENTS_PER_PLAN = 20
+const MAX_MESSAGE_LEN = 600
 const UGX_PER_USD = 3700
 const GEMMA_TIMEOUT_MS = 18000
 const LISTABLE_STATUS = new Set(['approved', 'active'])
@@ -29,6 +31,18 @@ type CatalogService = {
   slug?: string | null
   vendor_id?: string | null
   status: string
+  banner_ocr_text?: string | null
+}
+
+type ConversationMessage = {
+  role: 'user' | 'advisor'
+  content: string
+  created_at?: string
+}
+
+type PlanSource = {
+  title: string
+  uri: string
 }
 
 type NamedBudget = { amount: number; currency: 'USD' | 'UGX' }
@@ -42,31 +56,6 @@ type TripRequest = {
   children: number
   extra_info: string | null
 }
-
-type ReconciledSlot = {
-  kind: 'bookable' | 'wish' | 'reservation'
-  service_id: string | null
-  title: string
-  time: string | null
-  guests: number | null
-  why: string | null
-  wish_title: string | null
-  wish_category: string | null
-  wish_cost_band: 'budget' | 'mid' | 'luxury' | null
-  price: number | null
-  currency: string | null
-  slug: string | null
-  itinerary: string[]
-}
-
-type ReconciledDay = {
-  day: number
-  date: string | null
-  location: string | null
-  slots: ReconciledSlot[]
-}
-
-type ReconciledPlan = { title: string; days: ReconciledDay[] }
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -120,7 +109,7 @@ function isPlannerCatalogService(service: CatalogService): boolean {
   return Number(service.price) > 0
 }
 
-function catalogToPromptText(services: CatalogService[], budget: NamedBudget | null): string {
+function catalogToPromptText(services: CatalogService[], budget: NamedBudget | null = null): string {
   return [...services]
     .sort((a, b) => {
       const aFit = serviceFitsBudget(a, budget) ? 0 : 1
@@ -130,60 +119,28 @@ function catalogToPromptText(services: CatalogService[], budget: NamedBudget | n
     .map((s) => {
       const inBudget = serviceFitsBudget(s, budget)
       const loc = s.meeting_point || s.location || 'unspecified'
-      const days = s.duration_days ? `${s.duration_days}d` : null
-      const itinerary = inBudget && s.category_id === TOUR_CATEGORY ? (s.itinerary || []).slice(0, 4).join(' | ') : null
+      const days = s.duration_days ? `${s.duration_days}d` : 'duration unknown'
+      const itinerary =
+        inBudget && s.category_id === TOUR_CATEGORY ? (s.itinerary || []).slice(0, 14).join(' | ') : null
+      const highlights =
+        inBudget && s.category_id === TOUR_CATEGORY ? (s.tour_highlights || []).slice(0, 6).join(', ') : null
+      const bannerNotes = inBudget ? (s.banner_ocr_text || '').trim().slice(0, 500) : ''
       return [
         inBudget ? 'IN_BUDGET' : 'OVER_BUDGET',
         `id=${s.id}`,
         `category=${s.category_id}`,
         `title=${s.title.trim()}`,
         `location=${loc}`,
-        days ? `duration=${days}` : null,
+        `duration=${days}`,
         `price=${s.price} ${s.currency}`,
+        highlights ? `highlights=${highlights}` : null,
         itinerary ? `itinerary=${itinerary}` : null,
+        bannerNotes ? `banner_notes=${bannerNotes}` : null,
       ]
         .filter(Boolean)
         .join(' | ')
     })
     .join('\n')
-}
-
-function buildPlannerPrompt(catalogText: string, request: TripRequest): string {
-  const countries = request.countries.length ? request.countries.join(', ') : 'not specified — do not assume Kenya or East Africa'
-  const activities = request.activities.length ? request.activities.join(', ') : 'not specified — do not assume safari'
-  const statement = request.extra_info?.trim() || 'none'
-  const budget = parseBudget(request.extra_info)
-  const days = request.days > 0 ? String(request.days) : 'not specified — plan 1-3 days from in-budget listings'
-  return `You are the DirtTrails trip planner. You compose trips ONLY from the catalog below.
-
-Rules:
-- The traveler's statement is the request. Infer destination, duration, party size, and budget from it.
-- Do not assume safari, Kenya, or 7 days unless they said so.
-- BOOKABLE slots must use IN_BUDGET catalog ids. Never mark an OVER_BUDGET id as bookable. Never invent a cheaper price.
-- If no tour package is IN_BUDGET, stitch in-budget hotels, transport, and activities. That is the trip.
-- OVER_BUDGET tours may appear once as a WISH upgrade only if the traveler named that country. Never use them as the trip title or as empty day 2–7 locations.
-- Every day must have at least one slot. Omit empty days.
-- Prefer ONE in-budget tour package as the spine. Do not break a multi-day package into fake daily bookings.
-- Never use shops. Never invent a service_id.
-- Restaurants are reservations, not bookable, not priced.
-- Output compact JSON only, matching:
-{"title": string, "days":[{"day": number, "date": string|null, "location": string|null, "slots":[{"kind":"bookable"|"wish"|"reservation","service_id": string|null,"time": string|null,"guests": number|null,"why": string|null,"wish_title": string|null,"wish_category": string|null,"wish_cost_band":"budget"|"mid"|"luxury"|null}]}]}
-
-Traveler statement:
-${statement}
-
-Structured hints (may be empty; statement wins):
-countries=${countries}
-activities=${activities}
-days=${days}
-budget=${budget ? formatBudget(budget) : 'not specified'}
-start_date=${request.start_date || 'flexible'}
-adults=${request.adults}
-children=${request.children}
-
-Catalog:
-${catalogText}
-`
 }
 
 function extractJsonObject(text: string): Record<string, unknown> {
@@ -204,7 +161,7 @@ function costBand(raw: unknown): 'budget' | 'mid' | 'luxury' | null {
   return v === 'budget' || v === 'mid' || v === 'luxury' ? v : null
 }
 
-function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[]): ReconciledPlan {
+function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[], sources: PlanSource[] = []) {
   const index = new Map(catalog.map((s) => [s.id, s]))
   const rawDays = (Array.isArray(raw.days) ? raw.days : []) as Record<string, unknown>[]
   const days = rawDays.map((dayRaw, i) => {
@@ -230,7 +187,7 @@ function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[]):
           if (!title) return null
           return {
             ...base,
-            kind: 'wish' as const,
+            kind: 'wish',
             title,
             wish_title: title,
             wish_category: slotRaw.wish_category ? String(slotRaw.wish_category) : null,
@@ -243,7 +200,7 @@ function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[]):
         if (svc.category_id === RESTAURANT_CATEGORY) {
           return {
             ...base,
-            kind: 'reservation' as const,
+            kind: 'reservation',
             service_id: svc.id,
             title: svc.title.trim(),
             slug: svc.slug || null,
@@ -251,7 +208,7 @@ function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[]):
         }
         return {
           ...base,
-          kind: 'bookable' as const,
+          kind: 'bookable',
           service_id: svc.id,
           title: svc.title.trim(),
           slug: svc.slug || null,
@@ -260,206 +217,176 @@ function reconcilePlan(raw: Record<string, unknown>, catalog: CatalogService[]):
           itinerary: svc.itinerary || [],
         }
       })
-      .filter(Boolean) as ReconciledSlot[]
+      .filter(Boolean)
     return {
       day: typeof dayRaw.day === 'number' ? dayRaw.day : i + 1,
       date: dayRaw.date ? String(dayRaw.date) : null,
       location: dayRaw.location ? String(dayRaw.location) : null,
+      narrative: dayRaw.narrative ? String(dayRaw.narrative).trim() : null,
       slots: reconciledSlots,
     }
   })
+
+  const totals = new Map<string, number>()
+  for (const day of days) {
+    for (const slot of day.slots as Array<{ kind: string; price: number | null; currency: string | null }>) {
+      if (slot.kind !== 'bookable' || slot.price == null || !slot.currency) continue
+      totals.set(slot.currency, (totals.get(slot.currency) || 0) + slot.price)
+    }
+  }
+  const cost_summary = Array.from(totals.entries()).map(([currency, bookable_total]) => ({ currency, bookable_total }))
+
   return {
     title: String(raw.title || 'Your DirtTrails trip').trim() || 'Your DirtTrails trip',
+    advisor_note: raw.advisor_note ? String(raw.advisor_note).trim() : null,
+    cost_summary,
+    sources,
     days,
   }
 }
 
-function collapseEmptyDays(plan: ReconciledPlan): ReconciledPlan {
-  return {
-    ...plan,
-    days: plan.days.filter((day) => day.slots.length > 0).map((day, i) => ({ ...day, day: i + 1 })),
-  }
+// Grounding knowledge so the model reasons about East Africa like a local operator even for
+// gaps the catalog can't fill (WISH slots), not just the listings it can book.
+const EAST_AFRICA_KNOWLEDGE = `
+Regional knowledge (use for realistic sequencing, travel time, and WISH suggestions —
+never to invent a bookable price):
+
+UGANDA
+- Kampala/Entebbe: arrival hub, city day, Ssese Islands boat access.
+- Jinja (~2-3h from Kampala): source of the Nile, white-water rafting, bungee, Mabira Forest en route.
+- Lake Mburo NP (~3.5h from Kampala): closest savannah park, zebra, no predators to fear on walking safaris.
+- Bwindi Impenetrable NP (~8-9h drive or short flight from Entebbe): gorilla trekking, permits are the single
+  biggest line item on any Uganda budget and usually exceed a shoestring budget.
+- Queen Elizabeth NP (~5-6h from Kampala, ~2-3h from Bwindi): tree-climbing lions, Kazinga Channel boat cruise.
+- Kibale NP (~4-5h from Kampala): chimpanzee trekking, Bigodi wetland walk.
+- Murchison Falls NP (~4-5h from Kampala via Masindi): boat cruise to the base of the falls, top-of-the-falls hike,
+  game drives on the northern bank, classic 3-4 day loop (mirrors the Masindi/Murchison itinerary style).
+- Sipi Falls / Mt Elgon (~4-5h east of Kampala): waterfalls, coffee tours, hiking, budget-friendly.
+- Kabale/Kisoro (far southwest, near Bwindi/Mgahinga): Lake Bunyonyi, gorilla/golden monkey base.
+- Fort Portal: crater lakes, tea estates, gateway to Kibale and Rwenzori foothills.
+
+NEIGHBOURING EAST AFRICA (only mention if the traveler's statement or destination implies a regional trip)
+- Kenya: Nairobi hub, Maasai Mara (wildebeest migration July-Oct), Amboseli (Kilimanjaro views), Diani coast.
+- Tanzania: Arusha hub, Serengeti, Ngorongoro Crater, Zanzibar beach add-on.
+- Rwanda: Kigali hub, Volcanoes NP gorilla trekking (permits pricier than Uganda), Lake Kivu.
+
+Seasonality: Uganda's driest/easiest travel windows are Dec-Feb and Jun-Aug; Mar-May and Oct-Nov are wetter,
+roads to Bwindi/Kibale can be slower. Mention this only when it changes the plan.
+`.trim()
+
+const OUTPUT_SCHEMA = `{"title": string, "advisor_note": string, "days":[{"day": number, "date": string|null, "location": string|null, "narrative": string, "slots":[{"kind":"bookable"|"wish"|"reservation","service_id": string|null,"time": string|null,"guests": number|null,"why": string|null,"wish_title": string|null,"wish_category": string|null,"wish_cost_band":"budget"|"mid"|"luxury"|null}]}]}`
+
+const SHARED_RULES = `
+Rules:
+- The traveler's statement is the request. Infer destination, duration, party size, and budget from it.
+- Do not assume safari, Kenya, or 7 days unless they said so.
+- BOOKABLE slots must use IN_BUDGET catalog ids. Never mark an OVER_BUDGET id as bookable. Never invent a cheaper price.
+- If they named a budget, do not pick a BOOKABLE package whose listed catalog price is above that budget. Put the overshoot in WISH slots instead.
+- If no tour package is IN_BUDGET, stitch in-budget hotels, transport, and activities. That is the trip.
+- OVER_BUDGET tours may appear once as a WISH upgrade only if the traveler named that country. Never use them as the trip title or as empty day 2–7 locations.
+- Every day must have at least one slot. Omit empty days.
+- Prefer ONE in-budget tour package as the spine of the trip (one service_id for the whole tour). Do not break a multi-day package into fake daily bookings.
+- Never use shops. Never invent a service_id — only ids that appear in the Catalog block below.
+- Restaurants are reservations, not bookable, not priced.
+- BOOKABLE slots: kind="bookable" and a catalog service_id.
+- WISH slots: real experiences/lodges DirtTrails does not sell yet, drawn from the regional knowledge above. kind="wish", wish_title, wish_category, wish_cost_band (budget|mid|luxury). Never a number, never a fabricated service_id.
+- You have a Google Search tool. Use it to check current, real-world East Africa facts that make the plan credible — park entry fee ranges, gorilla/chimp permit prices, seasonal road/weather conditions, opening days, recently opened lodges or attractions near the destination. This is what should make this plan noticeably better-informed than a generic itinerary. Still only ever describe a WISH cost as a band (budget|mid|luxury), never quote a search-found number as if it were bookable — DirtTrails prices come only from the catalog.
+- Write like an experienced East Africa tour operator building a written quotation, not a chatbot listing bullet points:
+  - "narrative" per day is 2-4 sentences of flowing itinerary text: departure/arrival times, transit, meals, what happens and roughly when, in the same voice as a written trip quotation (e.g. "8:00 AM — depart Kampala, refreshments in the car, lunch en route, afternoon arrival and check-in...").
+  - "why" per slot is one short sentence justifying that choice for this traveler (budget fit, logistics, pacing) — not marketing copy.
+  - "advisor_note" is 2-4 sentences, first person plural ("we"), speaking directly to the traveler: summarize the trip, flag the single biggest trade-off or gap (e.g. a WISH item over budget), and end with one concrete question or suggestion to move the conversation forward (this is a back-and-forth, not a final answer).
+- Output JSON only, matching:
+${OUTPUT_SCHEMA}`
+
+
+function buildPlannerPrompt(catalogText: string, request: Record<string, unknown>): string {
+  const countries = Array.isArray(request.countries) && request.countries.length
+    ? (request.countries as string[]).join(', ')
+    : 'not specified — do not assume Kenya or East Africa'
+  const activities = Array.isArray(request.activities) && request.activities.length
+    ? (request.activities as string[]).join(', ')
+    : 'not specified — do not assume safari'
+  const statement = String(request.extra_info || '').trim() || 'none'
+  const budget = parseBudget(String(request.extra_info || ''))
+  const daysRaw = Number(request.days)
+  const days = Number.isFinite(daysRaw) && daysRaw > 0 ? String(daysRaw) : 'not specified — plan 1-3 days from in-budget listings'
+  return `You are the DirtTrails trip planner — an experienced East Africa tour operator drafting a first quotation for a traveler. You compose BOOKABLE trips ONLY from the catalog below, but you reason about the whole trip like someone who knows the region.
+
+${EAST_AFRICA_KNOWLEDGE}
+${SHARED_RULES}
+
+Traveler statement:
+${statement}
+
+Structured hints (may be empty; statement wins):
+countries=${countries}
+activities=${activities}
+days=${days}
+budget=${budget ? formatBudget(budget) : 'not specified'}
+start_date=${request.start_date || 'flexible'}
+adults=${request.adults || 1}
+children=${request.children || 0}
+
+Catalog:
+${catalogText}
+`
 }
 
-function isWeakPlan(plan: ReconciledPlan, catalog: CatalogService[], request: TripRequest): boolean {
-  if (plan.days.length === 0 || plan.days.some((day) => day.slots.length === 0)) return true
-  const budget = parseBudget(request.extra_info)
-  if (!budget) return false
-  const affordable = catalog.filter(
-    (service) => service.category_id !== RESTAURANT_CATEGORY && serviceFitsBudget(service, budget)
-  )
-  if (affordable.length === 0) return false
-  return !plan.days.some((day) =>
-    day.slots.some(
-      (slot) => slot.kind === 'bookable' && slot.service_id && affordable.some((service) => service.id === slot.service_id)
-    )
-  )
-}
+function buildRefinePrompt(
+  catalogText: string,
+  request: Record<string, unknown>,
+  previousPlan: Record<string, unknown>,
+  history: ConversationMessage[],
+  userMessage: string
+): string {
+  const recentHistory = history.slice(-8)
+  const historyText = recentHistory.length
+    ? recentHistory.map((m) => `${m.role === 'user' ? 'Traveler' : 'Advisor'}: ${m.content}`).join('\n')
+    : '(none yet)'
 
-function bookableSlot(service: CatalogService, why: string): ReconciledSlot {
-  return {
-    kind: 'bookable',
-    service_id: service.id,
-    title: service.title.trim(),
-    time: null,
-    guests: 1,
-    why,
-    wish_title: null,
-    wish_category: null,
-    wish_cost_band: null,
-    price: Number(service.price),
-    currency: service.currency,
-    slug: service.slug || null,
-    itinerary: service.itinerary || [],
-  }
-}
-
-function reservationSlot(service: CatalogService): ReconciledSlot {
-  return {
-    kind: 'reservation',
-    service_id: service.id,
-    title: service.title.trim(),
-    time: null,
-    guests: 1,
-    why: 'Reservation only — no payment on DirtTrails.',
-    wish_title: null,
-    wish_category: null,
-    wish_cost_band: null,
-    price: null,
-    currency: null,
-    slug: service.slug || null,
-    itinerary: [],
-  }
-}
-
-function matchesCountry(service: CatalogService, countries: string[]): boolean {
-  if (!countries.length) return false
-  const hay = `${service.title} ${service.location || ''} ${service.meeting_point || ''}`.toLowerCase()
-  return countries.some((country) => hay.includes(country.toLowerCase()))
-}
-
-function buildAffordablePlan(catalog: CatalogService[], request: TripRequest): ReconciledPlan {
-  const budget = parseBudget(request.extra_info)
-  const affordable = catalog
-    .filter((service) => service.category_id !== RESTAURANT_CATEGORY && serviceFitsBudget(service, budget))
-    .sort((a, b) => priceInUgx(a) - priceInUgx(b))
-
-  const pick = (categoryId: string) =>
-    affordable.find((service) => service.category_id === categoryId && matchesCountry(service, request.countries)) ||
-    affordable.find((service) => service.category_id === categoryId)
-
-  const tour = pick(TOUR_CATEGORY)
-  const hotel = pick('cat_hotels')
-  const activity = pick('cat_activities')
-  const transport = pick('cat_transport')
-  const restaurant = catalog.find((service) => service.category_id === RESTAURANT_CATEGORY)
-  const overTour = catalog
-    .filter((service) => service.category_id === TOUR_CATEGORY && budget && !serviceFitsBudget(service, budget))
-    .filter((service) => matchesCountry(service, request.countries))
-    .sort((a, b) => priceInUgx(a) - priceInUgx(b))[0]
-
-  const why = budget ? `Fits a ${formatBudget(budget)} trip.` : 'Available on DirtTrails.'
-  const days: ReconciledDay[] = []
-
-  if (tour) {
-    days.push({
-      day: 1,
-      date: null,
-      location: tour.meeting_point || tour.location,
-      slots: [bookableSlot(tour, why)],
-    })
-  } else {
-    const day1: ReconciledSlot[] = []
-    if (hotel) day1.push(bookableSlot(hotel, why))
-    if (restaurant) day1.push(reservationSlot(restaurant))
-    if (day1.length) {
-      days.push({
-        day: 1,
-        date: null,
-        location: hotel?.location || restaurant?.location || null,
-        slots: day1,
-      })
-    }
-    const day2: ReconciledSlot[] = []
-    if (activity) day2.push(bookableSlot(activity, why))
-    if (transport) day2.push(bookableSlot(transport, why))
-    if (day2.length) {
-      days.push({
-        day: days.length + 1,
-        date: null,
-        location: activity?.location || transport?.location || null,
-        slots: day2,
-      })
-    }
+  const days = (Array.isArray(previousPlan.days) ? previousPlan.days : []) as Record<string, unknown>[]
+  const previousPlanSlim = {
+    title: previousPlan.title,
+    days: days.map((d) => ({
+      day: d.day,
+      date: d.date,
+      location: d.location,
+      narrative: d.narrative,
+      slots: ((Array.isArray(d.slots) ? d.slots : []) as Record<string, unknown>[]).map((s) => ({
+        kind: s.kind,
+        service_id: s.service_id,
+        time: s.time,
+        guests: s.guests,
+        why: s.why,
+        wish_title: s.wish_title,
+        wish_category: s.wish_category,
+        wish_cost_band: s.wish_cost_band,
+      })),
+    })),
   }
 
-  if (overTour && days[0]) {
-    days[0].slots.push({
-      kind: 'wish',
-      service_id: null,
-      title: overTour.title.trim(),
-      time: null,
-      guests: 1,
-      why: `${overTour.title.trim()} starts at ${overTour.price} ${overTour.currency} — over your ${budget ? formatBudget(budget) : 'budget'}. Request it if you can stretch.`,
-      wish_title: overTour.title.trim(),
-      wish_category: 'tour_packages',
-      wish_cost_band: 'luxury',
-      price: null,
-      currency: null,
-      slug: null,
-      itinerary: [],
-    })
-  }
+  return `You are the DirtTrails trip planner — an experienced East Africa tour operator in an ongoing conversation with a traveler about a draft quotation. You are adjusting the CURRENT PLAN below based on their new message. You compose BOOKABLE trips ONLY from the catalog below, but you reason about the whole trip like someone who knows the region.
 
-  if (days.length === 0) {
-    days.push({
-      day: 1,
-      date: null,
-      location: null,
-      slots: [
-        {
-          kind: 'wish',
-          service_id: null,
-          title: budget ? `Nothing listed under ${formatBudget(budget)}` : 'No matching listing',
-          time: null,
-          guests: 1,
-          why: 'Tell us the country and dates and we will request a vendor.',
-          wish_title: budget ? `Nothing listed under ${formatBudget(budget)}` : 'No matching listing',
-          wish_category: 'tour_packages',
-          wish_cost_band: 'budget',
-          price: null,
-          currency: null,
-          slug: null,
-          itinerary: [],
-        },
-      ],
-    })
-  }
+${EAST_AFRICA_KNOWLEDGE}
+${SHARED_RULES}
+- This is a REVISION, not a fresh plan. Keep everything the traveler did not ask to change. Only edit the days/slots the new message actually affects.
+- If the traveler's request would break a hard rule (e.g. asks to add a price for a restaurant, or push a bookable slot over their stated budget without moving it to WISH), do it the compliant way and say so in advisor_note instead of refusing silently.
 
-  const maxDays = request.days > 0 ? Math.min(request.days, 3) : 3
-  return {
-    title: tour ? tour.title.trim() : budget ? `What ${formatBudget(budget)} can book on DirtTrails` : 'Your DirtTrails trip',
-    days: days.slice(0, maxDays).map((day, i) => ({ ...day, day: i + 1 })),
-  }
-}
+Original request:
+${JSON.stringify(request)}
 
-function finalizePlan(raw: Record<string, unknown>, catalog: CatalogService[], request: TripRequest): ReconciledPlan {
-  const plan = collapseEmptyDays(reconcilePlan(raw, catalog))
-  if (isWeakPlan(plan, catalog, request)) return buildAffordablePlan(catalog, request)
-  return plan
-}
+Current plan (before this message):
+${JSON.stringify(previousPlanSlim)}
 
-function shouldSkipModel(request: TripRequest, catalog: CatalogService[]): boolean {
-  const budget = parseBudget(request.extra_info)
-  if (budget && request.countries.length === 0 && request.days === 0 && request.activities.length === 0) return true
-  if (!budget) return false
-  const inBudgetTours = catalog.filter(
-    (service) => service.category_id === TOUR_CATEGORY && serviceFitsBudget(service, budget)
-  )
-  const matching = request.countries.length
-    ? inBudgetTours.filter((service) => matchesCountry(service, request.countries))
-    : inBudgetTours
-  return matching.length === 0
+Conversation so far:
+${historyText}
+
+Traveler's new message:
+${userMessage}
+
+Catalog:
+${catalogText}
+`
 }
 
 function rowToCatalog(row: Record<string, unknown>): CatalogService {
@@ -477,49 +404,127 @@ function rowToCatalog(row: Record<string, unknown>): CatalogService {
     slug: row.slug ? String(row.slug) : null,
     vendor_id: row.vendor_id ? String(row.vendor_id) : null,
     status: String(row.status || ''),
+    banner_ocr_text: row.banner_ocr_text ? String(row.banner_ocr_text) : null,
   }
 }
 
-async function callGemma(prompt: string, signal: AbortSignal): Promise<string> {
+// Grounding (Google Search) is only supported by Gemini 2.0+ models, not Gemma — so the planner
+// defaults to a Gemini model. GEMMA_MODEL is kept as a fallback env var name for compatibility with
+// existing deployments, but should be set to a Gemini model id (e.g. gemini-2.5-flash) to keep grounding working.
+async function callPlannerModel(prompt: string): Promise<{ text: string; sources: PlanSource[] }> {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
-  const model = Deno.env.get('GEMMA_MODEL') || 'gemma-4-26b-a4b-it'
+  const model = Deno.env.get('GEMINI_MODEL') || Deno.env.get('GEMMA_MODEL') || 'gemini-2.5-flash'
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set on the trip-planner function')
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal,
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 1536, temperature: 0.2 },
-    }),
-  })
-  const data = await res.json()
-  if (!res.ok) {
-    throw new Error(data?.error?.message || `Gemma request failed (${res.status})`)
-  }
-  const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
-  if (!text.trim()) throw new Error('Gemma returned an empty plan')
-  return text
-}
-
-async function planWithModel(catalog: CatalogService[], request: TripRequest): Promise<ReconciledPlan> {
-  const prompt = buildPlannerPrompt(catalogToPromptText(catalog, parseBudget(request.extra_info)), request)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), GEMMA_TIMEOUT_MS)
+  const signal = controller.signal
   try {
-    const modelText = await callGemma(prompt, controller.signal)
-    return finalizePlan(extractJsonObject(modelText), catalog, request)
-  } catch (error) {
-    console.error('trip-planner model fallback:', error)
-    return buildAffordablePlan(catalog, request)
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.2 },
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `Planner model request failed (${res.status})`)
+    }
+    const candidate = data?.candidates?.[0]
+    const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text || '').join('') || ''
+    if (!text.trim()) throw new Error('Planner model returned an empty plan')
+
+    const chunks = (candidate?.groundingMetadata?.groundingChunks || []) as Array<{ web?: { uri?: string; title?: string } }>
+    const seen = new Set<string>()
+    const sources: PlanSource[] = []
+    for (const chunk of chunks) {
+      const uri = chunk?.web?.uri
+      if (!uri || seen.has(uri)) continue
+      seen.add(uri)
+      sources.push({ uri, title: chunk?.web?.title || uri })
+      if (sources.length >= 5) break
+    }
+
+    return { text, sources }
   } finally {
     clearTimeout(timer)
   }
 }
 
+function shouldSkipModel(request: TripRequest, catalog: CatalogService[]): boolean {
+  const budget = parseBudget(request.extra_info)
+  if (budget && request.countries.length === 0 && request.days === 0 && request.activities.length === 0) return true
+  if (!budget) return false
+  const inBudgetTours = catalog.filter(
+    (service) => service.category_id === TOUR_CATEGORY && serviceFitsBudget(service, budget)
+  )
+  const matching = request.countries.length
+    ? inBudgetTours.filter((service) => {
+        const hay = `${service.title} ${service.location || ''} ${service.meeting_point || ''}`.toLowerCase()
+        return request.countries.some((country) => hay.includes(country.toLowerCase()))
+      })
+    : inBudgetTours
+  return matching.length === 0
+}
+
+function budgetFallbackPlan(catalog: CatalogService[], request: TripRequest) {
+  const budget = parseBudget(request.extra_info)
+  const affordable = catalog
+    .filter((service) => service.category_id !== RESTAURANT_CATEGORY && serviceFitsBudget(service, budget))
+    .sort((a, b) => priceInUgx(a) - priceInUgx(b))
+  const pick = (categoryId: string) => affordable.find((service) => service.category_id === categoryId)
+  const tour = pick(TOUR_CATEGORY)
+  const hotel = pick('cat_hotels')
+  const activity = pick('cat_activities')
+  const spine = tour || hotel || activity || affordable[0]
+  const days = spine
+    ? [{
+        day: 1,
+        date: null,
+        location: spine.meeting_point || spine.location,
+        narrative: null,
+        slots: [{
+          kind: 'bookable' as const,
+          service_id: spine.id,
+          title: spine.title.trim(),
+          time: null,
+          guests: 1,
+          why: budget ? `Fits a ${formatBudget(budget)} trip.` : 'Available on DirtTrails.',
+          wish_title: null,
+          wish_category: null,
+          wish_cost_band: null,
+          price: Number(spine.price),
+          currency: spine.currency,
+          slug: spine.slug || null,
+          itinerary: spine.itinerary || [],
+        }],
+      }]
+    : []
+  return reconcilePlan(
+    {
+      title: tour
+        ? tour.title.trim()
+        : budget
+          ? `What ${formatBudget(budget)} can book on DirtTrails`
+          : 'Your DirtTrails trip',
+      advisor_note: budget
+        ? `We stayed inside ${formatBudget(budget)} using what DirtTrails actually sells. Want a different city or dates?`
+        : 'Here is what we can book from the live catalog.',
+      days,
+    },
+    catalog
+  )
+}
+
 function adminClient() {
-  return createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
 }
 
 function utcDayStart(): string {
@@ -542,16 +547,71 @@ serve(async (req: Request) => {
       const visitorId = body?.visitor_id ? String(body.visitor_id) : null
       const userId = body?.user_id ? String(body.user_id) : null
       if (!id) return json(400, { error: 'id is required' })
-      const { data, error } = await supabase
-        .from('trip_plans')
-        .select('id, request, plan, status, created_at, user_id, visitor_id')
-        .eq('id', id)
-        .maybeSingle()
+      const { data, error } = await supabase.from('trip_plans').select('id, request, plan, messages, status, created_at, user_id, visitor_id').eq('id', id).maybeSingle()
       if (error) throw error
       if (!data) return json(404, { error: 'Plan not found' })
       const allowed = (userId && data.user_id === userId) || (visitorId && data.visitor_id === visitorId)
       if (!allowed) return json(404, { error: 'Plan not found' })
-      return json(200, { id: data.id, request: data.request, plan: data.plan, status: data.status, created_at: data.created_at })
+      return json(200, { id: data.id, request: data.request, plan: data.plan, messages: data.messages || [], status: data.status, created_at: data.created_at })
+    }
+
+    if (action === 'refine') {
+      const id = String(body?.id || '')
+      const visitorId = body?.visitor_id ? String(body.visitor_id) : null
+      const userId = body?.user_id ? String(body.user_id) : null
+      const userMessage = String(body?.message || '').trim().slice(0, MAX_MESSAGE_LEN)
+      if (!id) return json(400, { error: 'id is required' })
+      if (!userMessage) return json(400, { error: 'message is required' })
+      if (!visitorId && !userId) return json(400, { error: 'visitor_id is required' })
+
+      const { data: existing, error: fetchError } = await supabase
+        .from('trip_plans')
+        .select('id, request, plan, messages, user_id, visitor_id')
+        .eq('id', id)
+        .maybeSingle()
+      if (fetchError) throw fetchError
+      if (!existing) return json(404, { error: 'Plan not found' })
+      const allowed = (userId && existing.user_id === userId) || (visitorId && existing.visitor_id === visitorId)
+      if (!allowed) return json(404, { error: 'Plan not found' })
+
+      const history = (Array.isArray(existing.messages) ? existing.messages : []) as ConversationMessage[]
+      if (history.filter((m) => m.role === 'user').length >= MAX_REFINEMENTS_PER_PLAN) {
+        return json(429, { error: 'This trip has reached its adjustment limit. Start a new plan to keep refining.' })
+      }
+
+      const { data: rows, error: svcError } = await supabase
+        .from('services')
+        .select('id, title, category_id, location, meeting_point, duration_days, price, currency, itinerary, tour_highlights, slug, vendor_id, status, banner_ocr_text')
+        .in('status', ['approved', 'active'])
+      if (svcError) throw svcError
+      const catalog = (rows || []).map(rowToCatalog).filter(isPlannerCatalogService)
+      if (catalog.length === 0) return json(503, { error: 'No bookable catalog available' })
+
+      const prompt = buildRefinePrompt(
+        catalogToPromptText(catalog, parseBudget(String((existing.request as { extra_info?: string } | null)?.extra_info || ''))),
+        existing.request as Record<string, unknown>,
+        existing.plan as Record<string, unknown>,
+        history,
+        userMessage
+      )
+      const { text: modelText, sources } = await callPlannerModel(prompt)
+      const raw = extractJsonObject(modelText)
+      const plan = reconcilePlan(raw, catalog, sources)
+
+      const now = new Date().toISOString()
+      const nextMessages: ConversationMessage[] = [
+        ...history,
+        { role: 'user', content: userMessage, created_at: now },
+        { role: 'advisor', content: plan.advisor_note || 'Updated your plan.', created_at: now },
+      ]
+
+      const { error: updateError } = await supabase
+        .from('trip_plans')
+        .update({ plan, messages: nextMessages })
+        .eq('id', id)
+      if (updateError) throw updateError
+
+      return json(200, { id, request: existing.request, plan, messages: nextMessages })
     }
 
     if (action === 'wish') {
@@ -592,7 +652,7 @@ serve(async (req: Request) => {
 
     const { data: rows, error: svcError } = await supabase
       .from('services')
-      .select('id, title, category_id, location, meeting_point, duration_days, price, currency, itinerary, tour_highlights, slug, vendor_id, status')
+      .select('id, title, category_id, location, meeting_point, duration_days, price, currency, itinerary, tour_highlights, slug, vendor_id, status, banner_ocr_text')
       .in('status', ['approved', 'active'])
     if (svcError) throw svcError
 
@@ -610,9 +670,24 @@ serve(async (req: Request) => {
       extra_info: body?.extra_info ? String(body.extra_info).slice(0, 1000) : null,
     }
 
-    const plan = shouldSkipModel(request, catalog)
-      ? buildAffordablePlan(catalog, request)
-      : await planWithModel(catalog, request)
+    const budget = parseBudget(request.extra_info)
+    let plan
+    if (shouldSkipModel(request, catalog)) {
+      plan = budgetFallbackPlan(catalog, request)
+    } else {
+      try {
+        const { text: modelText, sources } = await callPlannerModel(buildPlannerPrompt(catalogToPromptText(catalog, budget), request))
+        plan = reconcilePlan(extractJsonObject(modelText), catalog, sources)
+      } catch (error) {
+        console.error('trip-planner model fallback:', error)
+        plan = budgetFallbackPlan(catalog, request)
+      }
+    }
+
+    const initialMessages: ConversationMessage[] = [
+      { role: 'user', content: request.extra_info || 'Plan a trip', created_at: new Date().toISOString() },
+      { role: 'advisor', content: plan.advisor_note || `Here's a first draft: ${plan.title}.`, created_at: new Date().toISOString() },
+    ]
 
     const { data: saved, error: saveError } = await supabase
       .from('trip_plans')
@@ -621,13 +696,14 @@ serve(async (req: Request) => {
         visitor_id: visitorId,
         request,
         plan,
+        messages: initialMessages,
         status: 'draft',
       })
       .select('id, created_at')
       .single()
     if (saveError) throw saveError
 
-    return json(200, { id: saved.id, created_at: saved.created_at, request, plan })
+    return json(200, { id: saved.id, created_at: saved.created_at, request, plan, messages: initialMessages })
   } catch (error) {
     console.error('trip-planner error:', error)
     return json(500, { error: error instanceof Error ? error.message : 'Failed to generate plan' })

@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertCircle, CheckCircle, Compass, MapPin } from 'lucide-react'
+import { AlertCircle, CheckCircle, Compass, ExternalLink, MapPin, Send, Sparkles } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { usePlanTripSubmit } from '../hooks/usePlanTripSubmit'
 import Money from '../components/Money'
-import type { ReconciledSlot } from '../lib/tripPlanner/types'
+import type { ConversationMessage, ReconciledSlot } from '../lib/tripPlanner/types'
 import {
   fetchTripPlan,
   getPlannerVisitorId,
+  refineTripPlan,
   requestWishSlot,
   type SavedTripPlan,
 } from '../lib/tripPlannerClient'
+
+const QUICK_ADJUSTMENTS = [
+  'Make it cheaper',
+  'Add more adventure',
+  'Slow the pace down',
+  'Fewer travel days, more time in one place',
+]
 
 function SlotCard({
   slot,
@@ -125,16 +133,129 @@ function SlotCard({
   )
 }
 
+function AdvisorChat({
+  messages,
+  onSend,
+  sending,
+  error,
+}: {
+  messages: ConversationMessage[]
+  onSend: (text: string) => void
+  sending: boolean
+  error: string | null
+}) {
+  const [draft, setDraft] = useState('')
+
+  const send = (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || sending) return
+    onSend(trimmed)
+    setDraft('')
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white/90 p-5 shadow-lg">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-emerald-700" />
+        <h2 className="text-sm font-bold text-gray-900">Talk to your trip advisor</h2>
+      </div>
+      <p className="mb-4 text-xs text-gray-600">
+        Tell us what to change — budget, pace, activities — and we'll adjust the plan and explain the trade-offs.
+      </p>
+
+      <div className="mb-4 max-h-80 space-y-3 overflow-y-auto pr-1">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                m.role === 'user'
+                  ? 'bg-emerald-700 text-white'
+                  : 'border border-gray-200 bg-gray-50 text-gray-800'
+              }`}
+            >
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {sending ? (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+              Your advisor is adjusting the plan…
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {error ? <p className="mb-3 text-xs text-red-600">{error}</p> : null}
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {QUICK_ADJUSTMENTS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            disabled={sending}
+            onClick={() => send(q)}
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          send(draft)
+        }}
+        className="flex items-end gap-2"
+      >
+        <textarea
+          rows={2}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="e.g. Swap day 2's hotel for something cheaper, and add a boat cruise"
+          className="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:border-emerald-600 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={sending || !draft.trim()}
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+          aria-label="Send"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+    </div>
+  )
+}
+
 export default function TripPlanner() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { selectedCurrency, selectedLanguage } = usePreferences()
   const { submitStatement, submitting, error, visitorId } = usePlanTripSubmit()
   const [statement, setStatement] = useState('')
   const [loadingPlan, setLoadingPlan] = useState(Boolean(id))
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saved, setSaved] = useState<SavedTripPlan | null>(null)
+  const [chatSending, setChatSending] = useState(false)
+  const [chatError, setChatError] = useState<string | null>(null)
   const resolvedVisitorId = visitorId || getPlannerVisitorId(null)
+
+  const handleSendMessage = async (text: string) => {
+    if (!saved) return
+    setChatSending(true)
+    setChatError(null)
+    try {
+      const updated = await refineTripPlan(saved.id, text, { visitor_id: resolvedVisitorId, user_id: user?.id })
+      setSaved(updated)
+    } catch (e) {
+      setChatError(e instanceof Error ? e.message : 'Could not update the plan')
+    } finally {
+      setChatSending(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) {
@@ -223,6 +344,41 @@ export default function TripPlanner() {
           <div>
             <h1 className="text-2xl font-bold text-emerald-800">{saved.plan.title}</h1>
             <p className="mt-1 text-sm text-gray-600">Prices come from DirtTrails listings. Checkout is not wired yet — open the package to book the existing way.</p>
+            {(saved.plan.cost_summary || []).length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {saved.plan.cost_summary.map((line) => (
+                  <div key={line.currency} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5">
+                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Bookable total</span>
+                    <Money
+                      amount={line.bookable_total}
+                      serviceCurrency={line.currency}
+                      targetCurrency={selectedCurrency || line.currency}
+                      locale={selectedLanguage || 'en-US'}
+                      className="inline text-sm font-bold"
+                      currencyClassName="text-[10px] font-normal text-gray-600 mr-0.5"
+                      amountClassName="text-sm font-bold text-gray-900"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {(saved.plan.sources || []).length > 0 ? (
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                <span className="font-medium text-gray-600">Grounded with current info from:</span>
+                {saved.plan.sources.map((source) => (
+                  <a
+                    key={source.uri}
+                    href={source.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-700 hover:underline"
+                  >
+                    {source.title}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ))}
+              </div>
+            ) : null}
             {loadError ? <p className="mt-3 text-sm text-red-600">{loadError}</p> : null}
             <div className="mt-6 space-y-6">
               {saved.plan.days.map((day) => (
@@ -232,6 +388,7 @@ export default function TripPlanner() {
                     Day {day.day}
                     {day.location ? <span className="font-normal text-gray-600">· {day.location}</span> : null}
                   </div>
+                  {day.narrative ? <p className="mb-3 text-xs leading-relaxed text-gray-700">{day.narrative}</p> : null}
                   <div className="space-y-3">
                     {day.slots.length === 0 ? (
                       <p className="rounded-xl border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500">No listing for this day.</p>
@@ -251,6 +408,16 @@ export default function TripPlanner() {
                 </section>
               ))}
             </div>
+
+            <div className="mt-8">
+              <AdvisorChat
+                messages={saved.messages || []}
+                onSend={(text) => void handleSendMessage(text)}
+                sending={chatSending}
+                error={chatError}
+              />
+            </div>
+
             <button
               type="button"
               onClick={() => {

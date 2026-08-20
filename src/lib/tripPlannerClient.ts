@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { ReconciledPlan, TripRequest } from './tripPlanner/types'
+import type { ConversationMessage, ReconciledPlan, TripRequest } from './tripPlanner/types'
 
 const VISITOR_KEY = 'dt_planner_visitor'
 
@@ -8,6 +8,7 @@ export type SavedTripPlan = {
   created_at?: string
   request: TripRequest
   plan: ReconciledPlan
+  messages: ConversationMessage[]
   status?: string
 }
 
@@ -65,6 +66,21 @@ export async function fetchTripPlan(
   const data = await invokePlanner({
     action: 'get',
     id,
+    visitor_id: ids.visitor_id || null,
+    user_id: ids.user_id || null,
+  })
+  return data as SavedTripPlan
+}
+
+export async function refineTripPlan(
+  id: string,
+  message: string,
+  ids: { visitor_id?: string | null; user_id?: string | null }
+): Promise<SavedTripPlan> {
+  const data = await invokePlanner({
+    action: 'refine',
+    id,
+    message,
     visitor_id: ids.visitor_id || null,
     user_id: ids.user_id || null,
   })

@@ -29,18 +29,23 @@ export function catalogToPromptText(services: CatalogService[], budget?: NamedBu
     .map((s) => {
       const inBudget = serviceFitsBudget(s, budget || null)
       const loc = s.meeting_point || s.location || 'unspecified'
-      const days = s.duration_days ? `${s.duration_days}d` : null
+      const days = s.duration_days ? `${s.duration_days}d` : 'duration unknown'
       const itinerary =
-        inBudget && s.category_id === TOUR_CATEGORY ? (s.itinerary || []).slice(0, 4).join(' | ') : null
+        inBudget && s.category_id === TOUR_CATEGORY ? (s.itinerary || []).slice(0, 14).join(' | ') : null
+      const highlights =
+        inBudget && s.category_id === TOUR_CATEGORY ? (s.tour_highlights || []).slice(0, 6).join(', ') : null
+      const bannerNotes = inBudget ? (s.banner_ocr_text || '').trim().slice(0, 500) : ''
       return [
         inBudget ? 'IN_BUDGET' : 'OVER_BUDGET',
         `id=${s.id}`,
         `category=${s.category_id}`,
         `title=${s.title.trim()}`,
         `location=${loc}`,
-        days ? `duration=${days}` : null,
+        `duration=${days}`,
         `price=${s.price} ${s.currency}`,
+        highlights ? `highlights=${highlights}` : null,
         itinerary ? `itinerary=${itinerary}` : null,
+        bannerNotes ? `banner_notes=${bannerNotes}` : null,
       ]
         .filter(Boolean)
         .join(' | ')
