@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { processQuoteBookingFulfillment } from "./quoteSettlement.ts"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -217,7 +218,7 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
   const { data: booking, error: bookingFetchErr } = await supabase
     .from("bookings")
     .select(
-      "id, vendor_id, tourist_id, currency, total_amount, service_id, status, payment_status, payment_reference, commission_amount, platform_fee, commission_rate_at_booking, vendor_payout_amount"
+      "id, vendor_id, tourist_id, currency, total_amount, service_id, status, payment_status, payment_reference, commission_amount, platform_fee, commission_rate_at_booking, vendor_payout_amount, pricing_source"
     )
     .eq("id", bookingId)
     .single()
@@ -244,51 +245,61 @@ async function processBookingFulfillment(supabase: any, job: QueueJob): Promise<
 
   const adminId = await getAdminProfileId(supabase)
 
-  const { data: existingTx, error: txCheckErr } = await supabase
-    .from("transactions")
-    .select("id, payout_meta")
-    .eq("booking_id", bookingId)
-    .eq("transaction_type", "payment")
-    .eq("status", "completed")
-    .maybeSingle()
-
-  if (txCheckErr) throw new Error(`tx-check-failed:${txCheckErr.message}`)
-
-  const walletAlreadySettled = Boolean((existingTx as any)?.payout_meta?.wallet_settlement)
-
-  if (existingTx && !walletAlreadySettled) {
-    const { data: backfillResult, error: backfillErr } = await supabase.rpc(
-      "backfill_wallet_credits_for_booking",
-      { p_booking_id: bookingId, p_admin_id: adminId },
-    )
-    if (backfillErr) throw new Error(`wallet-backfill-failed:${backfillErr.message}`)
-    if (!(backfillResult as any)?.success) {
-      throw new Error(
-        `wallet-backfill-failed:${(backfillResult as any)?.error || "unknown"}`,
-      )
-    }
-  } else if (!existingTx) {
-    const { data: serviceData, error: serviceErr } = await supabase
-      .from("services")
-      .select("category_id")
-      .eq("id", booking.service_id)
+  if (booking.pricing_source === "quote") {
+    await processQuoteBookingFulfillment(supabase, {
+      booking,
+      bookingId,
+      paymentRef,
+      adminId,
+      settlePaymentWithCommission,
+    })
+  } else {
+    const { data: existingTx, error: txCheckErr } = await supabase
+      .from("transactions")
+      .select("id, payout_meta")
+      .eq("booking_id", bookingId)
+      .eq("transaction_type", "payment")
+      .eq("status", "completed")
       .maybeSingle()
 
-    if (serviceErr) throw new Error(`service-fetch-failed:${serviceErr.message}`)
+    if (txCheckErr) throw new Error(`tx-check-failed:${txCheckErr.message}`)
 
-    const isTransport = (serviceData as any)?.category_id === "cat_transport"
-    const { total, commission } = resolveBookingCommission(booking, isTransport)
+    const walletAlreadySettled = Boolean((existingTx as any)?.payout_meta?.wallet_settlement)
 
-    await settlePaymentWithCommission(supabase, {
-      vendorId: booking.vendor_id,
-      totalAmount: total,
-      commissionAmount: commission,
-      adminId,
-      bookingId,
-      touristId: booking.tourist_id || null,
-      currency: booking.currency || "UGX",
-      reference: paymentRef,
-    })
+    if (existingTx && !walletAlreadySettled) {
+      const { data: backfillResult, error: backfillErr } = await supabase.rpc(
+        "backfill_wallet_credits_for_booking",
+        { p_booking_id: bookingId, p_admin_id: adminId },
+      )
+      if (backfillErr) throw new Error(`wallet-backfill-failed:${backfillErr.message}`)
+      if (!(backfillResult as any)?.success) {
+        throw new Error(
+          `wallet-backfill-failed:${(backfillResult as any)?.error || "unknown"}`,
+        )
+      }
+    } else if (!existingTx) {
+      const { data: serviceData, error: serviceErr } = await supabase
+        .from("services")
+        .select("category_id")
+        .eq("id", booking.service_id)
+        .maybeSingle()
+
+      if (serviceErr) throw new Error(`service-fetch-failed:${serviceErr.message}`)
+
+      const isTransport = (serviceData as any)?.category_id === "cat_transport"
+      const { total, commission } = resolveBookingCommission(booking, isTransport)
+
+      await settlePaymentWithCommission(supabase, {
+        vendorId: booking.vendor_id,
+        totalAmount: total,
+        commissionAmount: commission,
+        adminId,
+        bookingId,
+        touristId: booking.tourist_id || null,
+        currency: booking.currency || "UGX",
+        reference: paymentRef,
+      })
+    }
   }
 
   const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")

@@ -44,4 +44,5 @@ export interface Booking {
   commission_amount?: number | null;
   vendor_payout_amount?: number;
   platform_fee?: number | null;
+  pricing_source?: 'tier' | 'override' | 'quote';
 }

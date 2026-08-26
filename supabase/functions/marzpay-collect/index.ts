@@ -98,10 +98,17 @@ serve(async (req) => {
       )
     }
 
-    const { amount, phone_number, order_id, booking_id, description, user_id, metadata } = body
+    let amount = body.amount
+    const { phone_number, order_id, booking_id, description, user_id, metadata } = body
     const method = body.method === "card" ? "card" : "mobile_money"
 
-    if (!amount) {
+    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
+    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
+    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+
+    // Dummy 0 from /pay/:token is allowed when booking_id is a valid UUID;
+    // the quote branch overwrites amount from DB. Wallet/order still require amount.
+    if (!amount && !paymentBookingId) {
       return new Response(
         JSON.stringify({ error: "Missing required field: amount" }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
@@ -115,10 +122,6 @@ serve(async (req) => {
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       )
     }
-
-    const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
-    const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
-    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
 
     let formattedPhone: string | null = null
     if (method === "mobile_money") {
@@ -146,7 +149,7 @@ serve(async (req) => {
           { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
         )
       }
-    } else {
+    } else if (!paymentBookingId) {
       const amountInt = parseInt(String(amount), 10)
       if (amountInt < 500 || amountInt > 10_000_000) {
         return new Response(
@@ -158,6 +161,72 @@ serve(async (req) => {
 
     // Supabase client created once and reused for all pre-payment checks + insert.
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    if (paymentBookingId) {
+      const { data: bookingRow, error: bookingError } = await supabase
+        .from("bookings")
+        .select("id, pricing_source, payment_status, status")
+        .eq("id", paymentBookingId)
+        .maybeSingle()
+
+      if (bookingError) {
+        return new Response(JSON.stringify({ error: bookingError.message || "Failed to load booking" }), {
+          status: 500,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        })
+      }
+
+      if (bookingRow?.pricing_source === "quote") {
+        const { data: quoteRow } = await supabase
+          .from("quotes")
+          .select("status, valid_until, collect_amount_ugx, agreed_total_ugx, amount_paid_ugx, balance_enabled, booking_id")
+          .eq("booking_id", paymentBookingId)
+          .maybeSingle()
+
+        if (!quoteRow) {
+          return new Response(JSON.stringify({ error: "Quote not found for booking" }), {
+            status: 400,
+            headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+          })
+        }
+
+        const remaining = Math.max(0, quoteRow.agreed_total_ugx - quoteRow.amount_paid_ugx)
+        const expired = quoteRow.valid_until && new Date(quoteRow.valid_until).getTime() < Date.now()
+        const blocked =
+          expired ||
+          remaining <= 0 ||
+          quoteRow.status === "cancelled" ||
+          quoteRow.status === "paid" ||
+          quoteRow.status === "expired" ||
+          (quoteRow.status === "deposit_paid" && !quoteRow.balance_enabled)
+
+        if (blocked) {
+          return new Response(JSON.stringify({ error: "This payment link cannot be charged" }), {
+            status: 400,
+            headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+          })
+        }
+
+        amount = Math.min(quoteRow.collect_amount_ugx, remaining)
+      }
+    }
+
+    if (!amount) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: amount" }),
+        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      )
+    }
+
+    if (method === "card" && paymentBookingId) {
+      const amountInt = parseInt(String(amount), 10)
+      if (amountInt < 500 || amountInt > 10_000_000) {
+        return new Response(
+          JSON.stringify({ error: "Card payment amount must be between 500 and 10,000,000 UGX" }),
+          { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        )
+      }
+    }
 
     // ── Order-scoped pre-payment guards ─────────────────────────────────────
     if (paymentOrderId) {
