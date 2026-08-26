@@ -29,7 +29,6 @@ export type AdminVisitorStats = {
   bounceRate: number
   topCountries: AdminCountryStat[]
   ageGroups: Array<{ ageGroup: string; count: number; percentage: string | number }>
-  genderDistribution: { male: number; female: number; other: number }
   topLikedServices: AdminLikedService[]
   recentReviews: AdminReviewStat[]
   reviewsThisMonth: number
@@ -55,7 +54,6 @@ export const emptyAdminVisitorStats: AdminVisitorStats = {
   bounceRate: 0,
   topCountries: [],
   ageGroups: [],
-  genderDistribution: { male: 0, female: 0, other: 0 },
   topLikedServices: [],
   recentReviews: [],
   reviewsThisMonth: 0,
@@ -74,7 +72,6 @@ export function mapAdminVisitorStats(
     bounceRate: Number(payload.bounceRate) || 0,
     topCountries: Array.isArray(payload.topCountries) ? payload.topCountries : [],
     ageGroups: [],
-    genderDistribution: { male: 0, female: 0, other: 0 },
     topLikedServices: Array.isArray(payload.topLikedServices) ? payload.topLikedServices : [],
     recentReviews: Array.isArray(payload.recentReviews) ? payload.recentReviews : [],
     reviewsThisMonth: Number(payload.reviewsThisMonth) || 0,

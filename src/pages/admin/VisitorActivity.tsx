@@ -43,7 +43,6 @@ interface VisitorStats {
   bounceRate: number
   topCountries: CountryData[]
   ageGroups: DemographicData[]
-  genderDistribution: { male: number; female: number; other: number }
   topLikedServices: LikeData[]
   recentReviews: ReviewData[]
   reviewsThisMonth: number
@@ -107,14 +106,12 @@ export const VisitorActivity = () => {
     bounceRate: 0,
     topCountries: [],
     ageGroups: [],
-    genderDistribution: { male: 0, female: 0, other: 0 },
     topLikedServices: [],
     recentReviews: [],
     reviewsThisMonth: 0,
     avgRating: 0
   })
   const [vendorStats, setVendorStats] = useState<any[]>([])
-  const genderTotal = stats.genderDistribution.male + stats.genderDistribution.female + stats.genderDistribution.other
   const [loading, setLoading] = useState(true)
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null)
 
@@ -242,31 +239,6 @@ export const VisitorActivity = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Gender Distribution */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-sm font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
-          Gender Distribution
-        </h2>
-        {genderTotal === 0 && (
-          <p className="text-sm text-gray-500 mb-4">Gender is not collected on DirtTrails visits.</p>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { label: 'Male', count: stats.genderDistribution.male, color: 'bg-blue-100 text-blue-800' },
-            { label: 'Female', count: stats.genderDistribution.female, color: 'bg-purple-100 text-purple-800' },
-            { label: 'Other', count: stats.genderDistribution.other, color: 'bg-orange-100 text-orange-800' }
-          ].map((gender, idx) => (
-            <div key={idx} className={`p-4 rounded-lg text-center ${gender.color}`}>
-              <p className="text-sm font-semibold mb-2">{gender.label}</p>
-              <p className="text-3xl font-bold">{gender.count.toLocaleString()}</p>
-              <p className="text-xs mt-2">
-                {genderTotal > 0 ? ((gender.count / genderTotal) * 100).toFixed(1) : '0'}%
-              </p>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -430,25 +402,6 @@ export const VisitorActivity = () => {
                           ) : (
                             <p className="text-xs text-gray-500">No age data</p>
                           )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Gender Distribution */}
-                    <div className="bg-white rounded-xl p-4 border border-gray-200">
-                      <h4 className="text-sm font-bold text-gray-900 mb-4">Gender Distribution</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <p className="text-xs text-gray-600 mb-2">Male</p>
-                          <p className="text-2xl font-semibold text-blue-600">{vendor.genderDistribution?.male || 0}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-600 mb-2">Female</p>
-                          <p className="text-2xl font-semibold text-purple-600">{vendor.genderDistribution?.female || 0}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-600 mb-2">Other</p>
-                          <p className="text-2xl font-semibold text-orange-600">{vendor.genderDistribution?.other || 0}</p>
                         </div>
                       </div>
                     </div>
