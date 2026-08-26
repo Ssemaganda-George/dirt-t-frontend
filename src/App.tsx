@@ -50,6 +50,7 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminServices = lazy(() => import('./pages/admin/Services').then(module => ({ default: module.Services })))
 const AdminBookings = lazy(() => import('./pages/admin/Bookings').then(module => ({ default: module.Bookings })))
+const Quotes = lazy(() => import('./pages/admin/Quotes'))
 const Transactions = lazy(() => import('./pages/admin/Wallets').then(module => ({ default: module.Transactions })))
 const DirtTrailsWallet = lazy(() => import('./pages/admin/DirtTrailsWallet').then(module => ({ default: module.DirtTrailsWallet })))
 const Finance = lazy(() => import('./pages/admin/Finance').then(module => ({ default: module.Finance })))
@@ -94,6 +95,7 @@ const AdminReviews = lazy(() => import('./pages/admin/Reviews').then(module => (
 const VendorTierManagement = lazy(() => import('./pages/admin/VendorTierManagement'))
 const Vendors = lazy(() => import('./pages/admin/Vendors'))
 const ReviewFromEmail = lazy(() => import('./pages/ReviewFromEmail'))
+const QuotePay = lazy(() => import('./pages/QuotePay'))
 const AdminPerformance = lazy(() => import('./pages/admin/PerformanceReport'))
 const AdminFlaggedBookings = lazy(() => import('./pages/admin/FlaggedBookings'))
 
@@ -164,6 +166,9 @@ function App() {
           {/* Public Routes */}
           <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/review/:token" element={<ReviewFromEmail />} />
+          <Route path="/pay/:token" element={<PublicLayout />}>
+            <Route index element={<QuotePay />} />
+          </Route>
           <Route path="/" element={<PublicLayout />}>
             <Route path="booking/:id" element={<BookingDetail />} />
             <Route index element={<Home />} />
@@ -316,6 +321,7 @@ function App() {
             <Route path="services/tours" element={<ToursServices />} />
             <Route path="services/transport" element={<TransportServices />} />
             <Route path="bookings" element={<AdminBookings />} />
+            <Route path="quotes" element={<Quotes />} />
             <Route path="bookings/events" element={<EventsBookings />} />
             <Route path="bookings/flights" element={<FlightsBookings />} />
             <Route path="bookings/hotels" element={<HotelsBookings />} />

@@ -535,17 +535,18 @@ export default function PublicLayout() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation - Hidden on scan pages, service detail pages, and checkout/payment pages */}
+      {/* Mobile Bottom Navigation - Hidden on scan pages, service detail pages, checkout/payment pages, and quote pay pages */}
       {!location.pathname.includes('/scan/') &&
         !location.pathname.startsWith('/service/') &&
-        !location.pathname.match(/^\/checkout\/[^/]+(\/payment)?$/) && (
+        !location.pathname.match(/^\/checkout\/[^/]+(\/payment)?$/) &&
+        !location.pathname.startsWith('/pay/') && (
           <MobileBottomNav
             onSupportClick={() => setShowSupportModal(true)}
             onSearchClick={() => setShowGlobalSearch(true)}
           />
       )}
 
-      <PlanTripFab />
+      {!location.pathname.startsWith('/pay/') && <PlanTripFab />}
 
       {/* Footer */}
       <footer className="hidden md:block text-gray-900">

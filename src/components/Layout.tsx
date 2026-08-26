@@ -21,7 +21,8 @@ import {
   Eye,
   Star,
   TreePine,
-  Mail
+  Mail,
+  Link2
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import PanelSearchModal from './PanelSearchModal'
@@ -61,6 +62,7 @@ const navigation = [
     category: 'Bookings',
     items: [
       { labelKey: 'bookings', href: '/admin/bookings', icon: MapPin },
+      { labelKey: 'quotes', href: '/admin/quotes', icon: Link2 },
       { labelKey: 'events_bookings', href: '/admin/bookings/events', icon: MapPin },
       { labelKey: 'flights_bookings', href: '/admin/bookings/flights', icon: MapPin },
       { labelKey: 'hotels_bookings', href: '/admin/bookings/hotels', icon: MapPin },
