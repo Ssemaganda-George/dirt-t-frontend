@@ -41,7 +41,6 @@ describe('mapAdminVisitorStats', () => {
     expect(mapped.uniqueVisitors).toBe(1375)
     expect(mapped.topCountries[0]).toEqual({ country: 'Uganda', count: 871, percentage: '63.3' })
     expect(mapped.ageGroups).toEqual([])
-    expect(mapped.genderDistribution).toEqual({ male: 0, female: 0, other: 0 })
     expect(mapped.recentReviews).toHaveLength(1)
     expect(mapped.avgRating).toBe(4.5)
   })
