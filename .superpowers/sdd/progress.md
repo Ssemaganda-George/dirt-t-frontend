@@ -10,4 +10,4 @@ Task 4: complete (working tree, review approved after vendor-listing stale-state
 Task 5: complete (working tree, review approved after hiding MobileBottomNav + PlanTripFab on /pay/). Justified: paid/deposit copy before expiry.
 Task 6: complete. Deployed `marzpay-collect` v18 (verify_jwt true). Quote bookings overwrite amount from DB.
 Task 7: complete. Deployed `process-payment-fulfillment-queue` v17 (verify_jwt true) including `quoteSettlement.ts`.
-Task 8: not started — real MarzPay smoke. Frontend `/admin/quotes` and `/pay/:token` still uncommitted (local/preview only until the SPA is shipped). Halt if ledger ≠ wallets.
+Task 8: smoke passed after webhook/worker JWT fix. MarzPay 1000 UGX completed; quote paid; vendor pending +940 not catalog 6750. Do not re-enable JWT on webhook or worker (they use their own secrets).

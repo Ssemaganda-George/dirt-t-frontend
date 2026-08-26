@@ -94,7 +94,7 @@ CREATE OR REPLACE FUNCTION public.create_quote_pay_link(
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_cat text;
