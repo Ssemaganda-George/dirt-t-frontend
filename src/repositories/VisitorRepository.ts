@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
+import { mapAdminVisitorStats } from '../lib/adminVisitorStats'
 import type { VisitorSession, ServiceLike, VisitorActivity } from '../types'
 
 export interface AppVisit {
@@ -332,95 +333,12 @@ export async function getServiceActivityStats(serviceId: string) {
 
 export async function getVisitorActivityStats() {
   try {
-    // Get all profiles (visitors/tourists)
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, created_at, role')
-      .eq('role', 'tourist')
-
-    if (profilesError) throw profilesError
-
-    // Get all bookings with service and profile info
-    const { data: bookings, error: bookingsError } = await supabase
-      .from('bookings')
-      .select('id, tourist_id, service_id, status, created_at, total_amount, currency')
-      .in('status', ['confirmed', 'completed', 'pending'])
-
-    if (bookingsError) throw bookingsError
-
-    // Get all services
-    const { data: services, error: servicesError } = await supabase
-      .from('services')
-      .select('id, title')
-
-    if (servicesError) throw servicesError
-
-    // Get all reviews
-    const { data: reviews, error: reviewsError } = await supabase
-      .from('reviews')
-      .select('id, service_id, user_id, rating, comment, helpful_count, created_at, profiles(full_name), services(title)')
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    if (reviewsError) throw reviewsError
-
-    // Process data for analytics
-    const uniqueVisitorIds = new Set<string>()
-
-    profiles?.forEach((profile: any) => {
-      uniqueVisitorIds.add(profile.id)
-    })
-
-    // Get top liked services (based on service count)
-    const topLikedServices = services
-      ?.slice(0, 5)
-      .map((s: any) => ({
-        id: s.id,
-        serviceName: s.title,
-        category: '',
-        totalLikes: 0,
-        avgRating: 0
-      })) || []
-
-    // Get recent reviews with formatted data
-    const recentReviewsList = reviews
-      ?.map((r: any) => ({
-        id: r.id,
-        serviceName: r.services?.title || 'Unknown Service',
-        rating: r.rating || 0,
-        comment: r.comment || '',
-        visitorName: r.profiles?.full_name || 'Anonymous',
-        date: r.created_at || new Date().toISOString(),
-        helpful: r.helpful_count || 0
-      })) || []
-
-    // Count reviews this month
-    const now = new Date()
-    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1)
-    const reviewsThisMonth = reviews?.filter((r: any) => new Date(r.created_at) >= monthAgo).length || 0
-
-    // Calculate average rating
-    const avgRating = reviews && reviews.length > 0
-      ? (reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
-      : '0'
-
-    // Calculate average session duration (using booking data as proxy)
-    const avgSessionDuration = bookings?.length ? (bookings.length * 0.5).toFixed(1) : '0'
-    const bounceRate = bookings?.length ? ((1 - (bookings.filter((b: any) => b.status === 'confirmed').length / bookings.length)) * 100).toFixed(1) : '0'
-
-    return {
-      totalVisitors: profiles?.length || 0,
-      uniqueVisitors: uniqueVisitorIds.size,
-      avgSessionDuration: parseFloat(avgSessionDuration as string),
-      bounceRate: parseFloat(bounceRate as string),
-      topCountries: [],
-      ageGroups: [],
-      genderDistribution: { male: 0, female: 0, other: 0 },
-      topLikedServices,
-      recentReviews: recentReviewsList,
-      reviewsThisMonth,
-      avgRating: parseFloat(avgRating as string)
+    const { data, error } = await supabase.rpc('get_admin_visitor_stats')
+    if (error) throw error
+    if (data && typeof data === 'object' && (data as { error?: string }).error) {
+      throw new Error((data as { error: string }).error)
     }
+    return mapAdminVisitorStats(data as Record<string, unknown>)
   } catch (error) {
     console.error('Error fetching visitor activity stats:', error)
     throw error

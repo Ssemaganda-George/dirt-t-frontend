@@ -125,12 +125,20 @@ export const VisitorActivity = () => {
   const fetchVisitorActivity = async () => {
     try {
       setLoading(true)
-      const [platformData, vendorsData] = await Promise.all([
+      const [platformResult, vendorsResult] = await Promise.allSettled([
         getVisitorActivityStats(),
         getAllVendorsWithActivity()
       ])
-      setStats(platformData)
-      setVendorStats(vendorsData)
+      if (platformResult.status === 'fulfilled') {
+        setStats(platformResult.value)
+      } else {
+        console.error('Error fetching visitor activity:', platformResult.reason)
+      }
+      if (vendorsResult.status === 'fulfilled') {
+        setVendorStats(vendorsResult.value)
+      } else {
+        console.error('Error fetching vendor activity:', vendorsResult.reason)
+      }
     } catch (error) {
       console.error('Error fetching visitor activity:', error)
     } finally {
@@ -155,7 +163,7 @@ export const VisitorActivity = () => {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Visitors"
+          title="Page views"
           value={stats.totalVisitors.toLocaleString()}
           color="blue"
         />
@@ -184,6 +192,9 @@ export const VisitorActivity = () => {
             <h2 className="text-sm font-semibold text-gray-900">Top Countries</h2>
           </div>
           <div className="space-y-4">
+            {stats.topCountries.length === 0 && (
+              <p className="text-sm text-gray-500">No country data yet from visitor sessions.</p>
+            )}
             {stats.topCountries.map((country, idx) => (
               <div key={idx} className="flex items-center justify-between">
                 <div className="flex-1">
@@ -210,6 +221,9 @@ export const VisitorActivity = () => {
             <h2 className="text-sm font-semibold text-gray-900">Age Distribution</h2>
           </div>
           <div className="space-y-4">
+            {stats.ageGroups.length === 0 && (
+              <p className="text-sm text-gray-500">Age is not collected on DirtTrails visits.</p>
+            )}
             {stats.ageGroups.map((group, idx) => (
               <div key={idx} className="flex items-center justify-between">
                 <div className="flex-1">
@@ -236,6 +250,9 @@ export const VisitorActivity = () => {
         <h2 className="text-sm font-semibold text-gray-900 mb-6 pb-4 border-b border-gray-200">
           Gender Distribution
         </h2>
+        {genderTotal === 0 && (
+          <p className="text-sm text-gray-500 mb-4">Gender is not collected on DirtTrails visits.</p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             { label: 'Male', count: stats.genderDistribution.male, color: 'bg-blue-100 text-blue-800' },
@@ -269,6 +286,11 @@ export const VisitorActivity = () => {
               </tr>
             </thead>
             <tbody>
+              {stats.topLikedServices.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-6 px-4 text-sm text-gray-500">No listing views or likes yet.</td>
+                </tr>
+              )}
               {stats.topLikedServices.map((service) => (
                 <tr key={service.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3 px-4 text-sm font-medium text-gray-900">{service.serviceName}</td>
@@ -293,6 +315,9 @@ export const VisitorActivity = () => {
           </div>
         </div>
         <div className="space-y-4">
+          {stats.recentReviews.length === 0 && (
+            <p className="text-sm text-gray-500">No reviews yet.</p>
+          )}
           {stats.recentReviews.map((review) => (
             <div key={review.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-3">
