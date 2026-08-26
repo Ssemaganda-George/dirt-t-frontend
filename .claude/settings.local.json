@@ -76,7 +76,10 @@
       "Bash(grep -v \"node_modules\\\\|//\\\\|StatCard\\\\|\\\\.md\\\\|AdminPricingManagement\")",
       "Bash(grep -v \"node_modules\\\\|//\\\\|StatCard\\\\|AdminPricingManagement\")",
       "Bash(grep -v \"node_modules\\\\|//\\\\|StatCard\\\\|AdminPricingManagement\\\\|\\\\.css\\\\|index.css\")",
-      "Bash(awk -F: '{print $1}')"
+      "Bash(awk -F: '{print $1}')",
+      "Read(//c/Users/user/.claude/skills/**)",
+      "Read(//c/Users/user/.claude/plugins/**)",
+      "Skill(claude-api)"
     ]
   },
   "enableAllProjectMcpServers": true,

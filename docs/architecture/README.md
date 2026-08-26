@@ -33,6 +33,9 @@ Follow [`ARCHITECTURE.md`](./ARCHITECTURE.md) for layer rules while still on Sup
 ## Related docs
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — layer rules and import conventions
+- [`SECURITY.md`](./SECURITY.md) — short, non-technical (for partners)
+- [`SECURITY-ENGINEERING.md`](./SECURITY-ENGINEERING.md) — auth, RLS, paid-state, Edge secrets
+- [`MONEY_CYCLE.md`](./MONEY_CYCLE.md) — MarzPay → webhook → wallets / tickets
 - [`audit-2026-06-03.md`](./audit-2026-06-03.md) — migration audit (future)
 - [`../MIGRATIONS.md`](../MIGRATIONS.md) — how DB migrations are applied today
 - [`../../RAILWAY_MIGRATION_ARCHITECTURE_AUDIT_PROMPT.md`](../../RAILWAY_MIGRATION_ARCHITECTURE_AUDIT_PROMPT.md) — full audit prompt
