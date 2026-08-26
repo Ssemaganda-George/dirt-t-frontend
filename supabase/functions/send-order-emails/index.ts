@@ -6,7 +6,16 @@ import QRCode from "https://esm.sh/qrcode@1.5.3"
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL")
-const FRONTEND_URL = Deno.env.get("FRONTEND_URL")
+const PRODUCTION_FRONTEND_URL = "https://bookings.dirt-trails.com"
+function resolveFrontendUrl(raw: string | undefined): string {
+  const value = String(raw || "").trim().replace(/\/$/, "")
+  if (!value) return PRODUCTION_FRONTEND_URL
+  if (/your-frontend-url|example\.com|localhost|127\.0\.0\.1/i.test(value)) {
+    return PRODUCTION_FRONTEND_URL
+  }
+  return value
+}
+const FRONTEND_URL = resolveFrontendUrl(Deno.env.get("FRONTEND_URL"))
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -284,7 +293,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
 
   try {
-    if (!RESEND_API_KEY || !FROM_EMAIL || !FRONTEND_URL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!RESEND_API_KEY || !FROM_EMAIL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing required environment variables")
     }
 

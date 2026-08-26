@@ -4,10 +4,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL')
-const FRONTEND_URL = Deno.env.get('FRONTEND_URL')
+const PRODUCTION_FRONTEND_URL = 'https://bookings.dirt-trails.com'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 const ENABLE_BOOKING_PDF = Deno.env.get('ENABLE_BOOKING_PDF') === 'true'
+
+function resolveFrontendUrl(raw: string | undefined): string {
+  const value = String(raw || '').trim().replace(/\/$/, '')
+  if (!value) return PRODUCTION_FRONTEND_URL
+  if (/your-frontend-url|example\.com|localhost|127\.0\.0\.1/i.test(value)) {
+    return PRODUCTION_FRONTEND_URL
+  }
+  return value
+}
+
+const FRONTEND_URL = resolveFrontendUrl(Deno.env.get('FRONTEND_URL'))
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -172,7 +183,7 @@ function buildTouristEmailHtml(p: {
     <!-- CTA -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
     <tr><td style="text-align:center;">
-      <a href="${frontendUrl}/bookings/${booking.id}" style="display:inline-block;background:#1B3A2D;color:#FAF6EE;text-decoration:none;padding:15px 40px;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-family:Arial,sans-serif;font-weight:700;">View My Booking &rarr;</a>
+      <a href="${frontendUrl}/booking/${booking.id}" style="display:inline-block;background:#1B3A2D;color:#FAF6EE;text-decoration:none;padding:15px 40px;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-family:Arial,sans-serif;font-weight:700;">View My Booking &rarr;</a>
     </td></tr>
     </table>
 
@@ -287,7 +298,7 @@ function buildVendorEmailHtml(p: {
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td style="text-align:center;">
-      <a href="${frontendUrl}/vendor/bookings/${booking.id}" style="display:inline-block;background:#1B3A2D;color:#FAF6EE;text-decoration:none;padding:15px 40px;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-family:Arial,sans-serif;font-weight:700;">Manage Booking &rarr;</a>
+      <a href="${frontendUrl}/vendor/bookings" style="display:inline-block;background:#1B3A2D;color:#FAF6EE;text-decoration:none;padding:15px 40px;font-size:11px;letter-spacing:4px;text-transform:uppercase;font-family:Arial,sans-serif;font-weight:700;">Manage Booking &rarr;</a>
     </td></tr>
     </table>
   </td></tr>
@@ -422,7 +433,7 @@ async function buildReceiptPdfBase64(p: {
     // QR CODE (bottom right)
     try {
       const q = (QRCode as any).default ?? QRCode
-      const dataUrl = await q.toDataURL(`${frontendUrl}/bookings/${booking.id}`, { width: 130 })
+      const dataUrl = await q.toDataURL(`${frontendUrl}/booking/${booking.id}`, { width: 130 })
       const b64 = dataUrl.split(',')[1]
       const bin = atob(b64)
       const bytes = new Uint8Array(bin.length)
@@ -456,7 +467,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    if (!RESEND_API_KEY || !FROM_EMAIL || !FRONTEND_URL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!RESEND_API_KEY || !FROM_EMAIL || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return jsonError('CONFIG_ERROR', 'Missing env vars', 500)
     }
 
