@@ -47,7 +47,7 @@ The following secrets must be configured in your Supabase project:
    ```bash
    supabase secrets set RESEND_API_KEY=your_resend_api_key
    supabase secrets set FROM_EMAIL=noreply@yourdomain.com
-   supabase secrets set FRONTEND_URL=https://your-frontend-url.com
+   supabase secrets set FRONTEND_URL=https://bookings.dirt-trails.com
    supabase secrets set SUPABASE_URL=https://your-project.supabase.co
    supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    supabase secrets set SUPABASE_ANON_KEY=your_anon_key
