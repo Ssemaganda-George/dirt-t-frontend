@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+const MARZPAY_API_URL = Deno.env.get("MARZPAY_API_URL") || "https://wallet.wearemarz.com/api/v1"
+const MARZPAY_API_CREDENTIALS = Deno.env.get("MARZPAY_API_CREDENTIALS") || ""
 const APP_URL = Deno.env.get("APP_URL") || Deno.env.get("FRONTEND_URL") || "http://localhost:3000"
 const EXTRA_CORS_ORIGINS = Deno.env.get("EXTRA_CORS_ORIGINS") || ""
 const DEFAULT_CORS_ORIGINS = [
@@ -77,6 +79,76 @@ function evictExpired(): void {
   }
 }
 
+function mapMarzpayStatus(raw: string): string {
+  const s = (raw || "").toLowerCase()
+  if (s === "successful" || s === "success" || s === "completed") return "completed"
+  if (["failed", "cancelled", "rejected", "expired"].includes(s)) return "failed"
+  return s || "processing"
+}
+
+async function refreshFromMarzpay(
+  supabase: ReturnType<typeof createClient>,
+  p: { id: string; order_id: string | null; booking_id?: string | null; amount: number | null; status: string; reference: string; transaction_uuid?: string | null },
+): Promise<{ status: string; amount: number | null }> {
+  if (isTerminal(p.status) || !MARZPAY_API_CREDENTIALS) {
+    return { status: p.status, amount: p.amount }
+  }
+  const lookup = p.transaction_uuid || p.reference
+  if (!lookup) return { status: p.status, amount: p.amount }
+
+  try {
+    const res = await fetch(`${MARZPAY_API_URL}/transactions/${lookup}`, {
+      headers: {
+        Authorization: `Basic ${MARZPAY_API_CREDENTIALS}`,
+        "Content-Type": "application/json",
+      },
+    })
+    if (!res.ok) return { status: p.status, amount: p.amount }
+    const body: any = await res.json()
+    const txn = body.transaction || body.data?.transaction
+    const next = mapMarzpayStatus(String(txn?.status || ""))
+    if (!isTerminal(next)) return { status: p.status, amount: p.amount }
+
+    await supabase
+      .from("payments")
+      .update({
+        status: next,
+        webhook_data: body,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", p.id)
+
+    if (next === "completed" && p.booking_id) {
+      await supabase
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          payment_status: "paid",
+          payment_reference: p.reference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", p.booking_id)
+
+      await supabase.from("payment_fulfillment_jobs").upsert(
+        {
+          job_type: "booking_fulfillment",
+          source_id: p.booking_id,
+          payload: { reference: p.reference, amount: Number(p.amount || 0) },
+          idempotency_key: `booking_fulfillment:${p.booking_id}:${p.reference}`,
+          status: "pending",
+          scheduled_for: new Date().toISOString(),
+        },
+        { onConflict: "idempotency_key" },
+      )
+    }
+
+    return { status: next, amount: p.amount }
+  } catch (err) {
+    console.warn("marzpay-payment-status: MarzPay refresh failed", (err as Error).message)
+    return { status: p.status, amount: p.amount }
+  }
+}
+
 serve(async (req) => {
   const CORS_HEADERS = buildCorsHeaders(req)
   const NO_CACHE_HEADERS = {
@@ -124,7 +196,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     const { data: rows, error } = await supabase
       .from("payments")
-      .select("id, order_id, reference, status, amount, phone_number, created_at")
+      .select("id, order_id, booking_id, reference, status, amount, phone_number, created_at, transaction_uuid")
       .eq("reference", reference)
       .limit(1)
 
@@ -137,21 +209,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Payment not found" }), { status: 404, headers: JSON_HEADERS })
     }
 
+    const refreshed = await refreshFromMarzpay(supabase, p)
+    const status = refreshed.status
+    const amount = refreshed.amount
+
     statusCache.set(reference, {
-      status:     p.status,
+      status,
       payment_id: p.id,
       order_id:   p.order_id,
-      amount:     p.amount,
+      amount,
       cachedAt:   Date.now(),
     })
 
     return new Response(
       JSON.stringify({
         reference:  p.reference,
-        status:     p.status,
+        status,
         payment_id: p.id,
         order_id:   p.order_id,
-        amount:     p.amount,
+        amount,
         cached:     false,
       }),
       { status: 200, headers: JSON_HEADERS }
