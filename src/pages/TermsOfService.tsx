@@ -1,5 +1,6 @@
 import { FileText, Shield, Scale, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { BOOKING_TERMS_EFFECTIVE_DATE } from '../lib/termsVersion'
 
 export default function TermsOfService() {
   const navigate = useNavigate()
@@ -259,7 +260,7 @@ export default function TermsOfService() {
             <div className="flex items-center justify-center space-x-2 text-gray-500">
               <Clock className="h-4 w-4" />
               <span className="text-xs sm:text-sm font-medium tracking-tight antialiased">
-                Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                Last updated: {BOOKING_TERMS_EFFECTIVE_DATE}
               </span>
             </div>
           </div>
@@ -398,7 +399,7 @@ export default function TermsOfService() {
         {/* Footer */}
         <div className="text-center mt-6 sm:mt-10 pt-4 sm:pt-6 border-t border-gray-200">
           <p className="text-gray-500 mb-1 antialiased text-xs sm:text-sm">
-            These terms were last updated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
+            These terms were last updated on {BOOKING_TERMS_EFFECTIVE_DATE}.
           </p>
           <p className="text-gray-600 text-xs sm:text-sm leading-relaxed antialiased">
             Continued use of DirtTrails constitutes acceptance of any changes.

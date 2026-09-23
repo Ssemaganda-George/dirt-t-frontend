@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { initiateMarzpayCollect, type MarzpayMethod } from '../lib/marzpayApi'
 import { getOptionalUserId } from '../services/AuthService'
+import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from './useMarzpayPaymentWatch'
 
 export function useOrderPaymentFlow(orderId: string | undefined) {
@@ -54,6 +55,17 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
         method = 'mobile_money',
       } = params
       if (!orderId || !order) return
+
+      if (!await requestTermsAcceptance()) {
+        setPaymentError('Please accept the Terms of Service to continue.')
+        return
+      }
+      try {
+        await recordTermsAcceptance('order', orderId)
+      } catch (acceptanceError) {
+        setPaymentError((acceptanceError as Error).message)
+        return
+      }
 
       setPaymentError(null)
       if (!ticketPricingReady) {

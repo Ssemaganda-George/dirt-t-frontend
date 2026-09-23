@@ -7,6 +7,7 @@ import { calculatePaymentForAmount } from '../lib/pricingService'
 import { initiateMarzpayCollect, redirectMarzpayIfNeeded, toMarzpayMethod, isMobileUiMethod, getMarzpayMobileValidationErrors, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
 import { getOptionalUserId } from '../services/AuthService'
+import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from '../hooks/useMarzpayPaymentWatch'
 import { PageSkeleton } from '../components/SkeletonLoader'
@@ -261,6 +262,17 @@ export default function PaymentPage() {
         setPaymentError(mobileErrs.phone || 'Please enter a valid mobile money phone number (e.g. 0712345678).')
         return
       }
+    }
+
+    if (!await requestTermsAcceptance()) {
+      setPaymentError('Please accept the Terms of Service to continue.')
+      return
+    }
+    try {
+      await recordTermsAcceptance('order', orderId)
+    } catch (acceptanceError) {
+      setPaymentError((acceptanceError as Error).message)
+      return
     }
 
     // Persist tier/pricing breakdown on the order before collect so admin finance (Dirt Trails Wallet)

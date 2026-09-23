@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabaseClient'
 import { getAccessToken } from '../services/AuthService'
 import { buildCreateBookingAtomicRpcPayload } from '../lib/createBookingAtomicRpc'
+import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
 import { normalizeServiceCurrency } from '../lib/utils'
 import type { Booking } from '../types'
 import { getAdminProfileId } from './PartnerRepository'
@@ -184,6 +185,9 @@ export async function createBooking(
     pricing_base_amount?: number | null
   }
 ): Promise<Booking> {
+  if (!await requestTermsAcceptance()) {
+    throw new Error('Terms of Service acceptance is required before booking')
+  }
   console.log('createBooking called with:', booking)
 
   // Check if this is a guest booking
@@ -253,6 +257,13 @@ export async function createBooking(
 
   const bookingId: string = result.data.booking_id
   console.log('Booking created successfully (atomic):', bookingId)
+
+  try {
+    await recordTermsAcceptance('booking', bookingId)
+  } catch (acceptanceError) {
+    await supabase.rpc('cancel_pending_booking_atomic', { p_booking_id: bookingId })
+    throw acceptanceError
+  }
 
   const requestedStatus = (bookingData as any).status ?? 'pending'
   let requestedPaymentStatus =
