@@ -7,6 +7,7 @@ import { calculatePaymentForAmount } from '../lib/pricingService'
 import { initiateMarzpayCollect, redirectMarzpayIfNeeded, toMarzpayMethod, isMobileUiMethod, getMarzpayMobileValidationErrors, detectMarzpayProvider, type MarzpayPaymentFieldsValue } from '../lib/marzpayApi'
 import MarzpayPaymentFields from '../components/payment/MarzpayPaymentFields'
 import { getOptionalUserId } from '../services/AuthService'
+import { prepareCheckoutOrder, setCheckoutTicketQuantity } from '../repositories/OrderRepository'
 import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
 import { orderMarzpayWatchConfig, useMarzpayPaymentWatch } from '../hooks/useMarzpayPaymentWatch'
@@ -30,37 +31,7 @@ export default function PaymentPage() {
     if (newQuantity < 0 || !orderId) return
 
     try {
-      const existingItem = items.find((it: any) => it.ticket_type_id === ticketTypeId)
-
-      if (existingItem) {
-        if (newQuantity === 0) {
-          const { error } = await supabase
-            .from('order_items')
-            .delete()
-            .eq('id', existingItem.id)
-          if (error) throw error
-        } else {
-          const { error } = await supabase
-            .from('order_items')
-            .update({ quantity: newQuantity })
-            .eq('id', existingItem.id)
-          if (error) throw error
-        }
-      } else if (newQuantity > 0) {
-        // fallback unit_price to existing item price if available
-        const fallbackPrice = items.find((it: any) => it.ticket_type_id === ticketTypeId)?.unit_price || 0
-        const { error } = await supabase
-          .from('order_items')
-          .insert({
-            order_id: orderId,
-            ticket_type_id: ticketTypeId,
-            quantity: newQuantity,
-            unit_price: fallbackPrice
-          })
-          .select()
-          .single()
-        if (error) throw error
-      }
+      await setCheckoutTicketQuantity(orderId, ticketTypeId, newQuantity)
 
       await queryClient.invalidateQueries({ queryKey: orderQueryKey(orderId) })
     } catch (err) {
@@ -251,7 +222,7 @@ export default function PaymentPage() {
     return
   }
   const isCard = paymentFields.method === 'card'
-  const totalWithFee = Math.round(totalAmount)
+  let totalWithFee = Math.round(totalAmount)
     let phone = ''
     if (!isCard) {
       const rawPhone = (paymentFields.phone || order?.guest_phone || '').trim().replace(/^\+256/, '')
@@ -275,51 +246,15 @@ export default function PaymentPage() {
       return
     }
 
-    // Persist tier/pricing breakdown on the order before collect so admin finance (Dirt Trails Wallet)
-    // can resolve platform fee via payments.reference → order_id (transactions are not booking-linked).
     const emailToSave = (ticketEmail || order?.guest_email || '').trim()
-    const activeItems = items.filter((it: any) => Number(it.quantity ?? 0) > 0)
-    let orderPatch: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-      ...(emailToSave ? { guest_email: emailToSave } : {}),
+    try {
+      totalWithFee = await prepareCheckoutOrder(orderId, order.guest_name || '', emailToSave, phone || order.guest_phone || '')
+    } catch (prepareError) {
+      setPaymentError((prepareError as Error).message || 'Could not prepare order for payment.')
+      return
     }
-    if (activeItems.length > 0) {
-      let platformFeeSum = 0
-      let vendorPayoutSum = 0
-      let basePriceSum = 0
-      let feePayer: string | null = null
-      let pricingSource: string | null = null
-      let pricingReferenceId: string | null = null
-      for (const it of activeItems) {
-        const qty = Number(it.quantity ?? 0)
-        const calc = ticketCalculations[it.ticket_type_id]
-        if (!calc || calc.success === false) {
-          setPaymentError('Pricing is still loading for one or more tickets. Please wait a moment and try again.')
-          return
-        }
-        platformFeeSum += Number(calc.platform_fee || 0) * qty
-        vendorPayoutSum += Number(calc.vendor_payout || 0) * qty
-        basePriceSum += Number(calc.base_price || 0) * qty
-        if (feePayer === null) feePayer = String(calc.fee_payer || 'vendor')
-        if (pricingSource === null) pricingSource = String(calc.pricing_source || 'tier')
-        if (!pricingReferenceId && calc.pricing_reference_id) pricingReferenceId = String(calc.pricing_reference_id)
-      }
-      orderPatch = {
-        ...orderPatch,
-        total_amount: totalWithFee,
-        base_price: Math.round(basePriceSum),
-        platform_fee: Math.round(platformFeeSum),
-        vendor_payout: Math.round(vendorPayoutSum),
-        fee_payer: feePayer,
-        pricing_source: pricingSource,
-        pricing_reference_id: pricingReferenceId,
-      }
-    }
-
-    const { error: orderUpdateErr } = await supabase.from('orders').update(orderPatch).eq('id', orderId)
-    if (orderUpdateErr) {
-      console.error('[Payment] failed to persist order pricing', orderUpdateErr)
-      setPaymentError('Could not save order totals before payment. Please try again.')
+    if (Math.abs(totalWithFee - Math.round(totalAmount)) > 1) {
+      setPaymentError('Ticket price changed. Please refresh checkout and review the new total before paying.')
       return
     }
 

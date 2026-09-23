@@ -42,6 +42,15 @@ export async function getSession(): Promise<Session | null> {
   return data.session ?? null
 }
 
+export async function ensureCheckoutSession(): Promise<string> {
+  const session = await getSession()
+  if (session?.user?.id) return session.user.id
+  const { data, error } = await supabase.auth.signInAnonymously()
+  if (error) throw error
+  if (!data.user?.id) throw new Error('Could not start a private guest checkout session')
+  return data.user.id
+}
+
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error) throw error

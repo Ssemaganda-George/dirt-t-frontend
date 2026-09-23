@@ -104,7 +104,7 @@ serve(async (req) => {
 
     const paymentOrderId = order_id && isValidUUID(order_id) ? order_id : null
     const paymentBookingId = booking_id && isValidUUID(booking_id) ? booking_id : null
-    const paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
+    let paymentUserId = user_id && isValidUUID(user_id) ? user_id : null
 
     // Dummy 0 from /pay/:token is allowed when booking_id is a valid UUID;
     // the quote branch overwrites amount from DB. Wallet/order still require amount.
@@ -279,7 +279,7 @@ serve(async (req) => {
       // HIGH-1: Server-side order validation — verify order exists and is payable.
       const { data: order } = await supabase
         .from("orders")
-        .select("id, total_amount, status")
+        .select("id, user_id, total_amount, status, terms_accepted_at")
         .eq("id", paymentOrderId)
         .single()
 
@@ -288,6 +288,24 @@ serve(async (req) => {
           JSON.stringify({ error: "Order not found" }),
           { status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
         )
+      }
+
+      const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || ""
+      const { data: identity, error: identityError } = bearer
+        ? await supabase.auth.getUser(bearer)
+        : { data: { user: null }, error: new Error("Missing checkout identity") }
+      if (identityError || !identity.user || identity.user.id !== order.user_id) {
+        return new Response(JSON.stringify({ error: "Order does not belong to this checkout session" }), {
+          status: 403,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        })
+      }
+      paymentUserId = identity.user.id
+      if (!order.terms_accepted_at) {
+        return new Response(JSON.stringify({ error: "Terms acceptance is required" }), {
+          status: 409,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        })
       }
 
       if (!["pending", "processing"].includes(order.status ?? "")) {

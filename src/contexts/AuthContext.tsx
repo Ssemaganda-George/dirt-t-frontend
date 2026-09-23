@@ -213,7 +213,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const session = await getSession()
         const u = session?.user
         if (u) {
-          if (!isEmailConfirmed(u)) {
+          if (u.is_anonymous) {
+            setUser(null)
+            setProfile(null)
+            setVendor(null)
+          } else if (!isEmailConfirmed(u)) {
             await rejectUnverifiedSession()
           } else {
             setUser({ id: u.id, email: u.email ?? '', created_at: u.created_at ?? new Date().toISOString() })
@@ -240,6 +244,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const u = session.user
+        if (u.is_anonymous) {
+          setUser(null)
+          setProfile(null)
+          setVendor(null)
+          setProfileLoaded(false)
+          return
+        }
         if (!isEmailConfirmed(u)) {
           await rejectUnverifiedSession()
           return

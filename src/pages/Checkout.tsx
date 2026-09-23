@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
+import { setCheckoutTicketQuantity } from '../repositories/OrderRepository'
 import { useAuth } from '../contexts/AuthContext'
 import { usePreferences } from '../contexts/PreferencesContext'
 import { useOrderQuery, useOrderQueryClient, orderQueryKey } from '../hooks/useOrderQuery'
@@ -129,26 +129,7 @@ export default function CheckoutPage() {
   const updateTicketQuantity = async (ticketTypeId: string, newQuantity: number) => {
     if (newQuantity < 0 || !orderId) return
     try {
-      const existingItem = items.find(item => item.ticket_type_id === ticketTypeId)
-      if (existingItem) {
-        if (newQuantity === 0) {
-          const { error: delErr } = await supabase.from('order_items').delete().eq('id', existingItem.id)
-          if (delErr) throw delErr
-        } else {
-          const { error: updErr } = await supabase.from('order_items').update({ quantity: newQuantity }).eq('id', existingItem.id)
-          if (updErr) throw updErr
-        }
-      } else if (newQuantity > 0) {
-        const { error: insErr } = await supabase
-          .from('order_items')
-          .insert({
-            order_id: orderId,
-            ticket_type_id: ticketTypeId,
-            quantity: newQuantity,
-            unit_price: allTicketTypes.find(tt => tt.id === ticketTypeId)?.price || 0,
-          })
-        if (insErr) throw insErr
-      }
+      await setCheckoutTicketQuantity(orderId, ticketTypeId, newQuantity)
       await queryClient.invalidateQueries({ queryKey: orderQueryKey(orderId) })
     } catch (err) {
       console.error('Failed to update ticket quantity:', err)

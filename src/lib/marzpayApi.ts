@@ -1,4 +1,5 @@
 import { isValidUgMobileMoneyPhone } from './bookingFormValidation'
+import { getAccessToken } from '../services/AuthService'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -96,11 +97,12 @@ export function isCardUiMethod(method: string): boolean {
 
 /** Start MarzPay collect; returns reference and optional card redirect URL. */
 export async function initiateMarzpayCollect(payload: MarzpayCollectPayload): Promise<MarzpayCollectResult> {
+  const accessToken = payload.order_id ? await getAccessToken() : undefined
   const collectRes = await fetch(`${supabaseUrl}/functions/v1/marzpay-collect`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${supabaseAnonKey}`,
+      Authorization: `Bearer ${accessToken || supabaseAnonKey}`,
     },
     body: JSON.stringify(payload),
   })

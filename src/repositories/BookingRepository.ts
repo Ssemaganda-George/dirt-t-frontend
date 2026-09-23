@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
-import { getAccessToken } from '../services/AuthService'
+import { ensureCheckoutSession, getAccessToken } from '../services/AuthService'
 import { buildCreateBookingAtomicRpcPayload } from '../lib/createBookingAtomicRpc'
 import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
 import { normalizeServiceCurrency } from '../lib/utils'
@@ -193,6 +193,8 @@ export async function createBooking(
   // Check if this is a guest booking
   const isGuestBooking = !booking.tourist_id
 
+  if (isGuestBooking) await ensureCheckoutSession()
+
   if (isGuestBooking && (!booking.guest_name || !booking.guest_email || !booking.guest_phone)) {
     throw new Error('Guest name, email, and phone are required for guest bookings')
   }
@@ -266,21 +268,8 @@ export async function createBooking(
   }
 
   const requestedStatus = (bookingData as any).status ?? 'pending'
-  let requestedPaymentStatus =
-    (bookingData as any).payment_status ?? 'pending'
-  const requestedPaymentReference =
-    (bookingData as any).payment_reference || (bookingData as any).paymentReference
 
-  if (requestedPaymentStatus === 'paid') {
-    console.warn('createBooking: ignoring client payment_status=paid for booking', bookingId)
-    requestedPaymentStatus = 'pending'
-  }
-
-  const needsPatch =
-    bookingData.platform_fee != null ||
-    requestedStatus !== 'pending' ||
-    requestedPaymentStatus !== 'pending' ||
-    Boolean(requestedPaymentReference)
+  const needsPatch = requestedStatus !== 'pending'
 
   if (needsPatch) {
     const { data: patchResult, error: patchError } = await supabase.rpc(
@@ -288,10 +277,9 @@ export async function createBooking(
       {
         p_booking_id: bookingId,
         p_status: requestedStatus !== 'pending' ? requestedStatus : null,
-        p_payment_status: requestedPaymentStatus !== 'pending' ? requestedPaymentStatus : null,
-        p_payment_reference: requestedPaymentReference || null,
-        p_platform_fee:
-          bookingData.platform_fee != null ? Number(bookingData.platform_fee) : null,
+        p_payment_status: null,
+        p_payment_reference: null,
+        p_platform_fee: null,
       },
     )
 

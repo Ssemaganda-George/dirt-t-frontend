@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
+import { prepareCheckoutOrder } from '../repositories/OrderRepository'
 import { initiateMarzpayCollect, type MarzpayMethod } from '../lib/marzpayApi'
 import { getOptionalUserId } from '../services/AuthService'
 import { requestTermsAcceptance, recordTermsAcceptance } from '../lib/termsAcceptance'
@@ -45,8 +45,6 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
     }) => {
       const {
         order,
-        items,
-        ticketCalculations,
         totalAmount,
         ticketPricingReady,
         phone,
@@ -79,56 +77,20 @@ export function useOrderPaymentFlow(orderId: string | undefined) {
         }
       }
 
-      const totalWithFee = Math.round(totalAmount)
-      const activeItems = items.filter((it: any) => Number(it.quantity ?? 0) > 0)
-
-      let orderPatch: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-        guest_name: guestName.trim() || order.guest_name || null,
-        guest_email: guestEmail.trim() || order.guest_email || null,
-        guest_phone: method === 'mobile_money' && phone ? phone : order.guest_phone || null,
+      let totalWithFee: number
+      try {
+        totalWithFee = await prepareCheckoutOrder(
+          orderId,
+          guestName.trim() || order.guest_name || '',
+          guestEmail.trim() || order.guest_email || '',
+          method === 'mobile_money' && phone ? phone : order.guest_phone || '',
+        )
+      } catch (prepareError) {
+        setPaymentError((prepareError as Error).message || 'Could not prepare order for payment.')
+        return
       }
-
-      if (activeItems.length > 0) {
-        let platformFeeSum = 0
-        let vendorPayoutSum = 0
-        let basePriceSum = 0
-        let feePayer: string | null = null
-        let pricingSource: string | null = null
-        let pricingReferenceId: string | null = null
-
-        for (const it of activeItems) {
-          const qty = Number(it.quantity ?? 0)
-          const calc = ticketCalculations[it.ticket_type_id]
-          if (!calc || calc.success === false) {
-            setPaymentError('Pricing is still loading. Please wait a moment and try again.')
-            return
-          }
-          platformFeeSum += Number(calc.platform_fee || 0) * qty
-          vendorPayoutSum += Number(calc.vendor_payout || 0) * qty
-          basePriceSum += Number(calc.base_price || 0) * qty
-          if (feePayer === null) feePayer = String(calc.fee_payer || 'vendor')
-          if (pricingSource === null) pricingSource = String(calc.pricing_source || 'tier')
-          if (!pricingReferenceId && calc.pricing_reference_id) {
-            pricingReferenceId = String(calc.pricing_reference_id)
-          }
-        }
-
-        orderPatch = {
-          ...orderPatch,
-          total_amount: totalWithFee,
-          base_price: Math.round(basePriceSum),
-          platform_fee: Math.round(platformFeeSum),
-          vendor_payout: Math.round(vendorPayoutSum),
-          fee_payer: feePayer,
-          pricing_source: pricingSource,
-          pricing_reference_id: pricingReferenceId,
-        }
-      }
-
-      const { error: orderUpdateErr } = await supabase.from('orders').update(orderPatch).eq('id', orderId)
-      if (orderUpdateErr) {
-        setPaymentError('Could not save order before payment. Please try again.')
+      if (Math.abs(totalWithFee - Math.round(totalAmount)) > 1) {
+        setPaymentError('Ticket price changed. Please refresh checkout and review the new total before paying.')
         return
       }
 

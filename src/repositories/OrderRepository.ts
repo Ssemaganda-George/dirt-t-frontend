@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import { executeWithCircuitBreaker } from '../lib/concurrency'
+import { ensureCheckoutSession } from '../services/AuthService'
 
 // Ticketing helpers for event management
 export async function createTicketType(serviceId: string, payload: { title: string; description?: string; price: number; quantity: number; metadata?: any; sale_start?: string; sale_end?: string }) {
@@ -63,22 +64,38 @@ export async function deleteTicketType(ticketTypeId: string) {
   }
 }
 
-export async function createOrder(userId: string | null, vendorId: string | null, items: { ticket_type_id: string; quantity: number; unit_price: number }[], currency = 'UGX') {
+export async function createOrder(_userId: string | null, _vendorId: string | null, items: { ticket_type_id: string; quantity: number; unit_price: number }[], _currency = 'UGX') {
   try {
-    const total = items.reduce((s, it) => s + (it.unit_price * it.quantity), 0)
-
-    const { data: order, error: orderError } = await supabase.from('orders').insert([{ user_id: userId, vendor_id: vendorId, total_amount: total, currency, status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]).select().single()
-    if (orderError) throw orderError
-
-    const orderItems = items.map(it => ({ order_id: order.id, ticket_type_id: it.ticket_type_id, quantity: it.quantity, unit_price: it.unit_price, total_price: it.unit_price * it.quantity }))
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
-    if (itemsError) throw itemsError
-
-    return order
+    await ensureCheckoutSession()
+    const { data: orderId, error } = await supabase.rpc('create_checkout_order', {
+      p_items: items.map(({ ticket_type_id, quantity }) => ({ ticket_type_id, quantity })),
+    })
+    if (error) throw error
+    return { id: orderId }
   } catch (err) {
     console.error('Error creating order:', err)
     throw err
   }
+}
+
+export async function setCheckoutTicketQuantity(orderId: string, ticketTypeId: string, quantity: number): Promise<void> {
+  const { error } = await supabase.rpc('set_checkout_ticket_quantity', {
+    p_order_id: orderId,
+    p_ticket_type_id: ticketTypeId,
+    p_quantity: quantity,
+  })
+  if (error) throw error
+}
+
+export async function prepareCheckoutOrder(orderId: string, guestName: string, guestEmail: string, guestPhone: string): Promise<number> {
+  const { data, error } = await supabase.rpc('prepare_checkout_order', {
+    p_order_id: orderId,
+    p_guest_name: guestName,
+    p_guest_email: guestEmail,
+    p_guest_phone: guestPhone,
+  })
+  if (error) throw error
+  return Number(data)
 }
 
 export async function confirmOrderAndIssueTickets(
