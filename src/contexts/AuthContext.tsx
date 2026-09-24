@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js'
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
 import { PRIVACY_NOTICE_VERSION } from '../lib/privacyNotice'
+import { isAdultBirthDate } from '../lib/adultAge'
 import { updateUserPublicKey, getUserPublicKey, markMessagesAsDelivered } from '../lib/database'
 import {
   clearLocalAuthStorage,
@@ -42,7 +43,7 @@ interface AuthContextType {
   loading: boolean
   loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
-  signUp: (email: string, password: string, firstName: string, lastName: string, role: string, homeCity: string | undefined, homeCountry: string | undefined, privacyAccepted: boolean, adultConfirmed: boolean) => Promise<void>
+  signUp: (email: string, password: string, firstName: string, lastName: string, role: string, homeCity: string | undefined, homeCountry: string | undefined, privacyAccepted: boolean, adultConfirmed: boolean, birthDate: string) => Promise<void>
   signOut: (options?: { redirect?: boolean }) => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   confirmSignOut: () => Promise<void>
@@ -330,10 +331,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     homeCity?: string,
     homeCountry?: string,
     privacyAccepted = false,
-    adultConfirmed = false
+    adultConfirmed = false,
+    birthDate = ''
   ) => {
     if (!privacyAccepted) throw new Error('Please review and accept the privacy notice before creating an account.')
     if (!adultConfirmed) throw new Error('An adult must create and manage this account.')
+    if (!isAdultBirthDate(birthDate)) throw new Error('Account holders must be at least 18 years old. An adult can book for younger travelers.')
     const { data, error } = await signUpWithPassword(email, password, PRIVACY_NOTICE_VERSION)
     if (error) throw error
 

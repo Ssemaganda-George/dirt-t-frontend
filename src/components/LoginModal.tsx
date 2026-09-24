@@ -34,6 +34,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [adultConfirmed, setAdultConfirmed] = useState(false)
+  const [birthDate, setBirthDate] = useState('')
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -51,6 +52,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     setAgreedToTerms(false)
     setPrivacyAccepted(false)
     setAdultConfirmed(false)
+    setBirthDate('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +127,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     }
 
     try {
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined, privacyAccepted, adultConfirmed)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined, privacyAccepted, adultConfirmed, birthDate)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -393,7 +395,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             </div>
           )}
           {isSignUp && <SignupPrivacyConsent id="modalSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />}
-          {isSignUp && <AdultAccountConfirmation id="modalSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />}
+          {isSignUp && <AdultAccountConfirmation id="modalSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} birthDate={birthDate} onBirthDateChange={setBirthDate} />}
 
           {/* Sign in button */}
           <div>

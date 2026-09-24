@@ -20,6 +20,7 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [adultConfirmed, setAdultConfirmed] = useState(false)
+  const [birthDate, setBirthDate] = useState('')
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -82,7 +83,7 @@ export default function Login() {
       const nameParts = fullName.trim().split(/\s+/)
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, undefined, privacyAccepted, adultConfirmed)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, undefined, privacyAccepted, adultConfirmed, birthDate)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -201,7 +202,7 @@ export default function Login() {
               </div>
 
               <SignupPrivacyConsent id="touristSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />
-              <AdultAccountConfirmation id="touristSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />
+              <AdultAccountConfirmation id="touristSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} birthDate={birthDate} onBirthDateChange={setBirthDate} />
 
               <button
                 type="submit" disabled={loading}

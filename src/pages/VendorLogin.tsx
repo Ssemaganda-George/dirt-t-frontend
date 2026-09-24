@@ -40,6 +40,7 @@ export default function VendorLogin() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [adultConfirmed, setAdultConfirmed] = useState(false)
+  const [birthDate, setBirthDate] = useState('')
   const [showStepValidationErrors, setShowStepValidationErrors] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -247,7 +248,7 @@ export default function VendorLogin() {
       const lastName = nameParts.slice(1).join(' ') || ''
 
       // First create the user account (this also creates profile and basic vendor record)
-      await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined, privacyAccepted, adultConfirmed)
+      await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined, privacyAccepted, adultConfirmed, birthDate)
 
       // Get the current user
       const user = await getCurrentUser()
@@ -758,7 +759,7 @@ export default function VendorLogin() {
                         </label>
                       </div>
                       <SignupPrivacyConsent id="vendorSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />
-                      <AdultAccountConfirmation id="vendorSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />
+                      <AdultAccountConfirmation id="vendorSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} birthDate={birthDate} onBirthDateChange={setBirthDate} />
                     </div>
                   )}
 
