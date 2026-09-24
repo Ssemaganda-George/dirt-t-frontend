@@ -10,6 +10,8 @@ type Incident = {
   status: 'open' | 'contained' | 'closed'
   pdpo_notified_at: string | null
   pdpo_reference: string | null
+  cert_reported_at: string | null
+  cert_reference: string | null
 }
 
 const dateTime = (value: string) => new Date(value).toLocaleString()
@@ -20,12 +22,13 @@ export default function DataBreachIncidents() {
   const [summary, setSummary] = useState('')
   const [awarenessAt, setAwarenessAt] = useState('')
   const [references, setReferences] = useState<Record<string, string>>({})
+  const [certReferences, setCertReferences] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase.from('data_breach_incidents')
-      .select('id,title,summary,awareness_at,notification_deadline_at,status,pdpo_notified_at,pdpo_reference')
+      .select('id,title,summary,awareness_at,notification_deadline_at,status,pdpo_notified_at,pdpo_reference,cert_reported_at,cert_reference')
       .order('awareness_at', { ascending: false })
     if (loadError) setError(loadError.message)
     else setIncidents((data || []) as Incident[])
@@ -71,6 +74,23 @@ export default function DataBreachIncidents() {
     setBusy(false)
   }
 
+  const recordCertReport = async (incident: Incident) => {
+    const reference = certReferences[incident.id]?.trim()
+    if (!reference || reference.length < 3) {
+      setError('Enter the CERT/CC submission reference or other proof of delivery first.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    const { error: updateError } = await supabase.from('data_breach_incidents')
+      .update({ cert_reported_at: new Date().toISOString(), cert_reference: reference })
+      .eq('id', incident.id)
+      .is('cert_reported_at', null)
+    if (updateError) setError(updateError.message)
+    else await load()
+    setBusy(false)
+  }
+
   return (
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Data breach incidents</h1>
@@ -101,6 +121,13 @@ export default function DataBreachIncidents() {
                 <button type="button" disabled={busy} onClick={() => void recordNotification(incident)} className="rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-50">Record notification</button>
               </div>
             </div>}
+            <div className="mt-3 rounded bg-slate-100 p-3 text-sm text-slate-800">
+              <a href="https://cert.ug/form/reporter-s-contact-information" target="_blank" rel="noreferrer" className="font-medium underline">Report a cyber incident to Uganda National CERT/CC</a>. Do not include personal data or secrets in the public report form.
+              {incident.cert_reported_at ? <p className="mt-2 text-green-800">CERT/CC report recorded: {dateTime(incident.cert_reported_at)} · Reference: {incident.cert_reference}</p> : <div className="mt-2 flex flex-wrap gap-2">
+                <input aria-label={`CERT/CC reference for ${incident.title}`} placeholder="CERT/CC reference or proof of delivery" value={certReferences[incident.id] || ''} onChange={event => setCertReferences(previous => ({ ...previous, [incident.id]: event.target.value }))} className="min-w-64 rounded border p-2" />
+                <button type="button" disabled={busy} onClick={() => void recordCertReport(incident)} className="rounded bg-slate-800 px-3 py-2 text-white disabled:opacity-50">Record CERT/CC report</button>
+              </div>}
+            </div>
           </article>
         })}
         {incidents.length === 0 && <p className="text-sm text-gray-600">No incidents recorded.</p>}
