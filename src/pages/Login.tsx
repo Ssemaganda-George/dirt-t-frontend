@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import SignupPrivacyConsent from '../components/SignupPrivacyConsent'
+import AdultAccountConfirmation from '../components/AdultAccountConfirmation'
 
 export default function Login() {
   const [, setShowEmailForm] = useState(true)
@@ -18,6 +19,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [adultConfirmed, setAdultConfirmed] = useState(false)
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -80,7 +82,7 @@ export default function Login() {
       const nameParts = fullName.trim().split(/\s+/)
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, undefined, privacyAccepted)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, undefined, privacyAccepted, adultConfirmed)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -199,6 +201,7 @@ export default function Login() {
               </div>
 
               <SignupPrivacyConsent id="touristSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />
+              <AdultAccountConfirmation id="touristSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />
 
               <button
                 type="submit" disabled={loading}

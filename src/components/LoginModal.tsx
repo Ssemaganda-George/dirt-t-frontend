@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import CitySearchInput from './CitySearchInput'
 import SignupPrivacyConsent from './SignupPrivacyConsent'
+import AdultAccountConfirmation from './AdultAccountConfirmation'
 import { Eye, EyeOff } from 'lucide-react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { getServiceById } from '../lib/database'
@@ -32,6 +33,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [adultConfirmed, setAdultConfirmed] = useState(false)
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -48,6 +50,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     setHomeCountry('')
     setAgreedToTerms(false)
     setPrivacyAccepted(false)
+    setAdultConfirmed(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +125,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     }
 
     try {
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined, privacyAccepted)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined, privacyAccepted, adultConfirmed)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -390,12 +393,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
             </div>
           )}
           {isSignUp && <SignupPrivacyConsent id="modalSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />}
+          {isSignUp && <AdultAccountConfirmation id="modalSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />}
 
           {/* Sign in button */}
           <div>
             <button
               type="submit"
-              disabled={loading || (isSignUp && (!agreedToTerms || !privacyAccepted))}
+              disabled={loading || (isSignUp && (!agreedToTerms || !privacyAccepted || !adultConfirmed))}
               className="w-full min-h-[48px] px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}

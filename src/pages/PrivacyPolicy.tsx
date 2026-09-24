@@ -67,7 +67,7 @@ export default function PrivacyPolicy() {
 
         <section className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Children</h2>
-          <p className="text-sm text-gray-700">Our services are not for children under 16. We do not knowingly collect data from minors; if discovered we will delete it promptly.</p>
+          <p className="text-sm text-gray-700">Accounts are for adults aged 18 or older. An adult may arrange a family booking that includes travelers under 18. Minors may not create their own accounts. If you believe a minor created an account, contact us so we can review and remove it.</p>
         </section>
 
         <section className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">

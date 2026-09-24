@@ -11,6 +11,7 @@ import {
 import { Eye, EyeOff, Store } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
 import SignupPrivacyConsent from '../components/SignupPrivacyConsent'
+import AdultAccountConfirmation from '../components/AdultAccountConfirmation'
 import { COUNTRIES } from '../lib/countries'
 
 const VENDOR_DRAFT_KEY = 'dt_vendor_signup_draft'
@@ -38,6 +39,7 @@ export default function VendorLogin() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [adultConfirmed, setAdultConfirmed] = useState(false)
   const [showStepValidationErrors, setShowStepValidationErrors] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -179,6 +181,7 @@ export default function VendorLogin() {
     setConfirmPassword('')
     setAgreedToTerms(false)
     setPrivacyAccepted(false)
+    setAdultConfirmed(false)
     setShowStepValidationErrors(false)
     setError('')
   }
@@ -244,7 +247,7 @@ export default function VendorLogin() {
       const lastName = nameParts.slice(1).join(' ') || ''
 
       // First create the user account (this also creates profile and basic vendor record)
-      await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined, privacyAccepted)
+      await signUp(email, password, firstName, lastName, 'vendor', personalCity.trim() || undefined, personalCountry.trim() || undefined, privacyAccepted, adultConfirmed)
 
       // Get the current user
       const user = await getCurrentUser()
@@ -755,6 +758,7 @@ export default function VendorLogin() {
                         </label>
                       </div>
                       <SignupPrivacyConsent id="vendorSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />
+                      <AdultAccountConfirmation id="vendorSignupAdult" checked={adultConfirmed} onChange={setAdultConfirmed} />
                     </div>
                   )}
 
@@ -771,7 +775,7 @@ export default function VendorLogin() {
                     ) : (
                       <button
                         type="submit"
-                        disabled={loading || !agreedToTerms || !privacyAccepted}
+                        disabled={loading || !agreedToTerms || !privacyAccepted || !adultConfirmed}
                         className="w-full min-w-0 whitespace-nowrap bg-emerald-600 text-white py-3.5 px-3 sm:px-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         {loading ? 'Creating account...' : 'Create Business Account'}
