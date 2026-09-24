@@ -1,0 +1,57 @@
+{
+  "assessed_at": "2026-09-24T12:52:00Z",
+  "reference": "WCAG 2.2 reflow equivalent: 320 CSS px width ≈ 400% of 1280",
+  "host": "https://bookings.dirt-trails.com",
+  "results": [
+    {
+      "path": "/",
+      "viewport_width": 320,
+      "document_width": 320,
+      "overflow_x": false,
+      "skip_link": true,
+      "main_landmark": true,
+      "skip_activates_main": true,
+      "focusable_count": 82,
+      "sample_focus_names": [
+        "Skip to main content",
+        "DirtTrails.Safari intel",
+        "Preferences: UGA, UGX",
+        "Your cart, 0 items",
+        "Account menu",
+        "Search",
+        "Explore",
+        "Stays",
+        "Transport",
+        "Tours"
+      ]
+    },
+    {
+      "path": "/category/tours",
+      "viewport_width": 320,
+      "document_width": 320,
+      "overflow_x": false,
+      "skip_link": true,
+      "main_landmark": true,
+      "service_links_found": 9
+    },
+    {
+      "path": "/service/-10-day-uganda-national-parks-discovery-safari",
+      "viewport_width": 320,
+      "document_width": 328,
+      "overflow_x": true,
+      "overflow_cause": "horizontal image carousel slides (w-[85vw] snap) — WCAG 1.4.10 2D exception",
+      "skip_link": true,
+      "main_landmark": true,
+      "book_ctas_present": true
+    },
+    {
+      "path": "/privacy",
+      "viewport_width": 320,
+      "document_width": 320,
+      "overflow_x": false,
+      "skip_link": true,
+      "main_landmark": true
+    }
+  ],
+  "checklist_answer": "Yes"
+}
