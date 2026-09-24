@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { generateKeyPair, storePrivateKey, hasEncryptionKeys } from '../lib/encryption'
+import { PRIVACY_NOTICE_VERSION } from '../lib/privacyNotice'
 import { updateUserPublicKey, getUserPublicKey, markMessagesAsDelivered } from '../lib/database'
 import {
   clearLocalAuthStorage,
@@ -41,7 +42,7 @@ interface AuthContextType {
   loading: boolean
   loadProfileData: () => Promise<Profile | null>
   signIn: (email: string, password: string) => Promise<Profile | null>
-  signUp: (email: string, password: string, firstName: string, lastName: string, role?: string, homeCity?: string, homeCountry?: string) => Promise<void>
+  signUp: (email: string, password: string, firstName: string, lastName: string, role: string, homeCity: string | undefined, homeCountry: string | undefined, privacyAccepted: boolean) => Promise<void>
   signOut: (options?: { redirect?: boolean }) => Promise<void>
   updateProfile: (updates: Partial<Profile>) => Promise<void>
   confirmSignOut: () => Promise<void>
@@ -327,9 +328,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     lastName: string,
     role: string = 'tourist',
     homeCity?: string,
-    homeCountry?: string
+    homeCountry?: string,
+    privacyAccepted = false
   ) => {
-    const { data, error } = await signUpWithPassword(email, password)
+    if (!privacyAccepted) throw new Error('Please review and accept the privacy notice before creating an account.')
+    const { data, error } = await signUpWithPassword(email, password, PRIVACY_NOTICE_VERSION)
     if (error) throw error
 
     const u = data.user

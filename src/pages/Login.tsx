@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
 import CitySearchInput from '../components/CitySearchInput'
+import SignupPrivacyConsent from '../components/SignupPrivacyConsent'
 
 export default function Login() {
   const [, setShowEmailForm] = useState(true)
@@ -16,6 +17,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -78,7 +80,7 @@ export default function Login() {
       const nameParts = fullName.trim().split(/\s+/)
       const firstName = nameParts[0] || ''
       const lastName = nameParts.slice(1).join(' ') || ''
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, undefined, privacyAccepted)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -196,6 +198,8 @@ export default function Login() {
                 </div>
               </div>
 
+              <SignupPrivacyConsent id="touristSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />
+
               <button
                 type="submit" disabled={loading}
                 className="w-full min-h-[44px] rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-50 transition-colors duration-150"
@@ -291,10 +295,10 @@ export default function Login() {
 
         <div className="px-6 pb-6">
           <p className="text-[11px] leading-4 text-center text-gray-400">
-            By continuing you agree to our{' '}
+            Read our{' '}
             <a href="/terms" className="underline hover:text-gray-600">Terms</a>{' '}
             and{' '}
-            <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
+            <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a> before creating an account.
           </p>
         </div>
       </div>

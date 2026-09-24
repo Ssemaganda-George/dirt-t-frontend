@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import CitySearchInput from './CitySearchInput'
+import SignupPrivacyConsent from './SignupPrivacyConsent'
 import { Eye, EyeOff } from 'lucide-react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { getServiceById } from '../lib/database'
@@ -30,6 +31,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const { signIn, signUp, signOut } = useAuth()
   const navigate = useNavigate()
@@ -45,6 +47,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     setHomeCity('')
     setHomeCountry('')
     setAgreedToTerms(false)
+    setPrivacyAccepted(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +122,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
     }
 
     try {
-      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined)
+      await signUp(email, password, firstName, lastName, 'tourist', homeCity.trim() || undefined, homeCountry.trim() || undefined, privacyAccepted)
       await signOut({ redirect: false })
       setIsSignUp(false)
       setPassword('')
@@ -386,12 +389,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
               </label>
             </div>
           )}
+          {isSignUp && <SignupPrivacyConsent id="modalSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />}
 
           {/* Sign in button */}
           <div>
             <button
               type="submit"
-              disabled={loading || (isSignUp && !agreedToTerms)}
+              disabled={loading || (isSignUp && (!agreedToTerms || !privacyAccepted))}
               className="w-full min-h-[48px] px-4 py-3.5 text-sm bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-xl transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create account' : 'Sign in')}
@@ -452,10 +456,10 @@ export default function LoginModal({ isOpen, onClose, onSuccess, restrictToScanP
 
           <div className="p-3 sm:p-4 border-t border-gray-100 flex-shrink-0 bg-white">
             <p className="text-[11px] leading-4 text-center text-gray-500">
-              By continuing you agree to our{' '}
+              Read our{' '}
               <a href="/terms" className="underline hover:text-gray-600">Terms</a>{' '}
               and{' '}
-              <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
+              <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a> before creating an account.
             </p>
           </div>
 

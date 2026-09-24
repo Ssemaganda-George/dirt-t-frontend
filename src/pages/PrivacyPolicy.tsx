@@ -1,9 +1,10 @@
 import { Clock, CheckCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { PRIVACY_NOTICE_VERSION } from '../lib/privacyNotice'
 
 export default function PrivacyPolicy() {
   const navigate = useNavigate()
-  const lastUpdated = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const lastUpdated = new Date(`${PRIVACY_NOTICE_VERSION}T00:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -51,7 +52,7 @@ export default function PrivacyPolicy() {
 
         <section className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Sharing & transfers</h2>
-          <p className="text-sm text-gray-700">We share necessary data with service providers and payment processors. Cross-border transfers are protected by standard contractual clauses or equivalent safeguards where required.</p>
+          <p className="text-sm text-gray-700">We share booking contact and trip details with the vendor providing your hotel, tour, transport, event, or activity. For paid bookings, MarzPay receives the payment details needed to process the transaction. Supabase stores account and booking data and provides authentication. These recipients receive data only for the services they provide. Contact us for information about storage locations and transfer safeguards.</p>
         </section>
 
         <section className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">

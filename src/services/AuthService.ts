@@ -77,14 +77,17 @@ export async function signInWithPassword(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email: normalizeEmail(email), password })
 }
 
-export async function signUpWithPassword(email: string, password: string) {
+export async function signUpWithPassword(email: string, password: string, privacyNoticeVersion: string) {
   const emailRedirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
 
   return supabase.auth.signUp({
     email: normalizeEmail(email),
     password,
-    options: emailRedirectTo ? { emailRedirectTo } : undefined,
+    options: {
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
+      data: { privacy_notice_version: privacyNoticeVersion, privacy_accepted_at: new Date().toISOString() },
+    },
   })
 }
 
