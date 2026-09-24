@@ -47,6 +47,7 @@ const AdminVendorDetail = lazy(() => import('./pages/admin/VendorDetail.tsx'))
 const Messages = lazy(() => import('./pages/admin/Messages'))
 const AdminInquiries = lazy(() => import('./pages/admin/Inquiries'))
 const DataBreachIncidents = lazy(() => import('./pages/admin/DataBreachIncidents'))
+const SecurityChangeAudit = lazy(() => import('./pages/admin/SecurityChangeAudit'))
 const AdminProfile = lazy(() => import('./pages/admin/Profile'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 const AdminServices = lazy(() => import('./pages/admin/Services').then(module => ({ default: module.Services })))
@@ -332,6 +333,7 @@ function App() {
             <Route path="messages" element={<Messages />} />
             <Route path="inquiries" element={<AdminInquiries />} />
             <Route path="data-breach-incidents" element={<DataBreachIncidents />} />
+            <Route path="security-change-audit" element={<SecurityChangeAudit />} />
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="conservation/trees" element={<AdminConservationTrees />} />

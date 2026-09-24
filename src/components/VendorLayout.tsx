@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import PanelSearchModal from './PanelSearchModal'
 import PreferencesModal from './PreferencesModal'
+import VendorAgreementGate from './VendorAgreementGate'
 import { usePreferences } from '../contexts/PreferencesContext'
 
 const navigation = [
@@ -464,6 +465,7 @@ export default function VendorLayout() {
         {/* Page content (add top padding to account for fixed header) */}
         <main className="pt-16 py-6">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <VendorAgreementGate vendorId={vendor?.id} />
             <Outlet />
           </div>
         </main>

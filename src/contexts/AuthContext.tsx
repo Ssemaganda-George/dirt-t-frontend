@@ -8,6 +8,7 @@ import {
   clearLocalAuthStorage,
   createUserProfileAtomic,
   createVendorProfileAtomic,
+  acceptVendorOperatorAgreement,
   fetchProfileByUserId,
   fetchVendorByUserId,
   fetchVendorByUserIdForPostVerify,
@@ -21,6 +22,12 @@ import {
   updateProfileByUserId,
   upsertTouristOnSignup,
 } from '../services/AuthService'
+import {
+  VENDOR_OPERATOR_AGREEMENT_SHA256,
+  VENDOR_OPERATOR_AGREEMENT_TEXT,
+  VENDOR_OPERATOR_AGREEMENT_VERSION,
+  sha256Hex,
+} from '../lib/vendorOperatorAgreement'
 import type { Profile, Vendor } from '../types'
 
 /** -------------------- Types -------------------- */
@@ -384,6 +391,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const vendorResult = await createVendorProfileAtomic(u.id)
         if (!vendorResult.data?.success) {
           console.error('Error creating vendor during sign up:', vendorResult.data?.error)
+        } else {
+          try {
+            const hash = await sha256Hex(VENDOR_OPERATOR_AGREEMENT_TEXT)
+            if (hash === VENDOR_OPERATOR_AGREEMENT_SHA256) {
+              await acceptVendorOperatorAgreement({
+                agreementVersion: VENDOR_OPERATOR_AGREEMENT_VERSION,
+                contentSha256: hash,
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+              })
+            }
+          } catch (agreeErr) {
+            console.error('Error recording vendor operator agreement:', agreeErr)
+          }
         }
       } catch (err) {
         console.error('Unexpected error creating vendor during sign up:', err)

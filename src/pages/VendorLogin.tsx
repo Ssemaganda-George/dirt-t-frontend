@@ -755,7 +755,7 @@ export default function VendorLogin() {
                           <a href="/terms" className="text-emerald-700 hover:text-emerald-800 underline">
                             Terms and Conditions
                           </a>
-                          .
+                          {' '}and the DirtTrails Vendor Operator Agreement (version 2026-09-24). A signed acceptance record will be stored with my account.
                         </label>
                       </div>
                       <SignupPrivacyConsent id="vendorSignupPrivacy" checked={privacyAccepted} onChange={setPrivacyAccepted} />

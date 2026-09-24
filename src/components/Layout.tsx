@@ -105,6 +105,7 @@ const navigation = [
       { labelKey: 'messages', href: '/admin/messages', icon: MessageSquare },
       { labelKey: 'inquiries', href: '/admin/inquiries', icon: Mail },
       { labelKey: 'Data breach incidents', href: '/admin/data-breach-incidents', icon: Eye },
+      { labelKey: 'Security change audit', href: '/admin/security-change-audit', icon: Eye },
       { labelKey: 'partnerships', href: '/admin/partnerships', icon: Users }
     ]
   }

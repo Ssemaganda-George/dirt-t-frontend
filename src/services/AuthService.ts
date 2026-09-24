@@ -193,6 +193,20 @@ export async function createVendorProfileAtomic(userId: string) {
   })
 }
 
+export async function acceptVendorOperatorAgreement(params: {
+  agreementVersion: string
+  contentSha256: string
+  ipAddress?: string | null
+  userAgent?: string | null
+}) {
+  return supabase.rpc('accept_vendor_operator_agreement', {
+    p_agreement_version: params.agreementVersion,
+    p_content_sha256: params.contentSha256,
+    p_ip_address: params.ipAddress ?? null,
+    p_user_agent: params.userAgent ?? null,
+  })
+}
+
 export async function upsertTouristOnSignup(userId: string, fullName: string) {
   return supabase.from('tourists').upsert({ user_id: userId, first_name: fullName }, { onConflict: 'user_id' })
 }
