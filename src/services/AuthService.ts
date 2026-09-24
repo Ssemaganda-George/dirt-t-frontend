@@ -88,6 +88,7 @@ export async function signUpWithPassword(email: string, password: string, privac
       ...(emailRedirectTo ? { emailRedirectTo } : {}),
       data: {
         privacy_notice_version: privacyNoticeVersion,
+        privacy_accepted: true,
         privacy_accepted_at: new Date().toISOString(),
         adult_account_confirmed_at: new Date().toISOString(),
       },
