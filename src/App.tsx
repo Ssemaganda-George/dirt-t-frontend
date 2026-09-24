@@ -67,7 +67,6 @@ const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Tre
 const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
 const TripPlanner = lazy(() => import('./pages/TripPlanner'));
 const PartnerWithUs = lazy(() => import('./pages/PartnerWithUs'))
-const ConnectionTest = lazy(() => import('./pages/ConnectionTest'))
 const ScanEvent = lazy(() => import('./pages/ScanEvent'))
 const RequestOTP = lazy(() => import('./pages/RequestOTP'))
 const TicketReceipt = lazy(() => import('./pages/TicketReceipt'))
@@ -165,7 +164,6 @@ function App() {
               <Suspense fallback={<SmoothLoader type="home" message="Loading page..." />}>
               <Routes>
           {/* Public Routes */}
-          <Route path="/connection-test" element={<ConnectionTest />} />
           <Route path="/review/:token" element={<ReviewFromEmail />} />
           <Route path="/pay/:token" element={<PublicLayout />}>
             <Route index element={<QuotePay />} />
