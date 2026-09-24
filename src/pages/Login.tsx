@@ -109,6 +109,7 @@ export default function Login() {
         {/* Close */}
         <button
           onClick={() => navigate('/')}
+          aria-label="Close login"
           className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors z-10"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,7 +186,7 @@ export default function Login() {
                       placeholder="••••••••"
                       value={password} onChange={(e) => setPassword(e.target.value)}
                     />
-                    <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
+                    <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                     </button>
                   </div>
@@ -257,7 +258,7 @@ export default function Login() {
                       placeholder="Enter your password"
                       value={password} onChange={(e) => setPassword(e.target.value)}
                     />
-                    <button type="button" className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
+                    <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-0 pr-3 flex items-center" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                     </button>
                   </div>

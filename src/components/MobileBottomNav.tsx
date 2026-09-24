@@ -70,20 +70,16 @@ export default function MobileBottomNav({ onSupportClick, onSearchClick }: Mobil
           if (item.isModal || item.isSearch) {
             const handler = item.isModal ? onSupportClick : onSearchClick
             return (
-              <div
+              <button
                 key={item.labelKey}
-                role="button"
-                tabIndex={0}
+                type="button"
                 aria-label={label}
                 aria-haspopup={item.isModal ? 'dialog' : undefined}
                 onClick={handler}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') handler && handler()
-                }}
                 className={baseClass}
               >
                 {content}
-              </div>
+              </button>
             )
           }
 

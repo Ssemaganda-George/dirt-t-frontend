@@ -44,6 +44,15 @@
     transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
+  :is(a, button, input, textarea, select):focus-visible {
+    outline: 2px solid #047857;
+    outline-offset: 2px;
+  }
+
+  main:focus {
+    outline: none;
+  }
+
   ::selection {
     background: rgba(16, 185, 129, 0.24);
     color: #0f172a;

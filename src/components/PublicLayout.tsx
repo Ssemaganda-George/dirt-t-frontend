@@ -200,6 +200,9 @@ export default function PublicLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[2000] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-gray-900 focus:shadow-lg focus:ring-2 focus:ring-emerald-700">
+        Skip to main content
+      </a>
       {/* Header */}
       <header className={`fixed top-0 left-0 right-0 z-[999] transition-all duration-300${typeof window !== 'undefined' && document.body.classList.contains('hide-main-navbar') ? ' hidden' : ''}`}>
         <div className={`transition-all duration-300 overflow-visible ${isTransparent ? '' : 'bg-white border-b border-gray-200 shadow-sm'}`}>
@@ -223,7 +226,7 @@ export default function PublicLayout() {
 
               {/* Desktop Navigation — clean text links, no pill borders */}
               {!location.pathname.includes('/scan/') && (
-                <nav className="hidden md:flex items-center gap-1">
+                <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-1">
                   {navigation.map((item) => {
                     const isActive = item.name.toLowerCase() === 'home'
                       ? location.pathname === '/'
@@ -256,6 +259,8 @@ export default function PublicLayout() {
                   {/* Search — focuses hero on home, opens modal elsewhere (Task 9) */}
                   <button
                     onClick={handleSearchClick}
+                    type="button"
+                    aria-label={t('search')}
                     className={`hidden md:flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
                     title={t('search')}
                   >
@@ -266,6 +271,7 @@ export default function PublicLayout() {
                   {user && (
                     <Link
                       to="/messages"
+                      aria-label={`${t('messages')}${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                       className={`hidden md:flex items-center justify-center w-9 h-9 rounded-full transition-colors relative ${iconHover}`}
                       title={t('messages')}
                     >
@@ -281,6 +287,8 @@ export default function PublicLayout() {
                   {/* Globe / preferences */}
                   <button
                     onClick={() => setShowPreferences(true)}
+                    type="button"
+                    aria-label={`${t('preferences')}: ${getRegionName(selectedRegion)}, ${selectedCurrency}`}
                     className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
                     title={t('preferences')}
                   >
@@ -291,6 +299,7 @@ export default function PublicLayout() {
                   {/* Cart — public for guests (localStorage) */}
                   <Link
                     to="/saved"
+                    aria-label={`Your cart, ${getCartCount()} items`}
                     title="Your cart"
                     className={`relative flex items-center justify-center w-9 h-9 rounded-full transition-colors ${iconHover}`}
                   >
@@ -307,6 +316,9 @@ export default function PublicLayout() {
                     <div className="relative z-[1002]" ref={userDropdownRef}>
                       <button
                         onClick={() => setShowUserDropdown(!showUserDropdown)}
+                        type="button"
+                        aria-label="Account menu"
+                        aria-expanded={showUserDropdown}
                         className={`flex items-center gap-1 pl-1 pr-2 py-1 rounded-full transition-colors ${iconHover}`}
                       >
                         <div className="h-7 w-7 rounded-full bg-emerald-600 flex items-center justify-center shadow-sm">
@@ -403,6 +415,9 @@ export default function PublicLayout() {
                     <div className="relative z-[1002]" ref={guestDropdownRef}>
                       <button
                         onClick={() => setShowGuestDropdown(!showGuestDropdown)}
+                        type="button"
+                        aria-label="Account menu"
+                        aria-expanded={showGuestDropdown}
                         className={`flex items-center gap-1 px-2 py-1.5 rounded-full transition-colors ${iconHover}`}
                       >
                         <User className={`h-4 w-4 ${iconCls}`} />
@@ -529,7 +544,7 @@ export default function PublicLayout() {
 
       {/* Main Content */}
       {/* Add top padding equal to header height so fixed header doesn't overlap content */}
-      <main className={`${location.pathname === '/' ? 'pt-0 pb-16' : location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
+      <main id="main-content" tabIndex={-1} className={`${location.pathname === '/' ? 'pt-0 pb-16' : location.pathname.includes('/scan/') ? 'pt-0 pb-0' : 'pt-16 pb-16'}`}>
         <div key={location.pathname} className="smooth-fade-in smooth-transition">
           <Outlet />
         </div>
