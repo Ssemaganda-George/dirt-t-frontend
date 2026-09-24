@@ -1,454 +1,384 @@
-# ICT checklist — tech done vs legal remaining
+# DirtTrails ICT checklist — what the product already does, and what legal still needs to finish
 
-**Platform:** DirtTrails Safaris  
-**Checklist:** ICT Technical Review & Compliance Checklist (Ministry of ICT alignment)  
-**Assessment date:** 24 September 2026  
-**Purpose:** Single handoff document. Explains, row by row, what engineering implemented in the product, and what legal / finance / leadership / external partners must still complete before Ministry submission.
+**Company:** DirtTrails Safaris  
+**Document for:** Legal, finance, and leadership (non-technical)  
+**Date:** 24 September 2026  
+**About this checklist:** Uganda Ministry of ICT–aligned technical review form covering contracts, security, privacy, accessibility, and government registrations.
 
-**Evidence pack (attach when briefing legal):**
-- This document
-- `output/pdf/DirtTrails_ICT_Checklist_Response_2026-09-24.pdf`
-- Supporting evidence under `docs/compliance/` (IR plan, TLS probes, a11y tests, audit logs, vendor agreement, etc.)
-
----
-
-## How to read this document
-
-| Label | Meaning |
-|-------|---------|
-| **Tech Yes** | Product controls are implemented and evidenced. Form can be marked Yes from an engineering view. |
-| **Tech partial** | Engineering delivered what it can; checkbox still needs legal, ops, or an external provider decision. |
-| **Legal / external** | Not solvable in application code. Ownership sits with counsel, finance, leadership, or government MoUs. |
-| **Usually N/A** | Applies to government data-exchange platforms; DirtTrails is a private marketplace unless you deliberately integrate. |
+**Please attach when you brief counsel:**
+- This document  
+- The filled response PDF: `output/pdf/DirtTrails_ICT_Checklist_Response_2026-09-24.pdf`  
+- Any certificates or letters legal later obtains (PDPO, tax, NITA, MoUs)
 
 ---
 
-## Category 1 — National ICT policies, laws & regulatory requirements
+## How to use this document
 
-### 1. Electronic contracts, bookings, and customer agreements (Electronic Transactions Act, 2011)
+For each checklist question we say:
 
-**Tech status: Partial (implementation done)**
-
-**What tech did:**
-- Unticked terms acceptance on booking and ticket payment paths.
-- Server-stored terms version (`2026-09-24`), acceptance timestamp, and accepting Auth identity.
-- Guest checkout with private sessions; acceptance fields protected from direct tampering.
-- Evidence: `termsAcceptance.ts`, `termsVersion.ts`, booking/order migrations, Appendix 1 in the response PDF.
-
-**What legal must do:**
-- Issue a written opinion that DirtTrails clickwrap + stored version/timestamp satisfies legal recognition under the Electronic Transactions Act, 2011.
-- Approve final Terms of Service wording if not already signed off.
-- Then mark the checklist row **Yes** (or state required changes).
+1. **What the system already does** — in everyday language (what a traveler, vendor, or admin experiences).  
+2. **What is still needed** — almost always a legal opinion, registration, policy, or government process — not more software.  
+3. **Suggested mark** — Yes / Partial / No / N/A from an engineering view.
 
 ---
 
-### 2. Non-repudiable digital signatures for high-value / B2B vendor agreements (Electronic Signatures Act, 2011)
+## Snapshot for busy readers
 
-**Tech status: Partial (artifact implemented; legal classification open)**
+### Already in good shape on the product side (can mark Yes from tech)
 
-**What tech did:**
-- Versioned Vendor Operator Agreement (`VENDOR-OPERATOR-AGREEMENT-2026-09-24.md`).
-- SHA-256 hash of the exact agreement text stored with vendor + authenticated user + timestamp (+ optional IP/UA).
-- Vendor portal gate forces acceptance if missing.
-- Admin cannot approve a vendor until the current-version acceptance exists.
-- Evidence: `vendor_agreement_acceptances`, `accept_vendor_operator_agreement` RPC, `VendorAgreementGate.tsx`, `VENDOR-AGREEMENT-SIGNATURE-2026-09-24.md`.
+The live booking platform already:
 
-**What legal must do:**
-- Decide whether clickwrap + SHA-256 + Auth binding is enough under the Electronic Signatures Act for DirtTrails B2B activation.
-- If not, specify required advanced/qualified e-sign product or process.
-- Then mark **Yes**, **No**, or **Partial** with reasoning.
+- Records who agreed to terms and privacy (with a clear unticked checkbox, not a pre-ticked box).  
+- Keeps a security trail of important changes (bookings, payments, wallets, vendor status, etc.) and login IPs.  
+- Has a written incident response plan that was practiced once (tabletop exercise), with links to Uganda CERT and PDPO forms.  
+- Encrypts data the way modern cloud hosts do, uses strong HTTPS (TLS 1.3), and limits who can see what by role (traveler / vendor / admin).  
+- Works with larger text / zoom and keyboard navigation on the main public pages we tested.
 
----
+### Built in the product, but legal must still “sign off” the checkbox
 
-### 3. System-level audit logs and access controls (Computer Misuse Act, 2011)
+- Electronic bookings/contracts (tech records the agreement; **legal** must say Ugandan law accepts that style of online agreement).  
+- Vendor “signature” of the operator agreement (tech stores a sealed copy of exactly what they accepted; **legal** must say if that counts as a digital signature under the Act).  
+- Adult-only accounts (tech blocks under-18 signups by date of birth; **legal** must confirm that policy and whether guardian flows or ID checks are required).  
+- Data-breach register (tech tracks incidents and reminds staff to notify PDPO; **people** must still file the official form).  
+- Security scans of software libraries (automated weekly); a full **penetration test** by an authorized tester is still outstanding.  
+- Cloud firewalls and backups (we use reputable hosts; **ops/legal** may need letters that match the checklist’s “UPS / RAID” wording).
 
-**Tech status: Yes**
+### Not a software job — legal, finance, or leadership own these
 
-**What tech did:**
-- Login history now captures IP from `auth.sessions.ip` (previously always null).
-- Immutable `security_change_audit` triggers on bookings, orders, payments, transactions, wallets, vendors, profiles.
-- Sensitive payout fields and raw payment webhook payloads stripped from audit JSON.
-- Admin-only RLS; admin UI at `/admin/security-change-audit`.
-- Broader RLS on public tables (prior work).
-- Evidence: migration `20260924200000_security_audit_and_vendor_agreement.sql`, `AUDIT-LOGS-2026-09-24.md`, Appendix 3A.
-
-**What legal / ops should still confirm (optional polish):**
-- Retention period and who may disclose logs to investigators.
-- Does not block marking **Yes** on technical grounds.
+Tax (DST, VAT, withholding), PDPO registration, appointing a Data Protection Officer, cloud privacy impact assessment (DPIA), contracts with Supabase/MarzPay as data processors, board ownership of cyber risk, SIEM tooling, IT asset lists, NITA certificates, and government MoUs (NIRA, URA, UWA, immigration, UGHub). Many MoU rows are likely **N/A** for a private travel marketplace unless you choose to integrate.
 
 ---
 
-### 4. 5% Digital Services Tax (DST) registration (Income Tax Act Sec 86A)
+## Category 1 — Laws on electronic deals, signatures, fraud logs, and tax
 
-**Tech status: Legal / external — not covered in code**
+### 1. Are online bookings and customer agreements legally valid electronic contracts?
 
-**What tech did:** Nothing tax-registration specific (and should not invent tax logic without finance).
+**What the system already does**  
+When someone books a hotel, tour, transport, event, activity, or buys tickets, they must actively tick agreement to the Terms (the box starts empty). The system stores:
 
-**What legal / finance must do:**
-- Determine if DirtTrails is a non-resident entity subject to DST.
-- Register / remittance process if applicable.
-- Mark **Yes**, **No**, or **N/A**.
+- which version of the Terms they saw,  
+- the exact time they accepted, and  
+- which account (or guest session) accepted.
 
----
+Restaurant reservations follow the same idea for rules that apply, without taking payment.
 
-### 5. 15% Withholding Tax (WHT) on non-resident related digital transactions
+**What legal still needs to do**  
+Confirm in writing that this click-to-agree method is recognized under Uganda’s Electronic Transactions Act, 2011, and that the Terms text is approved.
 
-**Tech status: Legal / external — not covered in code**
-
-**What legal / finance must do:** Applicability, configuration, remittance. Mark **Yes / No / N/A**.
-
----
-
-### 6. 18% VAT on electronic supplies to Ugandan consumers (charge + quarterly remit)
-
-**Tech status: Legal / external — not covered in code**
-
-**What legal / finance must do:** VAT registration, pricing display rules, remittance calendar. Mark **Yes / No / N/A**.  
-Engineering can implement tax display later **after** finance defines rates and rules.
+**Suggested mark after legal sign-off:** Yes (today: Partial until that opinion exists).
 
 ---
 
-## Category 2 — Cybersecurity (NISF 2026)
+### 2. Do high-value / B2B vendor agreements use non-repudiable digital signatures?
 
-### 7. Senior leadership accountability for institutional cyber risk
+**What the system already does**  
+Vendors must accept a specific **Vendor Operator Agreement**. The system:
 
-**Tech status: Legal / leadership — not covered in code**
+- shows them the exact agreement text,  
+- stores a digital “fingerprint” (hash) of that text so nobody can quietly change what was agreed later,  
+- links the acceptance to the vendor’s logged-in identity and time,  
+- blocks admin approval of the vendor until that acceptance is on file,  
+- stops vendors from using the portal without accepting (if they somehow skipped it).
 
-**What legal / board must do:** Formal ownership statement (Board / Accounting Officer). Mark **Yes** when signed.
+This is stronger than a casual checkbox, but it is **not** a government e-sign certificate product unless legal asks for one.
 
----
+**What legal still needs to do**  
+Decide whether this sealed acceptance meets the Electronic Signatures Act, 2011 for DirtTrails, or whether you must buy a specialized e-sign solution.
 
-### 8. Boundary / endpoint protection (enterprise firewalls, IDS/IPS)
-
-**Tech status: Partial (hosted platform controls)**
-
-**What tech relies on:**
-- HTTPS / HSTS on Vercel app hosts.
-- Supabase / cloud provider network and edge protections.
-- Application RLS and Edge Function secrets for money paths.
-
-**What legal / ops must do:**
-- Accept provider-managed controls as equivalent for a cloud SaaS marketplace, **or** procure named IDS/IPS and document it.
-- Mark **Yes** with hosting evidence letters, or **No** / **Partial**.
+**Suggested mark:** Partial until legal decides; then Yes / No / Partial with their wording.
 
 ---
 
-### 9. SIEM deployed for real-time log analysis across all components
+### 3. Does the platform keep audit logs and access controls to deter and trace fraud?
 
-**Tech status: Legal / external — not covered**
+**What the system already does**  
+- Remembers recent logins and (going forward) the IP address used.  
+- Automatically records a change history when bookings, orders, payments, wallet balances, vendor records, or user profiles are created, changed, or deleted.  
+- Sensitive payment dumps and bank payout details are not dumped raw into that history.  
+- Only admins can open the security change log in the admin panel.  
+- Travellers and vendors only see their own data; money settlement is not left to the public website alone.
 
-**What tech has instead:** Postgres audit tables, provider logs, admin incident register — **not** a SIEM.
+**What legal / ops may still polish**  
+How long to keep logs and who may share them with investigators. That does not block a technical **Yes**.
 
-**What leadership / security must do:** Procure SIEM or formally accept risk / N/A for current scale.
+**Suggested mark:** Yes.
+
+---
+
+### 4–6. Digital Services Tax (5%), Withholding Tax (15%), VAT (18%)
+
+**What the system already does**  
+Takes and records **payments for paid bookings** via MarzPay (mobile money). It does **not** itself register DirtTrails for tax or auto-remit DST/VAT/WHT to URA.
+
+**What finance / legal must do**  
+Decide if each tax applies, register if needed, and set remittance. Engineering can later show tax on invoices **after** you define the rules.
+
+**Suggested mark:** Yes / No / N/A — finance decision only.
+
+---
+
+## Category 2 — Cybersecurity
+
+### 7. Does senior leadership formally own cyber risk?
+
+**What the system already does**  
+Nothing that replaces a board / accounting-officer policy.
+
+**What leadership / legal must do**  
+Sign a short ownership statement. Mark **Yes** when signed.
+
+---
+
+### 8. Firewalls and intrusion detection / prevention
+
+**What the system already does**  
+Runs on modern cloud hosts (website and database). Traffic to the site uses HTTPS with long-term browser security headers. The app also enforces “who can see what” inside the database.
+
+**What legal / ops must do**  
+Either accept “cloud provider protections + our access rules” as meeting this row for a SaaS marketplace (ideally with a short letter from / about the hosts), or buy named enterprise IDS/IPS and document it.
+
+**Suggested mark:** Partial until that acceptance or purchase is recorded.
+
+---
+
+### 9. Is a SIEM (security monitoring cockpit) in place?
+
+**What the system already does**  
+Keeps important logs and an incident register. That is **not** a full SIEM product watching everything in real time.
+
+**What leadership must do**  
+Buy SIEM later, or formally accept risk / N/A at current size.
+
+**Suggested mark:** No (or N/A with written risk acceptance).
 
 ---
 
 ### 10. Regular vulnerability assessments and penetration tests
 
-**Tech status: Partial**
+**What the system already does**  
+Automatically checks software libraries for known security advisories on a weekly schedule.
 
-**What tech did:**
-- Weekly `npm audit` CI workflow (dependency advisories).
-- Record: `VULNERABILITY-ASSESSMENT-2026-09-24.md` (if committed) / CI artifacts.
+**What security / legal must do**  
+Hire and schedule a proper penetration test (with written scope). Library scanning alone is not a full pen test.
 
-**What legal / security must do:**
-- Authorize and schedule a penetration test (scope, tester, rules of engagement).
-- Mark **Yes** only when both recurring assessment **and** pen-test evidence exist (or accept Partial).
+**Suggested mark:** Partial until pen test is done (or Yes if you accept Partial for now).
 
 ---
 
-### 11. Formal Incident Response Plan, tested yearly, linked to National CERT/CC
+### 11. Incident Response Plan, tested yearly, linked to National CERT
 
-**Tech status: Yes**
+**What the system / ops already does**  
+- Written playbook: who leads, how to contain, how to report.  
+- Practiced once in a tabletop exercise (no live fake report to regulators during the exercise).  
+- Admin screen to log personal-data incidents, with links to CERT and PDPO forms, and fields to store the filing reference after staff submit.
 
-**What tech / ops did:**
-- Operational IR plan v1.0 with named roster and CERT/CC + PDPO links.
-- Annual tabletop exercise `IR-EX-2026-09-24` recorded.
-- Admin incident register with CERT/CC reference fields.
-- Evidence: `INCIDENT-RESPONSE-PLAN.md`, `INCIDENT-RESPONSE-EXERCISE-2026-09-24.md`, Appendix 11A.
+**What legal should note**  
+Humans still submit CERT/PDPO forms through official websites — the app does not send traveler data to those forms automatically (by design).
 
-**What legal should note:** Live CERT/CC and PDPO filings remain human actions through official channels (correct — do not auto-file PII).
-
----
-
-### 12. Infrastructure redundancy (UPS, dual feeds, RAID) for critical booking/payment databases
-
-**Tech status: Partial (cloud hosting)**
-
-**What tech relies on:** Supabase managed Postgres HA/backups; Vercel multi-region edge for frontend.
-
-**What legal / ops must do:** Obtain provider redundancy/SLA statements and map them to this checklist wording (on-prem UPS/RAID language may not fit 1:1). Mark **Yes / Partial / N/A** with evidence letters.
+**Suggested mark:** Yes.
 
 ---
 
-### 13. IT asset register + data sanitization before hardware disposal
+### 12. Redundant power / dual feeds / RAID for payment databases
 
-**Tech status: Legal / ops — not covered in code**
+**What the system relies on**  
+A managed cloud database and hosting provider (backups and provider-side resilience), not DirtTrails-owned server rooms with UPS units.
 
-**What ops must do:** Maintain asset register and wipe procedures (especially if any company-owned devices hold credentials).
+**What legal / ops must do**  
+Get provider SLA / reliability wording and map it to this checklist, or mark Partial / N/A with explanation that you are cloud-hosted.
 
----
-
-## Category 3 — Data protection, privacy & information security (DPPA 2019)
-
-### 14. Formal registration as data controller/processor with PDPO (annual renewal)
-
-**Tech status: Legal / external — not covered**
-
-**What legal must do:** File and renew with PDPO. Mark **Yes** when certificate/proof exists.
+**Suggested mark:** Partial (cloud) until ops attaches provider evidence.
 
 ---
 
-### 15. Designated DPO appointed, qualified, and registered with PDPO
+### 13. IT asset register and wiping devices before disposal
 
-**Tech status: Legal / HR — not covered**
+**What the system already does**  
+Not applicable inside the booking app.
 
-**What legal / HR must do:** Appoint, qualify, register DPO. Current roster uses Platform Administrator as interim privacy contact pending registration.
+**What ops must do**  
+Keep a list of company devices and wipe rules for phones/laptops that held passwords.
 
----
-
-### 16. Informed consent — active affirmative actions; third-party recipients named
-
-**Tech status: Yes**
-
-**What tech did:**
-- Unticked privacy acknowledgement on signup paths.
-- Unticked terms + privacy on booking/ticket checkout (including guests).
-- Notice names vendor, MarzPay (paid bookings only), Supabase (hosting/auth); restaurants not charged.
-- Consent recorded with versions and timestamps.
-- Evidence: Appendix 4; Privacy Policy sharing section.
-
-**What legal should still review:** Final privacy notice wording and recipient list accuracy (ongoing).
+**Suggested mark:** No until the policy exists; then Yes.
 
 ---
 
-### 17. Age verification and parental/guardian consent for under-18 travelers
+## Category 3 — Privacy and data protection
 
-**Tech status: Partial**
+### 14–15. PDPO registration and a registered Data Protection Officer
 
-**What tech did:**
-- Accounts are adult-only (18+).
-- Date of birth + unticked 18+ confirmation on tourist and vendor signup.
-- Self-reported DOB checked client/server-side; not stored as full DOB on profile by design of the current flow.
-- Policy text: adults may book for family including minors; minors may not create accounts.
+**What the system already does**  
+Processes bookings and accounts; does not file PDPO paperwork for you.
 
-**What legal must do:**
-- Confirm adult-only + family-via-adult is acceptable under DPPA for DirtTrails.
-- Decide if guardian consent workflow is required or **N/A**.
-- Decide if self-reported DOB is enough or ID/NIRA verification is required (would need MoU/product work).
+**What legal / HR must do**  
+Register DirtTrails with PDPO; appoint and register a DPO. Until then the platform admin is only an interim privacy contact.
+
+**Suggested mark:** No until filings are done.
 
 ---
 
-### 18. Incident tracking that triggers PDPO breach notification within 48 hours
+### 16. Informed consent (active tick boxes; third parties named)
 
-**Tech status: Partial**
+**What the system already does**  
+- Signup and checkout use **empty** checkboxes people must tick themselves.  
+- Privacy text names who else may receive data: the **service vendor**, **MarzPay** for paid bookings, and **Supabase** for hosting and login. Restaurant bookings are not charged through MarzPay.  
+- The system stores that the person consented and which notice version they saw.
 
-**What tech did:**
-- Admin-only `data_breach_incidents` register with awareness time, internal 48-hour marker, PDPO Form 7 link, delivery reference fields, CERT/CC fields, immutable event history.
-- UI urges **immediate** notification (Regulation 33(1)), not “wait 48 hours”.
+**What legal should still do**  
+Spot-check that the published Privacy Policy matches reality.
 
-**What legal / ops must do:**
-- Approve staff SOP and who files Form 7.
-- Run and record a dry-run (no live filing) if required for evidence.
-- Clarify checklist “48 hours” vs Regulation 33(1) “immediate”.
-- Mark **Yes** when protocol is staffed and tested; engineering alone cannot auto-submit to PDPO.
+**Suggested mark:** Yes.
 
 ---
 
-### 19. DPIA filed for cloud storage outside Uganda (equivalent protection)
+### 17. Age checks and guardian consent for under-18s
 
-**Tech status: Legal / external — not covered**
+**What the system already does**  
+- Only adults (18+) may create accounts.  
+- Signup asks for date of birth and an unticked “I am 18+” confirmation.  
+- Policy: an adult may book a trip that includes children; children may not open their own accounts.  
+- This is **self-declared** age, not a national ID check.
 
-**What legal must do:** DPIA for Supabase/AWS-region hosting; file as required. Mark **Yes** when filed.
+**What legal must do**  
+Confirm this adult-only model is enough, or require guardian workflows / ID (e.g. NIRA) — which would be a new project.
 
----
-
-### 20. Technical measures: AES-256 at rest, TLS 1.3 in transit, RBAC
-
-**Tech status: Yes**
-
-**What tech did:**
-- Live TLS 1.3 probes on `bookings.dirt-trails.com`, `www.dirt-trails.com`, and Supabase API.
-- AES-256 at rest per Supabase published security controls.
-- RLS on all public tables; role-based policies (tourist / vendor / admin).
-- Evidence: `TECHNICAL-SECURITY-CONTROLS-2026-09-24.md`, `evidence/tls-probe-2026-09-24.json`, Appendix 7A.
+**Suggested mark:** Partial until legal confirms Yes / N/A / further requirements.
 
 ---
 
-### 21. Third-party processor agreements enforcing DPPA on sub-contractors
+### 18. Breach tracking and PDPO notice within 48 hours
 
-**Tech status: Legal / external — not covered**
+**What the system already does**  
+Admins can open a breach case with the time they learned of it, a summary, deadlines, and space to paste the PDPO (and CERT) reference **after** filing. The screen tells staff to notify **immediately**, not to wait out the clock.
 
-**What legal must do:** Execute / obtain DPAs with Supabase, MarzPay, email provider, and any other processors. Mark **Yes** when signed.
+**What legal / ops must do**  
+Name who files Form 7, practice the steps, and keep proof. The website cannot submit to PDPO by itself.
 
----
-
-## Category 4 — Digital service standards, accessibility & interoperability
-
-### 22. Full WCAG 2.0/2.2 AA (screen reader, contrast, etc.)
-
-**Tech status: Partial / No for full AA**
-
-**What tech did:**
-- Skip-to-content, named nav landmark, focus styles, native controls on key mobile nav.
-- Not a full AA conformance claim.
-
-**What legal / accessibility must do:**
-- Commission a formal WCAG audit.
-- Engineering remediates findings afterward.
-- Mark **Yes** only after audit pass (or Partial with remediations tracked).
+**Suggested mark:** Partial until the human procedure is approved and tested.
 
 ---
 
-### 23. Up to 400% text resizing and full keyboard operability
+### 19. Privacy impact assessment (DPIA) for cloud hosting outside Uganda
 
-**Tech status: Yes**
+**What the system already does**  
+Data is hosted on a cloud database/auth provider (region chosen at project setup).
 
-**What tech did:**
-- Production tests at 320 CSS px width (400% of 1280 reference) on home, tours, sample service, privacy.
-- Skip link → main content; named keyboard focusables verified.
-- Evidence: `A11Y-400-KEYBOARD-2026-09-24.md`, Appendix 9A.
+**What legal must do**  
+Complete and file the DPIA showing equivalent protection.
 
-**Limit (documented):** Full WCAG AA remains separate; empty checkout without an order is not a form surface.
-
----
-
-### 24. APIs aligned with e-GIF (standardized XML or JSON)
-
-**Tech status: Partial / usually N/A until a government exchange exists**
-
-**What tech has:** JSON/REST via Supabase and Edge Functions.
-
-**What legal / NITA engagement must do:**
-- If no government data exchange is planned: mark **N/A** with applicability note.
-- If exchange is planned: agree Technical Interoperability Agreement and schemas with the receiving entity.
+**Suggested mark:** No until filed.
 
 ---
 
-### 25. Integration with UGHub (WSO2) for real-time federated exchange
+### 20. Encryption, secure connections, and role-based access
 
-**Tech status: No — usually N/A**
+**What the system already does**  
+- Public site and API connections use modern HTTPS (including TLS 1.3 verified on live hosts).  
+- Host encrypts stored customer data (AES-256 per provider security commitments).  
+- Access is split by role: travelers see their trips; vendors see their business; admins see operations; wallets and settlement are tightly controlled.
 
-**What tech did:** No UGHub client or gateway config exists (by design for a private marketplace).
-
-**What legal / leadership must do:** Mark **N/A** unless DirtTrails formally requests UGHub onboarding.
-
----
-
-### 26. Central API gateway controls (OAuth 2.0, rate limits, centralized logging) via UGHub
-
-**Tech status: No — usually N/A**
-
-Same as above. Supabase Auth ≠ UGHub gateway. Mark **N/A** unless UGHub is adopted.
+**Suggested mark:** Yes.
 
 ---
 
-## Category 5 — Administrative approvals, registrations & collaboration permissions
+### 21. Contracts with third-party processors (Supabase, MarzPay, email, etc.)
 
-### 27. NITA-U Conformity Certificate (Level 1/2/3)
+**What the system already does**  
+Uses those vendors technically.
 
-**Tech status: Legal / external — not covered**
+**What legal must do**  
+Sign data-processing / confidentiality agreements that meet DPPA.
 
-**What must be done:** Apply via NITA-U process; attach certificate when granted.
-
----
-
-### 28. MoU/SLA with NIRA for real-time e-KYC NIN checks
-
-**Tech status: Usually N/A** (unless product requires NIN verification)
-
-**What legal must do:** Mark **N/A** or pursue MoU if age/KYC strategy requires NIRA.
+**Suggested mark:** No until DPAs are signed.
 
 ---
 
-### 29. MoU with URA for TIN checks and EFRIS invoicing
+## Category 4 — Accessibility and government system links
 
-**Tech status: Usually N/A** (unless tax automation is required)
+### 22. Full WCAG accessibility (screen readers, contrast, full AA)
 
-**What finance / legal must do:** Mark **N/A** or pursue integration after tax model is fixed.
+**What the system already does**  
+Basic accessibility: skip-to-content, clearer focus outlines, proper buttons on key mobile navigation. This is **not** a full WCAG AA certificate.
 
----
+**What must still happen**  
+Commission a formal accessibility audit; engineering will fix what the audit finds.
 
-### 30. Data-sharing SLA with UWA for gorilla/park permits
-
-**Tech status: Usually N/A**
-
-Mark **N/A** unless DirtTrails automates UWA permits.
+**Suggested mark:** No / Partial until audit passes.
 
 ---
 
-### 31. Linkage with DCIC for e-Visa status checks
+### 23. Large text (about 400% zoom) and keyboard-only use
 
-**Tech status: Usually N/A**
+**What the system already does**  
+We tested the live site at a very narrow width (same idea as strong zoom). Main pages reflow without forcing sideways scrolling; keyboard users can skip to main content and tab through named controls (search, categories, account, cart).
 
-Mark **N/A** unless international guest visa checks become a product feature.
-
----
-
-### 32. Legal and privacy documents verified via NITA-U Regulatory Compliance Portal
-
-**Tech status: Legal / admin — not covered**
-
-**What legal must do:** Submit/verify documents at compliance.nita.go.ug when ready.
+**Suggested mark:** Yes.
 
 ---
 
-## Summary tables
+### 24–26. Government interoperability (e-GIF) and UGHub
 
-### Tech-side Yes (ready from engineering)
+**What the system already does**  
+Uses normal modern web APIs (JSON) for DirtTrails’ own app. It is **not** plugged into UGHub or a government data highway.
 
-1. Audit logs and access controls  
-2. Incident Response Plan + yearly exercise + CERT linkage  
-3. Informed consent mechanisms  
-4. AES-256 / TLS 1.3 / RBAC  
-5. 400% text resize + keyboard operability  
+**What legal / leadership must do**  
+Unless you plan government data exchange, mark these **N/A** with a short note: private marketplace, no federated government exchange. If you do plan it, that becomes a separate project and MoU.
 
-### Tech partial — legal or ops still own the final Yes
-
-| Item | Engineering delivered | Legal / ops still need |
-|------|----------------------|-------------------------|
-| Electronic contracts (ETA) | Clickwrap + stored acceptance | Legal recognition opinion |
-| Digital signatures (ESA) | Hash-bound vendor agreement | ESA classification |
-| Age / guardian | Adult-only DOB gate | Policy / ID / guardian decision |
-| PDPO breach notification | Incident register + Form 7 fields | Staffed SOP + filing practice |
-| Vuln + pen test | Dependency CI audit | Authorized pen test |
-| Firewalls / IDS / redundancy | Cloud provider stack | Accept provider evidence or procure more |
-| Full WCAG AA | Partial a11y hardening | Formal audit + remediations |
-| e-GIF | JSON APIs | N/A or government TIA |
-
-### Legal / finance / leadership only (no product Yes yet)
-
-- DST, WHT, VAT  
-- PDPO registration, DPO, DPIA, processor DPAs  
-- Leadership cyber-risk ownership  
-- SIEM  
-- IT asset register / media wipe  
-- NITA Conformity Certificate  
-- NITA compliance portal verification  
-- NIRA / URA / UWA / DCIC / UGHub (usually **N/A**)  
+**Suggested mark:** N/A (recommended) or No if the auditor insists without N/A.
 
 ---
 
-## Suggested next actions for legal
+## Category 5 — Certificates and government MoUs
 
-1. Read this file + the response PDF appendices.  
-2. For each **Legal / external** and **Tech partial** row, return: **Yes / No / N/A** + one-line rationale.  
-3. Especially prioritize: ETA opinion, ESA opinion on vendor hash acceptance, PDPO registration path, tax applicability, and N/A confirmations for UGHub and MoUs.  
-4. Return any required privacy/terms wording changes to engineering for a follow-up patch.
+### 27. NITA-U Conformity Certificate
+
+**Not a product feature.** Apply through NITA-U. Mark Yes when you have the certificate.
+
+### 28–31. MoUs with NIRA, URA, UWA, DCIC (IDs, tax invoices, park permits, e-visas)
+
+**What the system already does**  
+Books travel services between travelers and vendors. It does **not** currently pull national IDs, URA EFRIS, UWA permits, or immigration e-visa status in real time.
+
+**Recommended approach:** Mark **N/A** unless leadership chooses to build those integrations. Chasing MoUs “just for the form” without a product need creates cost and delay.
+
+### 32. Legal/privacy docs verified on NITA compliance portal
+
+**Admin / legal filing** at compliance.nita.go.ug when documents are ready. Not done by the booking app.
 
 ---
 
-## Related engineering documents
+## What we recommend you ask legal to return
 
-| File | Topic |
-|------|--------|
-| `ICT-CODE-VS-LEGAL-HANDOFF.md` | Short handoff list |
-| `INCIDENT-RESPONSE-PLAN.md` | IR plan |
-| `INCIDENT-RESPONSE-EXERCISE-2026-09-24.md` | Annual IR exercise |
-| `TECHNICAL-SECURITY-CONTROLS-2026-09-24.md` | Encryption / TLS / RBAC |
-| `A11Y-400-KEYBOARD-2026-09-24.md` | 400% + keyboard |
-| `AUDIT-LOGS-2026-09-24.md` | Fraud audit trail |
-| `VENDOR-AGREEMENT-SIGNATURE-2026-09-24.md` | Vendor agreement hashing |
-| `VENDOR-OPERATOR-AGREEMENT-2026-09-24.md` | Agreement text |
-| `evidence/tls-probe-2026-09-24.json` | TLS probe results |
-| `evidence/a11y-reflow-keyboard-2026-09-24.json` | Accessibility probe results |
+For each row above that is not already **Tech Yes**, please return:
+
+| Checklist row | Their answer (Yes / No / Partial / N/A) | One-sentence reason | Any wording change needed in Privacy/Terms |
+|---------------|----------------------------------------|---------------------|--------------------------------------------|
+
+**Highest priority for them:**
+1. Electronic Transactions Act opinion on click-to-agree bookings.  
+2. Electronic Signatures Act opinion on the vendor sealed agreement.  
+3. PDPO registration + DPO path.  
+4. Tax applicability (DST / VAT / WHT).  
+5. Confirm **N/A** (or not) for UGHub and MoUs.  
+6. Approve breach-notification staffing SOP.
+
+Engineering can implement follow-ups (tax display, e-sign vendor, NIRA checks, etc.) **after** those decisions.
+
+---
+
+## Plain-language glossary
+
+| Term | Meaning |
+|------|---------|
+| Clickwrap / unticked box | User must actively tick “I agree”; nothing is pre-ticked. |
+| Hash / sealed fingerprint | A unique code of the exact agreement text so later edits are detectable. |
+| RLS / roles | Database rules so each user type only sees allowed data. |
+| MarzPay | Payment partner for mobile money on **paid** bookings (not restaurant reservations). |
+| Supabase | Cloud host for login accounts and booking database. |
+| PDPO | Uganda Personal Data Protection Office. |
+| CERT | Uganda national cyber incident reporting channel. |
+| UGHub | Government integration platform — only relevant if DirtTrails exchanges data with government systems. |
+
+---
+
+*End of handoff. This is the single document for non-technical briefing of legal and leadership.*
