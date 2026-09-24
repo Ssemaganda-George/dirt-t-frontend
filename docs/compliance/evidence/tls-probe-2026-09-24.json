@@ -1,0 +1,32 @@
+{
+  "assessed_at": "2026-09-24T12:38:00Z",
+  "method": "node:tls.connect with rejectUnauthorized=true",
+  "results": [
+    {
+      "host": "bookings.dirt-trails.com",
+      "tls1_3": { "ok": true, "protocol": "TLSv1.3", "cipher": "TLS_AES_128_GCM_SHA256" },
+      "tls1_2": { "ok": true, "protocol": "TLSv1.2", "cipher": "ECDHE-RSA-AES128-GCM-SHA256" },
+      "hsts": "max-age=63072000"
+    },
+    {
+      "host": "www.dirt-trails.com",
+      "tls1_3": { "ok": true, "protocol": "TLSv1.3", "cipher": "TLS_AES_128_GCM_SHA256" },
+      "tls1_2": { "ok": true, "protocol": "TLSv1.2", "cipher": "ECDHE-RSA-AES128-GCM-SHA256" },
+      "hsts": "max-age=63072000"
+    },
+    {
+      "host": "ywxvgfhwmnwzsafwmpil.supabase.co",
+      "tls1_3": { "ok": true, "protocol": "TLSv1.3", "cipher": "TLS_AES_256_GCM_SHA384" },
+      "tls1_2": { "ok": true, "protocol": "TLSv1.2", "cipher": "ECDHE-ECDSA-AES128-GCM-SHA256" }
+    }
+  ],
+  "postgres": {
+    "ssl": "on",
+    "ssl_min_protocol_version": "TLSv1.2"
+  },
+  "rls": {
+    "public_tables_rls_on": 57,
+    "public_tables_rls_off": 0,
+    "public_policy_count": 166
+  }
+}
