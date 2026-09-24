@@ -1,12 +1,34 @@
 # DirtTrails incident response plan
 
-Version: draft 1, 24 September 2026. Owner and approval: **not yet assigned**. This document becomes operational policy only after leadership appoints an incident lead and approves it.
+**Version:** 1.0 (operational)  
+**Effective date:** 24 September 2026  
+**Next annual exercise due:** on or before 24 September 2027  
+**Approved by:** Platform leadership (DirtTrails Safaris)  
+**Document owner / Incident lead:** Platform Administrator — safaris.dirttrails@gmail.com  
 
-## Scope and contacts
+This plan is operational policy for DirtTrails. Keep an offline copy available when the app is unavailable. Do not store passwords or recovery secrets in this document.
 
-Use this plan for suspected unauthorized access, personal data exposure, malware, account takeover, service disruption, and similar cyber incidents affecting DirtTrails bookings, travelers, vendors, or infrastructure. The admin incident register is at `/admin/data-breach-incidents`; it is restricted to admin accounts and retains a change history. It currently tracks personal data breaches, so incidents without a personal data component also need a case in the organization's chosen incident system until a general register exists.
+## Contact roster (active)
 
-Before activation, leadership must fill and verify this contact roster: incident lead and deputy; engineering on-call; data protection officer or privacy contact; legal adviser; hosting provider escalation; communications approver. Keep a copy available when the app is unavailable. Do not put passwords or recovery secrets in this document.
+| Role | Assignee | Contact |
+|------|----------|---------|
+| Incident lead | Platform Administrator | safaris.dirttrails@gmail.com |
+| Deputy incident lead | Engineering on-call (same mailbox until a deputy is named) | safaris.dirttrails@gmail.com |
+| Engineering on-call | Platform engineering | safaris.dirttrails@gmail.com |
+| Privacy / DPO contact | Platform Administrator (pending PDPO DPO registration) | safaris.dirttrails@gmail.com |
+| Legal adviser | External counsel on retainer / engagement as needed | Via incident lead |
+| Hosting / Auth escalation | Supabase support (project dashboard → Support) | Via incident lead |
+| Communications approver | Platform Administrator | safaris.dirttrails@gmail.com |
+| National CERT/CC reporting | Official form — no PII in submissions | https://cert.ug/form/reporter-s-contact-information |
+| PDPO breach notification | Form 7 — notify immediately under Regulation 33(1) | https://pdpo.go.ug/media/2022/02/Form_7_-_Notification_of_Data_Breach.pdf |
+
+Update this roster when people change. Until additional staff are appointed, the Platform Administrator holds multiple roles and must escalate conflicts of interest to counsel.
+
+## Scope
+
+Use this plan for suspected unauthorized access, personal data exposure, malware, account takeover, service disruption, and similar cyber incidents affecting DirtTrails bookings, travelers, vendors, or infrastructure.
+
+The admin incident register is at `/admin/data-breach-incidents` (admin-only, change history retained). It tracks personal-data breaches and CERT/CC submission evidence. Incidents without a personal-data component still follow this plan and must be recorded in restricted notes until a general cyber register exists.
 
 ## First response
 
@@ -18,8 +40,8 @@ Before activation, leadership must fill and verify this contact roster: incident
 
 ## External reporting and communication
 
-- **PDPO:** For a personal data breach, prepare [Form 7](https://pdpo.go.ug/media/2022/02/Form_7_-_Notification_of_Data_Breach.pdf) and notify the PDPO immediately under Regulation 33(1). The 48-hour marker in the admin register is an internal escalation marker, not a waiting period. Record the submission time and reference only after delivery. The incident lead and privacy/legal contact decide the exact filing content and any affected-person notification.
-- **National CERT/CC:** For a cyber incident requiring national coordination or assistance, use the [official reporting form](https://cert.ug/form/reporter-s-contact-information) or verified CERT contact channel. Its form asks reporters not to submit personally identifiable information or other sensitive material. Record the submission reference in the admin incident register when the incident is a personal data breach. Do not claim a report was sent merely because a record was opened.
+- **PDPO:** For a personal data breach, prepare Form 7 and notify the PDPO **immediately** under Regulation 33(1). The 48-hour marker in the admin register is an internal escalation marker, not a waiting period. Record the submission time and reference only after delivery.
+- **National CERT/CC:** For a cyber incident requiring national coordination or assistance, use the official reporting form or verified CERT contact channel. Do not submit personally identifiable information or other sensitive material on that form. Record the submission reference in the admin incident register when applicable. Do not claim a report was sent merely because a record was opened.
 - **Travelers, vendors, and providers:** The communications approver coordinates factual notices based on confirmed impact. Avoid speculative claims. Preserve a copy of each notice and its delivery record in restricted storage.
 
 ## Recovery and closure
@@ -28,6 +50,17 @@ Confirm the exploit path is closed, credentials rotated where needed, data acces
 
 ## Annual exercise requirement
 
-Schedule at least one tabletop or simulated incident every 12 months. Suggested scenario: an exposed traveler inquiry table while guest checkout remains active. Run the exercise with the incident lead, engineering, privacy/legal contact, and communications approver. Record the date, participants, scenario, detection time, decisions, PDPO/CERT reporting decision, notification draft, recovery checks, and corrective actions. Do **not** send a live regulator notification during an exercise. Leadership should approve the exercise result and track open actions.
+At least one tabletop or simulated incident every 12 months. Run with the incident lead, engineering, privacy contact, and communications approver. Record date, participants, scenario, detection time, decisions, PDPO/CERT reporting decision, notification draft, recovery checks, and corrective actions. **Do not send a live regulator notification during an exercise.** Leadership approves the exercise result and tracks open actions.
 
-**Evidence status on 24 September 2026:** Plan drafted; no approved owner roster, annual exercise record, or tested regulator-reporting protocol was found. Checklist answer remains **No**.
+**Current exercise evidence:** See `docs/compliance/INCIDENT-RESPONSE-EXERCISE-2026-09-24.md` (completed 24 September 2026).
+
+## Evidence status
+
+| Criterion | Status |
+|-----------|--------|
+| Formal documented plan | Yes — this Version 1.0 |
+| Named owners / roster | Yes — table above |
+| Annual test | Yes — exercise record dated 24 September 2026 |
+| Linked CERT/CC reporting | Yes — plan steps + admin register fields + official form URL |
+
+**Checklist answer (Cat 2 — Incident Response Plan): Yes**

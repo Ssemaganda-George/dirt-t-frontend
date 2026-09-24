@@ -94,6 +94,7 @@ export default function DataBreachIncidents() {
   return (
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Data breach incidents</h1>
+      <p className="text-sm text-slate-600">Follow the operational incident response plan (docs/compliance/INCIDENT-RESPONSE-PLAN.md). Record CERT/CC and PDPO delivery proof here after real submission.</p>
       <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-900">
         Notify the PDPO immediately when a personal data breach occurs. The 48-hour clock below is an internal escalation marker, not permission to wait. Use the <a className="underline" href="https://pdpo.go.ug/media/2022/02/Form_7_-_Notification_of_Data_Breach.pdf" target="_blank" rel="noreferrer">PDPO Form 7</a> and record the delivery reference here. This screen does not send a notification.
       </div>
