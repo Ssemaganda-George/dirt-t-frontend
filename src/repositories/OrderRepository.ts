@@ -156,11 +156,12 @@ export async function markTicketUsed(ticketId: string, usedAt?: string) {
 }
 
 export async function verifyTicketByCode(code: string, serviceId?: string) {
+  if (!serviceId) throw new Error('Event service is required for ticket scanning')
   return executeWithCircuitBreaker(async () => {
     console.log('Verifying ticket with code:', code, 'for service:', serviceId)
 
     // Use atomic verification function
-    const { data: result, error } = await supabase.rpc('verify_and_use_ticket_atomic', {
+    const { data: result, error } = await supabase.rpc('verify_ticket_for_operator', {
       p_ticket_code: code,
       p_service_id: serviceId || null
     })

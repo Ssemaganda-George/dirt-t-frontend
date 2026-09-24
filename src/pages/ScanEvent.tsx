@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import QrScanner from 'qr-scanner'
-import { getServiceById, createEventOTP, verifyEventOTP, verifyPassword, verifyTicketByCode, getActiveScanSession } from '../lib/database'
+import { getServiceById, verifyEventOTP, verifyPassword, verifyTicketByCode, getActiveScanSession } from '../lib/database'
 import { useAuth } from '../contexts/AuthContext'
 import { formatDateTime } from '../lib/utils'
 import LoginModal from '../components/LoginModal'
@@ -161,19 +161,15 @@ export default function ScanEventPage() {
           return
         }
 
-        // If visitor is vendor of service or admin and scan_enabled, allow immediate access
+        // Ticket redemption is authorized by the server for this event's vendor or an admin.
         if (svc.scan_enabled && user?.id) {
-          // If user is admin or vendor owner, skip OTP
-          if (user?.id === svc.vendors?.user_id) {
+          if (profile?.role === 'admin' || user.id === svc.vendors?.user_id) {
             setVerified(true)
             return
           }
-          // TODO: if we have profile role check, skip for admins
         }
 
-        // For any guest/random user we will request an OTP when they land
-        await createEventOTP(id)
-        setOtpRequested(true)
+        setError('Sign in as this event\'s vendor or a platform admin to scan tickets.')
       } catch (err: any) {
         console.error('Error loading service or requesting OTP:', err)
         setError(err?.message || 'Failed to load event')
@@ -182,7 +178,7 @@ export default function ScanEventPage() {
       }
     }
     load()
-  }, [id, user?.id])
+  }, [id, user?.id, profile?.role])
 
   // Separate useEffect for scan session check - runs independently of user authentication
   useEffect(() => {
@@ -235,6 +231,10 @@ export default function ScanEventPage() {
   const submitOtp = async (e: any) => {
     e.preventDefault()
     if (!id) return
+    if (!user?.id || (profile?.role !== 'admin' && user.id !== service?.vendors?.user_id)) {
+      setError('Sign in as this event\'s vendor or a platform admin to scan tickets.')
+      return
+    }
 
     // Handle password-based OTP verification
     if (usePasswordMode) {
@@ -883,6 +883,22 @@ export default function ScanEventPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  if (!verified) {
+    return (
+      <div className="p-6 max-w-md mx-auto">
+        <h2 className="text-xl font-bold">Operator sign-in required</h2>
+        <p className="mt-2 text-gray-700">
+          Ticket scanning requires this event's vendor account or a platform admin account.
+        </p>
+        {error && <p className="mt-3 text-red-700">{error}</p>}
+        <div className="mt-5 flex gap-4">
+          <Link to="/vendor-login" className="text-emerald-700 underline">Vendor sign-in</Link>
+          <Link to="/login" className="text-emerald-700 underline">Admin sign-in</Link>
         </div>
       </div>
     )

@@ -144,7 +144,7 @@ class OperationQueue {
   }
 
   private async verifyTicket(data: { code: string; serviceId?: string }): Promise<void> {
-    const { data: result, error } = await supabase.rpc('verify_and_use_ticket_atomic', {
+    const { data: result, error } = await supabase.rpc('verify_ticket_for_operator', {
       p_ticket_code: data.code,
       p_service_id: data.serviceId || null
     })
