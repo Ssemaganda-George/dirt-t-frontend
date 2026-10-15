@@ -21,6 +21,7 @@ import {
   Eye,
   Star,
   TreePine,
+  Coins,
   Mail,
   Link2
 } from 'lucide-react'
@@ -96,7 +97,8 @@ const navigation = [
   {
     category: 'Conservation',
     items: [
-      { labelKey: 'trees', href: '/admin/conservation/trees', icon: TreePine }
+      { labelKey: 'trees', href: '/admin/conservation/trees', icon: TreePine },
+      { labelKey: 'commercial', href: '/admin/conservation/commercial', icon: Coins }
     ]
   },
   {

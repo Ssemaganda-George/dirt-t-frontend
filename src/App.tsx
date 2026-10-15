@@ -63,6 +63,7 @@ const HeroVideoManager = lazy(() => import('./pages/admin/HeroVideoManager'))
 const AdminVendorMessages = lazy(() => import('./pages/vendor/AdminVendorMessages'))
 const Partnerships = lazy(() => import('./pages/admin/Partnerships'))
 const AdminConservationTrees = lazy(() => import('./pages/admin/conservation/Trees').then(m => ({ default: m.default })))
+const AdminConservationCommercial = lazy(() => import('./pages/admin/ConservationCommercial'))
 
 // Create Safari Page
 const CreateSafariPage = lazy(() => import('./pages/CreateSafariPage'));
@@ -127,6 +128,9 @@ const CarbonCalculator = lazy(() => import('./pages/conservation/CarbonCalculato
 const OffsetDonation = lazy(() => import('./pages/conservation/OffsetDonation'))
 const OffsetCheckout = lazy(() => import('./pages/conservation/OffsetCheckout'))
 const OffsetSuccess = lazy(() => import('./pages/conservation/OffsetSuccess'))
+const TreeCreditStore = lazy(() => import('./pages/conservation/TreeCreditStore'))
+const CarbonOffsetPurchase = lazy(() => import('./pages/conservation/CarbonOffsetPurchase'))
+const OffsetCertificate = lazy(() => import('./pages/conservation/OffsetCertificate'))
 const Donate = lazy(() => import('./pages/conservation/Donate'))
 
 // Tourist pages
@@ -209,6 +213,9 @@ function App() {
             <Route path="conservation/offset" element={<OffsetDonation />} />
             <Route path="conservation/checkout" element={<OffsetCheckout />} />
             <Route path="conservation/offset/success" element={<OffsetSuccess />} />
+            <Route path="conservation/credits" element={<TreeCreditStore />} />
+            <Route path="conservation/offsets" element={<CarbonOffsetPurchase />} />
+            <Route path="conservation/offsets/certificate" element={<OffsetCertificate />} />
             <Route path="environment/donate" element={<Navigate to="/conservation/donate" replace />} />
             {/* Partner and Vendor Login Pages */}
             <Route path="partner" element={<PartnerWithUs />} />
@@ -337,6 +344,7 @@ function App() {
             <Route path="tickets" element={<AdminTickets />} />
             <Route path="partnerships" element={<Partnerships />} />
             <Route path="conservation/trees" element={<AdminConservationTrees />} />
+            <Route path="conservation/commercial" element={<AdminConservationCommercial />} />
             <Route path="wallets" element={<Transactions />} />
             <Route path="vendors" element={<AdminVendors />} />
             <Route path="vendors/:id" element={<AdminVendorDetail />} />

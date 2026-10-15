@@ -399,6 +399,18 @@ const GeotaggingPage = () => {
               >
                 Donate
               </button>
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => navigate('/conservation/offsets')}
+              >
+                Buy Carbon Offsets
+              </button>
+              <button
+                className="px-3 py-1 md:px-5 md:py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs md:text-base font-medium rounded-md"
+                onClick={() => navigate('/conservation/credits')}
+              >
+                Tree Credits
+              </button>
             </div>
           </div>
           <div className="flex flex-col items-center md:items-end md:w-1/3 mt-2 md:mt-0">

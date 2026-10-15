@@ -614,6 +614,8 @@ export default function PublicLayout() {
                 <li><Link to="/conservation/geotagging" className="text-gray-600 hover:text-gray-900 transition-colors">Geotagging &amp; Monitoring</Link></li>
                 <li><Link to="/conservation/tree-planting" className="text-gray-400 hover:text-white transition-colors">Tree Planting Initiatives</Link></li>
                 <li><Link to="/conservation/carbon" className="text-gray-400 hover:text-white transition-colors">Calculate My Carbon</Link></li>
+                <li><Link to="/conservation/offsets" className="text-gray-400 hover:text-white transition-colors">Buy Verified Carbon Offsets</Link></li>
+                <li><Link to="/conservation/credits" className="text-gray-400 hover:text-white transition-colors">Tree Credits for Companies</Link></li>
               </ul>
             </div>
 

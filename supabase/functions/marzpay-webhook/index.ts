@@ -150,6 +150,37 @@ serve(async (req) => {
     })
     .eq("reference", reference)
 
+  // ── Conservation payments (tree credit batches / carbon offsets) ──────────
+  // These have neither order_id nor booking_id; they are tagged in
+  // payments.marzpay_response.type and activated by conservation-fulfillment.
+  if (!payment.order_id && !payment.booking_id) {
+    try {
+      const { data: fullPayment } = await supabase
+        .from("payments")
+        .select("marzpay_response")
+        .eq("id", payment.id)
+        .maybeSingle()
+
+      const responseType = (fullPayment?.marzpay_response as Record<string, any>)?.type
+      if (
+        responseType === "tree_credit_batch" ||
+        responseType === "carbon_offset_order"
+      ) {
+        const baseUrl = (SUPABASE_URL || "").replace(/\/rest\/v1\/?$/, "")
+        await fetch(`${baseUrl}/functions/v1/conservation-fulfillment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ reference, status: paymentStatus }),
+        }).catch((e) => console.warn("Webhook: conservation fulfillment failed", e?.message || e))
+      }
+    } catch (err) {
+      console.warn("Webhook: conservation fulfillment dispatch failed", err)
+    }
+  }
+
   // ── Booking-linked payment (hotel / transport / activity bookings) ────────
   if (paymentStatus === "completed" && payment.booking_id) {
     const bookingId = payment.booking_id
