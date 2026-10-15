@@ -44,6 +44,20 @@ supabase functions deploy conservation-fulfillment --project-ref "${PROJECT_REF}
 # when a conservation payment settles.
 supabase functions deploy marzpay-webhook --project-ref "${PROJECT_REF}"
 
+# The trip planner needs a reachable model, and banner OCR needs a vision key.
+# Without these the planner silently degrades (empty plans / no banner text).
+supabase functions deploy trip-planner --project-ref "${PROJECT_REF}"
+supabase functions deploy scan-service-banner --project-ref "${PROJECT_REF}"
+
+echo ""
+echo "==> Verify the model/OCR secrets exist:"
+echo "    GEMINI_API_KEY  — trip planner calls the Gemini API"
+echo "    GEMMA_MODEL     — REQUIRED: the old gemini-2.5-flash default is now"
+echo "                      restricted for this key; use gemma-4-26b-a4b-it"
+echo "    GROQ_API_KEY    — scan-service-banner OCR; without it service banners"
+echo "                      are never read and the planner loses source text"
+supabase secrets list --project-ref "${PROJECT_REF}"
+
 echo ""
 echo "Done. Verify with:"
 echo "  curl -s \"\${SUPABASE_URL}/functions/v1/carbon-offsets/pricing\" \\"
