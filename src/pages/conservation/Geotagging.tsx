@@ -525,9 +525,9 @@ const GeotaggingPage = () => {
         }
       `}</style>
 
-      {viewerOpen && (
-        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)]">
+      {viewerOpen && createPortal(
+        <div className="fixed inset-0 z-[1100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <button
               type="button"
               className="absolute top-4 right-4 z-20 rounded-full bg-white/90 p-2 text-gray-800 hover:bg-white"
@@ -565,7 +565,8 @@ const GeotaggingPage = () => {
               <p className="text-xs text-gray-500">{`${viewerIndex + 1} of ${viewerImages.length}`}</p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="w-full mb-8" style={{ height: "45vh", minHeight: 220, maxHeight: "60vh" }}>
@@ -604,9 +605,9 @@ const GeotaggingPage = () => {
         </MapContainer>
       </div>
 
-      {selectedTree && (
-        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-4 sm:p-6 relative max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto">
+      {selectedTree && createPortal(
+        <div className="fixed inset-0 z-[1100] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-4 sm:p-6 relative max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <button
               className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
               onClick={() => setSelectedTree(null)}
@@ -680,7 +681,8 @@ const GeotaggingPage = () => {
               <p><strong>Location:</strong> {selectedTree.latitude}, {selectedTree.longitude}</p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showAddTree && createPortal(
