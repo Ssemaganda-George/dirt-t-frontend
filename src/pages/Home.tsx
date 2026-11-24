@@ -329,6 +329,9 @@ export default function Home() {
 
   const handleTabClick = (id: string) => {
     handleCategorySelect(id)
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      requestAnimationFrame(() => window.scrollTo(0, 0))
+    }
   }
 
   // Use the reactive useServices hook
