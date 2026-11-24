@@ -678,7 +678,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative min-h-[60vh] md:min-h-[72vh] bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
+      <div className="relative min-h-[60dvh] md:min-h-[72vh] bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 overflow-hidden">
         {/* Background media carousel */}
         {heroMediaList.length > 0 && (
           heroMediaList.map((media, idx) => (
@@ -718,7 +718,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 z-20" />
 
         {/* Hero content + embedded search */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 md:pb-14 px-4 z-30">
+        <div className="relative min-h-[60dvh] flex flex-col items-center justify-end pt-28 pb-10 px-4 z-30 md:absolute md:inset-0 md:min-h-0 md:pt-0 md:pb-14">
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight mb-3">
               {t('hero_title')}
@@ -883,7 +883,7 @@ export default function Home() {
       {/* Category tab bar */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex items-end justify-start md:justify-center overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
             {[
               { id: 'all',              name: 'Explore',     Icon: Map        },
               { id: 'cat_hotels',       name: 'Stays',       Icon: Hotel      },
