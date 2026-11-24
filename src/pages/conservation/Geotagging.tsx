@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { getSession } from '../../services/AuthService';
 import { TreePine, Smartphone, QrCode } from "lucide-react";
@@ -682,7 +683,7 @@ const GeotaggingPage = () => {
         </div>
       )}
 
-      {showAddTree && (
+      {showAddTree && createPortal(
         <div className="fixed inset-0 z-[1100] bg-black/50 flex items-end sm:items-center justify-center sm:p-4">
           <div role="dialog" aria-modal="true" aria-labelledby="add-tree-title" className="bg-white rounded-t-2xl sm:rounded-lg shadow-2xl w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
@@ -878,7 +879,8 @@ const GeotaggingPage = () => {
             </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="max-w-2xl mx-auto mt-10 px-2">
