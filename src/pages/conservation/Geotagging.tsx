@@ -683,29 +683,34 @@ const GeotaggingPage = () => {
       )}
 
       {showAddTree && (
-        <div className="fixed inset-x-0 top-16 bottom-16 sm:top-[3rem] sm:bottom-[7rem] bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl p-4 sm:p-6 relative max-h-[calc(100vh-3.5rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto">
-            <button
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-              onClick={() => setShowAddTree(false)}
-            >
-              ✕
-            </button>
-            <h2 className="text-2xl font-bold mb-4">Add a New Tree</h2>
+        <div className="fixed inset-0 z-[1100] bg-black/50 flex items-end sm:items-center justify-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="add-tree-title" className="bg-white rounded-t-2xl sm:rounded-lg shadow-2xl w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+              <h2 id="add-tree-title" className="text-xl sm:text-2xl font-bold">Add a New Tree</h2>
+              <button
+                type="button"
+                aria-label="Close add tree form"
+                className="shrink-0 p-2 text-gray-500 hover:text-gray-800"
+                onClick={() => setShowAddTree(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="grid gap-3">
               <label className="text-sm">Species</label>
               <input value={newSpecies} onChange={(e) => setNewSpecies(e.target.value)} className="border rounded px-3 py-2" />
               <div className="grid md:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm">Latitude</label>
-                  <input value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} className="border rounded px-3 py-2" />
+                  <input value={newLatitude} onChange={(e) => setNewLatitude(e.target.value)} className="border rounded px-3 py-2 w-full" />
                 </div>
                 <div>
                   <label className="text-sm">Longitude</label>
-                  <input value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} className="border rounded px-3 py-2" />
+                  <input value={newLongitude} onChange={(e) => setNewLongitude(e.target.value)} className="border rounded px-3 py-2 w-full" />
                 </div>
               </div>
-              <div className="mt-2 flex gap-2 items-center">
+              <div className="mt-2 flex flex-wrap gap-2 items-center">
                 <button
                   onClick={() => {
                     if (!('geolocation' in navigator)) {
@@ -747,7 +752,7 @@ const GeotaggingPage = () => {
                     setNewImagePreviews(previews);
                     setNewImageFiles(arr);
                   }}
-                  className="w-full"
+                  className="w-full min-w-0 text-sm"
                 />
                 {newImagePreviews.length > 0 && (
                   <div className="mt-2 flex gap-2 overflow-x-auto touch-pan-x">
@@ -765,7 +770,7 @@ const GeotaggingPage = () => {
                 type="datetime-local"
                 value={newPlantedOn}
                 onChange={(e) => setNewPlantedOn(e.target.value)}
-                className="border rounded px-3 py-2"
+                className="border rounded px-3 py-2 min-w-0"
               />
 
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -864,12 +869,13 @@ const GeotaggingPage = () => {
                     setNewImagePreviews([]);
                     setNewImageFiles([]);
                   }}
-                  className="bg-green-600 text-white rounded px-4 py-2"
+                  className="bg-green-600 text-white rounded px-4 py-3 w-full sm:w-auto"
                 >
                   Add Tree
                 </button>
                 <button onClick={() => setShowAddTree(false)} className="border rounded px-4 py-3 w-full sm:w-auto">Cancel</button>
               </div>
+            </div>
             </div>
           </div>
         </div>
